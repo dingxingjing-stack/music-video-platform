@@ -23,6 +23,7 @@ API Assumptions:
 
 from __future__ import annotations
 
+import base64
 import logging
 import time
 from typing import Any, Optional
@@ -289,7 +290,8 @@ class DemucsService(GradioSpaceMixin, BaseInferenceService):
         Unified entry-point.
 
         Extracts audio bytes and stem options from ``request.extra``,
-        builds the internal payload, then delegates to the base class.
+        validates parameters, builds the internal payload, then delegates
+        to the base class.
         """
         audio_b64 = request.extra.get("audio_base64", "")
         if not audio_b64:
@@ -300,7 +302,6 @@ class DemucsService(GradioSpaceMixin, BaseInferenceService):
                 error="Missing 'audio_base64' in PredictRequest.extra",
             )
 
-        import base64
         try:
             audio_bytes = base64.b64decode(audio_b64)
         except Exception:
@@ -319,8 +320,22 @@ class DemucsService(GradioSpaceMixin, BaseInferenceService):
                 error="Empty audio data",
             )
 
+        # Validate stem_count
         stem_count = request.extra.get("stem_count", "4")
-        remove_reverb = request.extra.get("remove_reverb", False)
+        if stem_count not in self.STEM_OPTIONS:
+            return PredictResult(
+                task_id=request.task_id,
+                status=TaskStatus.FAILED,
+                progress=0,
+                error=f"Invalid stem_count '{stem_count}'. Must be one of: {self.STEM_OPTIONS}",
+            )
+
+        # Normalize remove_reverb — handle string "true"/"false" from JSON
+        remove_reverb_raw = request.extra.get("remove_reverb", False)
+        if isinstance(remove_reverb_raw, str):
+            remove_reverb = remove_reverb_raw.lower() in ("true", "1", "yes")
+        else:
+            remove_reverb = bool(remove_reverb_raw)
 
         payload = self._build_payload(
             stem_count=stem_count,
@@ -348,7 +363,6 @@ class DemucsService(GradioSpaceMixin, BaseInferenceService):
         remove_reverb: bool = False,
     ) -> PredictResult:
         """Direct convenience method — bypasses PredictRequest."""
-        import base64
         audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
         return await self.predict(PredictRequest(
             service_type="demucs",
