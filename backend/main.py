@@ -43,8 +43,10 @@ from app.services.inference import (
 from app.services.inference.gpt_sovits import GPTSovitsService
 from app.services.inference.factory import _SERVICE_REGISTRY, _ALIASES
 from app.services.inference.mock import MockInferenceService
+from app.services.inference.llm_factory import llm_factory
 from app.services.workflow import WorkflowEngine
-from app.services.batch_queue import batch_queue, BatchState
+from app.services.batch_queue import batch_queue
+from app.services.inference.remix import RemixService
 from app.websocket_manager import ConnectionManager, manager
 
 # ---------------------------------------------------------------------------
@@ -148,6 +150,112 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "services": services_health,
     }
+
+
+# ---------------------------------------------------------------------------
+# LLM endpoints — Text generation (prompts, lyrics, MV concepts, etc.)
+# ---------------------------------------------------------------------------
+
+
+from pydantic import BaseModel, Field
+from typing import List, Optional, AsyncGenerator
+from fastapi.responses import StreamingResponse
+
+
+class LLMMessage(BaseModel):
+    role: str = Field(..., description="Role: system, user, or assistant")
+    content: str = Field(..., description="Message content")
+
+
+class LLMRequest(BaseModel):
+    messages: List[LLMMessage] = Field(..., description="Conversation messages")
+    provider: str = Field("auto", description="Provider: auto, nvidia, gemini")
+    model: Optional[str] = Field(None, description="Specific model name")
+    temperature: float = Field(0.7, ge=0.0, le=2.0)
+    max_tokens: int = Field(2048, ge=1, le=8192)
+    stream: bool = Field(False, description="Stream response as SSE")
+
+
+class LLMResponse(BaseModel):
+    text: str
+    provider: str
+    model: str
+
+
+@app.post("/api/v1/llm/generate", tags=["llm"], response_model=LLMResponse)
+async def llm_generate(request: LLMRequest):
+    """
+    Generate text using LLM (NVIDIA Nemotron / Gemini with auto-fallback).
+
+    Use cases:
+      - Expand/improve music prompts
+      - Generate lyrics from theme
+      - Generate MV concepts from audio analysis
+      - Any text-to-text generation
+    """
+    try:
+        messages = [{"role": m.role, "content": m.content} for m in request.messages]
+        text = await llm_factory.call(
+            messages=messages,
+            provider=request.provider,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+            stream=False,
+        )
+        return LLMResponse(text=text, provider=request.provider, model=request.model or "auto")
+    except Exception as exc:
+        logger.exception("LLM generation failed")
+        raise HTTPException(status_code=500, detail=f"LLM generation failed: {exc}")
+
+
+@app.post("/api/v1/llm/stream", tags=["llm"])
+async def llm_stream(request: LLMRequest):
+    """
+    Stream LLM response as Server-Sent Events (SSE).
+
+    Returns: text/event-stream with each chunk as 'data: <text>\n\n'
+    """
+    messages = [{"role": m.role, "content": m.content} for m in request.messages]
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            async for chunk in llm_factory.call(
+                messages=messages,
+                provider=request.provider,
+                model=request.model,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens,
+                stream=True,
+            ):
+                yield f"data: {chunk}\n\n"
+        except Exception as exc:
+            logger.exception("LLM streaming failed")
+            yield f"data: [ERROR] {exc}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/api/v1/llm/health", tags=["llm"])
+async def llm_health():
+    """Check LLM provider availability."""
+    results = {}
+    for name, client in llm_factory.clients.items():
+        try:
+            # Quick health check with a tiny request
+            resp = await client.post(
+                llm_factory._get_endpoint(name, MODELS[name]["model_default"]),
+                json=llm_factory._build_payload(name, [{"role": "user", "content": "hi"}], MODELS[name]["model_default"], 0.1, 10, False),
+            )
+            results[name] = {"healthy": resp.status_code == 200, "status": resp.status_code}
+        except Exception as exc:
+            results[name] = {"healthy": False, "error": str(exc)[:200]}
+    return {"providers": results}
+
+
+# Need MODELS dict for health check - import from llm_factory
+from app.services.inference.llm_factory import MODELS
 
 
 # ---------------------------------------------------------------------------
@@ -1267,6 +1375,482 @@ async def trim_audio_endpoint(
     except Exception as exc:
         logger.exception("Trim error: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Mix render endpoint — multi-track mixer with volume/pan/EQ/reverb
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/mix/render", tags=["mix"])
+async def mix_render(request: Request):
+    """
+    Render a multi-track stereo mix with per-track volume, pan, 3-band EQ,
+    mute/solo, and reverb send. Runs via ffmpeg filter complex.
+
+    Body::
+        {
+            "tracks": [
+                {"url": "/results/...", "volume": -6.0, "pan": 0.0,
+                 "eq": {"low": 2, "mid": 0, "high": -3},
+                 "solo": false, "mute": false, "reverb_send": 0.3}
+            ],
+            "master_volume": 0.0,
+            "output_format": "wav"
+        }
+
+    Returns task_id. WS /ws/progress/{task_id} streams rendering progress.
+    On completion, result_url contains the mixed output file.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    tracks = body.get("tracks", [])
+    if not tracks or not isinstance(tracks, list):
+        raise HTTPException(status_code=422, detail="'tracks' array is required")
+
+    task_id = f"mix-{str(uuid.uuid4())[:8]}"
+    output_format = body.get("output_format", "wav")
+    master_volume = float(body.get("master_volume", 0.0))
+
+    async def _bg_mix(tid: str, trks: list, _fmt: str, _master: float) -> None:
+        try:
+            from app.services.mix_engine import render_mix
+
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.PENDING, progress=0,
+                    message="Preparing mix...",
+                ),
+            )
+
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.RUNNING, progress=30,
+                    message="Rendering mix with ffmpeg...",
+                ),
+            )
+
+            start = time.time()
+            result_path = await render_mix(
+                tid, trks, RESULTS_DIR,
+                output_format=_fmt,
+                master_volume=_master,
+            )
+            elapsed = time.time() - start
+
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.COMPLETED, progress=100,
+                    message="Mix exported!",
+                    result_url=result_path,
+                    metadata={
+                        "tracks_count": len(trks),
+                        "master_volume": _master,
+                        "output_format": _fmt,
+                        "elapsed_time": round(elapsed, 2),
+                    },
+                    updated_at=time.time(),
+                ),
+            )
+        except Exception as exc:
+            logger.exception("Mix render failed: %s", exc)
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.FAILED, progress=0,
+                    error=str(exc)[:300],
+                    error_code="MIX_RENDER_FAILED",
+                    retryable=False,
+                    updated_at=time.time(),
+                ),
+            )
+
+    asyncio.create_task(_bg_mix(task_id, tracks, output_format, master_volume))
+
+    return {
+        "task_id": task_id,
+        "status": "started",
+        "websocket": f"/ws/progress/{task_id}",
+    }
+
+
+# ---------------------------------------------------------------------------
+# MV helper utilities (used by mv_render and mv_detect_beats)
+# ---------------------------------------------------------------------------
+
+
+def _find_ffmpeg() -> str:
+    import shutil
+    local = os.path.join(os.path.dirname(__file__), "..", "..", "bin", "ffmpeg.exe")
+    local = os.path.abspath(local)
+    if os.path.exists(local):
+        return local
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    raise RuntimeError("ffmpeg not found. Install ffmpeg or place ffmpeg.exe in bin/")
+
+
+def _ffmpeg_run(cmd: list[str]) -> None:
+    import subprocess
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        logger.error("ffmpeg failed: %s", exc.stderr.decode(errors="replace")[:300])
+        raise RuntimeError(f"ffmpeg encoding failed: {exc}")
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("ffmpeg encoding timed out (120s)")
+
+
+def _resolve_audio_path(url: str) -> str:
+    import tempfile
+    if url.startswith("/results/"):
+        local = os.path.join(RESULTS_DIR, os.path.basename(url))
+        if os.path.exists(local):
+            return local
+    return url
+
+
+# ---------------------------------------------------------------------------
+# Remix endpoint — pitch shifting, tempo adjustment, timbre transformation
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/remix/process", tags=["remix"])
+async def remix_process(request: Request):
+    """
+    Submit an audio remix task (pitch shift, tempo adjustment, timbre EQ).
+
+    Body::
+        {
+            "source_track_id": "track-123",
+            "source_url": "/results/...",
+            "pitchShift": 0,
+            "tempoMultiplier": 1.0,
+            "timbreTransform": "warm"
+        }
+
+    Returns a task_id. Connect to WS /ws/progress/{task_id} for progress.
+    On completion, result_url contains the remixed audio.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    source_url = body.get("source_url", "")
+    if not source_url:
+        raise HTTPException(status_code=422, detail="'source_url' is required")
+
+    task_id = body.get("source_track_id") or str(uuid.uuid4())[:8]
+    if not task_id.startswith("remix-"):
+        task_id = f"remix-{task_id}"
+
+    local_url = source_url
+    if source_url.startswith("/results/"):
+        local_url = source_url
+
+    svc = RemixService(
+        results_dir=RESULTS_DIR,
+        broadcast=_websocket_broadcast,
+    )
+
+    asyncio.create_task(
+        svc.predict(PredictRequest(
+            service_type="remix",
+            task_id=task_id,
+            payload={},
+            extra={
+                "source_track_id": body.get("source_track_id", ""),
+                "source_url": local_url,
+                "pitchShift": body.get("pitchShift", 0),
+                "tempoMultiplier": body.get("tempoMultiplier", 1.0),
+                "timbreTransform": body.get("timbreTransform", "warm"),
+            },
+        ))
+    )
+
+    return {
+        "task_id": task_id,
+        "status": "started",
+        "websocket": f"/ws/progress/{task_id}",
+    }
+
+
+# ---------------------------------------------------------------------------
+# MV Generator endpoints — beat detection + video rendering
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/mv/detect-beats", tags=["mv"])
+async def mv_detect_beats(request: Request):
+    """
+    Detect BPM and beat timestamps from an audio track.
+
+    Body::
+        {
+            "track_id": "track-123",
+            "url": "/results/..."
+        }
+
+    Returns::
+        {
+            "bpm": 120.0,
+            "beat_timestamps": [0.0, 0.5, 1.0, ...],
+            "energy_profile": [{"time": 0.0, "energy": 0.8}, ...]
+        }
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    url = body.get("url", "")
+    if not url:
+        raise HTTPException(status_code=422, detail="'url' is required")
+
+    try:
+        import librosa
+        import numpy as np
+        import tempfile
+        import os as _os
+
+        audio_path = url
+        if url.startswith("/results/"):
+            audio_path = _os.path.join(RESULTS_DIR, _os.path.basename(url))
+        elif url.startswith("http"):
+            import httpx
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    raise HTTPException(status_code=500, detail=f"Download failed: HTTP {resp.status_code}")
+                tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                tmp.write(resp.content)
+                tmp.close()
+                audio_path = tmp.name
+
+        loop = asyncio.get_event_loop()
+        def _detect():
+            y, sr = librosa.load(audio_path, sr=None)
+
+            tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+            beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+
+            hop_length = 512
+            rms = librosa.feature.rms(y=y, frame_length=hop_length, hop_length=hop_length)[0]
+            times = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
+            energy_profile = [
+                {"time": float(t), "energy": float(rms[i])}
+                for i, t in enumerate(times)
+            ]
+
+            if url.startswith("/results/"):
+                pass
+            elif url.startswith("http") and audio_path != url:
+                try:
+                    _os.unlink(audio_path)
+                except OSError:
+                    pass
+
+            return {
+                "bpm": float(tempo),
+                "beat_timestamps": [float(t) for t in beat_times],
+                "energy_profile": energy_profile,
+            }
+
+        result = await loop.run_in_executor(None, _detect)
+        return result
+
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="librosa not installed. Run: pip install librosa",
+        )
+    except Exception as exc:
+        logger.exception("Beat detection failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)[:300])
+
+
+@app.post("/api/v1/mv/render", tags=["mv"])
+async def mv_render(request: Request):
+    """
+    Render a music video from audio track + beat data + config.
+
+    Body::
+        {
+            "source_track_id": "track-123",
+            "audio_url": "/results/...",
+            "beat_data": { "bpm": 120, "beat_timestamps": [...] },
+            "config": {
+                "resolution": "1080p",
+                "aspectRatio": "16:9",
+                "transitionStyle": "cut",
+                "backgroundColor": "#1a1a2e",
+                "waveformVisualization": true
+            }
+        }
+
+    Returns task_id. WS /ws/progress/{task_id} streams rendering progress.
+    On completion, result_url contains the MP4 file.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    audio_url = body.get("audio_url", "")
+    if not audio_url:
+        raise HTTPException(status_code=422, detail="'audio_url' is required")
+
+    task_id = body.get("source_track_id", f"mv-{uuid.uuid4().hex[:8]}")
+    if not task_id.startswith("mv-"):
+        task_id = f"mv-{task_id}"
+
+    beat_data = body.get("beat_data", {})
+    config = body.get("config", {})
+
+    async def _render_mv(
+        tid: str,
+        src_url: str,
+        beats: dict,
+        cfg: dict,
+    ) -> None:
+        resolution_map = {"720p": (1280, 720), "1080p": (1920, 1080), "4K": (3840, 2160)}
+        res = cfg.get("resolution", "1080p")
+        width, height = resolution_map.get(res, (1920, 1080))
+        bg = cfg.get("backgroundColor", "#1a1a2e")
+        show_waveform = cfg.get("waveformVisualization", True)
+
+        try:
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.PENDING, progress=0,
+                    message="Preparing MV render...",
+                ),
+            )
+
+            await asyncio.sleep(0.5)
+
+            # Phase 2: Build waveform visualization image
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.RUNNING, progress=20,
+                    message="Rendering waveform visualization...",
+                ),
+            )
+
+            import subprocess
+            import tempfile
+            import os as _os
+
+            out_path = _os.path.join(RESULTS_DIR, f"{tid}_mv.mp4")
+            waveform_img = None
+
+            if show_waveform:
+                waveform_img = tempfile.NamedTemporaryFile(
+                    suffix=".png", delete=False,
+                ).name
+                # Generate waveform PNG via ffmpeg showwaves filter
+                showwaves_cmd = [
+                    _find_ffmpeg(), "-y",
+                    "-i", _resolve_audio_path(src_url),
+                    "-filter_complex",
+                    f"[0:a]showwaves=s={width}x{height}:mode=cline:colors=0x16A34A|0x9333EA|0x3B82F6:scale=sqrt[wave]",
+                    "-frames:v", "1",
+                    "-map", "[wave]",
+                    waveform_img,
+                ]
+                _ffmpeg_run(showwaves_cmd)
+
+            # Phase 3: Encode final video
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.RUNNING, progress=50,
+                    message="Encoding video with ffmpeg...",
+                ),
+            )
+
+            # Build ffmpeg filter: waveform image + beat markers overlay
+            beat_str = ":".join(
+                str(t) for t in beats.get("beat_timestamps", [])[:64]
+            ) if beats.get("beat_timestamps") else ""
+            vf_parts: list[str] = []
+            if waveform_img:
+                vf_parts.append(f"movie={waveform_img}[wm]")
+                vf_parts.append(f"[wm]scale={width}:{height},format=rgba[bg]")
+            if beat_str:
+                beat_pts = beats.get("beat_timestamps", [])
+                for i, bt in enumerate(beat_pts[:32]):
+                    color = ("red" if i % 4 == 0 else "white")
+                    vf_parts.append(
+                        f"drawtext=text='●':fontcolor={color}:fontsize=24:"
+                        f"x={width-80}:y={height-80}:enable='between(t,{bt},"
+                        f"{bt+0.15})'"
+                    )
+            vf_chain = ",".join(vf_parts) if vf_parts else "null"
+
+            enc_cmd = [
+                _find_ffmpeg(), "-y",
+                "-loop", "1",
+                "-i", waveform_img or "nullsrc=s={width}x{height}:d=10",
+                "-i", _resolve_audio_path(src_url),
+                "-filter_complex", vf_chain,
+                "-c:v", "libx264", "-preset", "fast",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "192k",
+                "-shortest",
+                out_path,
+            ]
+            if waveform_img:
+                _ffmpeg_run(enc_cmd)
+
+            result_url = f"/results/{tid}_mv.mp4"
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.COMPLETED, progress=100,
+                    message="MV rendered successfully!",
+                    result_url=result_url,
+                    metadata={
+                        "resolution": res,
+                        "width": width,
+                        "height": height,
+                        "beat_count": len(beats.get("beat_timestamps", [])),
+                        "bpm": beats.get("bpm", 0),
+                    },
+                    updated_at=time.time(),
+                ),
+            )
+
+        except Exception as exc:
+            logger.exception("MV render failed: %s", exc)
+            await _websocket_broadcast(
+                tid,
+                PredictResult(
+                    task_id=tid, status=TaskStatus.FAILED, progress=0,
+                    error=str(exc)[:300],
+                    error_code="MV_RENDER_FAILED",
+                    retryable=False,
+                    updated_at=time.time(),
+                ),
+            )
+
+    asyncio.create_task(_render_mv(task_id, audio_url, beat_data, config))
+
+    return {
+        "task_id": task_id,
+        "status": "started",
+        "websocket": f"/ws/progress/{task_id}",
+    }
 
 
 # ---------------------------------------------------------------------------
