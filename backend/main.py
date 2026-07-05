@@ -1454,8 +1454,218 @@ async def trim_audio_endpoint(
 
 
 # ---------------------------------------------------------------------------
-# Mix render endpoint — multi-track mixer with volume/pan/EQ/reverb
+# Copyright Watermark endpoints — fingerprint + blind watermark
 # ---------------------------------------------------------------------------
+
+
+from app.services.watermark import (
+    AudioFingerprintService,
+    BlindWatermarkService,
+    WatermarkPayload,
+)
+
+
+@app.get("/api/v1/watermark/fingerprint", tags=["watermark"])
+async def fingerprint_audio(url: str):
+    """
+    Extract spectral fingerprint from audio URL.
+    Returns MFCC hash, chroma hash, spectral stats.
+    """
+    # Download audio to temp file
+    import tempfile as tmpf
+    import httpx
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Failed to fetch audio: {resp.status_code}")
+
+        with tmpf.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+            tf.write(resp.content)
+            tmp_path = tf.name
+
+    try:
+        fingerprint = await AudioFingerprintService.extract(tmp_path)
+        if fingerprint is None:
+            raise HTTPException(status_code=422, detail="Failed to extract fingerprint — audio too short or codec unsupported")
+        return fingerprint.to_dict()
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
+@app.post("/api/v1/watermark/embed", tags=["watermark"])
+async def embed_watermark(request: Request):
+    """
+    Embed a blind watermark into audio.
+    Returns a watermarked audio file (base64).
+
+    Body:
+        {
+            "audio_url": "...",
+            "owner_id": "user-123",
+            "project_id": "proj-456"
+        }
+    """
+    body = await request.json()
+
+    audio_url = body.get("audio_url", "")
+    owner_id = body.get("owner_id", "anonymous")
+    project_id = body.get("project_id", "unknown")
+
+    if not audio_url:
+        raise HTTPException(status_code=422, detail="audio_url is required")
+
+    # Download source audio
+    import tempfile as tmpf
+    import httpx
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.get(audio_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Failed to fetch audio: {resp.status_code}")
+
+        with tmpf.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+            tf.write(resp.content)
+            src_path = tf.name
+
+    out_path = src_path + "_wm.wav"
+
+    try:
+        # Get fingerprint first
+        fp = await AudioFingerprintService.extract(src_path)
+
+        payload = WatermarkPayload(
+            owner_id=owner_id,
+            project_id=project_id,
+            timestamp=str(int(time.time())),
+            rights="all_rights_reserved",
+            signature=fp.composite_id if fp else "",
+        )
+
+        ok = await BlindWatermarkService.embed(src_path, payload, out_path)
+
+        if not ok:
+            raise HTTPException(status_code=500, detail="Blind watermark embed failed")
+
+        # Read result as base64
+        with open(out_path, "rb") as f:
+            result_bytes = f.read()
+
+        import base64
+        b64 = base64.b64encode(result_bytes).decode()
+
+        return {
+            "fingerprint": fp.to_dict() if fp else None,
+            "watermark": payload.to_dict(),
+            "watermarked": True,
+            "content_type": "audio/wav",
+            "data": f"data:audio/wav;base64,{b64}",
+            "composite_id": fp.composite_id if fp else None,
+        }
+    finally:
+        for path in (src_path, out_path):
+            try:
+                os.unlink(path)
+            except Exception:
+                pass
+
+
+@app.post("/api/v1/watermark/extract", tags=["watermark"])
+async def extract_watermark(request: Request):
+    """
+    Extract and decode a blind watermark from audio.
+    Returns the WatermarkPayload if found.
+
+    Body:
+        {
+            "audio_url": "..."
+        }
+    """
+    body = await request.json()
+    audio_url = body.get("audio_url", "")
+
+    if not audio_url:
+        raise HTTPException(status_code=422, detail="audio_url is required")
+
+    import tempfile as tmpf
+    import httpx
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.get(audio_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Failed to fetch audio: {resp.status_code}")
+
+        with tmpf.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+            tf.write(resp.content)
+            tmp_path = tf.name
+
+    try:
+        payload = await BlindWatermarkService.extract(tmp_path)
+        if payload is None:
+            return {"found": False, "message": "No watermark detected"}
+
+        return {
+            "found": True,
+            "watermark": payload.to_dict(),
+        }
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
+@app.post("/api/v1/watermark/apply", tags=["watermark"])
+async def watermark_apply(request: Request):
+    """
+    Combined fingerprint + embed in one call.
+    """
+    body = await request.json()
+
+    audio_url = body.get("audio_url", "")
+    owner_id = body.get("owner_id", "anonymous")
+    project_id = body.get("project_id", "unknown")
+
+    if not audio_url:
+        raise HTTPException(status_code=422, detail="audio_url is required")
+
+    from app.services.watermark import fingerprint_and_watermark
+
+    import tempfile as tmpf
+    import httpx
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.get(audio_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Failed to fetch audio: {resp.status_code}")
+
+        with tmpf.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+            tf.write(resp.content)
+            tmp_path = tf.name
+
+    try:
+        result = await fingerprint_and_watermark(tmp_path, owner_id, project_id)
+
+        if result.get("watermarked"):
+            with open(result["watermarked_path"], "rb") as f:
+                import base64
+                b64 = base64.b64encode(f.read()).decode()
+            result["data"] = f"data:audio/wav;base64,{b64}"
+
+        return result
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+        if result.get("watermarked_path"):
+            try:
+                os.unlink(result["watermarked_path"])
+            except Exception:
+                pass
 
 
 @app.post("/api/v1/mix/render", tags=["mix"])
@@ -1993,6 +2203,13 @@ async def root():
         "workflow_a": "/api/v1/workflow/a  (Suno-style: prompt→music)",
         "workflow_b": "/api/v1/workflow/b  (Hybrid: music+TTS)",
         "workflow_c": "/api/v1/workflow/c  (Remix: upload→stems)",
+        "workflow_d": "/api/v1/workflow/d  (MIDI: project→audio)",
+        "remix_process": "/api/v1/remix/process",
+        "lyrics_generate": "/api/v1/lyrics/generate",
+        "watermark_fingerprint": "/api/v1/watermark/fingerprint",
+        "watermark_embed": "/api/v1/watermark/embed",
+        "watermark_extract": "/api/v1/watermark/extract",
         "websocket": "/ws/progress/{task_id}",
         "mock_run": "/api/v1/mock/run",
     }
+
