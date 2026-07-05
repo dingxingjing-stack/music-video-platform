@@ -17,11 +17,12 @@ interface Props {
   track: Track;
   onRemixComplete: (newTrack: Track) => void;
   onRemixError: (error: string) => void;
+  onRemixDone?: (sourceTrackId: string, params: RemixParameters) => void;
 }
 
 const TIMBRE_PRESETS: NonNullable<RemixParameters['timbreTransform']>[] = ['warm', 'bright', 'dark', 'thin', 'heavy'];
 
-export function RemixTool({ track, onRemixComplete, onRemixError }: Props) {
+export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }: Props) {
   const [pitch, setPitch] = useState(0);
   const [tempo, setTempo] = useState(1.0);
   const [timbre, setTimbre] = useState<TimbrePreset>('warm');
@@ -79,6 +80,8 @@ export function RemixTool({ track, onRemixComplete, onRemixError }: Props) {
               color: '#8b5cf6',
               createdAt: Date.now(),
             };
+            const remixParams: RemixParameters = { pitchShift: pitch, tempoMultiplier: tempo, timbreTransform: timbre };
+            onRemixDone?.(track.id, remixParams);
             onRemixComplete(newTrack);
             setCollapsed(true);
           } else if (msg.status === 'failed') {

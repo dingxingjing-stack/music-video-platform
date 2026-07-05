@@ -12,9 +12,10 @@
 
 ## 变更记录
 
-| Date | Change | Description |
-|------|--------|-------------|
-| 2026-06-30 | P1: Implement RemixTool.tsx | Created RemixTool component (pitch ±12st, tempo 0.5-2.0x, timbre presets) with /api/v1/remix/process API integration. Wired into TrackList and HistoryPanel as floating menu on completed tracks. Added remix WS progress handling, provenance marking (derivative tracks). Updated types with ProjectProvenance, RemixParameters, BeatDetectionResult, VideoRenderJob. `tsc --noEmit` passes zero errors. |
+|| Date | Change | Description ||
+|------|--------|-------------||
+|| 2026-07-05 | P0: Implement ProvenanceTimeline | Created `ProvenanceTimeline.tsx` component with vertical timeline UI, color-coded operation nodes (generate/remix/trim/mv), param summaries, originality badge (原创/衍生), and JSON-LD export. Integrated into TrackStudio.tsx with provenance state management. RemixTool now records detailed params (pitchShift, tempoMultiplier, timbreTransform) and marks derivative works. `tsc --noEmit` passes zero errors. |
+|| 2026-06-30 | P1: Implement RemixTool.tsx | Created RemixTool component (pitch ±12st, tempo 0.5-2.0x, timbre presets) with /api/v1/remix/process API integration. Wired into TrackList and HistoryPanel as floating menu on completed tracks. Added remix WS progress handling, provenance marking (derivative tracks). Updated types with ProjectProvenance, RemixParameters, BeatDetectionResult, VideoRenderJob. `tsc --noEmit` passes zero errors. |
 | 2026-06-30 | Feature planning: copyright protection, MV generator, provenance audit | Added Section 8 (功能规划) to best-practices.md. Designed RemixTool.tsx, useVideoGenerator.ts, ProjectProvenance type. Identified 5 backend services needed. |
 | 2026-06-30 | Refactor TrackStudio.tsx (1586 lines → ~30 files) | Phase 1: Extract types (`types/trackStudio.ts`), hooks (`useSessionStorage`, `useBatchProgress`). Phase 2: Create 10 sub-components (`MiniWaveform`, `AudioPlayer`, `TrackStudioHeader`, `PathSelector`, `TrackInputArea`, `TrackList`, `HistoryPanel`, `IdleState`, `BatchProgressDashboard`). Phase 3: Rewrite `TrackStudio.tsx` as composition entry (~350 lines). Original backed up as `.tsx.bak`. `tsc --noEmit` passes zero errors. |
 | 2026-06-30 | Session interrupted — state frozen | User signed off. All files committed/staged. Build verified. See 明日待办 below. |
@@ -47,9 +48,7 @@
 
 ## 明日待办
 
-- [ ] **P0: Provenance 时间轴可视化** — 创建 `ProvenanceTimeline.tsx` 组件，
-       展示从生成 → remix → trim → 导出的完整操作链。
-       需要在 TrackStudio 中维护 `ProjectProvenance[]` 状态并传递给 Timeline。
+- [x] **P0: Provenance 时间轴可视化** — ✅ 已完成。`ProvenanceTimeline.tsx` 组件，垂直时间轴，颜色编码操作节点，原创/衍生徽章，JSON-LD 导出。
 - [ ] **RemixTool WS 反馈链路验证** — 启动后端 mock，确认
        `POST /api/v1/remix/process` → WS 推送 → `onRemixComplete` 追加新 track 到 history 的全链路。
 - [ ] **useVideoGenerator.ts 骨架** — 对接 `/api/v1/mv/detect-beats` 和

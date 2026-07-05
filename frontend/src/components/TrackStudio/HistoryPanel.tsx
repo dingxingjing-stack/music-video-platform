@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Track } from '../../types/trackStudio';
+import type { Track, RemixParameters } from '../../types/trackStudio';
 import { formatDate } from '../../types/trackStudio';
 import { AudioPlayer } from '../Audio/AudioPlayer';
 import { RemixTool } from './RemixTool';
@@ -13,11 +13,12 @@ import { RemixTool } from './RemixTool';
 interface Props {
   history: Track[];
   onClear: () => void;
-  onRename: (id: string, name: string) => void;
+  onRename: (id: string, newName: string) => void;
   onDelete: (id: string) => void;
   onTrimChange: (trackId: string, start: number, end: number) => void;
   onRemixComplete?: (newTrack: Track) => void;
   onRemixError?: (error: string) => void;
+  onRemixDone?: (sourceTrackId: string, params: RemixParameters) => void;
 }
 
 export function HistoryPanel({
@@ -28,6 +29,7 @@ export function HistoryPanel({
   onTrimChange,
   onRemixComplete,
   onRemixError,
+  onRemixDone,
 }: Props) {
   if (history.length === 0) return null;
 
@@ -110,6 +112,7 @@ export function HistoryPanel({
                 track={track}
                 onRemixComplete={onRemixComplete}
                 onRemixError={(err) => onRemixError?.(err)}
+                onRemixDone={onRemixDone}
               />
             )}
           </div>

@@ -19,7 +19,15 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useWebSocketProgress } from '../hooks/useWebSocketProgress';
 import { useSessionStorage } from '../hooks/useSessionStorage';
 import { useTranslation } from '../i18n/useTranslation';
-import type { Track, PersistedSession } from '../types/trackStudio';
+import type {
+  Track,
+  PersistedSession,
+  MidiProject,
+  ProjectProvenance,
+  ProvenanceOperation,
+  ProvenanceOperationType,
+  RemixParameters,
+} from '../types/trackStudio';
 import {
   PATHS,
   TRACK_COLORS,
@@ -35,6 +43,7 @@ import { IdleState } from '../components/TrackStudio/IdleState';
 import { BatchProgressDashboard } from '../components/TrackStudio/BatchProgressDashboard';
 import { MixConsole } from '../components/TrackStudio/MixConsole';
 import { MVGenerator } from '../components/TrackStudio/MVGenerator';
+import { ProvenanceTimeline } from '../components/TrackStudio/ProvenanceTimeline';
 
 // ── Fetch with Retry & Concurrency Limit ──────────────────────────────────
 const MAX_CONCURRENT = 4;
@@ -136,7 +145,7 @@ export function TrackStudio() {
   );
 
   // ── Local state ──────────────────────────────────────────────────────
-  const [selectedPath, setSelectedPath] = useState<'a' | 'b' | 'c'>('a');
+  const [selectedPath, setSelectedPath] = useState<'a' | 'b' | 'c' | 'd'>('a');
   const [prompt, setPrompt] = useState(PATHS[0].prompt);
   const [ttsText, setTtsText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<{
@@ -147,6 +156,51 @@ export function TrackStudio() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // ── Provenance Tracking ────────────────────────────────────────────────
+  const [provenance, setProvenance] = useState<ProjectProvenance | null>(null);
+
+  const createProvenance = useCallback(
+    (): ProjectProvenance => ({
+      projectId: `prov-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: Date.now(),
+      originality: 'original',
+      sourceTrackId: null,
+      operations: [],
+    }),
+    [],
+  );
+
+  const recordOp = useCallback(
+    (type: ProvenanceOperationType, params: Record<string, unknown>, resultTrackId?: string) => {
+      setProvenance((prev) => {
+        if (!prev) {
+          return createProvenance();
+        }
+        const op: ProvenanceOperation = {
+          type,
+          timestamp: Date.now(),
+          params,
+          resultTrackId,
+        };
+        return { ...prev, operations: [...prev.operations, op] };
+      });
+    },
+    [createProvenance],
+  );
+
+  const markDerivative = useCallback(
+    (sourceTrackId: string) => {
+      setProvenance((prev) => {
+        if (!prev) return prev;
+        return { ...prev, originality: 'derivative', sourceTrackId };
+      });
+    },
+    [],
+  );
+
+  // ── Path D: MIDI Project ─────────────────────────────────────────────────
+  const [midiProject, setMidiProject] = useState<MidiProject | null>(null);
 
   // ── Batch mode ───────────────────────────────────────────────────────
   const [batchMode, setBatchMode] = useState(false);
@@ -270,6 +324,11 @@ export function TrackStudio() {
         }
         body.audio_base64 = uploadedFile.base64;
         body.stem_count = t('common.stemCount4');
+      } else if (selectedPath === 'd') {
+        if (!midiProject) {
+          throw new Error(t('errors.midiProjectRequired'));
+        }
+        body.midi_project = midiProject;
       }
 
       const resp = await fetchWithRetry(endpoint, {
@@ -284,7 +343,7 @@ export function TrackStudio() {
       }
 
       const data: ApiResult = await resp.json();
-      const path = (data.path || selectedPath) as 'a' | 'b' | 'c';
+      const path = (data.path || selectedPath) as 'a' | 'b' | 'c' | 'd';
 
       setWorkflow({
         path,
@@ -558,6 +617,13 @@ export function TrackStudio() {
         .map((t) => ({ ...t, createdAt: Date.now() }));
 
       if (completedTracks.length > 0) {
+        // Record generate operation in provenance
+        const firstTrack = completedTracks[0];
+        const opType: ProvenanceOperationType = 'generate';
+        const pathParams: Record<string, unknown> = { path: workflow.path };
+        if (prompt) pathParams.prompt = prompt;
+        recordOp(opType, pathParams, firstTrack.id);
+
         setHistoryState((prev) =>
           [...completedTracks, ...prev].slice(0, 50),
         );
@@ -627,6 +693,7 @@ export function TrackStudio() {
     setSelectedTrack(null);
     setBatchState(null);
     setBatchStartTime(null);
+    setProvenance(null);
     if (batchWsRef.current) {
       batchWsRef.current.onclose = null;
       batchWsRef.current.close();
@@ -639,7 +706,7 @@ export function TrackStudio() {
   }, []);
 
   const handleSelectPath = useCallback(
-    (path: 'a' | 'b' | 'c') => {
+    (path: 'a' | 'b' | 'c' | 'd') => {
       setSelectedPath(path);
       const def = PATHS.find((p) => p.id === path)!;
       setPrompt(def.prompt || '');
@@ -648,6 +715,39 @@ export function TrackStudio() {
       setUploadError(null);
       setBatchMode(false);
       setBatchPrompts('');
+      
+      // Initialize MIDI project for Path D
+      if (path === 'd') {
+        const defaultProject: MidiProject = {
+          id: `midi-${Date.now()}`,
+          name: 'New MIDI Project',
+          tempo: 120,
+          timeSignature: { numerator: 4, denominator: 4 },
+          ticksPerQuarter: 480,
+          tracks: [
+            {
+              id: `track-${Date.now()}-1`,
+              name: 'Piano',
+              instrument: 0, // Acoustic Grand Piano
+              channel: 0,
+              notes: [],
+              color: TRACK_COLORS[0],
+              solo: false,
+              mute: false,
+              volume: 1,
+              pan: 0,
+            },
+          ],
+          loopStartTick: 0,
+          loopEndTick: 480 * 16, // 4 bars
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setMidiProject(defaultProject);
+      } else {
+        setMidiProject(null);
+      }
+      
       resetStudio();
     },
     [resetStudio],
@@ -662,6 +762,28 @@ export function TrackStudio() {
     [setHistoryState],
   );
 
+  const handleRemixDone = useCallback(
+    (sourceTrackId: string, params: RemixParameters) => {
+      // Mark as derivative and record remix operation with detailed params
+      markDerivative(sourceTrackId);
+
+      let opType: ProvenanceOperationType = 'remix_timbre_transform';
+      if (params.pitchShift && Math.abs(params.pitchShift) > 0) {
+        opType = 'remix_pitch_shift';
+      } else if (params.tempoMultiplier && Math.abs(params.tempoMultiplier - 1) > 0.01) {
+        opType = 'remix_tempo_change';
+      }
+
+      recordOp(opType, {
+        sourceTrackId,
+        pitchShift: params.pitchShift,
+        tempoMultiplier: params.tempoMultiplier,
+        timbreTransform: params.timbreTransform,
+      });
+    },
+    [markDerivative, recordOp],
+  );
+
   const handleRemixError = useCallback(
     (error: string) => {
       console.error('Remix failed:', error);
@@ -674,6 +796,7 @@ export function TrackStudio() {
     loading ||
     workflow.running ||
     (selectedPath === 'c' && !uploadedFile) ||
+    (selectedPath === 'd' && !midiProject) ||
     (!batchMode && selectedPath === 'b' && !prompt);
 
   const hasWorkflowResult = workflow.completed || workflow.error;
@@ -724,6 +847,8 @@ export function TrackStudio() {
           onStart={batchMode ? startBatch : startWorkflow}
           onReset={resetStudio}
           hasWorkflowResult={Boolean(hasWorkflowResult)}
+          midiProject={midiProject ?? undefined}
+          onMidiProjectChange={setMidiProject}
         />
 
         {/* Batch Progress Dashboard */}
@@ -765,7 +890,12 @@ export function TrackStudio() {
         <MixConsole history={history} />
 
         {/* MV Generator */}
-        <MVGenerator history={history} onTrackSelect={handleTrackSelect} />
+        <MVGenerator history={history} onTrackSelect={(track) => handleTrackSelect(track.id)} />
+
+        {/* Provenance Timeline */}
+        {provenance && provenance.operations.length > 0 && (
+          <ProvenanceTimeline provenance={provenance} />
+        )}
 
         {/* History */}
         <HistoryPanel
@@ -776,6 +906,7 @@ export function TrackStudio() {
           onTrimChange={handleTrimChange}
           onRemixComplete={handleRemixComplete}
           onRemixError={handleRemixError}
+          onRemixDone={handleRemixDone}
         />
 
         {/* Idle State */}
