@@ -16,6 +16,7 @@ interface Props {
   onRename: (id: string, newName: string) => void;
   onDelete: (id: string) => void;
   onTrimChange: (trackId: string, start: number, end: number) => void;
+  onTrackSelect?: (trackId: string) => void;
   onRemixComplete?: (newTrack: Track) => void;
   onRemixError?: (error: string) => void;
   onRemixDone?: (sourceTrackId: string, params: RemixParameters) => void;
@@ -27,6 +28,7 @@ export function HistoryPanel({
   onRename,
   onDelete,
   onTrimChange,
+  onTrackSelect,
   onRemixComplete,
   onRemixError,
   onRemixDone,
@@ -69,7 +71,8 @@ export function HistoryPanel({
         {history.map((track) => (
           <div
             key={track.id}
-            className={`rounded-xl border-2 p-3 text-left transition-all flex-shrink-0 ${
+            onClick={() => onTrackSelect?.(track.id)}
+            className={`rounded-xl border-2 p-3 text-left transition-all flex-shrink-0 cursor-pointer ${
               track.status === 'completed'
                 ? 'border-gray-800 bg-gray-900/50 hover:border-gray-600'
                 : 'border-red-900 bg-red-950/20'

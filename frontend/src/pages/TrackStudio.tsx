@@ -930,6 +930,7 @@ export function TrackStudio() {
           onRename={handleRenameTrack}
           onDelete={handleDeleteTrack}
           onTrimChange={handleTrimChange}
+          onTrackSelect={(trackId) => handleTrackSelect(trackId)}
           onRemixComplete={handleRemixComplete}
           onRemixError={handleRemixError}
           onRemixDone={handleRemixDone}
