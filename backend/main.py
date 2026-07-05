@@ -1668,7 +1668,82 @@ async def watermark_apply(request: Request):
                 pass
 
 
-@app.post("/api/v1/mix/render", tags=["mix"])
+# ---------------------------------------------------------------------------
+# AI Lyrics generation endpoint
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/lyrics/generate", tags=["lyrics"])
+async def generate_lyrics(request: Request):
+    """Generate structured lyrics via LLM. Body: prompt, style, language, line_count."""
+    body = await request.json()
+    prompt = body.get("prompt", "")
+    style = body.get("style", "pop")
+    language = body.get("language", "zh")
+    line_count = int(body.get("line_count", 24))
+
+    if not prompt:
+        raise HTTPException(status_code=422, detail="'prompt' is required")
+
+    system_prompt = (
+        f"You are a lyricist. Write lyrics as JSON. Language: {language}. Style: {style}. "
+        "Return ONLY: {\"lines\":[{\"time\":<seconds>,\"text\":\"...\"}]}. "
+        "Make time values evenly spaced across ~3-4 minutes. Include [Verse], [Chorus] markers."
+    )
+    user_prompt = f"Write a {style} song about: {prompt}. ~{line_count} lines. Language: {language}."
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    try:
+        raw = await llm_factory.call(messages=messages, temperature=0.8, max_tokens=2048)
+        return _parse_lyric_response(raw, style, language)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"LLM unavailable: {e}")
+    except Exception as e:
+        logger.exception("Lyrics generation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _parse_lyric_response(raw: str, style: str, language: str) -> dict:
+    import json as _json, re
+    cleaned = raw.strip()
+    cleaned = re.sub(r'^```(?:json)?\s*\n', '', cleaned)
+    cleaned = re.sub(r'\n```\s*$', '', cleaned)
+    try:
+        parsed = _json.loads(cleaned)
+        if isinstance(parsed, dict) and "lines" in parsed:
+            return {"lyric_lines": parsed["lines"], "metadata": {"style": style, "language": language, "generated_by": "llm"}, "raw_lrc": _lines_to_lrc(parsed["lines"])}
+    except (_json.JSONDecodeError, KeyError):
+        pass
+    # Fallback plain text
+    lyric_lines: list[dict] = []
+    for i, line in enumerate(raw.strip().split("\n")):
+        line = line.strip()
+        if not line: continue
+        m = re.match(r'\[(\d{2}):(\d{2})(?:\.(\d+))?\]\s*(.+)', line)
+        if m:
+            t = int(m.group(1))*60 + int(m.group(2)) + (int(m.group(3).ljust(3,"0")[:3])/1000 if m.group(3) else 0)
+            lyric_lines.append({"time": t, "text": m.group(4).strip()})
+        elif re.match(r'\[[A-Za-z ]+\]', line):
+            lyric_lines.append({"time": None, "text": line})
+        else:
+            lyric_lines.append({"time": i * 5.0, "text": line})
+    return {"lyric_lines": lyric_lines, "metadata": {"style": style, "language": language, "generated_by": "llm", "parsed_from": "text"}, "raw_lrc": _lines_to_lrc(lyric_lines)}
+
+
+def _lines_to_lrc(lines: list[dict]) -> str:
+    parts: list[str] = []
+    for line in lines:
+        t = line.get("time")
+        text = line.get("text", "")
+        if t is not None:
+            m = int(t // 60); s = int(t % 60); ms = int((t - int(t)) * 100)
+            parts.append(f"[{m:02d}:{s:02d}.{ms:02d}]{text}")
+        else:
+            parts.append(text)
+    return "\n".join(parts)
 async def mix_render(request: Request):
     """
     Render a multi-track stereo mix with per-track volume, pan, 3-band EQ,
