@@ -9,9 +9,9 @@ import { useTranslation } from '../../i18n';
 import { PATHS } from '../../types/trackStudio';
 
 interface Props {
-  selectedPath: 'a' | 'b' | 'c';
+  selectedPath: 'a' | 'b' | 'c' | 'd';
   running: boolean;
-  onSelectPath: (path: 'a' | 'b' | 'c') => void;
+  onSelectPath: (path: 'a' | 'b' | 'c' | 'd') => void;
 }
 
 export function PathSelector({

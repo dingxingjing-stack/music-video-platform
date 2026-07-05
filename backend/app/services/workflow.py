@@ -54,6 +54,7 @@ class WorkflowEngine:
         tts_token: Optional[str] = None,
         demucs_token: Optional[str] = None,
         use_mock: bool = False,
+        soundfont_path: Optional[str] = None,
     ):
         self.broadcast = broadcast or (lambda tid, r: asyncio.create_task(self._noop(r)))
         self.musicgen_url = musicgen_url
@@ -63,9 +64,11 @@ class WorkflowEngine:
         self.tts_token = tts_token
         self.demucs_token = demucs_token
         self.use_mock = use_mock
+        self.soundfont_path = soundfont_path
         self._musicgen_svc = None
         self._tts_svc = None
         self._demucs_svc = None
+        self._midi_svc = None
 
     @staticmethod
     async def _noop(result: PredictResult) -> None:
@@ -155,6 +158,26 @@ class WorkflowEngine:
                 broadcast=self.broadcast,
             )
         return self._demucs_svc
+
+    def _get_midi_service(self):
+        """Lazy-initialize MIDI render service."""
+        if self._midi_svc is not None:
+            return self._midi_svc
+        from .inference.midi_render import MidiRenderService
+
+        if self.use_mock:
+            self._midi_svc = MockInferenceService(
+                service_type="midi-mock",
+                duration=8.0,
+                tick_interval=0.5,
+                broadcast=self.broadcast,
+            )
+        else:
+            self._midi_svc = MidiRenderService(
+                soundfont_path=self.soundfont_path,
+                broadcast=self.broadcast,
+            )
+        return self._midi_svc
 
     # ------------------------------------------------------------------
     # Path A: Suno-style — prompt → MusicGen → full audio
@@ -483,6 +506,87 @@ class WorkflowEngine:
             message="Stem separation failed",
             error=result.error,
             metadata={"path": "c", "tracks": []},
+            updated_at=time.time(),
+        )
+        await self._broadcast(task_id, TaskStatus.FAILED, 0, failed.message, failed.metadata)
+        return failed
+
+    # ------------------------------------------------------------------
+    # Path D: Original Creation — MIDI project → render to audio
+    # ------------------------------------------------------------------
+
+    async def run_path_d(
+        self,
+        task_id: str,
+        midi_project: dict,
+        *,
+        soundfont_path: Optional[str] = None,
+        output_format: str = "wav",
+    ) -> PredictResult:
+        """
+        Path D: Original creation — render MIDI project to audio.
+
+        Flow: MIDI project → MIDI render service (FluidSynth/mido) → audio file
+        """
+        track_id = f"track-{task_id}-midi"
+        tracks = [{
+            "id": track_id,
+            "name": f"MIDI: {midi_project.get('name', 'Untitled')}",
+            "type": "music",
+            "status": "queued",
+            "url": None,
+            "progress": 0,
+        }]
+
+        # Broadcast: starting
+        await self._broadcast(task_id, TaskStatus.PENDING, 0, "Rendering MIDI project...", {
+            "path": "d", "tracks": tracks
+        })
+
+        svc = self._get_midi_service()
+        result = await svc.predict(PredictRequest(
+            service_type="midi",
+            task_id=task_id,
+            payload={},
+            extra={
+                "midi_project": midi_project,
+                "soundfont_path": soundfont_path or self.soundfont_path,
+                "output_format": output_format,
+            },
+        ))
+
+        # Update tracks and broadcast final result
+        if result.status == TaskStatus.COMPLETED:
+            tracks[0]["status"] = "completed"
+            tracks[0]["progress"] = 100
+            tracks[0]["url"] = result.result_url
+            tracks[0]["elapsed_time"] = result.metadata.get("elapsed_time")
+
+            wrapped = PredictResult(
+                task_id=task_id,
+                status=TaskStatus.COMPLETED,
+                progress=100,
+                message="MIDI project rendered!",
+                result_url=result.result_url,
+                metadata={
+                    "path": "d",
+                    "tracks": tracks,
+                    **result.metadata,
+                },
+                updated_at=time.time(),
+            )
+            await self._broadcast(task_id, TaskStatus.COMPLETED, 100, "MIDI project rendered!", wrapped.metadata)
+            return wrapped
+
+        # Failed
+        tracks[0]["status"] = "failed"
+        failed = PredictResult(
+            task_id=task_id,
+            status=TaskStatus.FAILED,
+            progress=0,
+            message="MIDI render failed",
+            error=result.error,
+            metadata={"path": "d", "tracks": tracks},
             updated_at=time.time(),
         )
         await self._broadcast(task_id, TaskStatus.FAILED, 0, failed.message, failed.metadata)

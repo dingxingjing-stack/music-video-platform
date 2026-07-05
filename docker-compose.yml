@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: mvp-backend
+    ports:
+      - "80:80"
+    environment:
+      - WORKFLOW_MODE=${WORKFLOW_MODE:-mock}
+      - TTS_BACKEND_MODE=${TTS_BACKEND_MODE:-mock}
+      - MUSICGEN_SPACE_URL=${MUSICGEN_SPACE_URL:-}
+      - TTS_SPACE_URL=${TTS_SPACE_URL:-}
+      - DEMUCS_SPACE_URL=${DEMUCS_SPACE_URL:-}
+      - NVIDIA_LLM_API_KEY=${NVIDIA_LLM_API_KEY:-}
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      - MIDI_SOUNDFONT_PATH=${MIDI_SOUNDFONT_PATH:-/usr/share/sounds/sf2/FluidR3_GM.sf2}
+    volumes:
+      - results_data:/app/results
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  results_data:

@@ -9,10 +9,10 @@
  *   - Preview and download final MV
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from '../../i18n';
-import type { Track, BeatDetectionResult, MVConfig, VideoRenderJob } from '../../types/trackStudio';
-import { useWebSocketProgress } from '../../hooks/useWebSocketProgress';
+import type { Track, MVConfig } from '../../types/trackStudio';
+import { useVideoGenerator } from '../../hooks/useVideoGenerator';
 
 const RESOLUTIONS = ['720p', '1080p', '4K'] as const;
 const ASPECT_RATIOS = ['16:9', '9:16', '1:1'] as const;
@@ -29,10 +29,6 @@ export function MVGenerator({ history, onTrackSelect }: Props) {
 
   // Track selection
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  // Beat detection
-  const [beatData, setBeatData] = useState<BeatDetectionResult | null>(null);
-  const [detectingBeats, setDetectingBeats] = useState(false);
-  const [detectError, setDetectError] = useState<string | null>(null);
   // Video config
   const [config, setConfig] = useState<MVConfig>({
     resolution: '1080p',
@@ -41,84 +37,43 @@ export function MVGenerator({ history, onTrackSelect }: Props) {
     backgroundColor: '#1a1a2e',
     waveformVisualization: true,
   });
-  // Render state
-  const [renderJob, setRenderJob] = useState<VideoRenderJob | null>(null);
-  const [rendering, setRendering] = useState(false);
 
-  // WebSocket progress hook for render
-  const { progress: wsProgress, message: wsMessage, resultUrl: wsResultUrl, error: wsError, connected: wsConnected } = useWebSocketProgress(renderJob?.jobId || null);
+  // Video generator hook
+  const {
+    beatData,
+    detectingBeats,
+    detectError,
+    detectBeats,
+    clearBeatData,
+    renderJob,
+    rendering,
+    renderVideo,
+    clearRenderJob,
+    wsMessage,
+    wsResultUrl,
+    wsError,
+    wsConnected,
+  } = useVideoGenerator();
 
   // Track selection handler
   const handleTrackSelect = useCallback((track: Track) => {
     setSelectedTrack(track);
-    setBeatData(null);
-    setDetectError(null);
+    clearBeatData();
+    clearRenderJob();
     onTrackSelect(track);
-  }, [onTrackSelect]);
+  }, [onTrackSelect, clearBeatData, clearRenderJob]);
 
-  // Detect beats
-  const handleDetectBeats = useCallback(async () => {
-    if (!selectedTrack?.url) return;
-    setDetectingBeats(true);
-    setDetectError(null);
-    try {
-      const resp = await fetch('/api/v1/mv/detect-beats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ track_id: selectedTrack.id, url: selectedTrack.url }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      setBeatData({
-        bpm: data.bpm,
-        beatTimestamps: data.beat_timestamps,
-        energyProfile: data.energy_profile,
-      });
-    } catch (err) {
-      console.error('Beat detection failed:', err);
-      setDetectError('Beat detection failed');
-    } finally {
-      setDetectingBeats(false);
+  const handleDetectBeats = useCallback(() => {
+    if (selectedTrack?.url) {
+      detectBeats(selectedTrack.id, selectedTrack.url);
     }
-  }, [selectedTrack]);
+  }, [selectedTrack, detectBeats]);
 
-  // Start video render
-  const handleRenderVideo = useCallback(async () => {
-    if (!selectedTrack?.url || !beatData) return;
-    setRendering(true);
-    try {
-      const resp = await fetch('/api/v1/mv/render', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source_track_id: selectedTrack.id,
-          audio_url: selectedTrack.url,
-          beat_data: beatData,
-          config,
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      setRenderJob({
-        jobId: data.task_id,
-        sourceTrackId: selectedTrack.id,
-        beatResult: beatData,
-        config,
-        status: 'queued',
-        progress: 0,
-      });
-    } catch (err) {
-      console.error('MV render failed:', err);
-      setRendering(false);
+  const handleRenderVideo = useCallback(() => {
+    if (selectedTrack?.url && beatData) {
+      renderVideo(selectedTrack.id, selectedTrack.url, beatData, config);
     }
-  }, [selectedTrack, beatData, config]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // WebSocket cleanup handled by hook
-    };
-  }, [renderJob]);
+  }, [selectedTrack, beatData, config, renderVideo]);
 
   if (completedTracks.length === 0) {
     return (
@@ -288,9 +243,10 @@ export function MVGenerator({ history, onTrackSelect }: Props) {
 
       {/* Download Result */}
       {wsResultUrl && (
-        <div className="border-t border-gray-800 pt-4">
-          <audio controls src={wsResultUrl} className="w-full" preload="metadata" />
-          <div className="flex gap-2 mt-2">
+        <div className="border-t border-gray-800 pt-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-300">{t('ui.mvReady')}</h3>
+          <video controls src={wsResultUrl} className="w-full rounded-lg bg-black" preload="metadata" />
+          <div className="flex gap-2">
             <a
               href={wsResultUrl}
               download={`mv_${selectedTrack?.id || 'output'}.mp4`}

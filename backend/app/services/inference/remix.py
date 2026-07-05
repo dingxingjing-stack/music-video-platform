@@ -204,12 +204,9 @@ class RemixService(BaseInferenceService):
         audio_bytes: bytes, ext: str,
         pitch: int, tempo: float, timbre: str,
     ) -> Optional[bytes]:
-        """Synchronous DSP (runs in executor)."""
-        try:
-            from pydub import AudioSegment
-        except ImportError:
-            logger.error("pydub not installed — remix unavailable")
-            return None
+        """Synchronous DSP via ffmpeg filter_complex (runs in executor)."""
+        import shutil
+        import subprocess
 
         # Write temp input
         tmp_in = tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False)
@@ -217,39 +214,92 @@ class RemixService(BaseInferenceService):
         tmp_in.close()
         tmp_out = tempfile.mktemp(suffix=".wav")
 
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            logger.error("ffmpeg not found — remix unavailable")
+            return None
+
+        # Build ffmpeg filter chain:
+        # 1. asetrate for pitch shift (changes sample rate → pitch changes)
+        # 2. atempo for tempo change (preserves pitch, changes speed)
+        # 3. EQ via aeval / lowshelf / highshelf filters for timbre
+        filters: list[str] = []
+
+        if pitch != 0:
+            # Pitch shift (pitch-only, tempo preserved):
+            # 1. asetrate changes the sample rate metadata → pitch goes up
+            #    by N semitones but duration shrinks by factor 2^(N/12)
+            # 2. atempo reverses the duration change, restoring original speed
+            pitch_rate = int(44100 * (2.0 ** (pitch / 12.0)))
+            tempo_fix = 2.0 ** (-pitch / 12.0)
+            filters.append(f"asetrate={pitch_rate}")
+            filters.append(f"atempo={tempo_fix:.6f}")
+            filters.append("aresample=44100")
+
+        if tempo != 1.0:
+            # atempo handles tempo change while preserving pitch
+            # ffmpeg allows 0.5–2.0 per filter; chain if outside range
+            t = tempo
+            while t > 2.0:
+                filters.append("atempo=2.0")
+                t /= 2.0
+            while t < 0.5:
+                filters.append("atempo=0.5")
+                t *= 2.0
+            if t != 1.0:
+                filters.append(f"atempo={t:.4f}")
+
+        # Timbre EQ via lowshelf/highshelf
+        eq = TIMBRE_EQ_PRESETS.get(timbre, TIMBRE_EQ_PRESETS["warm"])
+        bass_boost = eq.get("bass_boost", 0.0)
+        bass_cut = eq.get("bass_cut", 0.0)
+        treble_boost = eq.get("treble_boost", 0.0)
+        treble_cut = eq.get("treble_cut", 0.0)
+        mid_boost = eq.get("mid_boost", 0.0)
+        mid_cut = eq.get("mid_cut", 0.0)
+
+        bass_gain = bass_boost or bass_cut
+        if bass_gain != 0.0:
+            filters.append(f"lowshelf=f=250:g={bass_gain}")
+
+        treble_gain = treble_boost or treble_cut
+        if treble_gain != 0.0:
+            filters.append(f"highshelf=f=4000:g={treble_gain}")
+
+        mid_gain = mid_boost or mid_cut
+        if mid_gain != 0.0:
+            filters.append(f"equalizer=f=1000:t=q:w=1.0:g={mid_gain}")
+
+        # Normalize via dynaudnorm for consistent loudness
+        filters.append("dynaudnorm=f=200")
+
+        filter_str = ",".join(filters) if filters else "anull"
+
+        cmd = [
+            ffmpeg, "-y", "-i", tmp_in.name,
+            "-af", filter_str,
+            "-ar", "44100", "-ac", "2",
+            "-c:a", "pcm_s16le",
+            tmp_out,
+        ]
+
+        logger.info("Remix ffmpeg filter: %s", filter_str)
+
         try:
-            seg = AudioSegment.from_file(tmp_in.name, format=ext)
+            subprocess.run(cmd, check=True, capture_output=True, timeout=120)
+        except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.decode(errors="replace")[-500:]
+            logger.error("Remix ffmpeg failed: %s", stderr)
+            return None
+        except subprocess.TimeoutExpired:
+            logger.error("Remix ffmpeg timed out")
+            return None
 
-            # 1) Pitch shift: change frame_rate → audio plays faster/slower at
-            #    original rate (pitch changes). Then resample to original rate
-            #    to keep duration unchanged (pitch-only effect).
-            original_rate = seg.frame_rate
-            if pitch != 0:
-                octaves = pitch / 12.0
-                shifted_rate = int(original_rate * (2.0 ** octaves))
-                seg = seg._spawn(seg.raw_data, overrides={"frame_rate": shifted_rate})
-                seg = seg.set_frame_rate(original_rate)
-
-            # 2) Tempo: change speed via frame_rate shift without pitch correction
-            if tempo != 1.0:
-                tempo_rate = int(original_rate * tempo)
-                seg = seg._spawn(seg.raw_data, overrides={"frame_rate": tempo_rate})
-                seg = seg.set_frame_rate(original_rate)
-
-            # 3) Timbre EQ via pydub frequency manipulation
-            eq = TIMBRE_EQ_PRESETS.get(timbre, TIMBRE_EQ_PRESETS["warm"])
-            if eq.get("bass_boost", 0) != 0:
-                seg = seg.low_pass_filter(250) + (eq["bass_boost"] / 5.0) * seg
-            if eq.get("treble_boost", 0) != 0:
-                seg = seg.high_pass_filter(4000) + (eq["treble_boost"] / 5.0) * seg
-
-            seg = seg.normalize(headroom=0.5)
-            seg.export(tmp_out, format="wav")
-
+        try:
             with open(tmp_out, "rb") as f:
                 return f.read()
-        except Exception as exc:
-            logger.exception("DSP processing failed")
+        except OSError as exc:
+            logger.error("Remix output read failed: %s", exc)
             return None
         finally:
             try:
@@ -262,11 +312,11 @@ class RemixService(BaseInferenceService):
                 pass
 
     async def health_check(self) -> tuple[bool, str]:
-        try:
-            from pydub import AudioSegment
-            return True, "Remix service (pydub + ffmpeg) available"
-        except ImportError:
-            return False, "pydub not installed"
+        import shutil
+        ffmpeg = shutil.which("ffmpeg")
+        if ffmpeg:
+            return True, f"Remix service available (ffmpeg: {ffmpeg})"
+        return False, "ffmpeg not installed"
 
     # Stub abstract methods (service doesn't use HF Spaces)
     def _build_payload(self, **kwargs) -> dict[str, Any]:

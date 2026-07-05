@@ -27,6 +27,7 @@ from .base import BaseInferenceService, BroadcastCallback, PredictRequest, Predi
 from .gpt_sovits import GPTSovitsService
 from .musicgen import MusicGenService
 from .cogvideox import CogVideoXService
+from .midi_render import MidiRenderService, create_midi_render_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ _SERVICE_REGISTRY: dict[str, tuple[type[BaseInferenceService], str]] = {
     "tts": (GPTSovitsService, "GPT_SOVITS"),
     "music": (MusicGenService, "MUSICGEN"),
     "video": (CogVideoXService, "COGVIDEOX"),
+    "midi": (MidiRenderService, "MIDI_RENDER"),
 }
 
 # Alias support: allow alternate names to resolve to canonical types
@@ -44,6 +46,7 @@ _ALIASES: dict[str, str] = {
     "music_gen": "music",
     "text2video": "video",
     "t2v": "video",
+    "midi_render": "midi",
 }
 
 

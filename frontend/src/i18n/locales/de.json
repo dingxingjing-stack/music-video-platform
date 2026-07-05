@@ -67,6 +67,7 @@
     "mvGenerator": "MV Generator",
     "detectBeats": "Beats erkennen",
     "renderVideo": "Video rendern",
+    "mvReady": "MV Bereit",
     "waveformVisualization": "Wellenform-Visualisierung",
     "backgroundColor": "Hintergrundfarbe",
     "resolution": "Auflösung",
@@ -103,7 +104,8 @@
     "unsupportedFormat": "Nicht unterstütztes Format",
     "fileTooLarge": "Datei zu groß",
     "batchEmpty": "Stapelliste leer",
-    "unknownError": "Unbekannter Fehler",
-    "batchNotSupported": "Stapelmodus nicht für Pfad C (Remix) unterstützt"
+    "batchNotSupported": "Stapelmodus nicht für Pfad C (Remix) unterstützt",
+    "midiProjectRequired": "MIDI-Projekt erforderlich",
+    "unknownError": "Unbekannter Fehler"
   }
 }

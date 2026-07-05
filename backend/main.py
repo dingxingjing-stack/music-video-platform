@@ -1141,6 +1141,7 @@ def _get_workflow_engine() -> WorkflowEngine:
     """Get or create the global workflow engine."""
     global _workflow_engine
     if _workflow_engine is None:
+        soundfont = os.getenv("MIDI_SOUNDFONT_PATH")
         _workflow_engine = WorkflowEngine(
             broadcast=_websocket_broadcast,
             musicgen_url=_config.get("music", {}).get("space_url"),
@@ -1150,6 +1151,7 @@ def _get_workflow_engine() -> WorkflowEngine:
             tts_token=_config.get("tts", {}).get("api_token"),
             demucs_token=_config.get("demucs", {}).get("api_token"),
             use_mock=(WORKFLOW_MODE == "mock"),
+            soundfont_path=soundfont,
         )
     return _workflow_engine
 
@@ -1300,6 +1302,80 @@ async def workflow_path_c(request: Request):
         "status": "started",
         "websocket": f"/ws/progress/{task_id}",
         "path": "c",
+    }
+
+
+@app.post("/api/v1/workflow/d", tags=["workflows"])
+async def workflow_path_d(request: Request):
+    """
+    Path D: Original Creation — MIDI project → render to audio.
+
+    Body::
+        {
+            "task_id": "abc123",
+            "midi_project": {
+                "id": "midi-123",
+                "name": "My Project",
+                "tempo": 120,
+                "timeSignature": {"numerator": 4, "denominator": 4},
+                "ticksPerQuarter": 480,
+                "tracks": [
+                    {
+                        "id": "track-1",
+                        "name": "Piano",
+                        "instrument": 0,
+                        "channel": 0,
+                        "notes": [
+                            {"pitch": 60, "velocity": 100, "startTick": 0, "durationTicks": 480, "channel": 0}
+                        ],
+                        "color": "bg-violet-500",
+                        "solo": false,
+                        "mute": false,
+                        "volume": 1,
+                        "pan": 0
+                    }
+                ],
+                "loopStartTick": 0,
+                "loopEndTick": 7680,
+                "createdAt": 1234567890,
+                "updatedAt": 1234567890
+            },
+            "outputFormat": "wav",
+            "soundfontPath": "/path/to/soundfont.sf2"  // optional
+        }
+
+    Returns a task_id. On completion, metadata.tracks contains the rendered audio track.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
+    midi_project = body.get("midi_project")
+    if not midi_project:
+        raise HTTPException(
+            status_code=422,
+            detail="'midi_project' is required",
+        )
+
+    engine = _get_workflow_engine()
+
+    asyncio.create_task(
+        _run_workflow_async(
+            engine.run_path_d,
+            task_id,
+            midi_project=midi_project,
+            output_format=body.get("outputFormat", "wav"),
+            soundfont_path=body.get("soundfontPath"),
+        )
+    )
+
+    return {
+        "task_id": task_id,
+        "status": "started",
+        "websocket": f"/ws/progress/{task_id}",
+        "path": "d",
     }
 
 

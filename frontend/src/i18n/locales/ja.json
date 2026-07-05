@@ -67,6 +67,7 @@
     "mvGenerator": "MV 生成",
     "detectBeats": "ビート検出",
     "renderVideo": "動画レンダリング",
+    "mvReady": "MV 完了",
     "waveformVisualization": "波形表示",
     "backgroundColor": "背景色",
     "resolution": "解像度",
@@ -103,7 +104,8 @@
     "unsupportedFormat": "非対応形式",
     "fileTooLarge": "ファイルサイズ超過",
     "batchEmpty": "バッチリストが空です",
-    "unknownError": "不明なエラー",
-    "batchNotSupported": "パスC（リミックス）ではバッチモードはサポートされていません"
+    "batchNotSupported": "パスC（リミックス）ではバッチモードはサポートされていません",
+    "midiProjectRequired": "MIDIプロジェクトが必要です",
+    "unknownError": "不明なエラー"
   }
 }

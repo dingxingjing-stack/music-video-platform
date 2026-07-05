@@ -66,7 +66,8 @@
     "downloadFull": "Скачать полностью",
     "mvGenerator": "Генератор MV",
     "detectBeats": "Определить биты",
-    "renderVideo": "Рендер видео",
+    "renderVideo": "Рендер Видео",
+    "mvReady": "MV Готово",
     "waveformVisualization": "Визуализация волны",
     "backgroundColor": "Цвет фона",
     "resolution": "Разрешение",
@@ -103,7 +104,8 @@
     "unsupportedFormat": "Неподдерживаемый формат",
     "fileTooLarge": "Файл слишком большой",
     "batchEmpty": "Пакетный список пуст",
-    "unknownError": "Неизвестная ошибка",
-    "batchNotSupported": "Пакетный режим не поддерживается для пути C (Remix)"
+    "batchNotSupported": "Пакетный режим не поддерживается для пути C (Remix)",
+    "midiProjectRequired": "Требуется MIDI проект",
+    "unknownError": "Неизвестная ошибка"
   }
 }

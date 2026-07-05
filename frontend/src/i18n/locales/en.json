@@ -67,6 +67,7 @@
     "mvGenerator": "MV Generator",
     "detectBeats": "Detect Beats",
     "renderVideo": "Render Video",
+    "mvReady": "MV Ready",
     "waveformVisualization": "Waveform Visualization",
     "backgroundColor": "Background Color",
     "resolution": "Resolution",
@@ -103,7 +104,8 @@
     "unsupportedFormat": "Unsupported format",
     "fileTooLarge": "File too large",
     "batchEmpty": "Batch list is empty",
-    "unknownError": "Unknown error",
-    "batchNotSupported": "Batch mode not supported for Path C (Remix)"
+    "batchNotSupported": "Batch mode not supported for Path C (Remix)",
+    "midiProjectRequired": "MIDI project required",
+    "unknownError": "Unknown error"
   }
 }

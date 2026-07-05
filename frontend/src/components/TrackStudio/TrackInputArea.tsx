@@ -9,7 +9,8 @@
 
 import { useRef } from 'react';
 import { useTranslation } from '../../i18n';
-import type { PathDefinition } from '../../types/trackStudio';
+import type { PathDefinition, MidiProject } from '../../types/trackStudio';
+import { PianoRoll } from './PianoRoll';
 
 interface Props {
   pathDef: PathDefinition;
@@ -33,6 +34,9 @@ interface Props {
   onStart: () => void;
   onReset: () => void;
   hasWorkflowResult: boolean;
+  // Path D: MIDI project
+  midiProject?: MidiProject;
+  onMidiProjectChange?: (project: MidiProject) => void;
 }
 
 export function TrackInputArea({
@@ -57,6 +61,8 @@ export function TrackInputArea({
   onStart,
   onReset,
   hasWorkflowResult,
+  midiProject,
+  onMidiProjectChange,
 }: Props) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -70,6 +76,56 @@ export function TrackInputArea({
   };
 
   const label = pathDef.inputLabel || pathDef.musicLabel || '';
+
+  // Path D: Piano Roll Editor
+  if (pathDef.id === 'd') {
+    return (
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-gray-300">{label}</label>
+          <span className="text-xs px-2 py-1 bg-purple-900/50 text-purple-400 rounded-full">
+            {t('paths.pathD').split('—')[0].trim()}
+          </span>
+        </div>
+        {midiProject && onMidiProjectChange && (
+          <div className="h-96">
+            <PianoRoll
+              project={midiProject}
+              onProjectChange={onMidiProjectChange}
+              isPlaying={false}
+              currentTick={0}
+            />
+          </div>
+        )}
+        {!midiProject && (
+          <div className="h-96 flex items-center justify-center text-gray-500">
+            Initializing MIDI editor...
+          </div>
+        )}
+        <div className="flex gap-3">
+          <button
+            onClick={onStart}
+            disabled={disabled}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-semibold rounded-xl
+                         hover:from-purple-500 hover:to-fuchsia-500 disabled:opacity-40 disabled:cursor-not-allowed
+                         transition-all shadow-lg shadow-purple-500/20"
+          >
+            {loading
+              ? '⏳ Starting...'
+              : `✨ ${pathDef.icon} ${t('ui.generate')}`}
+          </button>
+          {hasWorkflowResult && (
+            <button
+              onClick={onReset}
+              className="px-6 py-3 text-gray-400 border border-gray-700 rounded-xl hover:bg-gray-800 transition-colors"
+            >
+              {t('common.reset') || 'Reset'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">

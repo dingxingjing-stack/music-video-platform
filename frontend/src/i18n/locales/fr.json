@@ -66,7 +66,8 @@
     "downloadFull": "Télécharger complet",
     "mvGenerator": "Générateur MV",
     "detectBeats": "Détecter les temps",
-    "renderVideo": "Rendu vidéo",
+    "renderVideo": "Rendu Vidéo",
+    "mvReady": "MV Prête",
     "waveformVisualization": "Visualisation forme d'onde",
     "backgroundColor": "Couleur fond",
     "resolution": "Résolution",
@@ -103,7 +104,8 @@
     "unsupportedFormat": "Format non supporté",
     "fileTooLarge": "Fichier trop volumineux",
     "batchEmpty": "Liste de lot vide",
-    "unknownError": "Erreur inconnue",
-    "batchNotSupported": "Chemin C (Remix) ne supporte pas le mode batch"
+    "batchNotSupported": "Chemin C (Remix) ne supporte pas le mode batch",
+    "midiProjectRequired": "Projet MIDI requis",
+    "unknownError": "Erreur inconnue"
   }
 }
