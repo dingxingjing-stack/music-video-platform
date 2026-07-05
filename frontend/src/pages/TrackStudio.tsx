@@ -34,16 +34,20 @@ import {
   STORAGE_VERSION,
 } from '../types/trackStudio';
 
-import { TrackStudioHeader } from '../components/TrackStudio/TrackStudioHeader';
-import { PathSelector } from '../components/TrackStudio/PathSelector';
-import { TrackInputArea } from '../components/TrackStudio/TrackInputArea';
-import { TrackList } from '../components/TrackStudio/TrackList';
-import { HistoryPanel } from '../components/TrackStudio/HistoryPanel';
-import { IdleState } from '../components/TrackStudio/IdleState';
-import { BatchProgressDashboard } from '../components/TrackStudio/BatchProgressDashboard';
-import { MixConsole } from '../components/TrackStudio/MixConsole';
-import { MVGenerator } from '../components/TrackStudio/MVGenerator';
-import { ProvenanceTimeline } from '../components/TrackStudio/ProvenanceTimeline';
+import {
+  TrackStudioHeader,
+  PathSelector,
+  TrackInputArea,
+  TrackList,
+  HistoryPanel,
+  IdleState,
+  BatchProgressDashboard,
+  MixConsole,
+  MVGenerator,
+  ProvenanceTimeline,
+  WatermarkPanel,
+  LyricsVisualizer,
+} from '../components/TrackStudio';
 
 // ── Fetch with Retry & Concurrency Limit ──────────────────────────────────
 const MAX_CONCURRENT = 4;
@@ -155,6 +159,8 @@ export function TrackStudio() {
   } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
+  const [selectedTrackUrl, setSelectedTrackUrl] = useState<string | null>(null);
+  const [selectedTrackName, setSelectedTrackName] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   // ── Provenance Tracking ────────────────────────────────────────────────
@@ -703,7 +709,17 @@ export function TrackStudio() {
   // ── Path selection handler ───────────────────────────────────────────
   const handleTrackSelect = useCallback((trackId: string | null) => {
     setSelectedTrack(trackId);
-  }, []);
+    if (trackId) {
+      const track = history.find((t) => t.id === trackId)
+        ?? workflow.tracks.find((t) => t.id === trackId)
+        ?? null;
+      setSelectedTrackUrl(track?.url ?? null);
+      setSelectedTrackName(track?.name ?? '');
+    } else {
+      setSelectedTrackUrl(null);
+      setSelectedTrackName('');
+    }
+  }, [history, workflow.tracks]);
 
   const handleSelectPath = useCallback(
     (path: 'a' | 'b' | 'c' | 'd') => {
@@ -892,6 +908,16 @@ export function TrackStudio() {
         {/* MV Generator */}
         <MVGenerator history={history} onTrackSelect={(track) => handleTrackSelect(track.id)} />
 
+        {/* Watermark Panel — copyright fingerprint + blind watermark */}
+        {selectedTrackUrl && (
+          <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+            <WatermarkPanel
+              trackUrl={selectedTrackUrl}
+              trackName={selectedTrackName}
+            />
+          </div>
+        )}
+
         {/* Provenance Timeline */}
         {provenance && provenance.operations.length > 0 && (
           <ProvenanceTimeline provenance={provenance} />
@@ -908,6 +934,18 @@ export function TrackStudio() {
           onRemixError={handleRemixError}
           onRemixDone={handleRemixDone}
         />
+
+        {/* Lyrics Visualizer — shows when a track is selected */}
+        {selectedTrackUrl && (
+          <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+            <LyricsVisualizer
+              lyrics={[]}
+              currentTime={0}
+              duration={0}
+              compact
+            />
+          </div>
+        )}
 
         {/* Idle State */}
         {!workflow.running &&

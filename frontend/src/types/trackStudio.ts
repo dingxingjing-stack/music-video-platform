@@ -500,3 +500,11 @@ export function defaultPersisted(): PersistedSession {
     history: [],
   };
 }
+
+// ── Lyrics type (shared with LyricsVisualizer) ─────────────────────────
+
+export type LyricLine = {
+  time: number;
+  text: string;
+  duration?: number;
+};

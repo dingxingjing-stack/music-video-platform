@@ -10,15 +10,9 @@
 
 import { useEffect, useRef } from 'react';
 import { Music, Clock } from 'lucide-react';
+import type { LyricLine } from '../../types/trackStudio';
 
-// ---- Types ----------------------------------------------------------------
-
-interface LyricLine {
-  time: number;        // start time in seconds
-  text: string;
-  duration?: number;   // line duration in seconds (optional)
-}
-
+// ---- Props ----------------------------------------------------------------
 interface Props {
   lyrics: LyricLine[];
   currentTime: number;         // Current playback position in seconds
