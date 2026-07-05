@@ -114,6 +114,8 @@ class TestFactoryCreation:
             "tts": {"space_url": FAKE_TTS_URL},
             "music": {"space_url": FAKE_MUSIC_URL},
             "video": {"space_url": FAKE_VIDEO_URL},
+            "remix": {"space_url": "http://localhost/remix"},
+            "midi": {"space_url": "http://localhost/midi"},
         }
         factory = InferenceServiceFactory(config)
         all_svcs = factory.create_all()

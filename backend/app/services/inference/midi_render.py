@@ -48,14 +48,15 @@ class MidiRenderService:
     """
     
     def __init__(
-        self,
-        space_url: str = "local://midi-render",
-        api_token: Optional[str] = None,
-        retry_config: Optional[Any] = None,
-        broadcast: Optional[BroadcastCallback] = None,
-        http_timeout: float = 300.0,
-        soundfont_path: Optional[str] = None,
-    ) -> None:
+            self,
+            space_url: str = "local://midi-render",
+            api_token: Optional[str] = None,
+            fn_index: int = 0,
+            retry_config: Optional[Any] = None,
+            broadcast: Optional[BroadcastCallback] = None,
+            http_timeout: float = 300.0,
+            soundfont_path: Optional[str] = None,
+        ) -> None:
         # Accept standard BaseInferenceService params for factory compatibility
         self.space_url = space_url
         self.api_token = api_token
