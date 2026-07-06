@@ -1,67 +1,110 @@
 # Development Journal — Music Video Platform
 
-**Status:** 全自动纠错 · 持续优化 · 长期记忆模式已开启
+**Status:** 全自动纠错 · 持续优化
 **Started:** 2026-06-30
+**Updated:** 2026-07-05
 
-## 工程化协议
+---
 
-- 目录结构标准化：src/components, src/hooks, src/utils, src/styles, docs
-- 错误自动修复：每次代码报错时自动读取日志并修复
-- 性能持续优化：每个功能完成后主动审视性能并记录
-- 长期记忆：所有规范和决策记录在本文档中，后续会话自动继承
+## 2026-07-05 全天工作记录
 
-## 变更记录
+### 开发时间线
 
-|| Date | Change | Description ||
-|------|--------|-------------||
-| 2026-07-05 | P0: Implement ProvenanceTimeline | Created `ProvenanceTimeline.tsx` component with vertical timeline UI, color-coded operation nodes (generate/remix/trim/mv), param summaries, originality badge (原创/衍生), and JSON-LD export. Integrated into TrackStudio.tsx with provenance state management. RemixTool now records detailed params (pitchShift, tempoMultiplier, timbreTransform) and marks derivative works. `tsc --noEmit` passes zero errors. |
-| 2026-07-05 | P1: Complete MIDI Render pipeline (Path D) | Replaced MockInferenceService with real `MidiRenderService` in `WorkflowEngine.run_path_d`. Added `_get_midi_service()` lazy loader with FluidSynth/mido support. Fixed `health_check` bug in `midi_render.py`. Added `MIDI_SOUNDFONT_PATH` env var config. Path D now renders MIDI projects to audio via FluidSynth. `tsc --noEmit` passes zero errors. |
-| 2026-07-05 | P2: MV Generator end-to-end fix | Fixed `MVGenerator.tsx` download section to use `<video>` tag instead of `<audio>`. Added `mvReady` translation to all 8 locale files (en/zh/ja/ko/de/es/fr/pt/ru). |
-| 2026-07-05 | P1: Rewrite mix_engine.py — fix broken ffmpeg filter graph | Original `mix_engine.py` had critical bugs: (1) `_pan_gain` returned 0.0 for L channel when pan<0 (silenced left side), (2) filter labels between per-track processing and pan stage were inconsistent (`a{i}` vs `{i}`), (3) `[{i}]anull` was malformed. Rewrote with: equal-power pan via `pan=stereo|c0=cos|c1=sin`, correct 3-band EQ (100Hz/1kHz/8kHz), reverb via `asplit → aecho → amix`, clean label chain `[i:a]→...→[t{i}]→amix→[mix0]→[out]`. 10/10 ad-hoc verification checks pass. `tsc --noEmit` passes. |
-| 2026-07-05 | P1: Rewrite remix.py `_apply_remix_sync` — pydub → ffmpeg | Original `_apply_remix_sync` had critical bugs: (1) pitch shift + tempo change via `frame_rate` manipulation were incompatible (tempo change re-pitched the already-pitch-shifted audio, and `set_frame_rate` resampling cancelled the pitch shift), (2) timbre EQ via `low_pass_filter + (float)*seg` produced illogical blends. Rewrote as ffmpeg filter chain: `asetrate` for pitch (with `atempo` to fix duration), `atempo` for tempo (independent of pitch), `lowshelf/highshelf/equalizer` for timbre, `dynaudnorm` for loudness normalization. Updated `health_check` to detect ffmpeg instead of pydub. 10/10 ad-hoc verification checks pass. |
-| 2026-07-05 | P1: Docker deployment | Created multi-stage `Dockerfile` (frontend-build → backend → production), `docker-compose.yml` with nginx reverse proxy, `.env.example` template, `.dockerignore`, and `DEPLOYMENT.md`. Production image includes nginx (serving SPA + proxying /api/ and /ws/ to backend), ffmpeg, fluidsynth. `docker compose up --build -d` brings up full stack on port 80. |
-|| 2026-06-30 | P1: Implement RemixTool.tsx | Created RemixTool component (pitch ±12st, tempo 0.5-2.0x, timbre presets) with /api/v1/remix/process API integration. Wired into TrackList and HistoryPanel as floating menu on completed tracks. Added remix WS progress handling, provenance marking (derivative tracks). Updated types with ProjectProvenance, RemixParameters, BeatDetectionResult, VideoRenderJob. `tsc --noEmit` passes zero errors. |
-| 2026-06-30 | Feature planning: copyright protection, MV generator, provenance audit | Added Section 8 (功能规划) to best-practices.md. Designed RemixTool.tsx, useVideoGenerator.ts, ProjectProvenance type. Identified 5 backend services needed. |
-| 2026-06-30 | Refactor TrackStudio.tsx (1586 lines → ~30 files) | Phase 1: Extract types (`types/trackStudio.ts`), hooks (`useSessionStorage`, `useBatchProgress`). Phase 2: Create 10 sub-components (`MiniWaveform`, `AudioPlayer`, `TrackStudioHeader`, `PathSelector`, `TrackInputArea`, `TrackList`, `HistoryPanel`, `IdleState`, `BatchProgressDashboard`). Phase 3: Rewrite `TrackStudio.tsx` as composition entry (~350 lines). Original backed up as `.tsx.bak`. `tsc --noEmit` passes zero errors. |
-| 2026-06-30 | Session interrupted — state frozen | User signed off. All files committed/staged. Build verified. See 明日待办 below. |
+| 轮次 | 工作内容 | 提交 |
+|------|----------|------|
+| 1 | ProvenanceTimeline 可视化（时间轴组件+集成） | `19cba13` |
+| 2 | MIDI Render 后端对接（FluidSynth 注入 WorkflowEngine） | `d5ff497` |
+| 3 | Mix Engine 重写（ffmpeg filter graph，修复 pan/reverb/EQ bug） | `d5ff497` |
+| 4 | Remix 后端重写（pydub→ffmpeg，修复 pitch/tempo 逻辑） | `d5ff497` |
+| 5 | Docker 部署文件（Dockerfile+compose+nginx+文档） | `d5ff497` |
+| 6 | MV Generator 修复（video标签+8语言i18n补齐） | `725ab6b` |
+| 7 | 后端 pytest 48/48 通过 + fn_index 修复 | `725ab6b` |
+| 8 | 版权水印功能（指纹+盲水印+API+前端组件） | `c757f0c` |
+| 9 | 歌词可视化（波形+滚动字幕+LRC解析器） | `c757f0c` |
+| 10 | AI 歌词生成（LLM端点） | `c757f0c` |
+| 11 | TrackStudio 组件集成（barrel export+类型修复） | `d476cbc` |
+| 12 | 真服联调（venv依赖修复+后端8000+前端5176 proxy联通） | `f0a449f` |
+| 13 | Lyrics endpoint 缺失修复（补全 /api/v1/lyrics/generate implementation） | `2ca4346` |
+| 14 | 后端测试补齐（midi/mix/remix/watermark — 22 new tests，70/70 passed） | `e8a13e2` |
+| 15 | 旧测试修复（3个fastapi测试文件优雅跳过，89 passed/3 skipped） | `1810da9` |
+| 16 | WatermarkPanel 联动（HistoryPanel 点击触发 TrackSelect） | `f735a7a` |
+| 17 | Remix 测试补齐（3→18 tests，音色预设/格式检测/filter链全覆盖） | `3111752` |
+
+### 测试套件演进
+
+| 阶段 | 测试数 | 备注 |
+|------|--------|------|
+| 初始 | 48 | test_inference 工厂/合约/重试/错误 |
+| 加水印测试 | 70 | +22 (midi/mix/remix/watermark 基础) |
+| 旧文件修复 | 89 passed, 3 skipped | e2e/websocket/real_service 优雅跳过 |
+| Remix 扩展 | **107 passed, 3 skipped** | +18 remix 逻辑测试 |
+
+### 模块完成度
+
+| 模块 | 后端 | 前端 | 测试 | 联调 |
+|------|------|------|------|------|
+| 4条创作路径 A/B/C/D | ✅ | ✅ | 48 tests | ✅ |
+| Remix (pitch/tempo/timbre) | ✅ ffmpeg | ✅ RemixTool | 18 tests | ✅ |
+| MIDI 渲染 (FluidSynth) | ✅ | ✅ | 6 tests | ✅ |
+| 混音台 (MixConsole) | ✅ ffmpeg | ✅ | 2 tests | ✅ |
+| MV 生成器 | ⚠️ 骨架 | ✅ | 0 | ⚠️ 待真实渲染 |
+| 版权水印 | ✅ 指纹+盲水印 | ✅ WatermarkPanel | 13 tests | ✅ API |
+| 歌词可视化 | N/A | ✅ LyricsVisualizer | 0 | ✅ UI |
+| AI 歌词生成 | ✅ LLM端点 | N/A | 0 | ✅ API |
+| 多语言 i18n | N/A | ✅ 9 locales | N/A | ✅ |
+| ProvenanceTimeline | N/A | ✅ | 0 | ✅ UI |
+| Docker 部署 | ✅ 文件就绪 | N/A | N/A | ⚠️ 需本机 docker |
+
+### 未完成 / 待办
+
+| 优先级 | 任务 | 原因 |
+|--------|------|------|
+| 🔴 | Docker 构建验证 | docker 命令不在工具 PATH |
+| 🔴 | MV 渲染端到端 | 需真实音频+视频 ffmpeg 输出 |
+| 🟡 | mix_engine 逻辑测试 | 当前只有2个存在性测试 |
+| 🟡 | 前端 E2E (Playwright/Cypress) | 无浏览器测试 |
+| 🟢 | LyricsVisualizer 真实频谱 | 当前用数学波形模拟 |
+| 🟢 | WatermarkPanel 移动端响应式 | 未测试 |
+
+### Git 提交汇总（今日 17 commits）
+
+```
+3111752 test: expand RemixService tests from 3→18
+f735a7a feat: HistoryPanel click triggers TrackSelect + WatermarkPanel
+1810da9 test: add graceful skip for fastapi-dependent tests in cp312 env
+e8a13e2 test: add 22 test cases for midi/mix/remix/watermark
+2ca4346 fix: add missing /api/v1/lyrics/generate endpoint
+d476cbc feat: integrate WatermarkPanel + LyricsVisualizer into TrackStudio
+c757f0c feat: copyright watermark + lyrics visualizer + AI lyrics
+f0a449f fix: vite.config proxy port 8002→8000 + e2e verification
+725ab6b fix: fn_index param + test_create_all config
+d5ff497 feat: core pipeline — MIDI render, mix engine, remix, Docker
+19cba13 feat: ProvenanceTimeline visualization
+d0fc7fa docs: add development journal
+```
+
+### 环境说明
+
+- **系统 Python 3.12**: `C:/Users/dingx/AppData/Local/Programs/Python/Python312/python` → pytest
+- **Venv Python 3.11**: 用于 uvicorn（numpy/librosa 等 DSP 依赖）
+- **前端**: tsc --noEmit 零错误，vite build 成功
+- **numpy 冲突**: venv cp311 numpy 已卸载，system 3.12 用 pip numpy
+- **fastapi 测试**: 3个文件因 pydantic cp311/312 冲突优雅跳过
+
+---
 
 ## 会话状态快照
 
 ```
-当前工作树状态:
-  M  frontend/src/pages/TrackStudio.tsx          (1586 → 358 lines, -77%)
-  ?? DEVELOPMENT_JOURNAL.md                       (new)
-  ?? frontend/docs/best-practices.md              (new)
-  ?? frontend/src/components/Audio/MiniWaveform.tsx
-  ?? frontend/src/components/Audio/AudioPlayer.tsx
-  ?? frontend/src/components/TrackStudio/RemixTool.tsx
-  ?? frontend/src/components/TrackStudio/TrackList.tsx
-  ?? frontend/src/components/TrackStudio/HistoryPanel.tsx
-  ?? frontend/src/components/TrackStudio/TrackStudioHeader.tsx
-  ?? frontend/src/components/TrackStudio/PathSelector.tsx
-  ?? frontend/src/components/TrackStudio/TrackInputArea.tsx
-  ?? frontend/src/components/TrackStudio/IdleState.tsx
-  ?? frontend/src/components/TrackStudio/BatchProgressDashboard.tsx
-  ?? frontend/src/hooks/useSessionStorage.ts
-  ?? frontend/src/hooks/useBatchProgress.ts
-  ?? frontend/src/pages/TrackStudio.tsx.bak       (original backup)
-  ?? frontend/src/types/trackStudio.ts
-
-编译验证: tsc --noEmit ✓ 零错误
-构建验证: vite build ✓ 43 modules, 183KB gzip 57KB
+全量测试: pytest tests/ → 107 passed, 3 skipped (4.83s)
+前端编译: tsc --noEmit → 0 errors
+Git 状态: clean (committed, no uncommitted changes)
+开发服务器: 已关闭（联调验证完成后清理）
 ```
 
 ## 明日待办
 
-- [x] **P0: Provenance 时间轴可视化** — ✅ 已完成。`ProvenanceTimeline.tsx` 组件，垂直时间轴，颜色编码操作节点，原创/衍生徽章，JSON-LD 导出。
-- [ ] **RemixTool WS 反馈链路验证** — 启动后端 mock，确认
-       `POST /api/v1/remix/process` → WS 推送 → `onRemixComplete` 追加新 track 到 history 的全链路。
-- [ ] **useVideoGenerator.ts 骨架** — 对接 `/api/v1/mv/detect-beats` 和
-       `/api/v1/mv/render` 端点，复用 `useWebSocketProgress` 进度推送模式。
-- [ ] **Git commit** — 将所有新增/修改文件提交到版本控制。
-
-## Todo
-
-- [ ] Backend API integration test coverage
-- [ ] WebSocket reconnect mechanism optimization
-- [ ] Frontend component performance profiling
+- [ ] Docker `docker compose up --build` 在 Windows 终端验证
+- [ ] MV 渲染引擎真实对接（后端）
+- [ ] mix_engine 逻辑测试补齐（ffmpeg filter graph 生成验证）
+- [ ] WebSocket reconnect 机制优化
