@@ -554,7 +554,11 @@ async def tts_run(request: Request):
             )
 
             # Run predict in background; it will broadcast progress to WebSocket clients
-            asyncio.create_task(_run_tts(svc, task_id, audio_bytes, text, language, opt_filename))
+            asyncio.create_task(run_tts_and_save(
+                svc=svc, task_id=task_id, audio_bytes=audio_bytes,
+                text=text, language=language, opt_filename=opt_filename,
+                results_dir=RESULTS_DIR,
+            ))
         except Exception as exc:
             logger.error("Failed to create GPTSovitsService: %s", exc)
             raise HTTPException(
@@ -569,96 +573,9 @@ async def tts_run(request: Request):
     }
 
 
-async def _run_tts(
-    svc: "GPTSovitsService",
-    task_id: str,
-    audio_bytes: bytes,
-    text: str,
-    language: str,
-    opt_filename: str,
-) -> None:
-    """Background task: run TTS prediction and save result to results/."""
-    start_time = time.time()
-    try:
-        result = await svc.synthesize(
-            task_id=task_id,
-            reference_audio=audio_bytes,
-            text=text,
-            language=language,
-            opt_filename=opt_filename,
-        )
+from app.services.task_handlers import run_tts_and_save, run_musicgen_and_save
 
-        elapsed = time.time() - start_time
 
-        # Save generated audio file if completed
-        if result.status.value == "completed" and result.result_url:
-            try:
-                async with httpx.AsyncClient(timeout=120.0) as client:
-                    resp = await client.get(result.result_url)
-                    if resp.status_code == 200:
-                        filepath = os.path.join(RESULTS_DIR, f"{task_id}_{opt_filename}")
-                        with open(filepath, "wb") as f:
-                            f.write(resp.content)
-                        # Update result_url to local path
-                        local_url = f"/results/{task_id}_{opt_filename}"
-                        final = PredictResult(
-                            task_id=task_id,
-                            status=TaskStatus.COMPLETED,
-                            progress=100,
-                            message="Done!",
-                            result_url=local_url,
-                            metadata={
-                                **result.metadata,
-                                "elapsed_time": round(elapsed, 2),
-                            },
-                            updated_at=time.time(),
-                        )
-                        await svc._report(final)
-            except Exception as e:
-                logger.warning("Failed to save TTS result: %s", e)
-                # Still report with elapsed time even if save fails
-                final = PredictResult(
-                    task_id=task_id,
-                    status=TaskStatus.COMPLETED,
-                    progress=100,
-                    message="Done! (save failed)",
-                    result_url=result.result_url,
-                    metadata={
-                        **result.metadata,
-                        "elapsed_time": round(elapsed, 2),
-                    },
-                    updated_at=time.time(),
-                )
-                await svc._report(final)
-        else:
-            # Report final status (completed or failed) with elapsed time
-            final = PredictResult(
-                task_id=task_id,
-                status=result.status,
-                progress=result.progress,
-                message=result.message or result.error or "Done!",
-                result_url=result.result_url,
-                error=result.error,
-                metadata={
-                    **result.metadata,
-                    "elapsed_time": round(elapsed, 2),
-                },
-                updated_at=time.time(),
-            )
-            await svc._report(final)
-    except Exception as e:
-        elapsed = time.time() - start_time
-        logger.exception("TTS background task failed: %s", e)
-        failed = PredictResult(
-            task_id=task_id,
-            status=TaskStatus.FAILED,
-            progress=0,
-            message="TTS task failed",
-            error=str(e)[:500],
-            metadata={"elapsed_time": round(elapsed, 2)},
-            updated_at=time.time(),
-        )
-        await svc._report(failed)
 
 
 # ---------------------------------------------------------------------------
@@ -723,99 +640,17 @@ async def music_run(request: Request):
                 detail=f"Music service unavailable: {exc}",
             )
 
-        asyncio.create_task(_run_musicgen(svc, task_id, prompt, duration, temperature))
+        asyncio.create_task(run_musicgen_and_save(
+            svc=svc, task_id=task_id, prompt=prompt,
+            duration=duration, temperature=temperature,
+            results_dir=RESULTS_DIR,
+        ))
 
     return {
         "task_id": task_id,
         "status": "started",
         "websocket": f"/ws/progress/{task_id}",
     }
-
-
-async def _run_musicgen(
-    svc,
-    task_id: str,
-    prompt: str,
-    duration: float,
-    temperature: float,
-) -> None:
-    """Background task: run MusicGen prediction and save result."""
-    start_time = time.time()
-    try:
-        result = await svc.predict(PredictRequest(
-            service_type="music",
-            task_id=task_id,
-            payload={},
-            extra={"prompt": prompt, "duration": duration, "temperature": temperature},
-        ))
-
-        elapsed = time.time() - start_time
-
-        if result.status.value == "completed" and result.result_url:
-            try:
-                async with httpx.AsyncClient(timeout=120.0) as client:
-                    resp = await client.get(result.result_url)
-                    if resp.status_code == 200:
-                        filepath = os.path.join(RESULTS_DIR, f"{task_id}_music.wav")
-                        with open(filepath, "wb") as f:
-                            f.write(resp.content)
-                        local_url = f"/results/{task_id}_music.wav"
-                        final = PredictResult(
-                            task_id=task_id,
-                            status=TaskStatus.COMPLETED,
-                            progress=100,
-                            message="Music generated!",
-                            result_url=local_url,
-                            metadata={
-                                **result.metadata,
-                                "elapsed_time": round(elapsed, 2),
-                            },
-                            updated_at=time.time(),
-                        )
-                        await svc._report(final)
-            except Exception as e:
-                logger.warning("Failed to save music result: %s", e)
-                final = PredictResult(
-                    task_id=task_id,
-                    status=TaskStatus.COMPLETED,
-                    progress=100,
-                    message="Music generated! (save failed)",
-                    result_url=result.result_url,
-                    metadata={
-                        **result.metadata,
-                        "elapsed_time": round(elapsed, 2),
-                    },
-                    updated_at=time.time(),
-                )
-                await svc._report(final)
-        else:
-            final = PredictResult(
-                task_id=task_id,
-                status=result.status,
-                progress=result.progress,
-                message=result.message or result.error or "Done!",
-                result_url=result.result_url,
-                error=result.error,
-                metadata={
-                    **result.metadata,
-                    "elapsed_time": round(elapsed, 2),
-                },
-                updated_at=time.time(),
-            )
-            await svc._report(final)
-    except Exception as e:
-        elapsed = time.time() - start_time
-        logger.exception("MusicGen background task failed: %s", e)
-        failed = PredictResult(
-            task_id=task_id,
-            status=TaskStatus.FAILED,
-            progress=0,
-            message="Music generation failed",
-            error=str(e)[:500],
-            metadata={"elapsed_time": round(elapsed, 2)},
-            updated_at=time.time(),
-        )
-        await svc._report(failed)
 
 
 # ---------------------------------------------------------------------------
