@@ -52,17 +52,14 @@ async def render_mix(
     return f"/results/{task_id}_mix.{output_format}"
 
 
-def _render_mix_sync(
+def _build_filter_and_inputs(
     tracks: list[dict[str, Any]],
-    results_dir: str,
-    task_id: str,
-    output_format: str,
     master_volume: float,
-) -> str:
-    """Synchronous ffmpeg-based mix render."""
-    ffmpeg = _find_ffmpeg()
+) -> tuple[str, list[str], list[dict]]:
+    """Build ffmpeg filter_complex + input args + active tracks.
 
-    # Determine active tracks (solo overrides mute)
+    Returns: (filter_complex, inputs, active_tracks)
+    """
     any_solo = any(t.get("solo", False) for t in tracks)
     active = [
         t for t in tracks
@@ -72,20 +69,7 @@ def _render_mix_sync(
     if not active:
         raise RuntimeError("No active tracks to mix (all muted)")
 
-    # Build per-track filter chains, then merge.
-    #
-    # Strategy: each input [i:a] goes through volume → EQ → pan → reverb send.
-    # Output of each track is [t{i}]. All [t{i}] are amix'd into [mix],
-    # then master volume → [out].
-    #
-    # Pan law: equal-power. For pan p ∈ [-1, 1]:
-    #   L_gain = cos((p+1) * π/4)
-    #   R_gain = sin((p+1) * π/4)
-    # This keeps total power constant and avoids the discontinuities
-    # of the previous linear-pan approach.
-
     import math
-
     track_filters: list[str] = []
     mix_inputs: list[str] = []
 
@@ -96,39 +80,29 @@ def _render_mix_sync(
         reverb_send = float(t.get("reverb_send", 0.0))
 
         parts: list[str] = [f"[{i}:a]"]
-
-        # Force stereo
         parts.append("aformat=channel_layouts=stereo")
 
-        # Volume
         if vol_db != 0.0:
             parts.append(f"volume={vol_db}dB")
 
-        # 3-band EQ
         eq_bands = [
-            ("low", 100, "h", 200),    # highshelf-like at 100Hz, width 200Hz
-            ("mid", 1000, "q", 1.0),   # peaking at 1kHz, Q=1.0
-            ("high", 8000, "h", 200),  # highshelf at 8kHz, width 200Hz
+            ("low", 100, "h", 200),
+            ("mid", 1000, "q", 1.0),
+            ("high", 8000, "h", 200),
         ]
         for band, freq, width_type, width_val in eq_bands:
             db_val = float(eq.get(band, 0) or 0)
             if db_val != 0.0:
                 parts.append(f"equalizer=f={freq}:t={width_type}:w={width_val}:g={db_val}")
 
-        # Equal-power pan (afilter pan=stereo)
-        #   left  = cos((pan+1) * π/4)
-        #   right = sin((pan+1) * π/4)
         angle = (pan + 1.0) * math.pi / 4.0
         left_gain = math.cos(angle)
         right_gain = math.sin(angle)
-        # Clamp to 4 decimals for filter stability
         parts.append(f"pan=stereo|c0={left_gain:.4f}|c1={right_gain:.4f}")
 
-        # Reverb send (aecho approximation)
         if reverb_send > 0.0:
             wet = max(0.0, min(1.0, reverb_send))
             dry = 1.0 - wet
-            # asplit → dry path + wet path (aecho) → amix
             parts.append(f"asplit=2[d{i}a][d{i}b]")
             wet_chain = (
                 f"[d{i}b]aecho=0.8:0.7:{int(40)}|{int(60)}:{wet:.3f}|{wet:.3f}[d{i}r];"
@@ -143,7 +117,6 @@ def _render_mix_sync(
 
         mix_inputs.append(f"[t{i}]")
 
-    # Final amix of all tracks → master volume → [out]
     mix_filter = (
         f"{''.join(mix_inputs)}amix=inputs={len(active)}:duration=longest[mix0]"
     )
@@ -155,11 +128,25 @@ def _render_mix_sync(
     track_filters.append(mix_filter)
     filter_complex = ";".join(track_filters)
 
-    # Input files
     inputs: list[str] = []
     for t in active:
         src = _resolve_audio_path(t.get("url", ""))
         inputs.extend(["-i", src])
+
+    return filter_complex, inputs, active
+
+
+def _render_mix_sync(
+    tracks: list[dict[str, Any]],
+    results_dir: str,
+    task_id: str,
+    output_format: str,
+    master_volume: float,
+) -> str:
+    """Synchronous ffmpeg-based mix render."""
+    ffmpeg = _find_ffmpeg()
+
+    filter_complex, inputs, active = _build_filter_and_inputs(tracks, master_volume)
 
     out_path = os.path.join(results_dir, f"{task_id}_mix.{output_format}")
     cmd: list[str] = [

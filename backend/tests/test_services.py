@@ -78,6 +78,8 @@ class TestMidiRenderService:
 # Mix Engine Service
 # ═══════════════════════════════════════════════════════════════════════
 
+from app.services.mix_engine import render_mix, _build_filter_and_inputs
+
 
 class TestMixEngine:
     def test_render_mix_exists(self):
@@ -86,6 +88,154 @@ class TestMixEngine:
     def test_module_importable(self):
         import app.services.mix_engine
         assert hasattr(app.services.mix_engine, "render_mix")
+
+
+class TestBuildFilterInputs:
+    """Test _build_filter_and_inputs — filter chain construction (no ffmpeg)."""
+
+    def test_single_track_no_effects(self):
+        tracks = [{"url": "/results/a.wav", "volume": 0.0, "pan": 0.0}]
+        fc, inputs, active = _build_filter_and_inputs(tracks, 0.0)
+        assert len(active) == 1
+        assert "aformat=channel_layouts=stereo" in fc
+        assert "amix=inputs=1" in fc
+        assert "anull[out]" in fc  # no master volume
+
+    def test_all_muted_raises(self):
+        tracks = [{"url": "/results/a.wav", "mute": True}]
+        with pytest.raises(RuntimeError, match="all muted"):
+            _build_filter_and_inputs(tracks, 0.0)
+
+    def test_solo_overrides_mute(self):
+        tracks = [
+            {"url": "/results/a.wav", "mute": True, "solo": True},
+            {"url": "/results/b.wav", "mute": False, "solo": False},
+        ]
+        fc, inputs, active = _build_filter_and_inputs(tracks, 0.0)
+        # Only solo track is active
+        assert len(active) == 1
+        assert active[0]["url"] == "/results/a.wav"
+
+    def test_mute_without_solo_skipped(self):
+        tracks = [
+            {"url": "/results/a.wav", "mute": False},
+            {"url": "/results/b.wav", "mute": True},
+        ]
+        fc, inputs, active = _build_filter_and_inputs(tracks, 0.0)
+        assert len(active) == 1
+        assert active[0]["url"] == "/results/a.wav"
+
+    def test_volume_filter_applied(self):
+        tracks = [{"url": "/results/a.wav", "volume": -6.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "volume=-6.0dB" in fc
+
+    def test_no_volume_when_zero(self):
+        tracks = [{"url": "/results/a.wav", "volume": 0.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "volume=" not in fc  # no volume filter when 0dB
+
+    def test_pan_center_equal_power(self):
+        """Pan=0 (center): left=cos(π/4)=0.7071, right=sin(π/4)=0.7071."""
+        tracks = [{"url": "/results/a.wav", "pan": 0.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "pan=stereo|c0=0.7071|c1=0.7071" in fc
+
+    def test_pan_full_left(self):
+        """Pan=-1 (full left): left=cos(0)=1.0, right=sin(0)=0.0."""
+        tracks = [{"url": "/results/a.wav", "pan": -1.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "pan=stereo|c0=1.0000|c1=0.0000" in fc
+
+    def test_pan_full_right(self):
+        """Pan=1 (full right): left=cos(π/2)=0.0, right=sin(π/2)=1.0."""
+        tracks = [{"url": "/results/a.wav", "pan": 1.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "pan=stereo|c0=0.0000|c1=1.0000" in fc
+
+    def test_pan_clamped(self):
+        """Pan > 1 or < -1 should be clamped."""
+        tracks = [{"url": "/results/a.wav", "pan": 5.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "c0=0.0000|c1=1.0000" in fc  # clamped to 1.0
+
+    def test_eq_low_band(self):
+        tracks = [{"url": "/results/a.wav", "eq": {"low": 3.0}}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "equalizer=f=100:t=h:w=200:g=3.0" in fc
+
+    def test_eq_mid_band(self):
+        tracks = [{"url": "/results/a.wav", "eq": {"mid": -2.0}}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "equalizer=f=1000:t=q:w=1.0:g=-2.0" in fc
+
+    def test_eq_high_band(self):
+        tracks = [{"url": "/results/a.wav", "eq": {"high": 4.0}}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "equalizer=f=8000:t=h:w=200:g=4.0" in fc
+
+    def test_eq_all_bands(self):
+        tracks = [{"url": "/results/a.wav", "eq": {"low": 1, "mid": 2, "high": 3}}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert fc.count("equalizer=") == 3
+
+    def test_no_eq_when_zero(self):
+        tracks = [{"url": "/results/a.wav", "eq": {"low": 0, "mid": 0, "high": 0}}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "equalizer=" not in fc
+
+    def test_reverb_send(self):
+        tracks = [{"url": "/results/a.wav", "reverb_send": 0.3}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "asplit=2" in fc
+        assert "aecho=0.8:0.7:40|60:0.300|0.300" in fc
+        assert "amix=inputs=2:duration=longest" in fc
+
+    def test_no_reverb_when_zero(self):
+        tracks = [{"url": "/results/a.wav", "reverb_send": 0.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "asplit" not in fc
+        assert "aecho" not in fc
+
+    def test_master_volume_positive(self):
+        tracks = [{"url": "/results/a.wav"}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 3.0)
+        assert "volume=3.0dB[out]" in fc
+
+    def test_master_volume_negative(self):
+        tracks = [{"url": "/results/a.wav"}]
+        fc, _, _ = _build_filter_and_inputs(tracks, -6.0)
+        assert "volume=-6.0dB[out]" in fc
+
+    def test_no_master_volume_uses_anull(self):
+        tracks = [{"url": "/results/a.wav"}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "anull[out]" in fc
+        assert "volume=" not in fc.split("[mix0]")[1]
+
+    def test_inputs_built_from_urls(self):
+        tracks = [
+            {"url": "/results/a.wav"},
+            {"url": "/results/b.wav"},
+        ]
+        fc, inputs, active = _build_filter_and_inputs(tracks, 0.0)
+        # inputs = ["-i", "resolved_a", "-i", "resolved_b"]
+        assert inputs.count("-i") == 2
+        assert len(inputs) == 4
+
+    def test_multiple_tracks_amix_count(self):
+        tracks = [
+            {"url": "/results/a.wav"},
+            {"url": "/results/b.wav"},
+            {"url": "/results/c.wav"},
+        ]
+        fc, _, active = _build_filter_and_inputs(tracks, 0.0)
+        assert len(active) == 3
+        assert "amix=inputs=3:duration=longest" in fc
+
+    def test_empty_tracks_raises(self):
+        with pytest.raises(RuntimeError, match="all muted"):
+            _build_filter_and_inputs([], 0.0)
 
 
 # ═══════════════════════════════════════════════════════════════════════
