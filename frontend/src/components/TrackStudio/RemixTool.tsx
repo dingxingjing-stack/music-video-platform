@@ -1,11 +1,7 @@
 /**
  * RemixTool — Audio modification panel for completed tracks.
- *
- * Provides pitch (-12..+12 semitones), tempo (0.5x..2.0x), and timbre
- * presets. Submits a remix job to /api/v1/remix/process and reports
- * progress via WebSocket.
- *
- * Renders as a collapsible floating menu inside a completed track card.
+ * Pitch shift, tempo, timbre presets. WebSocket progress.
+ * Renders as an expandable section inside a completed track card.
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -58,7 +54,6 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
 
       const data = (await resp.json()) as { task_id: string; websocket: string };
 
-      // Connect to WS for remix progress
       if (wsRef.current) {
         wsRef.current.onclose = null;
         wsRef.current.close();
@@ -77,36 +72,35 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
               status: 'completed',
               url: (msg.result_url as string) || null,
               progress: 100,
-              color: '#8b5cf6',
+              color: '#ff6a10',
               createdAt: Date.now(),
             };
             const remixParams: RemixParameters = { pitchShift: pitch, tempoMultiplier: tempo, timbreTransform: timbre };
             onRemixDone?.(track.id, remixParams);
             onRemixComplete(newTrack);
             setCollapsed(true);
+            setSubmitting(false);
           } else if (msg.status === 'failed') {
-            onRemixError(
-              (msg.message as string) || 'Remix generation failed',
-            );
+            const errMsg = (msg.error as string) ?? 'Remix failed';
+            onRemixError(errMsg);
+            setSubmitting(false);
+            ws.close();
           }
         } catch {
-          // ignore
+          /* ignore */
         }
       };
-
-      ws.onclose = () => {
+      ws.onerror = () => {
+        onRemixError('WebSocket connection error');
         setSubmitting(false);
+        ws.close();
       };
     } catch (err) {
-      console.error('Remix failed:', err);
-      onRemixError(
-        err instanceof Error ? err.message : 'Unknown error',
-      );
+      onRemixError(err instanceof Error ? err.message : 'Unknown remix error');
       setSubmitting(false);
     }
-  }, [track.id, track.name, track.type, track.url, pitch, tempo, timbre]);
+  }, [track, pitch, tempo, timbre, onRemixComplete, onRemixError, onRemixDone]);
 
-  // Cleanup WS on unmount
   useEffect(() => {
     return () => {
       if (wsRef.current) {
@@ -117,67 +111,55 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
   }, []);
 
   return (
-    <div className="mt-2 border-t border-gray-800 pt-2">
+    <div className="mt-2 border-t border-[#2a2a38] pt-2">
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-300 transition-colors"
+        className="flex items-center gap-1 text-[10px] font-medium text-[#ff6a10] hover:text-[#ff6a10] transition-colors"
         title="Remix this track"
       >
         <span className="text-xs">{collapsed ? '➕' : '➖'}</span>
-        <span>Remix</span>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Remix</span>
       </button>
 
       {/* Controls panel */}
       {!collapsed && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-2.5">
           {/* Pitch slider */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-gray-400 w-10 text-right">
-              Pitch
-            </label>
+            <label className="text-[10px] text-[#777777] w-10 text-right">Pitch</label>
             <input
-              type="range"
-              min={-12}
-              max={12}
-              step={1}
+              type="range" min={-12} max={12} step={1}
               value={pitch}
               onChange={(e) => setPitch(Number(e.target.value))}
-              className="flex-1 h-1 accent-purple-400"
+              className="flex-1 h-1.5 accent-[#ff6a10]"
             />
-            <span className="text-[10px] text-purple-400 font-mono w-8 text-right">
+            <span className="text-[10px] font-mono text-[#ff6a10] w-8 text-right">
               {pitch > 0 ? `+${pitch}` : pitch}st
             </span>
           </div>
 
           {/* Tempo slider */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-gray-400 w-10 text-right">
-              Tempo
-            </label>
+            <label className="text-[10px] text-[#777777] w-10 text-right">Tempo</label>
             <input
-              type="range"
-              min={0.5}
-              max={2}
-              step={0.1}
+              type="range" min={0.5} max={2} step={0.1}
               value={tempo}
               onChange={(e) => setTempo(Number(e.target.value))}
-              className="flex-1 h-1 accent-purple-400"
+              className="flex-1 h-1.5 accent-[#38bdf8]"
             />
-            <span className="text-[10px] text-purple-400 font-mono w-12 text-right">
+            <span className="text-[10px] font-mono text-[#38bdf8] w-10 text-right">
               {tempo.toFixed(1)}x
             </span>
           </div>
 
           {/* Timbre dropdown */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-gray-400 w-10 text-right">
-              Timbre
-            </label>
+            <label className="text-[10px] text-[#777777] w-10 text-right">Timbre</label>
             <select
               value={timbre}
               onChange={(e) => setTimbre(e.target.value as TimbrePreset)}
-              className="flex-1 px-1 py-0.5 bg-gray-800 border border-gray-700 rounded text-[10px] text-white focus:outline-none"
+              className="flex-1 px-2 py-1 bg-[#2a2a38] border border-[#2a2a38] rounded text-xs text-[#b0b0b0] focus:outline-none focus:ring-1 focus:ring-[#ff6a10]/50"
             >
               {TIMBRE_PRESETS.map((t) => (
                 <option key={t} value={t}>
@@ -191,7 +173,10 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
           <button
             onClick={handleRemix}
             disabled={submitting}
-            className="w-full px-2 py-1 text-[10px] bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded hover:from-purple-500 hover:to-fuchsia-500 disabled:opacity-50 transition-all"
+            className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg transition-all
+              bg-[#ff6a10] text-white
+              hover:bg-[#ff6a10] disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {submitting ? '⏳ Processing...' : '🎛️ Generate Remix'}
           </button>

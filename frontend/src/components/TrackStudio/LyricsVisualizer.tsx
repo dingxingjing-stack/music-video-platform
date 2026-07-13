@@ -120,7 +120,7 @@ function LyricsDisplay({
 
   if (lyrics.length === 0) {
     return (
-      <p className="text-xs text-gray-400 italic">
+      <p className="text-xs text-[#b0b0b0] italic">
         No lyrics loaded. Generate or paste lyrics above.
       </p>
     );
@@ -207,8 +207,8 @@ export default function LyricsVisualizer({ lyrics, currentTime, duration, compac
       {!compact && (
         <div className="flex items-center gap-2 mb-1">
           <Music size={14} className="text-indigo-500" />
-          <span className="text-xs font-medium text-gray-600">Lyrics Sync</span>
-          <span className="text-[10px] text-gray-400">
+          <span className="text-xs font-medium text-[#777777]">Lyrics Sync</span>
+          <span className="text-[10px] text-[#b0b0b0]">
             {lyrics.length} lines · {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
@@ -221,7 +221,7 @@ export default function LyricsVisualizer({ lyrics, currentTime, duration, compac
       </div>
 
       {/* Progress bar */}
-      <div className="flex items-center gap-1 text-[10px] text-gray-400 mb-1">
+      <div className="flex items-center gap-1 text-[10px] text-[#b0b0b0] mb-1">
         <Clock size={10} />
         <span>{formatTime(currentTime)}</span>
         <div className="flex-1 h-1 bg-gray-200 rounded mx-1">

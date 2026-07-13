@@ -307,30 +307,30 @@ export function PianoRoll({ project, onProjectChange, isPlaying, currentTick = 0
   const gridPattern = useMemo(() => (
     <pattern id="grid" width={PPQ * pixelsPerTick} height={noteHeight * 12} patternUnits="userSpaceOnUse">
       <rect width={PPQ * pixelsPerTick} height={noteHeight * 12} fill="transparent"/>
-      <line x1={0} y1={0} x2={0} y2={noteHeight * 12} stroke="#374151" strokeWidth={1} />
-      {[PPQ/4, PPQ/2, PPQ*3/4].map(div => (
-        <line key={div} x1={div * pixelsPerTick} y1={0} x2={div * pixelsPerTick} y2={noteHeight * 12} stroke="#1f2937" strokeWidth={0.5} />
-      ))}
-      {[...Array(7)].map((_, i) => i * 12 * noteHeight).map(y => (
-        <line key={y} x1={0} y1={y} x2={PPQ * pixelsPerTick} y2={y} stroke="#1f2937" strokeWidth={0.5} />
-      ))}
+      <line x1={0} y1={0} x2={0} y2={noteHeight * 12} stroke="#2a2a38" strokeWidth={1} />
+            {[PPQ/4, PPQ/2, PPQ*3/4].map(div => (
+              <line key={div} x1={div * pixelsPerTick} y1={0} x2={div * pixelsPerTick} y2={noteHeight * 12} stroke="#2a2a38" strokeWidth={0.5} />
+            ))}
+            {[...Array(7)].map((_, i) => i * 12 * noteHeight).map(y => (
+              <line key={y} x1={0} y1={y} x2={PPQ * pixelsPerTick} y2={y} stroke="#2a2a38" strokeWidth={0.5} />
+            ))}
     </pattern>
   ), [pixelsPerTick, noteHeight]);
 
   return (
     <div 
-      className="flex h-full bg-gray-950 rounded-xl border border-gray-800 overflow-hidden"
+      className="flex h-full bg-[#121212] rounded-xl border border-[#2a2a38] overflow-hidden"
       onWheel={handleWheel}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
       {/* Piano Keys Sidebar */}
-      <div className="flex-shrink-0 w-40 border-r border-gray-800 bg-gray-900 relative overflow-hidden">
+      <div className="flex-shrink-0 w-40 border-r border-[#2a2a38] bg-[#1f1f1f] relative overflow-hidden">
         {pianoKeys.map(key => (
           <div
             key={key.pitch}
-            className={`absolute left-0 right-0 h-[20px] flex items-center justify-center px-2 text-xs font-mono text-gray-500 border-b border-gray-800/50 ${
-              key.isBlack ? 'bg-gray-800 text-gray-400' : 'bg-gray-900'
+            className={`absolute left-0 right-0 h-[20px] flex items-center justify-center px-2 text-xs font-mono text-[#777777] border-b border-[#2a2a38]/50 ${
+              key.isBlack ? 'bg-[#262626] text-[#b0b0b0]' : 'bg-[#1f1f1f]'
             }`}
             style={{ top: key.y }}
           >
@@ -365,7 +365,7 @@ export function PianoRoll({ project, onProjectChange, isPlaying, currentTick = 0
               y1={0}
               x2={bar * PPQ * 4 * pixelsPerTick - scrollX}
               y2="100%"
-              stroke="#4b5563"
+              stroke="#ff6a10"
               strokeWidth={2}
               strokeDasharray="8,4"
             />
@@ -393,8 +393,8 @@ export function PianoRoll({ project, onProjectChange, isPlaying, currentTick = 0
                 width={note.width}
                 height={note.height}
                 rx={2}
-                fill={note.isSelected ? '#60a5fa' : `hsl(${note.pitch * 2.8}, 70%, 55%)`}
-                stroke={note.isSelected ? '#93c5fd' : 'transparent'}
+                fill={note.isSelected ? '#ff6a10' : `hsl(${note.pitch * 2.8}, 70%, 55%)`}
+                stroke={note.isSelected ? '#ff6a10' : 'transparent'}
                 strokeWidth={2}
                 filter="drop-shadow(0 1px 2px rgba(0,0,0,0.3))"
                 className="transition-colors"
@@ -410,8 +410,8 @@ export function PianoRoll({ project, onProjectChange, isPlaying, currentTick = 0
               width={dragState.currentX - dragState.startX}
               height={noteHeight - 1}
               rx={2}
-              fill="rgba(96, 165, 250, 0.5)"
-              stroke="#60a5fa"
+              fill="rgba(230, 90, 11, 0.5)"
+              stroke="#ff6a10"
               strokeWidth={1}
               strokeDasharray="4,4"
             />

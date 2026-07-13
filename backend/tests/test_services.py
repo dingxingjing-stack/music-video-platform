@@ -191,6 +191,42 @@ class TestBuildFilterInputs:
         assert "aecho=0.8:0.7:40|60:0.300|0.300" in fc
         assert "amix=inputs=2:duration=longest" in fc
 
+    def test_master_volume_applied(self):
+        tracks = [{"url": "/results/a.wav", "volume": 0.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 6.0)
+        assert "volume=6.0dB[out]" in fc
+
+    def test_two_tracks_amix(self):
+        tracks = [
+            {"url": "/results/a.wav", "volume": 0.0},
+            {"url": "/results/b.wav", "volume": 0.0},
+        ]
+        fc, inputs, active = _build_filter_and_inputs(tracks, 0.0)
+        assert len(active) == 2
+        # inputs is ['-i', url1, '-i', url2] → 4 elements
+        assert inputs.count("-i") == 2
+        assert "amix=inputs=2" in fc
+
+    def test_empty_tracks_raises(self):
+        with pytest.raises(RuntimeError, match="No active tracks"):
+            _build_filter_and_inputs([], 0.0)
+
+    def test_volume_zero_no_filter(self):
+        tracks = [{"url": "/results/a.wav", "volume": 0.0}]
+        fc, _, _ = _build_filter_and_inputs(tracks, 0.0)
+        assert "volume=" not in fc
+
+    def test_all_solo_with_non_solo(self):
+        tracks = [
+            {"url": "/results/a.wav", "solo": True},
+            {"url": "/results/b.wav", "solo": True},
+            {"url": "/results/c.wav"},
+        ]
+        _, _, active = _build_filter_and_inputs(tracks, 0.0)
+        assert len(active) == 2
+        urls = {t["url"] for t in active}
+        assert urls == {"/results/a.wav", "/results/b.wav"}
+
     def test_no_reverb_when_zero(self):
         tracks = [{"url": "/results/a.wav", "reverb_send": 0.0}]
         fc, _, _ = _build_filter_and_inputs(tracks, 0.0)

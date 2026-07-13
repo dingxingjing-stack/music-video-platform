@@ -28,7 +28,7 @@ const OP_META: Record<ProvenanceOperationType, OpMeta> = {
   generate: {
     label: '生成',
     icon: '✨',
-    color: 'text-emerald-400',
+    color: 'text-[#76b900]',
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/40',
   },
@@ -49,7 +49,7 @@ const OP_META: Record<ProvenanceOperationType, OpMeta> = {
   remix_timbre_transform: {
     label: '音色变换',
     icon: '🎨',
-    color: 'text-amber-400',
+    color: 'text-[#febc2e]',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/40',
   },
@@ -122,34 +122,34 @@ export function ProvenanceTimeline({
 
   if (sortedOps.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-6 text-center">
-        <p className="text-sm text-gray-500">暂无操作记录</p>
+      <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/50 p-6 text-center">
+        <p className="text-sm text-[#777777]">暂无操作记录</p>
       </div>
     );
   }
 
   return (
     <div
-      className={`rounded-xl border border-gray-800 bg-gray-900/50 ${compact ? 'p-4' : 'p-6'}`}
+      className={`rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/50 ${compact ? 'p-4' : 'p-6'}`}
     >
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-lg">🔗</span>
-          <h3 className="text-sm font-semibold text-gray-300">
+          <h3 className="text-sm font-semibold text-[#e0e0e0]">
             溯源时间轴
           </h3>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
               provenance.originality === 'original'
-                ? 'bg-emerald-500/20 text-emerald-400'
-                : 'bg-amber-500/20 text-amber-400'
+                ? 'bg-emerald-500/20 text-[#76b900]'
+                : 'bg-amber-500/20 text-[#febc2e]'
             }`}
           >
             {provenance.originality === 'original' ? '原创' : '衍生'}
           </span>
         </div>
-        <span className="text-[11px] text-gray-600 font-mono">
+        <span className="text-[11px] text-[#777777] font-mono">
           {provenance.projectId.slice(0, 8)}
         </span>
       </div>
@@ -179,21 +179,21 @@ export function ProvenanceTimeline({
                     <span className={`text-xs font-semibold ${meta.color}`}>
                       {meta.label}
                     </span>
-                    <span className="text-[11px] text-gray-500 font-mono">
+                    <span className="text-[11px] text-[#777777] font-mono">
                       {formatDate(op.timestamp)}
                     </span>
                   </div>
 
                   {/* Param summary */}
                   {getParamSummary(op) && (
-                    <p className="mt-1 text-xs text-gray-400 truncate">
+                    <p className="mt-1 text-xs text-[#b0b0b0] truncate">
                       {getParamSummary(op)}
                     </p>
                   )}
 
                   {/* Result track link */}
                   {hasResult && (
-                    <span className="mt-1 inline-block rounded bg-gray-800/60 px-1.5 py-0.5 text-[10px] font-mono text-gray-500">
+                    <span className="mt-1 inline-block rounded bg-[#262626]/60 px-1.5 py-0.5 text-[10px] font-mono text-[#777777]">
                       → {op.resultTrackId}
                     </span>
                   )}
@@ -206,18 +206,18 @@ export function ProvenanceTimeline({
 
       {/* Footer: hash & proof */}
       {(provenance.outputHash || provenance.proofDocument) && (
-        <div className="mt-4 border-t border-gray-800 pt-3">
+        <div className="mt-4 border-t border-[#2a2a38] pt-3">
           {provenance.outputHash && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-600">指纹:</span>
-              <code className="text-[10px] font-mono text-gray-500 truncate max-w-[200px]">
+              <span className="text-[10px] text-[#777777]">指纹:</span>
+              <code className="text-[10px] font-mono text-[#777777] truncate max-w-[200px]">
                 {provenance.outputHash}
               </code>
             </div>
           )}
           {provenance.proofDocument && (
             <button
-              className="mt-2 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+              className="mt-2 text-[11px] text-[#777777] hover:text-[#e0e0e0] transition-colors"
               onClick={() => {
                 const blob = new Blob(
                   [JSON.stringify(provenance.proofDocument, null, 2)],

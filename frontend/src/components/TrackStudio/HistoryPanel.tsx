@@ -44,22 +44,22 @@ export function HistoryPanel({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-[#b0b0b0] uppercase tracking-wider">
           Saved Tracks ({history.length})
         </h2>
         <button
           onClick={handleClear}
-          className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+          className="text-xs text-[#777777] hover:text-[#ef4444] transition-colors"
         >
           Clear All
         </button>
       </div>
       <div
-        className="grid gap-3 overflow-y-auto pr-1"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          maxHeight: '500px',
-        }}
+              className="grid gap-3 overflow-y-auto pr-1"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                maxHeight: 'min(500px, 60vh)',
+              }}
       >
         {/* Custom scrollbar styles */}
         <style>{`
@@ -74,7 +74,7 @@ export function HistoryPanel({
             onClick={() => onTrackSelect?.(track.id)}
             className={`rounded-xl border-2 p-3 text-left transition-all flex-shrink-0 cursor-pointer ${
               track.status === 'completed'
-                ? 'border-gray-800 bg-gray-900/50 hover:border-gray-600'
+                ? 'border-[#2a2a38] bg-[#1f1f1f]/50 hover:border-[#777777]'
                 : 'border-red-900 bg-red-950/20'
             }`}
           >
@@ -88,13 +88,13 @@ export function HistoryPanel({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium truncate">{track.name}</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-[#777777]">
                   {track.createdAt ? formatDate(track.createdAt) : ''}
                 </p>
               </div>
               <button
                 onClick={() => onDelete(track.id)}
-                className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+                className="text-xs text-[#777777] hover:text-[#ef4444] transition-colors"
                 title="Delete"
               >
                 ✕

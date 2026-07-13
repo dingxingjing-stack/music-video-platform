@@ -19,21 +19,9 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useWebSocketProgress } from '../hooks/useWebSocketProgress';
 import { useSessionStorage } from '../hooks/useSessionStorage';
 import { useTranslation } from '../i18n/useTranslation';
-import type {
-  Track,
-  PersistedSession,
-  MidiProject,
-  ProjectProvenance,
-  ProvenanceOperation,
-  ProvenanceOperationType,
-  RemixParameters,
-} from '../types/trackStudio';
-import {
-  PATHS,
-  TRACK_COLORS,
-  STORAGE_VERSION,
-} from '../types/trackStudio';
-
+import type { Track, PersistedSession, MidiProject, ProjectProvenance, ProvenanceOperation, ProvenanceOperationType, RemixParameters } from '../types/trackStudio';
+import { PATHS, TRACK_COLORS, STORAGE_VERSION } from '../types/trackStudio';
+import { MultiTrackView } from '../components/MultiTrackEditor/MultiTrackView';
 import {
   TrackStudioHeader,
   PathSelector,
@@ -43,11 +31,11 @@ import {
   IdleState,
   BatchProgressDashboard,
   MixConsole,
-  MVGenerator,
   ProvenanceTimeline,
   WatermarkPanel,
   LyricsVisualizer,
 } from '../components/TrackStudio';
+import { enhancePrompt } from '../utils/enhancePrompt';
 
 // ── Fetch with Retry & Concurrency Limit ──────────────────────────────────
 const MAX_CONCURRENT = 4;
@@ -149,19 +137,20 @@ export function TrackStudio() {
   );
 
   // ── Local state ──────────────────────────────────────────────────────
-  const [selectedPath, setSelectedPath] = useState<'a' | 'b' | 'c' | 'd'>('a');
-  const [prompt, setPrompt] = useState(PATHS[0].prompt);
-  const [ttsText, setTtsText] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<{
-    name: string;
-    base64: string;
-    size: number;
-  } | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
-  const [selectedTrackUrl, setSelectedTrackUrl] = useState<string | null>(null);
-  const [selectedTrackName, setSelectedTrackName] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+    const [selectedPath, setSelectedPath] = useState<'a' | 'b' | 'c' | 'd'>('a');
+    const [prompt, setPrompt] = useState(PATHS[0].prompt);
+    const [ttsText, setTtsText] = useState('');
+    const [uploadedFile, setUploadedFile] = useState<{
+      name: string;
+      base64: string;
+      size: number;
+    } | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
+    const [selectedTrackUrl, setSelectedTrackUrl] = useState<string | null>(null);
+    const [selectedTrackName, setSelectedTrackName] = useState<string>('');
+    const [loading, setLoading] = useState(false);
+    const [viewMode, setViewMode] = useState<'list' | 'multi-track'>('list');
 
   // ── Provenance Tracking ────────────────────────────────────────────────
   const [provenance, setProvenance] = useState<ProjectProvenance | null>(null);
@@ -314,28 +303,33 @@ export function TrackStudio() {
       const endpoint = `/api/v1/workflow/${selectedPath}`;
       const body: Record<string, unknown> = { task_id: `studio-${Date.now()}` };
 
-      if (selectedPath === 'a') {
-        body.prompt = prompt;
-        body.duration = 10;
-      } else if (selectedPath === 'b') {
-        body.prompt = prompt;
-        body.tts_text = ttsText || t('common.helloWorld');
-        body.duration = 10;
-        if (uploadedFile) {
-          body.reference_audio = uploadedFile.base64;
-        }
-      } else if (selectedPath === 'c') {
-        if (!uploadedFile) {
-          throw new Error(t('errors.audioRequired'));
-        }
-        body.audio_base64 = uploadedFile.base64;
-        body.stem_count = t('common.stemCount4');
-      } else if (selectedPath === 'd') {
-        if (!midiProject) {
-          throw new Error(t('errors.midiProjectRequired'));
-        }
-        body.midi_project = midiProject;
-      }
+      let enhancedPrompt = prompt || '';
+            if ((selectedPath === 'a' || selectedPath === 'b') && (prompt || '').trim()) {
+              enhancedPrompt = await enhancePrompt(prompt || '');
+            }
+
+            if (selectedPath === 'a') {
+              body.prompt = enhancedPrompt || prompt;
+              body.duration = 10;
+            } else if (selectedPath === 'b') {
+              body.prompt = enhancedPrompt || prompt;
+              body.tts_text = ttsText || t('common.helloWorld');
+              body.duration = 10;
+              if (uploadedFile) {
+                body.reference_audio = uploadedFile.base64;
+              }
+            } else if (selectedPath === 'c') {
+              if (!uploadedFile) {
+                throw new Error(t('errors.audioRequired'));
+              }
+              body.audio_base64 = uploadedFile.base64;
+              body.stem_count = t('common.stemCount4');
+            } else if (selectedPath === 'd') {
+              if (!midiProject) {
+                throw new Error(t('errors.midiProjectRequired'));
+              }
+              body.midi_project = midiProject;
+            }
 
       const resp = await fetchWithRetry(endpoint, {
         method: 'POST',
@@ -681,12 +675,17 @@ export function TrackStudio() {
   );
 
   const handleClearHistory = useCallback(() => {
-    if (confirm(t('common.clearConfirm'))) {
-      setHistoryState(() => []);
-    }
-  }, [t, setHistoryState]);
+      if (confirm(t('common.clearConfirm'))) {
+        setHistoryState(() => []);
+      }
+    }, [t, setHistoryState]);
 
-  // ── Reset ────────────────────────────────────────────────────────────
+    // ── Multi-track editor handler ───────────────────────────────────────
+      const handleMultiTrackChange = useCallback((newTracks: Track[]) => {
+        setHistoryState(() => newTracks);
+      }, [setHistoryState]);
+
+    // ── Reset ────────────────────────────────────────────────────────────
   const resetStudio = useCallback(() => {
     setWorkflow(() => ({
       path: null,
@@ -818,17 +817,27 @@ export function TrackStudio() {
   const hasWorkflowResult = workflow.completed || workflow.error;
 
   // ── Render ───────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
-      <TrackStudioHeader
-        workflow={workflow}
-        historyLength={history.length}
-        wsConnected={wsConnected}
-        wsStatus={wsStatus}
-      />
+    return (
+      <div className="min-h-screen bg-[#121212] text-[#e0e0e0]">
+        <TrackStudioHeader
+                workflow={workflow}
+                historyLength={history.length}
+                wsConnected={wsConnected}
+                wsStatus={wsStatus}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+              />
 
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {/* Path Selector */}
+        {/* 视图切换：列表 vs 多轨 */}
+                {viewMode === 'multi-track' ? (
+                  <MultiTrackView
+                    tracks={history}
+                    onTracksChange={handleMultiTrackChange}
+                    onBack={() => setViewMode('list')}
+                  />
+                ) : (
+                                <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+                        {/* Path Selector */}
         <PathSelector
           selectedPath={selectedPath}
           running={workflow.running}
@@ -878,8 +887,8 @@ export function TrackStudio() {
         {/* Error Display */}
         {workflow.error && (
           <div className="rounded-xl border border-red-800 bg-red-950/50 p-4">
-            <p className="text-sm text-red-300 font-medium">{t('common.error')}</p>
-            <p className="text-xs text-red-400 mt-1 font-mono">
+            <p className="text-sm text-[#fca5a5] font-medium">{t('common.error')}</p>
+            <p className="text-xs text-[#ef4444] mt-1 font-mono">
               {workflow.error}
             </p>
           </div>
@@ -903,14 +912,11 @@ export function TrackStudio() {
         />
 
         {/* Mix Console */}
-        <MixConsole history={history} />
+                <MixConsole history={history} />
 
-        {/* MV Generator */}
-        <MVGenerator history={history} onTrackSelect={(track) => handleTrackSelect(track.id)} />
-
-        {/* Watermark Panel — copyright fingerprint + blind watermark */}
+                {/* Watermark Panel — copyright fingerprint + blind watermark */}
         {selectedTrackUrl && (
-          <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+          <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/70 p-4">
             <WatermarkPanel
               trackUrl={selectedTrackUrl}
               trackName={selectedTrackName}
@@ -938,7 +944,7 @@ export function TrackStudio() {
 
         {/* Lyrics Visualizer — shows when a track is selected */}
         {selectedTrackUrl && (
-          <div className="rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+          <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/70 p-4">
             <LyricsVisualizer
               lyrics={[]}
               currentTime={0}
@@ -950,15 +956,16 @@ export function TrackStudio() {
 
         {/* Idle State */}
         {!workflow.running &&
-          !workflow.completed &&
-          !workflow.error &&
-          workflow.tracks.length === 0 &&
-          history.length === 0 && <IdleState />}
-      </main>
+                  !workflow.completed &&
+                  !workflow.error &&
+                  workflow.tracks.length === 0 &&
+                  history.length === 0 && <IdleState />}
+              </main>
+              )}
 
-      {/* Footer */}
-      <footer className="border-t border-gray-800 mt-12 py-4 text-center text-xs text-gray-600">
-        {t('common.appName')} v3.1 · Built with React + Vite + FastAPI
+              {/* Footer */}
+      <footer className="border-t border-[#2a2a38] mt-12 py-4 text-center text-xs text-[#777777]">
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{t('common.appName')}</span> v3.1 · Built with React + Vite + FastAPI
       </footer>
     </div>
   );

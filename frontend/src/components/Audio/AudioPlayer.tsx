@@ -195,15 +195,15 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
       />
 
       {/* Progress bar with trim overlay */}
-      <div className="relative h-6 bg-gray-800 rounded-md overflow-hidden group">
+      <div className="relative h-6 bg-[#262626] rounded-md overflow-hidden group">
         {/* Trim dim zones (left of start) */}
         <div
-          className="absolute inset-y-0 left-0 bg-gray-950/70"
+          className="absolute inset-y-0 left-0 bg-[#121212]/70"
           style={{ width: `${trimLeftPct}%` }}
         />
         {/* Trim dim zones (right of end) */}
         <div
-          className="absolute inset-y-0 right-0 bg-gray-950/70"
+          className="absolute inset-y-0 right-0 bg-[#121212]/70"
           style={{ width: `${100 - trimRightPct}%` }}
         />
         {/* Active trim zone */}
@@ -229,7 +229,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
           title={`End: ${formatTime(trimEnd)}`}
         />
         {/* Time labels */}
-        <span className="absolute bottom-0.5 left-1 text-[9px] text-emerald-400 font-mono">
+        <span className="absolute bottom-0.5 left-1 text-[9px] text-[#76b900] font-mono">
           {formatTime(trimStart)}
         </span>
         <span className="absolute bottom-0.5 right-1 text-[9px] text-rose-400 font-mono">
@@ -242,7 +242,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
         {/* Play/Pause */}
         <button
           onClick={handlePlayPause}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-[#e0e0e0] text-sm transition-colors"
           title={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? '⏸' : '▶'}
@@ -262,7 +262,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
                 setRenameValue(track.name);
               }
             }}
-            className="flex-1 px-2 py-1 bg-gray-800 border border-indigo-500 rounded text-xs text-white focus:outline-none"
+            className="flex-1 px-2 py-1 bg-[#262626] border border-indigo-500 rounded text-xs text-[#e0e0e0] focus:outline-none"
           />
         ) : (
           <button
@@ -270,7 +270,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
               setShowRename(true);
               setRenameValue(track.name);
             }}
-            className="flex-1 text-left text-xs text-gray-400 hover:text-white truncate"
+            className="flex-1 text-left text-xs text-[#b0b0b0] hover:text-[#e0e0e0] truncate"
             title="Click to rename"
           >
             {track.name}
@@ -281,7 +281,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
         <button
           onClick={() => setShowTrim(!showTrim)}
           className={`px-2 py-1 text-xs rounded transition-colors ${
-            showTrim ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
+            showTrim ? 'bg-indigo-600 text-[#e0e0e0]' : 'text-[#b0b0b0] hover:text-[#e0e0e0]'
           }`}
           title="Toggle trim mode"
         >
@@ -291,7 +291,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
         {/* Download full */}
         <button
           onClick={handleDownload}
-          className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+          className="px-2 py-1 text-xs text-[#b0b0b0] hover:text-[#e0e0e0] transition-colors"
           title="Download full"
         >
           ⬇
@@ -302,7 +302,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
           onClick={() => {
             if (confirm(`Delete "${track.name}"?`)) onDelete(track.id);
           }}
-          className="px-2 py-1 text-xs text-gray-400 hover:text-red-400 transition-colors"
+          className="px-2 py-1 text-xs text-[#b0b0b0] hover:text-[#ef4444] transition-colors"
           title="Delete"
         >
           🗑
@@ -311,9 +311,9 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
 
       {/* Trim controls */}
       {showTrim && (
-        <div className="space-y-2 pt-1 border-t border-gray-800">
+        <div className="space-y-2 pt-1 border-t border-[#2a2a38]">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">Trim Range</span>
+            <span className="text-xs text-[#777777]">Trim Range</span>
             <span className="text-xs font-mono text-indigo-400">
               {formatTime(trimStart)} → {formatTime(trimEnd)} ({formatTime(trimEnd - trimStart)})
             </span>
@@ -321,7 +321,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
 
           {/* Start slider */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-emerald-400 w-8">Start</label>
+            <label className="text-[10px] text-[#76b900] w-8">Start</label>
             <input
               type="range"
               min={0}
@@ -342,7 +342,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
               onChange={(e) =>
                 setTrimState(Math.min(Number(e.target.value), trimEnd - 0.5), trimEnd)
               }
-              className="w-16 px-1 py-0.5 bg-gray-800 border border-gray-700 rounded text-[10px] text-white text-right font-mono"
+              className="w-16 px-1 py-0.5 bg-[#262626] border border-[#2a2a38] rounded text-[10px] text-[#e0e0e0] text-right font-mono"
             />
           </div>
 
@@ -369,7 +369,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
               onChange={(e) =>
                 setTrimState(trimStart, Math.max(Number(e.target.value), trimStart + 0.5))
               }
-              className="w-16 px-1 py-0.5 bg-gray-800 border border-gray-700 rounded text-[10px] text-white text-right font-mono"
+              className="w-16 px-1 py-0.5 bg-[#262626] border border-[#2a2a38] rounded text-[10px] text-[#e0e0e0] text-right font-mono"
             />
           </div>
 
@@ -377,7 +377,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
           <button
             onClick={handleDownloadSnippet}
             disabled={downloading}
-            className="w-full px-3 py-1.5 text-xs bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 transition-all"
+            className="w-full px-3 py-1.5 text-xs bg-gradient-to-r from-indigo-600 to-violet-600 text-[#e0e0e0] rounded-lg hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 transition-all"
           >
             {downloading
               ? '⏳ Trimming...'

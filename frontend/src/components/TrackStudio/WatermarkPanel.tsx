@@ -117,13 +117,13 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
         <div className="space-y-2">
           <div className="flex gap-2">
             <input
-              className="flex-1 text-xs px-2 py-1 border rounded bg-gray-50"
+              className="flex-1 text-xs px-2 py-1 border rounded bg-[#262626] text-[#b0b0b0]"
               placeholder="Owner ID"
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
             />
             <input
-              className="flex-1 text-xs px-2 py-1 border rounded bg-gray-50"
+              className="flex-1 text-xs px-2 py-1 border rounded bg-[#262626] text-[#b0b0b0]"
               placeholder="Project ID"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
@@ -131,14 +131,14 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
           </div>
           <div className="flex gap-2">
             <button
-              className="flex-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 flex items-center justify-center gap-1"
+              className="flex-1 text-xs bg-[#ff6a10] text-white px-3 py-1.5 rounded hover:bg-[#ff6a10] flex items-center justify-center gap-1"
               onClick={apply}
               disabled={!trackUrl}
             >
               <Fingerprint size={14} /> Apply
             </button>
             <button
-              className="flex-1 text-xs bg-gray-600 text-white px-3 py-1.5 rounded hover:bg-gray-700 flex items-center justify-center gap-1"
+              className="flex-1 text-xs bg-[#777777] text-[#e0e0e0] px-3 py-1.5 rounded hover:bg-[#2a2a38] flex items-center justify-center gap-1"
               onClick={extract}
               disabled={!trackUrl}
             >
@@ -152,7 +152,7 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
       )}
 
       {(stage === 'fingerprinting' || stage === 'embedding' || stage === 'extracting') && (
-        <div className="flex items-center gap-2 text-xs text-blue-600">
+        <div className="flex items-center gap-2 text-xs text-[#ff6a10]">
           <Loader2 size={14} className="animate-spin" />
           {stage === 'fingerprinting' && 'Fingerprinting...'}
           {stage === 'embedding' && 'Embedding watermark...'}
@@ -163,12 +163,12 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
       {stage === 'done' && result && (
         <div className="space-y-2 text-xs">
           {result.fingerprint && (
-            <div className="bg-blue-50 border border-blue-200 rounded p-2">
-              <p className="font-medium">Fingerprint</p>
-              <p className="text-gray-600">
+            <div className="bg-[#ff6a10]/5 border border-[#ff6a10]/30 rounded p-2">
+              <p className="font-medium text-[#ff6a10]">Fingerprint</p>
+              <p className="text-[#777777]">
                 Composite ID: <code className="text-[10px]">{result.fingerprint.mfcc_hash}</code>
               </p>
-              <p className="text-gray-500">
+              <p className="text-[#777777]">
                 Centroid: {result.fingerprint.spectral_centroid_mean.toFixed(0)} Hz ·
                 Bandwidth: {result.fingerprint.spectral_bandwidth_mean.toFixed(0)} Hz ·
                 Duration: {result.fingerprint.duration_sec.toFixed(1)}s
@@ -183,14 +183,14 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
                   ? (result.found ? '✅ Watermark Found' : '❌ No Watermark')
                   : '🔒 Watermark Embedded'}
               </p>
-              <p className="text-gray-600">
+              <p className="text-[#777777]">
                 Owner: {result.watermark.owner_id} · Project: {result.watermark.project_id}
               </p>
-              <p className="text-gray-500">
+              <p className="text-[#777777]">
                 Rights: {result.watermark.rights} · TS: {result.watermark.timestamp}
               </p>
               {result.watermark.signature && (
-                <p className="text-gray-400 text-[10px]">
+                <p className="text-[#b0b0b0] text-[10px]">
                   Sig: {result.watermark.signature}
                 </p>
               )}
@@ -199,7 +199,7 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
 
           {result.watermarked && result.data && (
             <button
-              className="w-full text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 flex items-center justify-center gap-1"
+              className="w-full text-xs bg-green-600 text-[#e0e0e0] px-3 py-1.5 rounded hover:bg-green-700 flex items-center justify-center gap-1"
               onClick={download}
             >
               <Download size={14} /> Download Watermarked
@@ -207,7 +207,7 @@ export default function WatermarkPanel({ trackUrl, trackName }: Props) {
           )}
 
           <button
-            className="w-full text-xs text-blue-600 hover:text-blue-800"
+            className="w-full text-xs text-[#ff6a10] hover:text-[#ff6a10]"
             onClick={() => { setStage('idle'); setResult(null); }}
           >
             ← Back

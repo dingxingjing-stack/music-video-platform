@@ -1,0 +1,77 @@
+"""
+AI 音乐生成路由
+"""
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+from app.services.mureka_service import mureka_service, MurekaSongRequest
+
+router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
+
+
+class GenerateRequest(BaseModel):
+    """AI 生成请求"""
+    prompt: str  # 音乐提示词
+    style: str = "pop"  # 风格
+    duration: Optional[int] = None  # 时长（秒）
+    type: str = "song"  # song/music/bgm
+
+
+class GenerateResponse(BaseModel):
+    """AI 生成响应"""
+    success: bool
+    audio_url: Optional[str] = None
+    error: Optional[str] = None
+    task_id: Optional[str] = None
+
+
+@router.post("/generate", response_model=GenerateResponse)
+async def generate_music(request: GenerateRequest):
+    """
+    AI 生成音乐
+    
+    - **prompt**: 音乐描述（风格、情绪、节奏等）
+    - **style**: 音乐风格（pop/rock/electronic/hip-hop/r&b/jazz/classical/ambient/cinematic/lo-fi）
+    - **duration**: 时长（秒），可选
+    - **type**: 生成类型（song=带人声，music=纯音乐，bgm=背景音乐）
+    """
+    # 验证提示词
+    if not request.prompt or len(request.prompt.strip()) < 5:
+        raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
+    
+    # 构建请求
+    mureka_request = MurekaSongRequest(
+        lyrics=request.prompt,
+        style=request.style,
+        duration=request.duration,
+    )
+    
+    # 调用 Mureka API
+    result = await mureka_service.generate_song(mureka_request)
+    
+    return GenerateResponse(
+        success=result.success,
+        audio_url=result.audio_url,
+        error=result.error,
+        task_id=result.task_id,
+    )
+
+
+@router.get("/styles")
+async def list_styles():
+    """获取支持的音乐风格"""
+    return {
+        "styles": [
+            {"value": "pop", "label": "流行", "description": "主流流行音乐"},
+            {"value": "rock", "label": "摇滚", "description": "摇滚乐"},
+            {"value": "electronic", "label": "电子", "description": "电子音乐"},
+            {"value": "hip-hop", "label": "嘻哈", "description": "嘻哈/说唱"},
+            {"value": "r&b", "label": "R&B", "description": "节奏布鲁斯"},
+            {"value": "jazz", "label": "爵士", "description": "爵士乐"},
+            {"value": "classical", "label": "古典", "description": "古典音乐"},
+            {"value": "ambient", "label": "氛围", "description": "氛围音乐"},
+            {"value": "cinematic", "label": "电影配乐", "description": "电影原声"},
+            {"value": "lo-fi", "label": "Lo-Fi", "description": "低保真音乐"},
+        ]
+    }

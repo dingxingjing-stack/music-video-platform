@@ -1,0 +1,10 @@
+# Render 部署配置文件
+# 用于在 Render 平台上运行 FastAPI 后端
+
+build:
+  - pip install -r requirements.txt
+
+start:
+  - uvicorn main:app --host 0.0.0.0 --port $PORT
+
+# Render 会自动设置 PORT 环境变量（默认 10000）

@@ -80,10 +80,10 @@ export function TrackInputArea({
   // Path D: Piano Roll Editor
   if (pathDef.id === 'd') {
     return (
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
+      <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f] p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-300">{label}</label>
-          <span className="text-xs px-2 py-1 bg-purple-900/50 text-purple-400 rounded-full">
+          <label className="text-sm font-medium text-[#e0e0e0]">{label}</label>
+          <span className="text-xs px-2 py-1 bg-[#ff6a10]/10 text-[#ff6a10] rounded-full">
             {t('paths.pathD').split('—')[0].trim()}
           </span>
         </div>
@@ -98,7 +98,7 @@ export function TrackInputArea({
           </div>
         )}
         {!midiProject && (
-          <div className="h-96 flex items-center justify-center text-gray-500">
+          <div className="h-96 flex items-center justify-center text-[#777777]">
             Initializing MIDI editor...
           </div>
         )}
@@ -106,9 +106,9 @@ export function TrackInputArea({
           <button
             onClick={onStart}
             disabled={disabled}
-            className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-semibold rounded-xl
-                         hover:from-purple-500 hover:to-fuchsia-500 disabled:opacity-40 disabled:cursor-not-allowed
-                         transition-all shadow-lg shadow-purple-500/20"
+            className="flex-1 px-6 py-3 bg-[#ff6a10] text-[#e0e0e0] font-semibold rounded-xl
+                         hover:bg-[#ff6a10] disabled:opacity-40 disabled:cursor-not-allowed
+                         transition-all shadow-lg shadow-[#ff6a10]/20"
           >
             {loading
               ? '⏳ Starting...'
@@ -117,7 +117,7 @@ export function TrackInputArea({
           {hasWorkflowResult && (
             <button
               onClick={onReset}
-              className="px-6 py-3 text-gray-400 border border-gray-700 rounded-xl hover:bg-gray-800 transition-colors"
+              className="px-6 py-3 text-[#b0b0b0] border border-[#2a2a38] rounded-xl hover:bg-[#262626] hover:border-[#2a2a38] transition-colors"
             >
               {t('common.reset') || 'Reset'}
             </button>
@@ -128,14 +128,14 @@ export function TrackInputArea({
   }
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-4">
+    <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/50 p-5 space-y-4">
       {/* Batch Toggle (not for Path C) */}
       {pathDef.id !== 'c' && (
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-300">{t('common.settings')}</label>
+          <label className="text-sm font-medium text-[#e0e0e0]">{t('common.settings')}</label>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className={`text-xs ${!batchMode ? 'text-blue-400 font-medium' : 'text-gray-600'}`}>
+              <span className={`text-xs ${!batchMode ? 'text-[#38bdf8] font-medium' : 'text-[#777777]'}`}>
                 {t('paths.pathA').split('—')[0].trim()}
               </span>
               <button
@@ -144,7 +144,7 @@ export function TrackInputArea({
                   onBatchPromptsChange('');
                 }}
                 className={`w-10 h-5 rounded-full transition-colors relative ${
-                  !batchMode ? 'bg-blue-600' : 'bg-gray-700'
+                  !batchMode ? 'bg-[#38bdf8]' : 'bg-[#2a2a38]'
                 }`}
               >
                 <span
@@ -153,12 +153,12 @@ export function TrackInputArea({
                   }`}
                 />
               </button>
-              <span className={`text-xs ${batchMode ? 'text-blue-400 font-medium' : 'text-gray-600'}`}>
+              <span className={`text-xs ${batchMode ? 'text-[#38bdf8] font-medium' : 'text-[#777777]'}`}>
                 {t('ui.batchMode')}
               </span>
             </div>
             {batchMode && batchPrompts.trim() && (
-              <span className="text-xs px-2 py-0.5 bg-blue-900/50 text-blue-400 rounded-full">
+              <span className="text-xs px-2 py-0.5 bg-[#38bdf8]/10 text-[#38bdf8] rounded-full">
                 {promptCount} {t('ui.promptsPerLine').split(' ')[0]}
               </span>
             )}
@@ -169,7 +169,7 @@ export function TrackInputArea({
       {/* Path C: File Upload */}
       {pathDef.id === 'c' ? (
         <div>
-          <label className="text-sm font-medium text-gray-300">{label}</label>
+          <label className="text-sm font-medium text-[#e0e0e0]">{label}</label>
           <div className="mt-2 flex items-center gap-3">
             <input
               ref={fileInputRef}
@@ -181,69 +181,69 @@ export function TrackInputArea({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 text-sm border border-gray-600 rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 text-sm border border-[#777777] rounded-lg hover:bg-[#262626] transition-colors"
             >
               {uploadedFile ? 'Change File' : 'Choose Audio File'}
             </button>
             {uploadedFile && (
-              <span className="text-xs text-emerald-400">
+              <span className="text-xs text-[#76b900]">
                 ✓ {uploadedFile.name} ({formatSize(uploadedFile.size)})
               </span>
             )}
           </div>
-          {uploadError && <p className="mt-1 text-xs text-red-400">{uploadError}</p>}
+          {uploadError && <p className="mt-1 text-xs text-[#ef4444]">{uploadError}</p>}
         </div>
       ) : batchMode ? (
         /* ── Batch Mode Input ───────────────────────────────────── */
         <div className="space-y-3">
           <div>
-            <label className="text-sm font-medium text-gray-300">
+            <label className="text-sm font-medium text-[#e0e0e0]">
               {t('ui.promptsPerLine')}
             </label>
             <textarea
               value={batchPrompts}
               onChange={(e) => onBatchPromptsChange(e.target.value)}
               rows={6}
-              className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600 resize-y font-mono"
+              className="w-full mt-1 px-3 py-2 bg-[#262626] border border-[#2a2a38] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6a10] placeholder-gray-600 resize-y font-mono"
               placeholder={'upbeat electronic dance music\nchill lofi hip hop beat\nambient piano melody\ndark synthwave cyberpunk'}
             />
             {batchPrompts.trim() && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#777777] mt-1">
                 {promptCount} prompt(s) ready
               </p>
             )}
           </div>
           {pathDef.id === 'b' && (
             <div>
-              <label className="text-sm font-medium text-gray-300">
+              <label className="text-sm font-medium text-[#e0e0e0]">
                 {t('ui.ttsText')} (one per line, optional)
               </label>
               <textarea
                 value={ttsText}
                 onChange={(e) => onTtsTextChange(e.target.value)}
                 rows={3}
-                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600 resize-y font-mono"
+                className="w-full mt-1 px-3 py-2 bg-[#262626] border border-[#2a2a38] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6a10] placeholder-gray-600 resize-y font-mono"
                 placeholder={'Line 1 lyrics\nLine 2 lyrics\nLine 3 lyrics'}
               />
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-[#777777] mt-1">
                 If fewer lines than prompts, last line repeats cyclically
               </p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-400">{t('ui.duration')} (s)</label>
+              <label className="text-xs text-[#b0b0b0]">{t('ui.duration')} (s)</label>
               <input
                 type="number"
                 value={batchDuration}
                 onChange={(e) => onDurationChange(Number(e.target.value))}
                 min={1}
                 max={60}
-                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 px-3 py-2 bg-[#262626] border border-[#2a2a38] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6a10]"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400">{t('ui.temperature')}</label>
+              <label className="text-xs text-[#b0b0b0]">{t('ui.temperature')}</label>
               <input
                 type="number"
                 value={batchTemperature}
@@ -251,7 +251,7 @@ export function TrackInputArea({
                 min={0}
                 max={2}
                 step={0.1}
-                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 px-3 py-2 bg-[#262626] border border-[#2a2a38] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6a10]"
               />
             </div>
           </div>
@@ -260,34 +260,34 @@ export function TrackInputArea({
         /* ── Single Mode Input ──────────────────────────────────── */
         <>
           <div>
-            <label className="text-sm font-medium text-gray-300">{label}</label>
+            <label className="text-sm font-medium text-[#e0e0e0]">{label}</label>
             <input
               type="text"
               value={batchMode ? batchPrompts.split('\n')[0] || '' : ''}
               onChange={(e) => onPromptChange(e.target.value)}
-              className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600"
+              className="w-full mt-1 px-3 py-2 bg-[#262626] border border-[#2a2a38] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6a10] placeholder-gray-600"
               placeholder={t('ui.musicPrompt')}
             />
           </div>
           {pathDef.id === 'b' && (
             <div>
-              <label className="text-sm font-medium text-gray-300">
+              <label className="text-sm font-medium text-[#e0e0e0]">
                 {t('ui.ttsText')}
               </label>
               <input
                 type="text"
                 value={ttsText}
                 onChange={(e) => onTtsTextChange(e.target.value)}
-                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600"
+                className="w-full mt-1 px-3 py-2 bg-[#262626] border border-[#2a2a38] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6a10] placeholder-gray-600"
                 placeholder={t('ui.ttsText')}
               />
               {uploadedFile && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                <div className="mt-2 flex items-center gap-2 text-xs text-[#777777]">
                   <span>📎 {uploadedFile.name} ({formatSize(uploadedFile.size)})</span>
                   <button
                     type="button"
                     onClick={onFileRemove}
-                    className="text-red-400 hover:text-red-300"
+                    className="text-[#ef4444] hover:text-[#fca5a5]"
                   >
                     Remove
                   </button>
@@ -303,9 +303,9 @@ export function TrackInputArea({
         <button
           onClick={onStart}
           disabled={disabled}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold rounded-xl
-                       hover:from-blue-500 hover:to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed
-                       transition-all shadow-lg shadow-blue-500/20"
+          className="flex-1 px-6 py-3 bg-gradient-to-r bg-[#ff6a10] text-[#e0e0e0] font-semibold rounded-xl
+                       hover:bg-[#ff6a10] disabled:opacity-40 disabled:cursor-not-allowed
+                       transition-all shadow-lg shadow-[#ff6a10]/20"
         >
           {loading
             ? batchMode
@@ -318,7 +318,7 @@ export function TrackInputArea({
         {hasWorkflowResult && (
           <button
             onClick={onReset}
-            className="px-6 py-3 text-gray-400 border border-gray-700 rounded-xl hover:bg-gray-800 transition-colors"
+            className="px-6 py-3 text-[#b0b0b0] border border-[#2a2a38] rounded-xl hover:bg-[#262626] transition-colors"
           >
             {t('common.reset') || 'Reset'}
           </button>

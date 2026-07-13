@@ -44,10 +44,49 @@ from app.services.inference.gpt_sovits import GPTSovitsService
 from app.services.inference.factory import _SERVICE_REGISTRY, _ALIASES
 from app.services.inference.mock import MockInferenceService
 from app.services.inference.llm_factory import llm_factory
-from app.services.workflow import WorkflowEngine
-from app.services.batch_queue import batch_queue
-from app.services.inference.remix import RemixService
+# Note: WorkflowEngine, batch_queue, RemixService are now loaded via dedicated routers
+# from app.services.workflow import WorkflowEngine
+# from app.services.batch_queue import batch_queue
+# from app.services.inference.remix import RemixService
 from app.websocket_manager import ConnectionManager, manager
+
+# ---------- Router imports (moved to dedicated modules) ----------
+from app.services.mv_router import router as mv_app
+from app.services.workflow_router import router as workflow_app
+from app.services.batch_router import router as batch_app
+from app.services.user_router import router as user_app
+from app.services.audio_router import router as audio_app
+from app.middleware.privacy import PrivacyMiddleware
+
+# ---------- Social system router ----------
+from app.routers.social import router as social_app
+
+# ---------- Collaboration system router ----------
+from app.routers.collaboration import router as collab_app
+
+# ---------- Copyright check router ----------
+from app.routers.copyright import router as copyright_app
+
+# ---------- Notification system router ----------
+from app.routers.notifications import router as notif_app
+
+# ---------- Messaging system router ----------
+from app.routers.messages import router as msg_app
+
+# ---------- Subscription system router ----------
+from app.routers.subscription import router as sub_app
+
+# ---------- Asset store router ----------
+from app.routers.asset_store import router as store_app
+
+# ---------- Copyright detection router ----------
+from app.routers.copyright import router as copyright_app
+
+# ---------- Audio quality test router ----------
+from app.routers.audio_quality import router as audio_quality_app
+
+# ---------- UGC submission router ----------
+from app.routers.ugc import router as ugc_app
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -111,6 +150,82 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
+# ---------- 合规中间件 ----------
+app.add_middleware(PrivacyMiddleware)
+
+# ---------- router 挂载 ----------
+# 开发阶段：使用 Gemini 临时方案（免费额度）
+# 生产阶段：切换回 ai_music (Mureka API)
+from app.routers import gemini_ai_music as ai_music
+from app.routers import hf_music
+from app.routers import stems_export
+from app.routers import community
+from app.routers import pitch_correction
+from app.routers import chord_track
+from app.routers import comping
+from app.routers import time_stretch
+from app.routers import remix_engine
+from app.routers import voice_clone
+from app.routers import ai_lyrics
+from app.routers import audio_processing
+from app.routers import song_continuation
+from app.routers import subtitle_recognition
+from app.routers import one_click_publish
+app.include_router(mv_app,       prefix="/api/v1/mv")
+app.include_router(workflow_app, prefix="/api/v1/workflow")
+app.include_router(batch_app,    prefix="/api/v1/batch")
+app.include_router(hf_music.router, prefix="/api/v1/ai-hf")
+app.include_router(ai_music.router, prefix="/api/v1/ai")
+app.include_router(user_app,    prefix="/api/v1/user")
+app.include_router(audio_app,   prefix="/api/v1/audio")
+app.include_router(stems_export.router)
+app.include_router(community.router)
+app.include_router(pitch_correction.router)
+app.include_router(chord_track.router)
+app.include_router(comping.router)
+app.include_router(time_stretch.router)
+app.include_router(remix_engine.router)
+app.include_router(voice_clone.router, prefix="/api/v1")
+app.include_router(ai_lyrics.router)
+app.include_router(audio_processing.router, prefix="/api/v1/audio")
+app.include_router(song_continuation.router)
+app.include_router(subtitle_recognition.router)
+app.include_router(one_click_publish.router)
+app.include_router(social_app)
+app.include_router(collab_app)
+app.include_router(copyright_app)
+app.include_router(notif_app)
+app.include_router(msg_app)
+app.include_router(sub_app)
+app.include_router(store_app)
+app.include_router(copyright_app)
+app.include_router(audio_quality_app)
+app.include_router(ugc_app)
+
+# ---------- Rhythm analysis router (P0-6 节拍检测) ----------
+from app.routers.rhythm_analysis import router as rhythm_app
+app.include_router(rhythm_app, prefix="/api/v1/beat")
+
+# ---------- CDN upload router (P0-8 CDN 集成) ----------
+from app.routers.cdn_upload import router as cdn_app
+app.include_router(cdn_app, prefix="/api/v1/cdn")
+
+# ---------- BG removal router (P1-7 智能抠图) ----------
+from app.routers.bg_removal import router as bg_app
+app.include_router(bg_app, prefix="/api/v1/bg")
+
+# ---------- Lyrics rhyme AI router (P3-7 歌词押韵) ----------
+from app.routers.lyrics_rhyme import router as lyrics_app
+app.include_router(lyrics_app, prefix="/api/v1/lyrics")
+
+# ---------- Supabase 认证路由 ----------
+from app.routers.auth import router as auth_app
+app.include_router(auth_app)
+
+# ---------- Supabase 歌曲管理路由 ----------
+from app.routers.songs import router as songs_app
+app.include_router(songs_app)
+
 
 # ---------------------------------------------------------------------------
 # WebSocket broadcast callback
@@ -137,6 +252,12 @@ async def health_check():
 
     for service_type in ("tts", "music", "video"):
         try:
+            # When *_FORCE_MOCK is set, skip remote probing and report healthy directly
+            force_key = f"{service_type.upper()}_FORCE_MOCK"
+            mock_key = f"{service_type.upper()}_BACKEND_MODE"
+            if os.getenv(force_key, "").strip().lower() == "true" or os.getenv(mock_key, "").strip().lower() == "mock":
+                services_health[service_type] = {"healthy": True, "message": f"Mock {service_type} service ready"}
+                continue
             svc = factory.create(service_type, cache=False)
             healthy, message = await svc.health_check()
             services_health[service_type] = {"healthy": healthy, "message": message}
@@ -655,577 +776,6 @@ async def music_run(request: Request):
 
 # ---------------------------------------------------------------------------
 # Batch endpoints — Sequential multi-prompt generation
-# ---------------------------------------------------------------------------
-
-
-@app.post("/api/v1/batch/a", tags=["batch"])
-async def batch_path_a(request: Request):
-    """
-    Batch generate music for multiple prompts sequentially.
-
-    Body::
-        {
-            "prompts": [
-                {"prompt": "upbeat electronic", "duration": 10},
-                {"prompt": "calm piano", "duration": 15}
-            ],
-            "duration": 10,
-            "temperature": 0.8
-        }
-
-    Returns a batch_id. Connect to WS to track progress.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    prompts = body.get("prompts", [])
-    if not prompts:
-        raise HTTPException(status_code=422, detail="'prompts' array is required")
-
-    duration = float(body.get("duration", 10.0))
-    temperature = float(body.get("temperature", 0.8))
-
-    engine = _get_workflow_engine()
-
-    batch = await batch_queue.submit(
-        path="a",
-        items=[
-            {
-                "prompt": p.get("prompt", ""),
-                "extra": {
-                    "duration": float(p.get("duration", duration)),
-                    "temperature": float(p.get("temperature", temperature)),
-                },
-            }
-            for p in prompts
-        ],
-        broadcast=_websocket_broadcast,
-    )
-
-    # Start execution
-    async def _run_batch_a(batch_state, run_fn, broadcast):
-        for item in batch_state.items:
-            item.status = "running"
-            batch_state.current_index = item.index
-            batch_state.updated_at = time.time()
-
-            # Send batch-level progress message BEFORE each item
-            batch_msg = PredictResult(
-                task_id=batch_state.batch_id,
-                status=TaskStatus.RUNNING,
-                progress=int(((item.index + 1) / batch_state.total) * 100),
-                message=f"Processing {item.index + 1}/{batch_state.total}: {item.prompt[:40]}",
-                metadata={
-                    "batch_id": batch_state.batch_id,
-                    "path": "a",
-                    "batch_total": batch_state.total,
-                    "batch_completed": batch_state.completed,
-                    "batch_failed": batch_state.failed,
-                    "current_item": {
-                        "index": item.index,
-                        "task_id": item.task_id,
-                        "prompt": item.prompt,
-                    },
-                },
-                updated_at=time.time(),
-            )
-            await broadcast(batch_state.batch_id, batch_msg)
-
-            try:
-                result = await engine.run_path_a(
-                    item.task_id,  # Use per-item task_id for sub-task
-                    item.prompt,
-                    duration=item.extra.get("duration", duration),
-                    temperature=item.extra.get("temperature", temperature),
-                )
-                item.status = result.status.value if result else "failed"
-                if result and result.status == TaskStatus.COMPLETED:
-                    batch_state.completed += 1
-                else:
-                    batch_state.failed += 1
-            except Exception as exc:
-                logger.error("Batch item %d failed: %s", item.index, exc)
-                item.status = "failed"
-                batch_state.failed += 1
-
-            batch_state.updated_at = time.time()
-
-        # Send final batch summary
-        batch_state.status = "completed" if batch_state.failed == 0 else "partial"
-        batch_state.updated_at = time.time()
-
-        final_msg = PredictResult(
-            task_id=batch_state.batch_id,
-            status=TaskStatus.COMPLETED if batch_state.failed == 0 else TaskStatus.FAILED,
-            progress=100,
-            message=f"Batch complete: {batch_state.completed} succeeded, {batch_state.failed} failed",
-            metadata={
-                "batch_id": batch_state.batch_id,
-                "path": "a",
-                "batch_total": batch_state.total,
-                "batch_completed": batch_state.completed,
-                "batch_failed": batch_state.failed,
-                "items": [
-                    {
-                        "index": it.index,
-                        "task_id": it.task_id,
-                        "prompt": it.prompt,
-                        "status": it.status,
-                    }
-                    for it in batch_state.items
-                ],
-            },
-            updated_at=time.time(),
-        )
-        await broadcast(batch_state.batch_id, final_msg)
-
-        async with batch_queue._lock:
-            if batch_queue._running is batch_state:
-                batch_queue._running = None
-                if batch_queue._queue:
-                    nb = batch_queue._queue.pop(0)
-                    batch_queue._running = nb
-                    asyncio.create_task(_run_batch_a(nb, run_fn, broadcast))
-
-    asyncio.create_task(_run_batch_a(batch, lambda *a, **k: None, _websocket_broadcast))
-
-    return {
-        "batch_id": batch.batch_id,
-        "path": "a",
-        "total": batch.total,
-        "status": batch.status,
-        "websocket": f"/ws/progress/{batch.batch_id}",
-    }
-
-
-@app.post("/api/v1/batch/b", tags=["batch"])
-async def batch_path_b(request: Request):
-    """
-    Batch generate hybrid tracks for multiple prompt+TTS pairs.
-
-    Body::
-        {
-            "items": [
-                {
-                    "prompt": "chill lofi beat",
-                    "tts_text": "Hello world",
-                    "duration": 10
-                }
-            ]
-        }
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    items = body.get("items", [])
-    if not items:
-        raise HTTPException(status_code=422, detail="'items' array is required")
-
-    engine = _get_workflow_engine()
-
-    batch = await batch_queue.submit(
-        path="b",
-        items=[
-            {
-                "prompt": item.get("prompt", ""),
-                "extra": {
-                    "tts_text": item.get("tts_text", "Hello world"),
-                    "duration": float(item.get("duration", 10.0)),
-                    "tts_language": item.get("tts_language", "zh"),
-                    "reference_audio_b64": item.get("reference_audio"),
-                },
-            }
-            for item in items
-        ],
-        broadcast=_websocket_broadcast,
-    )
-
-    async def _run_batch_b(batch_state, run_fn, broadcast):
-        for item in batch_state.items:
-            item.status = "running"
-            batch_state.current_index = item.index
-            batch_state.updated_at = time.time()
-
-            # Send batch-level progress message BEFORE each item
-            batch_msg = PredictResult(
-                task_id=batch_state.batch_id,
-                status=TaskStatus.RUNNING,
-                progress=int(((item.index + 1) / batch_state.total) * 100),
-                message=f"Processing {item.index + 1}/{batch_state.total}: {item.prompt[:40]}",
-                metadata={
-                    "batch_id": batch_state.batch_id,
-                    "path": "b",
-                    "batch_total": batch_state.total,
-                    "batch_completed": batch_state.completed,
-                    "batch_failed": batch_state.failed,
-                    "current_item": {
-                        "index": item.index,
-                        "task_id": item.task_id,
-                        "prompt": item.prompt,
-                    },
-                },
-                updated_at=time.time(),
-            )
-            await broadcast(batch_state.batch_id, batch_msg)
-
-            try:
-                result = await engine.run_path_b(
-                    item.task_id,
-                    item.prompt,
-                    item.extra.get("tts_text", "Hello world"),
-                    duration=item.extra.get("duration", 10.0),
-                    tts_language=item.extra.get("tts_language", "zh"),
-                    reference_audio_b64=item.extra.get("reference_audio_b64"),
-                )
-                item.status = result.status.value if result else "failed"
-                if result and result.status == TaskStatus.COMPLETED:
-                    batch_state.completed += 1
-                else:
-                    batch_state.failed += 1
-            except Exception as exc:
-                logger.error("Batch item %d failed: %s", item.index, exc)
-                item.status = "failed"
-                batch_state.failed += 1
-
-            batch_state.updated_at = time.time()
-
-        batch_state.status = "completed" if batch_state.failed == 0 else "partial"
-        batch_state.updated_at = time.time()
-
-        await broadcast(
-            batch_state.batch_id,
-            PredictResult(
-                task_id=batch_state.batch_id,
-                status=TaskStatus.COMPLETED if batch_state.failed == 0 else TaskStatus.FAILED,
-                progress=100,
-                message=f"Batch complete: {batch_state.completed} succeeded, {batch_state.failed} failed",
-                metadata={
-                    "batch_id": batch_state.batch_id,
-                    "path": "b",
-                    "batch_total": batch_state.total,
-                    "batch_completed": batch_state.completed,
-                    "batch_failed": batch_state.failed,
-                    "items": [
-                        {
-                            "index": it.index,
-                            "task_id": it.task_id,
-                            "prompt": it.prompt,
-                            "status": it.status,
-                        }
-                        for it in batch_state.items
-                    ],
-                },
-                updated_at=time.time(),
-            ),
-        )
-
-        async with batch_queue._lock:
-            if batch_queue._running is batch_state:
-                batch_queue._running = None
-                if batch_queue._queue:
-                    next_batch = batch_queue._queue.pop(0)
-                    batch_queue._running = next_batch
-                    asyncio.create_task(batch_queue._execute_batch(next_batch, run_fn, broadcast))
-
-    asyncio.create_task(_run_batch_b(batch, lambda *a, **k: None, _websocket_broadcast))
-
-    return {
-        "batch_id": batch.batch_id,
-        "path": "b",
-        "total": batch.total,
-        "status": batch.status,
-        "websocket": f"/ws/progress/{batch.batch_id}",
-    }
-
-
-@app.get("/api/v1/batch/status/{batch_id}", tags=["batch"])
-async def batch_status(batch_id: str):
-    """Get current status of a batch job."""
-    state = batch_queue.get_state(batch_id)
-    if not state:
-        raise HTTPException(status_code=404, detail=f"Batch {batch_id} not found")
-
-    return {
-        "batch_id": state.batch_id,
-        "path": state.path,
-        "total": state.total,
-        "completed": state.completed,
-        "failed": state.failed,
-        "current_index": state.current_index,
-        "status": state.status,
-        "error": state.error,
-        "created_at": state.created_at,
-        "updated_at": state.updated_at,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Workflow endpoints — Paths A / B / C
-# ---------------------------------------------------------------------------
-
-
-# Global workflow engine instance (initialized lazily)
-_workflow_engine: Optional[WorkflowEngine] = None
-
-
-def _get_workflow_engine() -> WorkflowEngine:
-    """Get or create the global workflow engine."""
-    global _workflow_engine
-    if _workflow_engine is None:
-        soundfont = os.getenv("MIDI_SOUNDFONT_PATH")
-        _workflow_engine = WorkflowEngine(
-            broadcast=_websocket_broadcast,
-            musicgen_url=_config.get("music", {}).get("space_url"),
-            tts_url=_config.get("tts", {}).get("space_url"),
-            demucs_url=_config.get("demucs", {}).get("space_url"),
-            musicgen_token=_config.get("music", {}).get("api_token"),
-            tts_token=_config.get("tts", {}).get("api_token"),
-            demucs_token=_config.get("demucs", {}).get("api_token"),
-            use_mock=(WORKFLOW_MODE == "mock"),
-            soundfont_path=soundfont,
-        )
-    return _workflow_engine
-
-
-@app.post("/api/v1/workflow/a", tags=["workflows"])
-async def workflow_path_a(request: Request):
-    """
-    Path A: Suno-style — one-click music generation.
-
-    Body::
-        {
-            "task_id": "abc123",
-            "prompt": "upbeat electronic dance music",
-            "duration": 10.0,
-            "temperature": 0.8
-        }
-
-    Returns a task_id. Connect to WS to track progress.
-    On completion, metadata.tracks contains the generated music track.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    prompt = body.get("prompt", "")
-    if not prompt:
-        raise HTTPException(status_code=422, detail="'prompt' is required")
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_a,
-            task_id,
-            prompt=prompt,
-            duration=float(body.get("duration", 10.0)),
-            temperature=float(body.get("temperature", 0.8)),
-        )
-    )
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "a",
-    }
-
-
-@app.post("/api/v1/workflow/b", tags=["workflows"])
-async def workflow_path_b(request: Request):
-    """
-    Path B: Hybrid — MusicGen background + TTS vocals.
-
-    Body::
-        {
-            "task_id": "abc123",
-            "prompt": "chill lofi hip hop beat",
-            "tts_text": "今天天气真好",
-            "tts_language": "zh",
-            "reference_audio": "<base64 wav>",  // optional in mock mode
-            "duration": 10.0
-        }
-
-    Returns a task_id. On completion, metadata.tracks contains
-    two tracks: music bed and vocals.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    prompt = body.get("prompt", "")
-    tts_text = body.get("tts_text", "")
-    if not prompt or not tts_text:
-        raise HTTPException(
-            status_code=422,
-            detail="'prompt' and 'tts_text' are required",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_b,
-            task_id,
-            prompt=prompt,
-            tts_text=tts_text,
-            duration=float(body.get("duration", 10.0)),
-            tts_language=body.get("tts_language", "zh"),
-            reference_audio_b64=body.get("reference_audio"),
-        )
-    )
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "b",
-    }
-
-
-@app.post("/api/v1/workflow/c", tags=["workflows"])
-async def workflow_path_c(request: Request):
-    """
-    Path C: Remix — upload audio → Demucs stem separation.
-
-    Body::
-        {
-            "task_id": "abc123",
-            "audio_base64": "<base64 wav>",
-            "stem_count": "4",       // "4" or "6"
-            "remove_reverb": false
-        }
-
-    Returns a task_id. On completion, metadata.tracks contains
-    individual stem tracks (vocals, drums, bass, other).
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    audio_b64 = body.get("audio_base64", "")
-    if not audio_b64:
-        raise HTTPException(
-            status_code=422,
-            detail="'audio_base64' is required",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_c,
-            task_id,
-            audio_base64=audio_b64,
-            stem_count=body.get("stem_count", "4"),
-            remove_reverb=bool(body.get("remove_reverb", False)),
-        )
-    )
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "c",
-    }
-
-
-@app.post("/api/v1/workflow/d", tags=["workflows"])
-async def workflow_path_d(request: Request):
-    """
-    Path D: Original Creation — MIDI project → render to audio.
-
-    Body::
-        {
-            "task_id": "abc123",
-            "midi_project": {
-                "id": "midi-123",
-                "name": "My Project",
-                "tempo": 120,
-                "timeSignature": {"numerator": 4, "denominator": 4},
-                "ticksPerQuarter": 480,
-                "tracks": [
-                    {
-                        "id": "track-1",
-                        "name": "Piano",
-                        "instrument": 0,
-                        "channel": 0,
-                        "notes": [
-                            {"pitch": 60, "velocity": 100, "startTick": 0, "durationTicks": 480, "channel": 0}
-                        ],
-                        "color": "bg-violet-500",
-                        "solo": false,
-                        "mute": false,
-                        "volume": 1,
-                        "pan": 0
-                    }
-                ],
-                "loopStartTick": 0,
-                "loopEndTick": 7680,
-                "createdAt": 1234567890,
-                "updatedAt": 1234567890
-            },
-            "outputFormat": "wav",
-            "soundfontPath": "/path/to/soundfont.sf2"  // optional
-        }
-
-    Returns a task_id. On completion, metadata.tracks contains the rendered audio track.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    midi_project = body.get("midi_project")
-    if not midi_project:
-        raise HTTPException(
-            status_code=422,
-            detail="'midi_project' is required",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_d,
-            task_id,
-            midi_project=midi_project,
-            output_format=body.get("outputFormat", "wav"),
-            soundfont_path=body.get("soundfontPath"),
-        )
-    )
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "d",
-    }
-
-
-async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
-    """Helper: run a workflow coroutine in background and catch exceptions."""
-    logger.info("Workflow task starting: %s(%s, %s)", coroutine_fn.__name__, args, kwargs)
-    try:
-        await coroutine_fn(*args, **kwargs)
-        logger.info("Workflow task completed: %s", coroutine_fn.__name__)
-    except Exception as e:
-        logger.exception("Workflow task failed: %s", e)
-
-
-# ---------------------------------------------------------------------------
-# Audio trim endpoint
 # ---------------------------------------------------------------------------
 
 
@@ -1784,275 +1334,7 @@ async def remix_process(request: Request):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/api/v1/mv/detect-beats", tags=["mv"])
-async def mv_detect_beats(request: Request):
-    """
-    Detect BPM and beat timestamps from an audio track.
-
-    Body::
-        {
-            "track_id": "track-123",
-            "url": "/results/..."
-        }
-
-    Returns::
-        {
-            "bpm": 120.0,
-            "beat_timestamps": [0.0, 0.5, 1.0, ...],
-            "energy_profile": [{"time": 0.0, "energy": 0.8}, ...]
-        }
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    url = body.get("url", "")
-    if not url:
-        raise HTTPException(status_code=422, detail="'url' is required")
-
-    try:
-        import librosa
-        import numpy as np
-        import tempfile
-        import os as _os
-
-        audio_path = url
-        if url.startswith("/results/"):
-            audio_path = _os.path.join(RESULTS_DIR, _os.path.basename(url))
-        elif url.startswith("http"):
-            import httpx
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.get(url)
-                if resp.status_code != 200:
-                    raise HTTPException(status_code=500, detail=f"Download failed: HTTP {resp.status_code}")
-                tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-                tmp.write(resp.content)
-                tmp.close()
-                audio_path = tmp.name
-
-        loop = asyncio.get_event_loop()
-        def _detect():
-            y, sr = librosa.load(audio_path, sr=None)
-
-            tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-            beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-
-            hop_length = 512
-            rms = librosa.feature.rms(y=y, frame_length=hop_length, hop_length=hop_length)[0]
-            times = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
-            energy_profile = [
-                {"time": float(t), "energy": float(rms[i])}
-                for i, t in enumerate(times)
-            ]
-
-            if url.startswith("/results/"):
-                pass
-            elif url.startswith("http") and audio_path != url:
-                try:
-                    _os.unlink(audio_path)
-                except OSError:
-                    pass
-
-            return {
-                "bpm": float(tempo),
-                "beat_timestamps": [float(t) for t in beat_times],
-                "energy_profile": energy_profile,
-            }
-
-        result = await loop.run_in_executor(None, _detect)
-        return result
-
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="librosa not installed. Run: pip install librosa",
-        )
-    except Exception as exc:
-        logger.exception("Beat detection failed: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)[:300])
-
-
-@app.post("/api/v1/mv/render", tags=["mv"])
-async def mv_render(request: Request):
-    """
-    Render a music video from audio track + beat data + config.
-
-    Body::
-        {
-            "source_track_id": "track-123",
-            "audio_url": "/results/...",
-            "beat_data": { "bpm": 120, "beat_timestamps": [...] },
-            "config": {
-                "resolution": "1080p",
-                "aspectRatio": "16:9",
-                "transitionStyle": "cut",
-                "backgroundColor": "#1a1a2e",
-                "waveformVisualization": true
-            }
-        }
-
-    Returns task_id. WS /ws/progress/{task_id} streams rendering progress.
-    On completion, result_url contains the MP4 file.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    audio_url = body.get("audio_url", "")
-    if not audio_url:
-        raise HTTPException(status_code=422, detail="'audio_url' is required")
-
-    task_id = body.get("source_track_id", f"mv-{uuid.uuid4().hex[:8]}")
-    if not task_id.startswith("mv-"):
-        task_id = f"mv-{task_id}"
-
-    beat_data = body.get("beat_data", {})
-    config = body.get("config", {})
-
-    async def _render_mv(
-        tid: str,
-        src_url: str,
-        beats: dict,
-        cfg: dict,
-    ) -> None:
-        resolution_map = {"720p": (1280, 720), "1080p": (1920, 1080), "4K": (3840, 2160)}
-        res = cfg.get("resolution", "1080p")
-        width, height = resolution_map.get(res, (1920, 1080))
-        bg = cfg.get("backgroundColor", "#1a1a2e")
-        show_waveform = cfg.get("waveformVisualization", True)
-
-        try:
-            await _websocket_broadcast(
-                tid,
-                PredictResult(
-                    task_id=tid, status=TaskStatus.PENDING, progress=0,
-                    message="Preparing MV render...",
-                ),
-            )
-
-            await asyncio.sleep(0.5)
-
-            # Phase 2: Build waveform visualization image
-            await _websocket_broadcast(
-                tid,
-                PredictResult(
-                    task_id=tid, status=TaskStatus.RUNNING, progress=20,
-                    message="Rendering waveform visualization...",
-                ),
-            )
-
-            import subprocess
-            import tempfile
-            import os as _os
-
-            out_path = _os.path.join(RESULTS_DIR, f"{tid}_mv.mp4")
-            waveform_img = None
-
-            if show_waveform:
-                waveform_img = tempfile.NamedTemporaryFile(
-                    suffix=".png", delete=False,
-                ).name
-                # Generate waveform PNG via ffmpeg showwaves filter
-                showwaves_cmd = [
-                    _find_ffmpeg(), "-y",
-                    "-i", _resolve_audio_path(src_url),
-                    "-filter_complex",
-                    f"[0:a]showwaves=s={width}x{height}:mode=cline:colors=0x16A34A|0x9333EA|0x3B82F6:scale=sqrt[wave]",
-                    "-frames:v", "1",
-                    "-map", "[wave]",
-                    waveform_img,
-                ]
-                _ffmpeg_run(showwaves_cmd)
-
-            # Phase 3: Encode final video
-            await _websocket_broadcast(
-                tid,
-                PredictResult(
-                    task_id=tid, status=TaskStatus.RUNNING, progress=50,
-                    message="Encoding video with ffmpeg...",
-                ),
-            )
-
-            # Build ffmpeg filter: waveform image + beat markers overlay
-            beat_str = ":".join(
-                str(t) for t in beats.get("beat_timestamps", [])[:64]
-            ) if beats.get("beat_timestamps") else ""
-            vf_parts: list[str] = []
-            if waveform_img:
-                vf_parts.append(f"movie={waveform_img}[wm]")
-                vf_parts.append(f"[wm]scale={width}:{height},format=rgba[bg]")
-            if beat_str:
-                beat_pts = beats.get("beat_timestamps", [])
-                for i, bt in enumerate(beat_pts[:32]):
-                    color = ("red" if i % 4 == 0 else "white")
-                    vf_parts.append(
-                        f"drawtext=text='●':fontcolor={color}:fontsize=24:"
-                        f"x={width-80}:y={height-80}:enable='between(t,{bt},"
-                        f"{bt+0.15})'"
-                    )
-            vf_chain = ",".join(vf_parts) if vf_parts else "null"
-
-            enc_cmd = [
-                _find_ffmpeg(), "-y",
-                "-loop", "1",
-                "-i", waveform_img or "nullsrc=s={width}x{height}:d=10",
-                "-i", _resolve_audio_path(src_url),
-                "-filter_complex", vf_chain,
-                "-c:v", "libx264", "-preset", "fast",
-                "-pix_fmt", "yuv420p",
-                "-c:a", "aac", "-b:a", "192k",
-                "-shortest",
-                out_path,
-            ]
-            if waveform_img:
-                _ffmpeg_run(enc_cmd)
-
-            result_url = f"/results/{tid}_mv.mp4"
-            await _websocket_broadcast(
-                tid,
-                PredictResult(
-                    task_id=tid, status=TaskStatus.COMPLETED, progress=100,
-                    message="MV rendered successfully!",
-                    result_url=result_url,
-                    metadata={
-                        "resolution": res,
-                        "width": width,
-                        "height": height,
-                        "beat_count": len(beats.get("beat_timestamps", [])),
-                        "bpm": beats.get("bpm", 0),
-                    },
-                    updated_at=time.time(),
-                ),
-            )
-
-        except Exception as exc:
-            logger.exception("MV render failed: %s", exc)
-            await _websocket_broadcast(
-                tid,
-                PredictResult(
-                    task_id=tid, status=TaskStatus.FAILED, progress=0,
-                    error=str(exc)[:300],
-                    error_code="MV_RENDER_FAILED",
-                    retryable=False,
-                    updated_at=time.time(),
-                ),
-            )
-
-    asyncio.create_task(_render_mv(task_id, audio_url, beat_data, config))
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-    }
-
-
-# ---------------------------------------------------------------------------
-# Task status endpoint
-# ---------------------------------------------------------------------------
-
+# MV endpoints moved to app/services/mv_router.py
 
 @app.get("/api/v1/tasks/{task_id}", tags=["predictions"])
 async def get_task_status(task_id: str):

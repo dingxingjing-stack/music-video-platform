@@ -1,0 +1,19 @@
+name = "music-api-gateway"
+main = "workers/gateway.js"
+compatibility_date = "2026-07-13"
+
+# R2 存储桶绑定
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "music-audio-storage"
+
+# 环境变量
+[vars]
+API_BASE_URL = "http://localhost:8002"
+RATE_LIMIT = "100"
+CORS_ORIGIN = "*"
+
+# 生产环境配置（部署后更新）
+[env.production]
+API_BASE_URL = "https://your-backend-api.com"
+CORS_ORIGIN = "https://9b8f75e7.music-video-platform.pages.dev"

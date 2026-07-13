@@ -54,15 +54,12 @@ export function TrackList({
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+      <h2 className="text-sm font-semibold text-[#b0b0b0] uppercase tracking-wider">
         Active Sessions
       </h2>
 
       {/* Grid of track cards */}
-      <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${Math.min(tracks.length, 3)}, minmax(0, 1fr))` }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {tracks.map((track, idx) => (
           <button
             key={track.id}
@@ -71,12 +68,12 @@ export function TrackList({
             }
             className={`relative rounded-xl border-2 p-4 text-left transition-all overflow-hidden ${
               selectedTrack === track.id
-                ? 'border-blue-500 bg-blue-500/10'
+                ? 'border-[#ff6a10] bg-[#ff6a10]/10'
                 : track.status === 'completed'
-                  ? 'border-emerald-800 bg-emerald-950/30 hover:border-emerald-600'
+                  ? 'border-[#76b900]/40 bg-[#76b900]/5 hover:border-[#76b900]/60'
                   : track.status === 'failed'
-                    ? 'border-red-800 bg-red-950/30'
-                    : 'border-gray-800 bg-gray-900/50 hover:border-gray-600'
+                    ? 'border-red-800/50 bg-red-950/20'
+                    : 'border-[#2a2a38] bg-[#1f1f1f]/50 hover:border-[#2a2a38]'
             }`}
           >
             {track.status === 'running' && (
@@ -96,19 +93,19 @@ export function TrackList({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{track.name}</p>
-                <p className="text-xs text-gray-500 capitalize">{track.status}</p>
+                <p className="text-xs text-[#777777] capitalize">{track.status}</p>
               </div>
             </div>
 
             {track.status === 'running' && (
               <div className="mt-2">
-                <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-[#262626] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${TRACK_COLORS[idx % TRACK_COLORS.length]}`}
                     style={{ width: `${track.progress}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{track.progress}%</p>
+                <p className="text-xs text-[#777777] mt-1">{track.progress}%</p>
               </div>
             )}
 
@@ -130,7 +127,7 @@ export function TrackList({
             )}
 
             {track.status === 'completed' && !track.url && (
-              <p className="text-xs text-gray-500 mt-2">No audio URL</p>
+              <p className="text-xs text-[#777777] mt-2">No audio URL</p>
             )}
           </button>
         ))}
@@ -138,11 +135,11 @@ export function TrackList({
 
       {/* Live Status Banner */}
       {(wsStatus || wsMessage) && (
-        <div className="rounded-xl border border-blue-800 bg-blue-950/30 p-4">
+        <div className="rounded-xl border border-[#2a2a38] bg-[#262626] p-4">
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-blue-300">
+                <span className="text-sm font-medium text-[#b0b0b0]">
                   {wsStatus === 'loading' && '🔄 Loading model...'}
                   {wsStatus === 'running' && '🎵 Generating...'}
                   {wsStatus === 'pending' && '⏳ Queued...'}
@@ -150,25 +147,25 @@ export function TrackList({
                   {wsStatus === 'failed' && '❌ Failed'}
                   {!wsStatus && '⏳ Starting...'}
                 </span>
-                <span className="text-sm font-bold text-blue-400">
+                <span className="text-sm font-bold text-[#ff6a10]">
                   {wsProgress}%
                 </span>
               </div>
-              <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-[#262626] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-gradient-to-r from-[#ff6a10] to-[#ff6a10] rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${wsProgress}%` }}
                 />
               </div>
-              {wsMessage && <p className="text-xs text-gray-500 mt-1">{wsMessage}</p>}
+              {wsMessage && <p className="text-xs text-[#777777] mt-1">{wsMessage}</p>}
               {wsElapsedTime !== null && wsElapsedTime > 0 && (
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-[#777777] mt-1">
                   Elapsed: {formatDuration(wsElapsedTime)}
                 </p>
               )}
             </div>
             {wsConnected && (
-              <span className="text-xs text-blue-400 animate-pulse">● LIVE</span>
+              <span className="text-xs text-[#ff6a10] animate-pulse">● LIVE</span>
             )}
           </div>
         </div>
@@ -193,46 +190,46 @@ function TrackDetailPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+    <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/50 p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-300">
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">
           Track Detail: {track.name}
         </h3>
         <button
           onClick={onClose}
-          className="text-xs text-gray-500 hover:text-gray-300"
+          className="text-xs text-[#777777] hover:text-[#e0e0e0]"
         >
           ✕ Close
         </button>
       </div>
       <div className="grid grid-cols-2 gap-4 text-xs">
         <div>
-          <span className="text-gray-500">Type:</span>{' '}
-          <span className="capitalize text-gray-300">{track.type}</span>
+          <span className="text-[#777777]">Type:</span>{' '}
+          <span className="capitalize text-[#e0e0e0]">{track.type}</span>
         </div>
         <div>
-          <span className="text-gray-500">Status:</span>{' '}
+          <span className="text-[#777777]">Status:</span>{' '}
           <span
             className={`capitalize ${
               track.status === 'completed'
-                ? 'text-emerald-400'
+                ? 'text-[#76b900]'
                 : track.status === 'failed'
-                  ? 'text-red-400'
+                  ? 'text-[#ef4444]'
                   : track.status === 'running'
-                    ? 'text-amber-400'
-                    : 'text-gray-400'
+                    ? 'text-[#febc2e]'
+                    : 'text-[#b0b0b0]'
             }`}
           >
             {track.status}
           </span>
         </div>
         <div>
-          <span className="text-gray-500">Progress:</span>{' '}
-          <span className="text-gray-300">{track.progress}%</span>
+          <span className="text-[#777777]">Progress:</span>{' '}
+          <span className="text-[#e0e0e0]">{track.progress}%</span>
         </div>
         <div>
-          <span className="text-gray-500">URL:</span>{' '}
-          <span className="text-gray-300 font-mono truncate block max-w-[200px]">
+          <span className="text-[#777777]">URL:</span>{' '}
+          <span className="text-[#e0e0e0] font-mono truncate block max-w-[200px]">
             {track.url || '—'}
           </span>
         </div>

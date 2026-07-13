@@ -1,10 +1,7 @@
 /**
- * MixConsole — Cubase-style multi-track mixing console.
- *
- * Provides per-track volume faders, pan knobs, 3-band EQ, mute/solo,
- * reverb send, master volume, and export-to-stereo via /api/v1/mix/render.
- *
- * Renders as a collapsible panel above HistoryPanel.
+ * MixConsole — Enterprise-grade multi-track mixing console.
+ * Per-track volume faders, pan, 3-band EQ, mute/solo, reverb send.
+ * Master volume + format selector. WebSocket progress streaming.
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -14,6 +11,19 @@ import { mixDefaults } from '../../types/trackStudio';
 interface Props {
   history: Track[];
 }
+
+/* ── helpers ─────────────────────────────────────────────────────── */
+
+function fmtDb(v: number): string {
+  return v > 0 ? `+${v}` : `${v}`;
+}
+
+function fmtPan(v: number): string {
+  if (Math.abs(v) < 0.05) return 'C';
+  return v < 0 ? `L${Math.abs(v * 100).toFixed(0)}` : `R${(v * 100).toFixed(0)}`;
+}
+
+/* ── Component ───────────────────────────────────────────────────── */
 
 export function MixConsole({ history }: Props) {
   const completed = useMemo(
@@ -26,6 +36,7 @@ export function MixConsole({ history }: Props) {
   const [outputFormat, setOutputFormat] = useState<'wav' | 'mp3'>('wav');
   const [collapsed, setCollapsed] = useState(true);
   const [rendering, setRendering] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [renderResult, setRenderResult] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
 
@@ -49,6 +60,7 @@ export function MixConsole({ history }: Props) {
 
   const handleExport = useCallback(async () => {
     setRendering(true);
+    setProgress(0);
     setRenderError(null);
     setRenderResult(null);
 
@@ -91,12 +103,15 @@ export function MixConsole({ history }: Props) {
             const msg = JSON.parse(event.data) as Record<string, unknown>;
             if (msg.status === 'completed') {
               setRenderResult((msg.result_url as string) ?? null);
+              setProgress(100);
               ws.close();
               resolve();
             } else if (msg.status === 'failed') {
               setRenderError((msg.error as string) ?? 'Mix failed');
               ws.close();
               reject(new Error((msg.error as string) ?? 'Mix failed'));
+            } else if (typeof msg.progress === 'number') {
+              setProgress(msg.progress);
             }
           } catch {
             /* ignore parse errors */
@@ -122,149 +137,145 @@ export function MixConsole({ history }: Props) {
   if (completed.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🎚️</span>
-          <h2 className="text-sm font-semibold text-gray-300">Mix Console</h2>
-          <span className="text-xs text-gray-600">({completed.length} tracks)</span>
+    <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f] p-3 sm:p-5 space-y-4" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-base font-bold text-[#ff6a10]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>◆</span>
+          <h2 className="text-sm font-semibold text-[#e0e0e0]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Mix Console</h2>
+          <span className="text-xs px-2 py-0.5 bg-[#ff6a10]/10 text-[#ff6a10] rounded-full">
+            {completed.length} track{completed.length > 1 ? 's' : ''}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {!collapsed && (
+            <>
+              <button
+                onClick={handleExport}
+                disabled={rendering || mixTracks.length === 0}
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all
+                  bg-[#ff6a10] text-white
+                  hover:bg-[#ff6a10] disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {rendering ? `⏳ ${progress}%` : '🔊 Export Mix'}
+              </button>
+              <button
+                onClick={() => { setCollapsed(true); setMixTracks([]); setRenderResult(null); setRenderError(null); }}
+                className="text-xs text-[#b0b0b0] hover:text-[#e0e0e0] transition-colors"
+              >
+                ▲ Close
+              </button>
+            </>
+          )}
+          {collapsed && (
             <button
-              onClick={handleExport}
-              disabled={rendering || mixTracks.length === 0}
-              className="px-3 py-1 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 transition-all"
+              onClick={initMix}
+              className="text-xs text-[#b0b0b0] hover:text-[#ff6a10] transition-colors"
             >
-              {rendering ? '⏳ Rendering...' : '🔊 Export Mix'}
+              ▶ Open Console
             </button>
           )}
-          <button
-            onClick={() => {
-              if (collapsed) {
-                initMix();
-              } else {
-                setCollapsed(true);
-                setMixTracks([]);
-                setRenderResult(null);
-                setRenderError(null);
-              }
-            }}
-            className="text-xs text-gray-400 hover:text-white transition-colors"
-          >
-            {collapsed ? '▶ Open' : '▲ Close'}
-          </button>
         </div>
       </div>
 
-      {/* Render result */}
+      {/* ── Render Result ── */}
       {renderResult && (
-        <div className="mb-3 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3">
-          <p className="text-xs text-emerald-400 font-medium">Mix exported successfully</p>
-          <audio controls src={renderResult} className="mt-2 w-full" preload="metadata" />
-          <div className="flex gap-2 mt-2">
-            <a
-              href={renderResult}
-              download={`mix_master.${outputFormat}`}
-              className="px-3 py-1 text-xs bg-emerald-700 text-white rounded hover:bg-emerald-600 transition-colors"
-            >
-              ⬇ Download
-            </a>
-          </div>
+        <div className="rounded-lg border border-[#76b900]/30 bg-[#76b900]/5 p-3 space-y-2">
+          <p className="text-xs font-medium text-[#76b900]">Mix exported successfully</p>
+          <audio controls src={renderResult} className="w-full" preload="metadata" />
+          <a
+            href={renderResult}
+            download={`mix_master.${outputFormat}`}
+            className="inline-block px-3 py-1 text-xs font-medium bg-[#76b900]/20 text-[#76b900] rounded hover:bg-[#76b900]/30 transition-colors"
+          >
+            ⬇ Download .{outputFormat}
+          </a>
         </div>
       )}
 
       {renderError && (
-        <div className="mb-3 rounded-lg border border-red-800 bg-red-950/30 p-3">
+        <div className="rounded-lg border border-red-800/50 bg-red-950/20 p-3">
           <p className="text-xs text-red-400">{renderError}</p>
         </div>
       )}
 
-      {/* Console body */}
+      {/* ── Console Body ── */}
       {!collapsed && (
         <div className="space-y-4">
-          {/* Master section */}
-          <div className="flex items-center gap-4 p-3 rounded-lg border border-gray-700 bg-gray-800/50">
-            <span className="text-xs font-medium text-gray-400 w-12">Master</span>
-            {/* Master Volume Fader */}
-            <div className="flex-1 flex items-center gap-2">
+          {/* Master Section */}
+          <div className="flex items-center gap-4 p-3 rounded-lg border border-[#2a2a38] bg-[#262626]">
+            <span className="text-xs font-semibold text-[#ff6a10] w-14" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>MASTER</span>
+            <div className="flex-1 flex items-center gap-3">
+              <span className="text-[10px] text-[#777777] w-8">Vol</span>
               <input
-                type="range"
-                min={-30}
-                max={6}
-                step={0.5}
+                type="range" min={-30} max={6} step={0.5}
                 value={masterVolume}
                 onChange={(e) => setMasterVolume(Number(e.target.value))}
-                className="flex-1 h-2 accent-amber-500"
+                className="flex-1 h-2 accent-[#ff6a10]"
               />
-              <span className="text-xs font-mono text-amber-400 w-10 text-right">
-                {masterVolume > 0 ? `+${masterVolume}` : masterVolume} dB
+              <span className="text-xs font-mono text-[#ff6a10] w-10 text-right">
+                {fmtDb(masterVolume)} dB
               </span>
             </div>
-            {/* Format selector */}
             <select
               value={outputFormat}
               onChange={(e) => setOutputFormat(e.target.value as 'wav' | 'mp3')}
-              className="px-2 py-0.5 bg-gray-700 border border-gray-600 rounded text-xs text-white"
+              className="px-2 py-1 bg-[#2a2a38] border border-[#2a2a38] rounded text-xs text-[#b0b0b0] focus:outline-none focus:ring-1 focus:ring-[#ff6a10]/50"
             >
               <option value="wav">WAV</option>
               <option value="mp3">MP3</option>
             </select>
           </div>
 
-          {/* Per-track channel strips */}
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(280px, 1fr))` }}>
+          {/* Progress Bar */}
+          {rendering && (
+            <div className="h-1.5 bg-[#2a2a38] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#ff6a10] to-[#ff6a10] rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+
+          {/* Channel Strips */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {mixTracks.map((mt) => {
               const trk = completed.find((t) => t.id === mt.trackId);
               if (!trk) return null;
 
+              const borderColor = mt.solo ? '#ff6a10' : mt.mute ? '#ef4444' : '#2a2a38';
+              const bgColor = mt.solo ? 'rgba(230,90,11,0.08)' : mt.mute ? 'rgba(239,68,68,0.05)' : 'transparent';
+
               return (
                 <div
                   key={mt.trackId}
-                  className={`rounded-lg border p-3 space-y-3 transition-colors ${
-                    mt.solo
-                      ? 'border-amber-600 bg-amber-950/20'
-                      : mt.mute
-                        ? 'border-red-800 bg-red-950/15 opacity-60'
-                        : 'border-gray-700 bg-gray-800/30'
-                  }`}
+                  className="rounded-lg border p-3 space-y-2.5 transition-all"
+                  style={{ borderColor, backgroundColor: bgColor }}
                 >
-                  {/* Channel header */}
+                  {/* Channel Header */}
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-300 truncate max-w-[140px]">
+                    <span className="text-xs font-medium text-[#e0e0e0] truncate max-w-[120px]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {trk.name}
                     </span>
                     <div className="flex items-center gap-1">
-                      {/* Solo */}
                       <button
-                        onClick={() =>
-                          updateTrack(mt.trackId, {
-                            solo: !mt.solo,
-                            mute: mt.solo ? false : mt.mute,
-                          })
-                        }
-                        className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+                        onClick={() => updateTrack(mt.trackId, { solo: !mt.solo, mute: mt.solo ? false : mt.mute })}
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-colors ${
                           mt.solo
-                            ? 'bg-amber-600 text-white'
-                            : 'bg-gray-800 text-gray-500 hover:text-amber-400'
+                            ? 'bg-[#ff6a10] text-white'
+                            : 'bg-[#262626] text-[#777777] hover:text-[#ff6a10]'
                         }`}
                         title="Solo"
                       >
                         S
                       </button>
-                      {/* Mute */}
                       <button
-                        onClick={() =>
-                          updateTrack(mt.trackId, {
-                            mute: !mt.mute,
-                            solo: mt.mute ? false : mt.solo,
-                          })
-                        }
-                        className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+                        onClick={() => updateTrack(mt.trackId, { mute: !mt.mute, solo: mt.mute ? false : mt.solo })}
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-colors ${
                           mt.mute
                             ? 'bg-red-600 text-white'
-                            : 'bg-gray-800 text-gray-500 hover:text-red-400'
+                            : 'bg-[#262626] text-[#777777] hover:text-red-400'
                         }`}
                         title="Mute"
                       >
@@ -273,148 +284,90 @@ export function MixConsole({ history }: Props) {
                     </div>
                   </div>
 
-                  {/* Volume fader */}
+                  {/* Volume Fader */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500 w-6">Vol</span>
+                    <span className="text-[10px] text-[#777777] w-6">Vol</span>
                     <input
-                      type="range"
-                      min={-60}
-                      max={12}
-                      step={0.5}
+                      type="range" min={-60} max={12} step={0.5}
                       value={mt.volume}
-                      onChange={(e) =>
-                        updateTrack(mt.trackId, { volume: Number(e.target.value) })
-                      }
-                      className="flex-1 h-1.5 accent-blue-400"
+                      onChange={(e) => updateTrack(mt.trackId, { volume: Number(e.target.value) })}
+                      className="flex-1 h-1.5 accent-[#ff6a10]"
                     />
-                    <span className="text-[10px] font-mono text-blue-400 w-10 text-right">
-                      {mt.volume > 0 ? `+${mt.volume}` : mt.volume}
+                    <span className="text-[10px] font-mono text-[#ff6a10] w-10 text-right">
+                      {fmtDb(mt.volume)}
                     </span>
                   </div>
 
-                  {/* Pan slider */}
+                  {/* Pan Slider */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500 w-6">Pan</span>
+                    <span className="text-[10px] text-[#777777] w-6">Pan</span>
                     <input
-                      type="range"
-                      min={-1}
-                      max={1}
-                      step={0.1}
+                      type="range" min={-1} max={1} step={0.1}
                       value={mt.pan}
-                      onChange={(e) =>
-                        updateTrack(mt.trackId, { pan: Number(e.target.value) })
-                      }
-                      className="flex-1 h-1 accent-green-400"
+                      onChange={(e) => updateTrack(mt.trackId, { pan: Number(e.target.value) })}
+                      className="flex-1 h-1 accent-[#38bdf8]"
                     />
-                    <span className="text-[10px] font-mono text-green-400 w-10 text-right">
-                      {mt.pan === 0
-                        ? 'C'
-                        : mt.pan < 0
-                          ? `L${Math.abs(mt.pan * 100).toFixed(0)}`
-                          : `R${(mt.pan * 100).toFixed(0)}`}
+                    <span className="text-[10px] font-mono text-[#38bdf8] w-10 text-right">
+                      {fmtPan(mt.pan)}
                     </span>
                   </div>
 
-                  {/* 3-band EQ */}
-                  <div className="grid grid-cols-3 gap-1">
+                  {/* 3-Band EQ */}
+                  <div className="grid grid-cols-3 gap-1.5">
                     {/* Low */}
                     <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-[9px] text-gray-500">Lo</span>
+                      <span className="text-[8px] text-[#777777]">Lo</span>
                       <input
-                        type="range"
-                        min={-12}
-                        max={12}
-                        step={1}
+                        type="range" min={-12} max={12} step={1}
                         value={mt.eqLow}
-                        onChange={(e) =>
-                          updateTrack(mt.trackId, { eqLow: Number(e.target.value) })
-                        }
-                        className="w-full h-1 accent-rose-400"
-                        style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '48px' }}
+                        onChange={(e) => updateTrack(mt.trackId, { eqLow: Number(e.target.value) })}
+                        className="accent-rose-400"
+                        style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '40px', width: '16px' }}
                       />
-                      <span
-                        className={`text-[9px] font-mono ${
-                          mt.eqLow > 0
-                            ? 'text-rose-400'
-                            : mt.eqLow < 0
-                              ? 'text-rose-600'
-                              : 'text-gray-500'
-                        }`}
-                      >
+                      <span className={`text-[8px] font-mono ${mt.eqLow > 0 ? 'text-rose-400' : mt.eqLow < 0 ? 'text-rose-600' : 'text-[#777777]'}`}>
                         {mt.eqLow > 0 ? `+${mt.eqLow}` : mt.eqLow || '0'}
                       </span>
                     </div>
                     {/* Mid */}
                     <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-[9px] text-gray-500">Mid</span>
+                      <span className="text-[8px] text-[#777777]">Mid</span>
                       <input
-                        type="range"
-                        min={-12}
-                        max={12}
-                        step={1}
+                        type="range" min={-12} max={12} step={1}
                         value={mt.eqMid}
-                        onChange={(e) =>
-                          updateTrack(mt.trackId, { eqMid: Number(e.target.value) })
-                        }
-                        className="w-full h-1 accent-amber-400"
-                        style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '48px' }}
+                        onChange={(e) => updateTrack(mt.trackId, { eqMid: Number(e.target.value) })}
+                        className="accent-[#ff6a10]"
+                        style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '40px', width: '16px' }}
                       />
-                      <span
-                        className={`text-[9px] font-mono ${
-                          mt.eqMid > 0
-                            ? 'text-amber-400'
-                            : mt.eqMid < 0
-                              ? 'text-amber-600'
-                              : 'text-gray-500'
-                        }`}
-                      >
+                      <span className={`text-[8px] font-mono ${mt.eqMid > 0 ? 'text-[#ff6a10]' : mt.eqMid < 0 ? 'text-orange-700' : 'text-[#777777]'}`}>
                         {mt.eqMid > 0 ? `+${mt.eqMid}` : mt.eqMid || '0'}
                       </span>
                     </div>
                     {/* High */}
                     <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-[9px] text-gray-500">Hi</span>
+                      <span className="text-[8px] text-[#777777]">Hi</span>
                       <input
-                        type="range"
-                        min={-12}
-                        max={12}
-                        step={1}
+                        type="range" min={-12} max={12} step={1}
                         value={mt.eqHigh}
-                        onChange={(e) =>
-                          updateTrack(mt.trackId, { eqHigh: Number(e.target.value) })
-                        }
-                        className="w-full h-1 accent-sky-400"
-                        style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '48px' }}
+                        onChange={(e) => updateTrack(mt.trackId, { eqHigh: Number(e.target.value) })}
+                        className="accent-sky-400"
+                        style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '40px', width: '16px' }}
                       />
-                      <span
-                        className={`text-[9px] font-mono ${
-                          mt.eqHigh > 0
-                            ? 'text-sky-400'
-                            : mt.eqHigh < 0
-                              ? 'text-sky-600'
-                              : 'text-gray-500'
-                        }`}
-                      >
+                      <span className={`text-[8px] font-mono ${mt.eqHigh > 0 ? 'text-sky-400' : mt.eqHigh < 0 ? 'text-sky-600' : 'text-[#777777]'}`}>
                         {mt.eqHigh > 0 ? `+${mt.eqHigh}` : mt.eqHigh || '0'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Reverb send */}
+                  {/* Reverb Send */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500 w-6">Rev</span>
+                    <span className="text-[10px] text-[#777777] w-6">Rev</span>
                     <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
+                      type="range" min={0} max={1} step={0.05}
                       value={mt.reverbSend}
-                      onChange={(e) =>
-                        updateTrack(mt.trackId, { reverbSend: Number(e.target.value) })
-                      }
-                      className="flex-1 h-1 accent-purple-400"
+                      onChange={(e) => updateTrack(mt.trackId, { reverbSend: Number(e.target.value) })}
+                      className="flex-1 h-1 accent-[#f96bee]"
                     />
-                    <span className="text-[10px] font-mono text-purple-400 w-8 text-right">
+                    <span className="text-[10px] font-mono text-[#f96bee] w-8 text-right">
                       {(mt.reverbSend * 100).toFixed(0)}%
                     </span>
                   </div>

@@ -1,6 +1,5 @@
 /**
  * BatchProgressDashboard — Visual dashboard for batch-mode processing.
- *
  * Shows total/done/failed counts, progress bar, current prompt, ETA, and errors.
  */
 
@@ -22,23 +21,23 @@ export function BatchProgressDashboard({ batchState, getETA }: Props) {
         : 'Batch';
 
   return (
-    <div className="rounded-xl border border-purple-800 bg-purple-950/30 p-5 space-y-4">
+    <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f] p-5 space-y-4" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xl">📦</span>
           <div>
-            <h3 className="text-sm font-semibold text-purple-300">
+            <h3 className="text-sm font-semibold text-[#ff6a10]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               {batchState.running ? 'Batch Processing' : 'Batch Error'}
             </h3>
-            <p className="text-xs text-purple-400">
+            <p className="text-xs text-[#b0b0b0]">
               {pathLabel} — {batchState.total} tasks
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {batchState.running && (
-            <span className="text-xs text-purple-400 animate-pulse font-mono">
+            <span className="text-xs text-[#ff6a10] animate-pulse font-mono">
               ● LIVE
             </span>
           )}
@@ -50,45 +49,43 @@ export function BatchProgressDashboard({ batchState, getETA }: Props) {
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3 text-center">
-        <div className="bg-gray-900/50 rounded-lg p-2">
-          <p className="text-lg font-bold text-white">{batchState.total}</p>
-          <p className="text-xs text-gray-500">Total</p>
+        <div className="bg-[#262626] rounded-lg p-2">
+          <p className="text-lg font-bold text-[#e0e0e0]">{batchState.total}</p>
+          <p className="text-xs text-[#777777]">Total</p>
         </div>
-        <div className="bg-emerald-950/30 rounded-lg p-2">
-          <p className="text-lg font-bold text-emerald-400">{batchState.completed}</p>
-          <p className="text-xs text-gray-500">Done</p>
+        <div className="bg-[#76b900]/10 rounded-lg p-2">
+          <p className="text-lg font-bold text-[#76b900]">{batchState.completed}</p>
+          <p className="text-xs text-[#777777]">Done</p>
         </div>
         <div className="bg-red-950/30 rounded-lg p-2">
-          <p className="text-lg font-bold text-red-400">{batchState.failed}</p>
-          <p className="text-xs text-gray-500">Failed</p>
+          <p className="text-lg font-bold text-[#ef4444]">{batchState.failed}</p>
+          <p className="text-xs text-[#777777]">Failed</p>
         </div>
-        <div className="bg-blue-950/30 rounded-lg p-2">
-          <p className="text-lg font-bold text-blue-400">{batchState.running ? eta : '—'}</p>
-          <p className="text-xs text-gray-500">ETA</p>
+        <div className="bg-[#262626] rounded-lg p-2">
+          <p className="text-lg font-bold text-[#ff6a10]">{batchState.running ? eta : '—'}</p>
+          <p className="text-xs text-[#777777]">ETA</p>
         </div>
       </div>
 
       {/* Progress bar */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-purple-400 truncate max-w-[60%]">
+          <span className="text-xs text-[#b0b0b0] truncate max-w-[60%]">
             {batchState.currentPrompt
               ? `▶ ${batchState.currentPrompt}`
               : batchState.running
                 ? 'Initializing...'
                 : ''}
           </span>
-          <span className="text-xs font-mono text-purple-300">
-            {batchState.completed}/{batchState.total} (
-            {Math.round(
+          <span className="text-xs font-mono text-[#ff6a10]">
+            {batchState.completed}/{batchState.total} ({Math.round(
               (batchState.completed / Math.max(batchState.total, 1)) * 100,
-            )}
-            %)
+            )}%)
           </span>
         </div>
-        <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+        <div className="w-full h-3 bg-[#262626] rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 rounded-full transition-all duration-700 ease-out"
+            className="h-full bg-gradient-to-r from-[#ff6a10] to-[#ff6a10] rounded-full transition-all duration-700 ease-out"
             style={{
               width: `${
                 batchState.total > 0
@@ -102,8 +99,8 @@ export function BatchProgressDashboard({ batchState, getETA }: Props) {
 
       {/* Error detail */}
       {batchState.error && (
-        <div className="rounded-lg bg-red-950/50 p-3">
-          <p className="text-xs text-red-300 font-mono">{batchState.error}</p>
+        <div className="rounded-lg border border-red-800/50 bg-red-950/20 p-3">
+          <p className="text-xs text-red-400 font-mono">{batchState.error}</p>
         </div>
       )}
     </div>

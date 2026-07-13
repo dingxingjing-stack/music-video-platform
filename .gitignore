@@ -1,27 +1,28 @@
-# Python
+# Dependencies
+node_modules/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-*.egg-info/
-dist/
-build/
-*.egg
-.pytest_cache/
-.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Virtual environments
-.venv/
 venv/
 env/
+.venv/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.pytest_cache/
 
 # Environment variables
 .env
-
-# Node.js
-node_modules/
-frontend/node_modules/
-frontend/dist/
+.env.local
+.env.*.local
 
 # IDE
 .vscode/
@@ -33,15 +34,34 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# Results (generated audio files)
-backend/results/
-
-# Test audio files (generated, not source)
-backend/test_audio/
+# Application data
+data/
+uploads/
+results/
+*.db
+*.sqlite
+*.sqlite3
 
 # Logs
 *.log
+logs/
 
-# Build artifacts
-*.pyc
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Testing
+coverage/
+.htmlcov/
+.nox/
+
+# Docker
+.docker/
+
+# Misc
+*.bak
+*.backup
+*~vst-plugins/

@@ -6,17 +6,37 @@
 
 // ── Domain Types ────────────────────────────────────────────────────────────
 
+export interface AudioClip {
+  id: string;
+  name: string;
+  startTime: number; // seconds
+  duration: number; // seconds
+  url?: string;
+  color?: string;
+  fadeIn?: number; // seconds
+  fadeOut?: number; // seconds
+  gain?: number; // dB
+  muted?: boolean;
+}
+
 export interface Track {
   id: string;
   name: string;
-  type: 'music' | 'tts' | 'stem' | 'stem_zip';
-  status: 'queued' | 'running' | 'completed' | 'failed';
+  type: 'music' | 'tts' | 'stem' | 'stem_zip' | 'audio' | 'midi';
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'ready';
   url: string | null;
   progress: number;
   color: string;
   createdAt?: number;
   trimStart?: number;
   trimEnd?: number;
+  // Multi-track properties
+  clips?: AudioClip[];
+  muted?: boolean;
+  solo?: boolean;
+  armed?: boolean;
+  volume?: number; // 0-1
+  pan?: number; // -1 to 1
 }
 
 export interface PersistedSession {
@@ -125,31 +145,6 @@ export interface RemixParameters {
 }
 
 // ── MV Generator ────────────────────────────────────────────────────────────
-
-export interface BeatDetectionResult {
-  bpm: number;
-  beatTimestamps: number[];
-  energyProfile: { time: number; energy: number }[];
-}
-
-export interface MVConfig {
-  resolution: '720p' | '1080p' | '4K';
-  aspectRatio: '16:9' | '9:16' | '1:1';
-  transitionStyle: 'cut' | 'fade' | 'zoom' | 'pan';
-  backgroundColor: string;
-  waveformVisualization: boolean;
-}
-
-export interface VideoRenderJob {
-  jobId: string;
-  sourceTrackId: string;
-  beatResult: BeatDetectionResult;
-  config: MVConfig;
-  status: 'queued' | 'analyzing' | 'rendering' | 'completed' | 'failed';
-  progress: number;
-  outputPath?: string;
-  error?: string;
-}
 
 // ── MIDI / Piano Roll (Path D) ────────────────────────────────────────────────
 

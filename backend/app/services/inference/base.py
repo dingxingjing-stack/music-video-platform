@@ -925,6 +925,13 @@ class BaseInferenceService(ABC):
           2. Direct HEAD request to the original `space_url`
         Falls back to True if either succeeds.
         """
+        # Mock mode: skip remote probe, always report healthy
+        try:
+            import os as _os2
+            if (_os2.getenv("TTS_FORCE_MOCK") or "").strip() or (_os2.getenv("MUSIC_FORCE_MOCK") or "").strip() or (_os2.getenv("VIDEO_FORCE_MOCK") or "").strip():
+                return True, "Mock service ready (FORCE_MOCK)"
+        except Exception:
+            pass
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 # Strategy 1: *.hf.space subdomain
