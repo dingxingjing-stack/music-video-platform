@@ -196,19 +196,26 @@ Respond as JSON (no markdown, pure JSON only):
                 import re
                 
                 # 尝试提取 JSON（可能有 markdown 包裹）
-                json_match = re.search(r'\{[^]*?\}', text, re.DOTALL)
+                json_match = re.search(r'\{[\s\S]*?\}', text, re.DOTALL)
                 if json_match:
-                    result = json_mod.loads(json_match.group())
-                    return (
-                        result.get("optimized_prompt", request.prompt),
-                        result.get("style_suggestions", []),
-                        result.get("lyrics")
-                    )
+                    try:
+                        result = json_mod.loads(json_match.group())
+                        return (
+                            result.get("optimized_prompt", request.prompt),
+                            result.get("style_suggestions", []),
+                            result.get("lyrics")
+                        )
+                    except json_mod.JSONDecodeError as je:
+                        logging.warning(f"Failed to parse Agnes JSON response: {str(je)}")
+                        return request.prompt, [], None
                 
                 return request.prompt, [], None
                 
         except Exception as e:
             # Agnes 失败，返回空让上层降级到 Gemini
+            # 添加日志以便调试
+            import logging
+            logging.error(f"Agnes API call failed: {str(e)}")
             raise e
     
     
