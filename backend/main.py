@@ -286,9 +286,11 @@ async def services_status():
     用于前端/运维快速排查：哪些服务已配置、哪些正常、哪些降级。
     """
     services = [
-        {"name": "gemini", "label": "Gemini AI (歌词/文案生成)", "env_var": "GEMINI_API_KEY",
-         "description": "歌词生成、文案优化、MV 概念生成", "category": "llm"},
-        {"name": "huggingface", "label": "Hugging Face (音频生成)", "env_var": "HF_TOKEN",
+            {"name": "agnes", "label": "Agnes AI (主力文本模型)", "env_var": "AGNES_API_KEY",
+             "description": "歌词生成、文案优化、MV 概念生成（主力，永久免费无限额度）", "category": "llm"},
+            {"name": "gemini", "label": "Gemini AI (备用文本接口)", "env_var": "GEMINI_API_KEY",
+             "description": "备用 LLM，当 Agnes 不可用时切换", "category": "llm"},
+            {"name": "huggingface", "label": "Hugging Face (音频生成)", "env_var": "HF_TOKEN",
          "description": "MusicGen / ACE-Step / YuE 音乐生成", "category": "audio"},
         {"name": "mureka", "label": "Mureka API (商业级音乐生成)", "env_var": "MUREKA_API_KEY",
          "description": "商业级音乐生成、录取、扒带", "category": "audio"},
