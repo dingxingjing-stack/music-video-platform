@@ -273,64 +273,64 @@ async def health_check():
     }
 
 
-    # ---------------------------------------------------------------------------
-    # Service status endpoint — 显示所有外部服务的配置状态
-    # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Service status endpoint — 显示所有外部服务的配置状态
+# ---------------------------------------------------------------------------
 
 
-    @app.get("/api/v1/services/status", tags=["operations"])
-    async def services_status():
-        """
-        获取所有外部服务的配置和连通性状态。
+@app.get("/api/v1/services/status", tags=["operations"])
+async def services_status():
+    """
+    获取所有外部服务的配置和连通性状态。
 
-        用于前端/运维快速排查：哪些服务已配置、哪些正常、哪些降级。
-        """
-        services = [
-            {"name": "gemini", "label": "Gemini AI (歌词/文案生成)", "env_var": "GEMINI_API_KEY",
-             "description": "歌词生成、文案优化、MV 概念生成", "category": "llm"},
-            {"name": "huggingface", "label": "Hugging Face (音频生成)", "env_var": "HF_TOKEN",
-             "description": "MusicGen / ACE-Step / YuE 音乐生成", "category": "audio"},
-            {"name": "mureka", "label": "Mureka API (商业级音乐生成)", "env_var": "MUREKA_API_KEY",
-             "description": "商业级音乐生成、录取、扒带", "category": "audio"},
-            {"name": "nvidia_nvapi", "label": "NVIDIA NVAPI (LLM/音乐生成)", "env_var": "NVIDIA_API_KEY",
-             "description": "备用 LLM、音乐生成", "category": "llm"},
-            {"name": "supabase", "label": "Supabase (数据库/存储/认证)", "env_var": "SUPABASE_URL",
-             "description": "PostgreSQL 数据库、Auth 认证、文件存储", "category": "database"},
-            {"name": "cloudflare_r2", "label": "Cloudflare R2 (对象存储)", "env_var": "CLOUDFLARE_R2_ACCOUNT_ID",
-             "description": "音频/视频文件存储", "category": "storage"},
-            {"name": "resend", "label": "Resend (邮件服务)", "env_var": "RESEND_API_KEY",
-             "description": "事务性邮件、验证码、通知", "category": "notification"},
-            {"name": "sentry", "label": "Sentry (错误监控)", "env_var": "SENTRY_DSN",
-             "description": "异常捕获、性能监控、告警", "category": "monitoring"},
-            {"name": "creatomate", "label": "Creatomate (视频渲染)", "env_var": "CREATOMATE_API_KEY",
-             "description": "MV 模板渲染、视频合成", "category": "video"},
-            {"name": "runwayml", "label": "RunwayML (AI 视频特效)", "env_var": "RUNWAYML_API_KEY",
-             "description": "视频生成、背景移除、特效", "category": "video"},
-        ]
+    用于前端/运维快速排查：哪些服务已配置、哪些正常、哪些降级。
+    """
+    services = [
+        {"name": "gemini", "label": "Gemini AI (歌词/文案生成)", "env_var": "GEMINI_API_KEY",
+         "description": "歌词生成、文案优化、MV 概念生成", "category": "llm"},
+        {"name": "huggingface", "label": "Hugging Face (音频生成)", "env_var": "HF_TOKEN",
+         "description": "MusicGen / ACE-Step / YuE 音乐生成", "category": "audio"},
+        {"name": "mureka", "label": "Mureka API (商业级音乐生成)", "env_var": "MUREKA_API_KEY",
+         "description": "商业级音乐生成、录取、扒带", "category": "audio"},
+        {"name": "nvidia_nvapi", "label": "NVIDIA NVAPI (LLM/音乐生成)", "env_var": "NVIDIA_API_KEY",
+         "description": "备用 LLM、音乐生成", "category": "llm"},
+        {"name": "supabase", "label": "Supabase (数据库/存储/认证)", "env_var": "SUPABASE_URL",
+         "description": "PostgreSQL 数据库、Auth 认证、文件存储", "category": "database"},
+        {"name": "cloudflare_r2", "label": "Cloudflare R2 (对象存储)", "env_var": "CLOUDFLARE_R2_ACCOUNT_ID",
+         "description": "音频/视频文件存储", "category": "storage"},
+        {"name": "resend", "label": "Resend (邮件服务)", "env_var": "RESEND_API_KEY",
+         "description": "事务性邮件、验证码、通知", "category": "notification"},
+        {"name": "sentry", "label": "Sentry (错误监控)", "env_var": "SENTRY_DSN",
+         "description": "异常捕获、性能监控、告警", "category": "monitoring"},
+        {"name": "creatomate", "label": "Creatomate (视频渲染)", "env_var": "CREATOMATE_API_KEY",
+         "description": "MV 模板渲染、视频合成", "category": "video"},
+        {"name": "runwayml", "label": "RunwayML (AI 视频特效)", "env_var": "RUNWAYML_API_KEY",
+         "description": "视频生成、背景移除、特效", "category": "video"},
+    ]
 
-        results = []
-        for svc in services:
-            env_value = os.getenv(svc["env_var"], "")
-            is_configured = bool(env_value and env_value.strip() and not env_value.startswith("your_"))
-            results.append({
-                "name": svc["name"], "label": svc["label"], "category": svc["category"],
-                "description": svc["description"], "configured": is_configured,
-                "env_var": svc["env_var"],
-                "status": "configured" if is_configured else "not_configured"
-            })
+    results = []
+    for svc in services:
+        env_value = os.getenv(svc["env_var"], "")
+        is_configured = bool(env_value and env_value.strip() and not env_value.startswith("your_"))
+        results.append({
+            "name": svc["name"], "label": svc["label"], "category": svc["category"],
+            "description": svc["description"], "configured": is_configured,
+            "env_var": svc["env_var"],
+            "status": "configured" if is_configured else "not_configured"
+        })
 
-        configured_count = sum(1 for r in results if r["configured"])
+    configured_count = sum(1 for r in results if r["configured"])
 
-        return {
-            "total": len(results),
-            "configured": configured_count,
-            "not_configured": len(results) - configured_count,
-            "services": results,
-            "timestamp": datetime.utcnow().isoformat() + "Z"
-        }
+    return {
+        "total": len(results),
+        "configured": configured_count,
+        "not_configured": len(results) - configured_count,
+        "services": results,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
 
 
-    # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
     # LLM endpoints — Text generation (prompts, lyrics, MV concepts, etc.)
 # ---------------------------------------------------------------------------
 
