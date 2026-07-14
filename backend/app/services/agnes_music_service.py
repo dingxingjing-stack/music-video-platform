@@ -28,12 +28,12 @@ class AgnesSongRequest(BaseModel):
 class AgnesSongResponse(BaseModel):
     """Agnes 音乐生成响应"""
     success: bool
-    audio_url: Optional[str]
-    optimized_prompt: Optional[str]  # Agnes 优化的提示词
-    style_suggestions: Optional[list]
-    error: Optional[str]
-    task_id: Optional[str]
-    generated_lyrics: Optional[str] = None  # 生成的歌词（如未提供）
+    audio_url: Optional[str] = None
+    optimized_prompt: Optional[str] = None
+    style_suggestions: Optional[list] = None
+    error: Optional[str] = None
+    task_id: Optional[str] = None
+    generated_lyrics: Optional[str] = None
 
 
 class AgnesService:
