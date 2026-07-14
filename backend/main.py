@@ -155,8 +155,8 @@ app.add_middleware(PrivacyMiddleware)
 
 # ---------- router 挂载 ----------
 # 开发阶段：使用 Gemini 临时方案（免费额度）
-# 生产阶段：切换回 ai_music (Mureka API)
-from app.routers import gemini_ai_music as ai_music
+# 生产阶段：使用 ai_music (Agnes AI 主力 + Gemini 备用 + Mureka 音频)
+from app.routers import ai_music
 from app.routers import hf_music
 from app.routers import stems_export
 from app.routers import community
