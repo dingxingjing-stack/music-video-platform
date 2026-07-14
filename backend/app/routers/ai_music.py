@@ -25,7 +25,8 @@ class GenerateResponse(BaseModel):
     audio_url: Optional[str] = None
     error: Optional[str] = None
     task_id: Optional[str] = None
-    ai_provider: Optional[str] = None  # "agnes" / "gemini" / "mureka"
+    ai_provider: Optional[str] = None   # "agnes" / "gemini" / "mureka"
+    agnes_debug: Optional[str] = None    # 调试 Agnes 调用详情
 
 
 @router.post("/generate", response_model=GenerateResponse)
@@ -52,8 +53,9 @@ async def generate_music(request: GenerateRequest):
     
     agnes_result = await agnes_service.generate_song(agnes_request)
     
-    # 记录 AI 提供者
+    # 记录 AI 提供者 + 调试信息
     ai_provider = "agnes" if agnes_result.optimized_prompt and agnes_result.optimized_prompt != request.prompt else "gemini"
+    agnes_debug = f"success={agnes_result.success}, opt_changed={'yes' if agnes_result.optimized_prompt != request.prompt else 'no'}, error={agnes_result.error}, key_set={bool(agnes_service.API_KEY)}"
     
     # 2. 使用优化后的提示词调用 Mureka 生成音频
     final_prompt = agnes_result.optimized_prompt or request.prompt
@@ -74,6 +76,7 @@ async def generate_music(request: GenerateRequest):
         error=mureka_result.error,
         task_id=mureka_result.task_id,
         ai_provider=ai_provider,
+        agnes_debug=agnes_debug,
     )
 
 
