@@ -22,5 +22,5 @@ COPY . .
 # Expose port (Render sets PORT env var)
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application (use $PORT for Render compatibility)
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT
