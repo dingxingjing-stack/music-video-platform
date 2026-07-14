@@ -41,8 +41,8 @@ class AgnesService:
     
     # Agnes API 配置（兼容 OpenAI 格式）
     API_KEY = os.getenv("AGNES_API_KEY", "")  # 从环境变量读取
-    API_ENDPOINT = "https://api.agnes-ai.com/v1/chat/completions"  # OpenAI 兼容端点
-    MODEL = "agnes-2.0-flash"  # 主力模型，256K 上下文
+    API_ENDPOINT = "https://apihub.agnes-ai.com/v1/chat/completions"  # 正确端点
+    MODEL = "agnes-2.0-flash"  # 主力模型，512K 上下文
     
     # Mock 音频示例（开发阶段使用）
     MOCK_AUDIO_URLS = [
