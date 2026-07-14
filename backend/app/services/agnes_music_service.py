@@ -148,7 +148,8 @@ class AgnesService:
 2. Generate suitable lyrics if requested (with proper song structure markers like [Verse], [Chorus], [Bridge])
 3. Provide style suggestions for music generation AI
 
-You have 256K context window and can handle very long, detailed prompts."""
+CRITICAL: Respond ONLY with valid JSON. No markdown, no explanation, no code blocks. PURE JSON ONLY.
+You have 512K context window and can handle very long, detailed prompts."""
 
         prompt = f"""Optimize this music generation request and generate lyrics.
 
