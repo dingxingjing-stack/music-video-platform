@@ -333,6 +333,10 @@ app.include_router(auth_app)
 from app.routers.songs import router as songs_app
 app.include_router(songs_app)
 
+# ---------- 公测灰度权限路由 ----------
+from app.routers.beta import router as beta_router
+app.include_router(beta_router)
+
 
 # ---------------------------------------------------------------------------
 # WebSocket broadcast callback
