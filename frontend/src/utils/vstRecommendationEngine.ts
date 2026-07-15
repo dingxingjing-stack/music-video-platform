@@ -31,7 +31,7 @@ export const PLUGIN_DATABASE: PluginProfile[] = [
     vendor: 'Surge Synth Team',
     type: 'synth',
     subtype: 'Hybrid',
-    format: ['VST3'] as const,
+    format: 'VST3',
     cpuUsage: 2.0,
     memoryUsage: 45,
     difficulty: 'Intermediate',
