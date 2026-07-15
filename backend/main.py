@@ -26,6 +26,75 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+# ==============================================================================
+# Sentry 错误监控初始化（必须在 app 创建之前）
+# ==============================================================================
+# 依赖安装（添加到 requirements.txt）:
+#   sentry-sdk[fastapi]==2.42.0
+#
+# 从 Render 环境变量读取 SENTRY_DSN，代码禁止硬编码密钥字符串。
+# 未配置 DSN 时自动跳过，不影响本地开发。
+#
+# 采集范围:
+#   - FastAPI 接口全量异常（500/4xx 自动上报，含 request body 脱敏）
+#   - Gemini / HuggingFace / Resend 等第三方 HTTP 调用报错（httpx 集成）
+#   - 所有 logger.error() / logger.exception() 调用（LoggingIntegration）
+#   - 数据库查询异常（若启用 SQLAlchemy 集成）
+# ==============================================================================
+
+SENTRY_DSN = os.getenv("SENTRY_DSN")  # 唯一密钥入口，禁止硬编码
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.httpx import HttpxIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+
+        # ---------- 环境标识（Render 部署时自动区分） ----------
+        environment=os.getenv("RENDER", "production"),  # Render 默认注入 RENDER=true
+        release=os.getenv("RENDER_GIT_COMMIT"),         # 精确到 commit SHA
+
+        # ---------- 采样率（免费额度友好：只上报 50% 错误） ----------
+        sample_rate=0.5,
+
+        # ---------- 请求体脱敏 ----------
+        # 不上报 Authorization / Cookie / 任何含 "token"/"key"/"secret" 的 header
+        send_default_pii=False,
+
+        # ---------- 集成模块 ----------
+        integrations=[
+            # FastAPI: 自动捕获每个路由的异常、慢请求（阈值 1s）
+            FastApiIntegration(
+                transaction_style="url",           # 按 URL 路径分组
+                failed_request_status_codes=[      # 哪些 HTTP 状态码算"错误"
+                    range(400, 499),                # 客户端错误也算（方便追踪 API 滥用）
+                    range(500, 599),                # 服务端错误
+                ],
+            ),
+            # httpx: 捕获所有 Gemini / HuggingFace / Resend / Mureka HTTP 调用异常
+            HttpxIntegration(),
+            # logging: 捕获 logger.error() / logger.exception() 调用
+            LoggingIntegration(
+                level=logging.WARNING,  # WARNING 及以上自动上报
+                event_level=logging.ERROR,  # ERROR 及以上作为 Sentry "event" 而非 "breadcrumb"
+            ),
+        ],
+
+        # ---------- 性能追踪阈值 ----------
+        # 超过 1 秒的 HTTP 请求作为慢查询上报
+        traces_sample_rate=0.3,          # 30% 追踪采样
+        _experiments={
+            "max_spans": 100,             # 每条 trace 最多 100 个 span
+        },
+    )
+
+    logger.info("Sentry SDK initialized (env=%s, sample_rate=0.5)", SENTRY_DSN.split("@")[-1].split("/")[0])
+else:
+    logger.info("SENTRY_DSN not set — skipping Sentry initialization")
+
 # Load .env file if present
 load_dotenv()
 
