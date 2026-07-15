@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AppLayout } from './AppLayout';
+import { ConsentGuard, GrayRoute } from './components/RouteGuards';
 
 // 路由级懒加载
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
@@ -21,37 +22,32 @@ const Loading = () => (
   </div>
 );
 
-// 公测期间独立落地页（不需要侧边栏布局）
-export function StandaloneRoutes() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <Routes>
-        <Route path="/landing" element={<Landing />} />
-      </Routes>
-    </Suspense>
-  );
-}
-
 export default function App() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        {/* 落地首页 — 独立展示，无侧边栏 */}
+        {/* 落地首页 — 独立展示，无侧边栏，无需协议 */}
         <Route path="/landing" element={<Landing />} />
 
-        {/* 主应用路由 — 侧边栏布局 */}
+        {/* 主应用路由 — 侧边栏布局 + 公测协议守卫 */}
         <Route element={<AppLayout />}>
-          <Route path="/" element={<TrackStudio />} />
-          <Route path="/path-a" element={<PathAPage />} />
-          <Route path="/path-b" element={<PathBPage />} />
-          <Route path="/path-c" element={<PathCPage />} />
-          <Route path="/path-d" element={<PathDPage />} />
-          <Route path="/community" element={<Community />} />
-          <Route path="/community-feed" element={<CommunityFeed />} />
-          <Route path="/feed" element={<Feed />} />
-          <Route path="/profile/:userId?" element={<Profile />} />
-          {/* 素材商城路由保留但导航隐不显示 */}
-          <Route path="/stock-library" element={<StockLibrary />} />
+          {/* 全开放功能 — 需同意协议 */}
+          <Route path="/" element={<ConsentGuard><TrackStudio /></ConsentGuard>} />
+          <Route path="/path-a" element={<ConsentGuard><PathAPage /></ConsentGuard>} />
+          <Route path="/path-b" element={<ConsentGuard><PathBPage /></ConsentGuard>} />
+          <Route path="/path-c" element={<ConsentGuard><PathCPage /></ConsentGuard>} />
+          <Route path="/path-d" element={<ConsentGuard><PathDPage /></ConsentGuard>} />
+          <Route path="/community" element={<ConsentGuard><Community /></ConsentGuard>} />
+          <Route path="/community-feed" element={<ConsentGuard><CommunityFeed /></ConsentGuard>} />
+          <Route path="/feed" element={<ConsentGuard><Feed /></ConsentGuard>} />
+          <Route path="/profile/:userId?" element={<ConsentGuard><Profile /></ConsentGuard>} />
+
+          {/* 灰度功能路由 — 协议 + 灰度权限双守卫 */}
+          <Route path="/mv-generate" element={<GrayRoute featureKey="mv_generate"><PathAPage /></GrayRoute>} />
+          <Route path="/collab" element={<GrayRoute featureKey="ws_collab"><PathDPage /></GrayRoute>} />
+
+          {/* 关闭功能路由 — 公测期间保留路由但不显示入口 */}
+          <Route path="/stock-library" element={<ConsentGuard><StockLibrary /></ConsentGuard>} />
         </Route>
       </Routes>
     </Suspense>

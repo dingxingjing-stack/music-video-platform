@@ -5,10 +5,11 @@ import { useUserGrayStatus } from '../hooks/useUserGrayStatus';
 
 interface GrayFeatureLockProps {
   featureKey: string;
+  userId?: string;
   onApply?: () => void;
 }
 
-export function GrayFeatureLock({ featureKey, onApply }: GrayFeatureLockProps) {
+export function GrayFeatureLock({ featureKey, userId, onApply }: GrayFeatureLockProps) {
   const feature = FEATURE_CONFIG[featureKey];
   const [showApply, setShowApply] = useState(false);
   const [reason, setReason] = useState('');
@@ -21,7 +22,7 @@ export function GrayFeatureLock({ featureKey, onApply }: GrayFeatureLockProps) {
     try {
       await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/beta/apply-gray', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-ID': 'beta_user' },
+        headers: { 'Content-Type': 'application/json', 'X-User-ID': userId || 'beta_user' },
         body: JSON.stringify({ feature_key: featureKey, reason, contact }),
       });
     } catch { /* 公测容错 */ }
@@ -122,7 +123,7 @@ interface FeatureGateProps {
   fallback?: React.ReactNode;
 }
 
-export function FeatureGate({ featureKey, children, fallback }: FeatureGateProps) {
+export function FeatureGate({ featureKey, userId, children, fallback }: FeatureGateProps & { userId?: string }) {
   const { status } = useUserGrayStatus();
   const feature = FEATURE_CONFIG[featureKey];
 
@@ -131,7 +132,7 @@ export function FeatureGate({ featureKey, children, fallback }: FeatureGateProps
   if (feature.level === 'closed') return <>{fallback ?? null}</>;
 
   if (feature.level === 'gray' && !status.isGray) {
-    return <GrayFeatureLock featureKey={featureKey} />;
+    return <GrayFeatureLock featureKey={featureKey} userId={userId} />;
   }
 
   return <>{children}</>;
