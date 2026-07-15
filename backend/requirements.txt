@@ -13,4 +13,4 @@ librosa==0.10.2
 python-multipart==0.0.20
 pypinyin==0.52.0
 sqlalchemy==2.0.35
-sentry-sdk[fastapi]==2.42.0
+sentry-sdk[fastapi,sqlalchemy]==2.42.0

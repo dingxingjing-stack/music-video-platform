@@ -27,6 +27,11 @@ from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 # ==============================================================================
+# 日志器初始化（必须在 Sentry 之前，Sentry 需要用到 logger）
+# ==============================================================================
+logger = logging.getLogger(__name__)
+
+# ==============================================================================
 # Sentry 错误监控初始化（必须在 app 创建之前）
 # ==============================================================================
 # 依赖安装（添加到 requirements.txt）:
@@ -37,9 +42,9 @@ from fastapi.staticfiles import StaticFiles
 #
 # 采集范围:
 #   - FastAPI 接口全量异常（500/4xx 自动上报，含 request body 脱敏）
-#   - Gemini / HuggingFace / Resend 等第三方 HTTP 调用报错（httpx 集成）
+#   - Gemini / HuggingFace / Resend / Mureka 等第三方 HTTP 调用报错（httpx 集成）
+#   - Supabase / SQLAlchemy 数据库查询异常（SQLAlchemy 集成）
 #   - 所有 logger.error() / logger.exception() 调用（LoggingIntegration）
-#   - 数据库查询异常（若启用 SQLAlchemy 集成）
 # ==============================================================================
 
 SENTRY_DSN = os.getenv("SENTRY_DSN")  # 唯一密钥入口，禁止硬编码
@@ -49,6 +54,32 @@ if SENTRY_DSN:
     from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.httpx import HttpxIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+    # ---------- 脱敏钩子：移除所有敏感字段 ----------
+    def _scrub_event(event, hint):
+        # 1. 请求头脱敏
+        if "request" in event and "headers" in event["request"]:
+            sensitive = {"authorization", "cookie", "x-api-key", "x-auth-token"}
+            event["request"]["headers"] = {
+                k: "[Filtered]" if k.lower() in sensitive else v
+                for k, v in event["request"]["headers"].items()
+            }
+        # 2. 请求体脱敏（JSON / form）
+        if "request" in event and "data" in event["request"] and event["request"]["data"]:
+            data = event["request"]["data"]
+            if isinstance(data, dict):
+                for key in list(data.keys()):
+                    if any(s in key.lower() for s in ("token", "key", "secret", "password", "dsn", "api")):
+                        data[key] = "[Filtered]"
+        # 3. 异常上下文脱敏
+        if "contexts" in event:
+            for ctx in event["contexts"].values():
+                if isinstance(ctx, dict):
+                    for key in list(ctx.keys()):
+                        if any(s in key.lower() for s in ("token", "key", "secret", "password", "dsn", "api")):
+                            ctx[key] = "[Filtered]"
+        return event
 
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -61,8 +92,8 @@ if SENTRY_DSN:
         sample_rate=0.5,
 
         # ---------- 请求体脱敏 ----------
-        # 不上报 Authorization / Cookie / 任何含 "token"/"key"/"secret" 的 header
         send_default_pii=False,
+        before_send=_scrub_event,  # 二次脱敏兜底
 
         # ---------- 集成模块 ----------
         integrations=[
@@ -73,9 +104,12 @@ if SENTRY_DSN:
                     range(400, 499),                # 客户端错误也算（方便追踪 API 滥用）
                     range(500, 599),                # 服务端错误
                 ],
+                http_methods_to_capture=("GET", "POST", "PUT", "PATCH", "DELETE"),
             ),
             # httpx: 捕获所有 Gemini / HuggingFace / Resend / Mureka HTTP 调用异常
             HttpxIntegration(),
+            # SQLAlchemy: 捕获 Supabase / PostgreSQL 查询异常、慢查询
+            SqlalchemyIntegration(),
             # logging: 捕获 logger.error() / logger.exception() 调用
             LoggingIntegration(
                 level=logging.WARNING,  # WARNING 及以上自动上报
@@ -84,14 +118,18 @@ if SENTRY_DSN:
         ],
 
         # ---------- 性能追踪阈值 ----------
-        # 超过 1 秒的 HTTP 请求作为慢查询上报
         traces_sample_rate=0.3,          # 30% 追踪采样
         _experiments={
             "max_spans": 100,             # 每条 trace 最多 100 个 span
         },
     )
 
-    logger.info("Sentry SDK initialized (env=%s, sample_rate=0.5)", SENTRY_DSN.split("@")[-1].split("/")[0])
+    # 安全打印项目 ID而非完整 DSN
+    try:
+        proj = SENTRY_DSN.split("@")[-1].split("/")[-1]
+    except Exception:
+        proj = "unknown"
+    logger.info("Sentry SDK initialized (project=%s, env=%s, sample_rate=0.5)", proj, os.getenv("RENDER", "production"))
 else:
     logger.info("SENTRY_DSN not set — skipping Sentry initialization")
 
@@ -165,7 +203,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger(__name__)
+# logger 已在文件头部初始化，此处不再重复
 
 # ---------------------------------------------------------------------------
 # Factory initialization
