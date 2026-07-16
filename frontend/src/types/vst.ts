@@ -40,6 +40,7 @@ export interface PluginInfo {
   parameters: PluginParameter[];
   presetCount: number;
   hasUI: boolean;
+  midiChannel?: number;
   uiWidth?: number;
   uiHeight?: number;
 }
@@ -50,6 +51,8 @@ export interface LoadedPlugin {
   pluginId: string;
   name: string;
   type: PluginType;
+  info?: PluginInfo;
+  midiChannel?: number;
   parameters: { [key: string]: number };
   presetIndex: number;
   enabled: boolean;

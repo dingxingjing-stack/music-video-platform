@@ -216,7 +216,7 @@ export class VSTHost {
     // 将 MIDI 事件路由到对应的虚拟乐器插件
     // 1. 查找接收该 MIDI 通道的乐器
     const targetPlugins = Array.from(this.plugins.values()).filter(
-      p => p?.info.type === 'instrument' && p?.info.midiChannel === midiEvent.channel
+      p => p.info?.type === 'instrument' && p.info?.midiChannel === midiEvent.channel
     );
     
     if (targetPlugins.length === 0) {
@@ -226,10 +226,12 @@ export class VSTHost {
     
     // 2. 调用插件的 MIDI 处理方法
     for (const plugin of targetPlugins) {
-      if (midiEvent.type === 'noteOn' && midiEvent.velocity !== undefined && midiEvent.velocity >= 0) {
-        this.processNoteOn(plugin, midiEvent.note, midiEvent.velocity);
-      } else if (midiEvent.type === 'noteOff' && midiEvent.note !== undefined) {
-        this.processNoteOff(plugin, midiEvent.note);
+      const note = midiEvent.note ?? 0;
+      const velocity = midiEvent.velocity ?? 0;
+      if (midiEvent.type === 'noteOn' && velocity >= 0) {
+        this.processNoteOn(plugin, note, velocity);
+      } else if (midiEvent.type === 'noteOff' && note >= 0) {
+        this.processNoteOff(plugin, note);
       } else if (midiEvent.type === 'controlChange' && midiEvent.controller !== undefined && midiEvent.value !== undefined) {
         this.processControlChange(plugin, midiEvent.controller, midiEvent.value);
       }
@@ -273,7 +275,7 @@ export class VSTHost {
   }
   
   // 处理 Control Change
-  private processControlChange(plugin: LoadedPlugin, controller: number, value: number): void {
+  private processControlChange(_plugin: LoadedPlugin, controller: number, value: number): void {
     console.log(`[VSTHost] CC 控制器 ${controller} = ${value}`);
     // 实际 VST: plugin.wasmInstance.vst_setParameter(controller, value / 127);
   }
@@ -285,8 +287,8 @@ export class VSTHost {
    */
   connectToAudioGraph(
     instanceId: string,
-    inputNode: AudioNode,
-    outputNode: AudioNode
+    _inputNode: AudioNode,
+    _outputNode: AudioNode
   ): boolean {
     const plugin = this.plugins.get(instanceId);
     if (!plugin || !this.audioContext) {
@@ -327,7 +329,7 @@ export class VSTHost {
   /**
    * 获取插件信息
    */
-  getPluginInfo(pluginId: string): PluginInfo | undefined {
+  getPluginInfo(_pluginId: string): PluginInfo | undefined {
     // 实际实现需要从 WASM 模块获取
     return undefined;
   }

@@ -9,19 +9,26 @@
  * - 用户行为学习
  */
 
-import type { VSTPlugin } from '../components/Market/VSTPluginMarket';
-
 // ============================================
 // 插件数据库 (7 个已测试插件)
 // ============================================
 
-export interface PluginProfile extends VSTPlugin {
+export interface PluginProfile {
+  id: string;
+  name: string;
+  vendor: string;
+  type: 'synth' | 'effect';
+  subtype: string;
+  format: 'VST2' | 'VST3';
   cpuUsage: number;          // CPU 占用 %
   memoryUsage: number;       // 内存 MB
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   bestFor: string[];         // 最佳用途
   chainPosition: number;     // 效果链位置 (0=乐器，1-7=效果器顺序)
   alternatives: string[];    // 替代插件
+  rating: number;
+  price: number;
+  description: string;
 }
 
 export const PLUGIN_DATABASE: PluginProfile[] = [
