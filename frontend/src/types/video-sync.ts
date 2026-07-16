@@ -142,6 +142,7 @@ export interface ExportConfig {
   fps: number;
   includeLyrics: boolean;
   includeWatermark: boolean;
+  includeAudio?: boolean;
   watermarkText?: string;
 }
 

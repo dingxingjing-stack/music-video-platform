@@ -33,8 +33,9 @@ export class RecordingEngine {
   private session: RecordingSession | null = null;
   private recordedChunks: Map<string, Blob[]> = new Map();
   private monitoringConfig: MonitoringConfig;
-  private quantizeConfig: QuantizeConfig;
+  private _quantizeConfig: QuantizeConfig;
   private midiEvents: MidiEvent[] = [];
+  public onLevelUpdate?: (data: LevelMeterData) => void;
 
   // 录音状态
   private isRecording = false;
@@ -49,7 +50,7 @@ export class RecordingEngine {
       outputEffectChain: []
     };
 
-    this.quantizeConfig = {
+    this._quantizeConfig = {
       enabled: false,
       gridType: '1/16',
       strength: 100,
@@ -60,6 +61,7 @@ export class RecordingEngine {
         duration: true
       }
     };
+    void this._quantizeConfig;
   }
 
   /**
@@ -220,8 +222,8 @@ export class RecordingEngine {
       outputGain.connect(this.audioContext.destination);
       
       // 保存效果器引用以便后续调整
-      this.gainNodes.set(`${track.id}_input`, inputGain);
-      this.gainNodes.set(`${track.id}_output`, outputGain);
+      this.gainNodes.set(`${track.trackId}_input`, inputGain);
+      this.gainNodes.set(`${track.trackId}_output`, outputGain);
     }
 
     console.log(`[RecordingEngine] 设置监听: ${track.name}, 低延迟=${this.monitoringConfig.lowLatency}`);
@@ -299,7 +301,7 @@ export class RecordingEngine {
         const midiAccess = await navigator.requestMIDIAccess();
         midiAccess.inputs.forEach(input => {
           input.onmidimessage = (event) => {
-            const midiEvent = this.parseMidiMessage(event.data);
+            const midiEvent = this.parseMidiMessage(event.data ?? new Uint8Array());
             if (midiEvent) {
               midiEvent.time = Date.now() - this.startTime;
               this.midiEvents.push(midiEvent);
@@ -430,7 +432,7 @@ export class RecordingEngine {
    * 设置量化配置
    */
   setQuantizeConfig(config: QuantizeConfig): void {
-    this.quantizeConfig = config;
+    this._quantizeConfig = config;
     console.log('[RecordingEngine] 量化配置已更新');
   }
 
