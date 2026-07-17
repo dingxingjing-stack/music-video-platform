@@ -13,6 +13,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SocialSystem } from '../components/SocialSystem';
 
+const API = 'https://ai-music-backend-8e85.onrender.com/api/v1/community';
+
 interface CommunityTrack {
   id: string;
   title: string;
@@ -43,85 +45,86 @@ const CHART_LABELS: Record<ChartType, string> = {
 
 const GENRES = ['pop', 'rock', 'jazz', 'electronic', 'hip-hop', 'classical', 'ambient', 'lo-fi', 'cinematic', 'r&b'];
 
+// 骨架屏组件
+function SkeletonRow() {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-[#1a1a1a] animate-pulse">
+      <div className="w-8 h-8 rounded-full bg-[#2a2a2a]" />
+      <div className="w-12 h-12 rounded-full bg-[#2a2a2a]" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-48 bg-[#2a2a2a] rounded" />
+        <div className="h-3 w-24 bg-[#2a2a2a] rounded" />
+      </div>
+      <div className="h-4 w-16 bg-[#2a2a2a] rounded" />
+    </div>
+  );
+}
+
 export function Community() {
   const navigate = useNavigate();
   const [chartType, setChartType] = useState<ChartType>('hot');
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
 
-  // 加载排行榜数据
   useEffect(() => {
     loadChart(chartType);
   }, [chartType]);
 
   const loadChart = async (type: ChartType) => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/community/${type}`);
+      const response = await fetch(`${API}/${type}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
       setData(result);
-    } catch (error) {
-      console.error('Failed to load chart:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 搜索功能
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadChart(chartType);
-      return;
-    }
-
+    if (!searchQuery.trim()) { loadChart(chartType); return; }
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ q: searchQuery });
-      if (selectedGenre !== 'all') {
-        params.append('genre', selectedGenre);
-      }
-      const response = await fetch(`http://localhost:8000/api/v1/community/search?${params}`);
+      if (selectedGenre !== 'all') params.append('genre', selectedGenre);
+      const response = await fetch(`${API}/search?${params}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
       setData(result);
-    } catch (error) {
-      console.error('Search failed:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '搜索失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 播放歌曲
   const handlePlay = (track: CommunityTrack) => {
-    if (currentPlaying === track.id) {
-      setCurrentPlaying(null); // 停止
-    } else {
-      setCurrentPlaying(track.id);
-      // 实际播放逻辑需要一个全局音频播放器
-      // 这里仅做演示
-      const audio = new Audio(track.audio_url);
-      audio.play();
-      audio.onended = () => setCurrentPlaying(null);
-    }
+    if (currentPlaying === track.id) { setCurrentPlaying(null); return; }
+    setCurrentPlaying(track.id);
+    const audio = new Audio(track.audio_url);
+    audio.play();
+    audio.onended = () => setCurrentPlaying(null);
   };
 
-  // 点赞歌曲
   const handleLike = async (trackId: string) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/community/${trackId}/like`, { method: 'POST' });
+      await fetch(`${API}/${trackId}/like`, { method: 'POST' });
       if (data) {
         setData({
           ...data,
-          tracks: data.tracks.map(t =>
-            t.id === trackId ? { ...t, likes: t.likes + 1 } : t
-          ),
+          tracks: data.tracks.map(t => t.id === trackId ? { ...t, likes: t.likes + 1 } : t),
         });
       }
-    } catch (error) {
-      console.error('Like failed:', error);
-    }
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -192,9 +195,32 @@ export function Community() {
       {/* 内容区 */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
+          <div className="space-y-3">
+            {[1,2,3,4,5,6,7,8].map(i => <SkeletonRow key={i} />)}
+          </div>
+        ) : error ? (
           <div className="text-center py-20">
-            <div className="text-4xl mb-4">🎵</div>
-            <p className="text-[#777777]">加载中...</p>
+            <div className="text-5xl mb-4">😵</div>
+            <p className="text-[#888888] mb-2">加载失败了</p>
+            <p className="text-sm text-[#555555] mb-6">{error}</p>
+            <button
+              onClick={() => loadChart(chartType)}
+              className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+            >
+              🔄 重新加载
+            </button>
+          </div>
+        ) : data && data.tracks.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-5xl mb-4">🎶</div>
+            <p className="text-[#888888] mb-2">还没有作品</p>
+            <p className="text-sm text-[#555555] mb-6">快去创作并发布你的第一首 AI 歌曲吧</p>
+            <button
+              onClick={() => navigate('/path-a')}
+              className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+            >
+              🎵 开始创作
+            </button>
           </div>
         ) : data ? (
           <>
