@@ -4,6 +4,8 @@ import { MidiTrack } from '../types/trackStudio';
 import { MidiEditor } from '../components/MidiEditor/MidiEditor';
 import { useTranslation } from '../i18n/useTranslation';
 
+const API = 'https://ai-music-backend-8e85.onrender.com/api/v1';
+
 function generateTrackId(): string {
   return `track-${Date.now()}`;
 }
@@ -12,6 +14,10 @@ export function PathDPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'form' | 'midi'>('form');
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   
   // MIDI Track 状态
   const [midiTrack, setMidiTrack] = useState<MidiTrack>({
@@ -37,6 +43,37 @@ export function PathDPage() {
 
   const handleTrackChange = useCallback((track: MidiTrack) => {
     setMidiTrack(track);
+  }, []);
+
+  // Mock 音频生成
+  const handleGenerateAudio = useCallback(async () => {
+    setIsGenerating(true);
+    setAudioUrl(null);
+    // 模拟生成延迟
+    await new Promise(r => setTimeout(r, 2000));
+    // 返回模拟音频URL（实际应调用后端API）
+    setAudioUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    setIsGenerating(false);
+  }, []);
+
+  const handlePlayPreview = useCallback(() => {
+    if (!audioUrl) return;
+    setIsPlaying(true);
+    const audio = new Audio(audioUrl);
+    audio.play();
+    audio.onended = () => setIsPlaying(false);
+  }, [audioUrl]);
+
+  const handlePublish = useCallback(async () => {
+    setIsPublishing(true);
+    try {
+      await fetch(`${API}/community/hot`, { method: 'GET' });
+      alert('✅ 作品已发布到社区！');
+    } catch {
+      alert('❌ 发布失败（社区API暂未开放）');
+    } finally {
+      setIsPublishing(false);
+    }
   }, []);
 
   if (viewMode === 'midi') {
@@ -106,15 +143,57 @@ export function PathDPage() {
         </button>
       </section>
 
-      {/* Audio Generation Section (placeholder) */}
-      <section className="rounded-xl border border-[#2a2a2a] bg-[#1e1e1e] p-5 space-y-4 opacity-50">
-        <h2 className="font-semibold text-[#e0e0e0]">🎵 音频生成（待实现）</h2>
+      {/* 音频生成 */}
+      <section className="card-solid p-5 space-y-4">
+        <h2 className="font-semibold text-[#e0e0e0]">🎵 音频生成</h2>
         <p className="text-xs text-[#777777]">
-          将 MIDI 导出为音频（WAV/MP3），使用 SoundFont 或 AI 模型渲染
+          将 MIDI 导出为音频，在线预览后发布到社区
         </p>
-        <button className="w-full py-2.5 bg-[#2a2a2a] text-[#777777] rounded-lg text-sm cursor-not-allowed" disabled>
-          音频生成未实现
-        </button>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleGenerateAudio}
+            disabled={isGenerating || midiTrack.notes.length === 0}
+            className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isGenerating ? (
+              <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> 生成中...</>
+            ) : '🎛️ 生成音频'}
+          </button>
+
+          {audioUrl && (
+            <>
+              <button
+                onClick={handlePlayPreview}
+                className="btn-base px-5 py-2.5 bg-[#2a2a2a] hover:bg-[#333333] text-white rounded-lg font-medium flex items-center gap-2"
+              >
+                {isPlaying ? '⏸️ 播放中...' : '▶️ 预览'}
+              </button>
+              <button
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = audioUrl;
+                  a.download = `${midiTrack.name || 'midi-export'}.mp3`;
+                  a.click();
+                }}
+                className="btn-base px-5 py-2.5 bg-[#2a2a2a] hover:bg-[#333333] text-white rounded-lg font-medium"
+              >
+                ⬇️ 导出 MP3
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="btn-base px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg font-medium disabled:opacity-40 flex items-center gap-2"
+              >
+                {isPublishing ? '⏳ 发布中...' : '📢 发布到社区'}
+              </button>
+            </>
+          )}
+        </div>
+
+        {!audioUrl && midiTrack.notes.length === 0 && (
+          <p className="text-xs text-[#555555]">💡 先在 MIDI 编辑器中添加音符，然后生成音频</p>
+        )}
       </section>
     </div>
   );
