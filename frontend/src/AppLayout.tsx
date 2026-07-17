@@ -83,11 +83,11 @@ export function AppLayout() {
 
         {/* 导航 */}
         <nav className="flex-1 py-3 overflow-y-auto">
-          {!sidebarCollapsed && <div className="px-3 mb-2 text-[10px] uppercase tracking-widest text-[#555555]">🎵 创作大厅</div>}
+          {!sidebarCollapsed && <div className="px-4 mb-2 text-[10px] uppercase tracking-widest text-[#555555]">🎵 创作大厅</div>}
           {allNav.slice(0, NAV_OPEN.length).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
               {({ isActive }) => (
-                <div className={`mx-1.5 px-3 py-2 rounded-lg text-sm flex items-center gap-3 cursor-pointer transition-all ${isActive ? 'bg-gradient-to-r from-[#ff6a10]/20 to-[#ee0979]/10 text-white shadow-sm' : 'text-[#888888] hover:text-white hover:bg-white/5'}`}>
+                <div className={`mx-2 px-3 py-2.5 rounded-lg text-sm flex items-center gap-3 cursor-pointer transition-all duration-200 ease-out ${isActive ? 'bg-gradient-to-r from-[#ff6a10]/20 to-[#ee0979]/10 text-white shadow-sm' : 'text-[#888888] hover:text-white hover:bg-white/5'}`}>
                   <span className="text-base flex-shrink-0">{n.icon}</span>
                   {!sidebarCollapsed && <span className="truncate">{n.label}</span>}
                 </div>

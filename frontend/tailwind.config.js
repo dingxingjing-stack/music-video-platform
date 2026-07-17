@@ -6,6 +6,17 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      fontSize: {
+        'title-lg': ['1.5rem', { lineHeight: '2rem', fontWeight: '700' }],
+        'title': ['1.25rem', { lineHeight: '1.75rem', fontWeight: '600' }],
+        'body': ['0.875rem', { lineHeight: '1.25rem', fontWeight: '400' }],
+        'caption': ['0.75rem', { lineHeight: '1rem', fontWeight: '400' }],
+      },
       colors: {
         'bg-deep': '#121212',
         'bg-elevated': '#1e1e1e',

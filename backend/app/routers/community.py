@@ -15,12 +15,14 @@ from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, List
 
 from app.services.community_service import community_service, CommunityTrack
+from app.services.cache_service import cached
 
 
 router = APIRouter(prefix="/api/v1/community", tags=["社区"])
 
 
 @router.get("/hot")
+@cached(ttl=30)
 async def get_hot_chart(
     limit: int = Query(default=20, ge=1, le=50)
 ):
