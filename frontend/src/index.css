@@ -46,7 +46,21 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+
+/* === 输入框聚焦发光 === */
+.input-glow:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(255, 106, 16, 0.4);
+}
+
+/* === 分割线/禁用规范 === */
+.divider-default { @apply border-t border-border-default; }
+.text-disabled { @apply text-[#555555]; }
+.bg-disabled { @apply bg-[#2a2a2a] opacity-40 cursor-not-allowed; }
+
 /* === UI 全局动效 === */
+
 .btn-base {
   @apply rounded-btn transition-all duration-200 ease-out;
 }

@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AppLayout } from './AppLayout';
 import { ConsentGuard, GrayRoute } from './components/RouteGuards';
+import { PageTransition } from './components/PageTransition';
 
 // 路由级懒加载
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
@@ -32,15 +33,15 @@ export default function App() {
         {/* 主应用路由 — 侧边栏布局 + 公测协议守卫 */}
         <Route element={<AppLayout />}>
           {/* 全开放功能 — 需同意协议 */}
-          <Route path="/" element={<ConsentGuard><TrackStudio /></ConsentGuard>} />
-          <Route path="/path-a" element={<ConsentGuard><PathAPage /></ConsentGuard>} />
-          <Route path="/path-b" element={<ConsentGuard><PathBPage /></ConsentGuard>} />
-          <Route path="/path-c" element={<ConsentGuard><PathCPage /></ConsentGuard>} />
-          <Route path="/path-d" element={<ConsentGuard><PathDPage /></ConsentGuard>} />
-          <Route path="/community" element={<ConsentGuard><Community /></ConsentGuard>} />
-          <Route path="/community-feed" element={<ConsentGuard><CommunityFeed /></ConsentGuard>} />
-          <Route path="/feed" element={<ConsentGuard><Feed /></ConsentGuard>} />
-          <Route path="/profile/:userId?" element={<ConsentGuard><Profile /></ConsentGuard>} />
+          <Route path="/" element={<ConsentGuard><PageTransition><TrackStudio /></PageTransition></ConsentGuard>} />
+          <Route path="/path-a" element={<ConsentGuard><PageTransition><PathAPage /></PageTransition></ConsentGuard>} />
+          <Route path="/path-b" element={<ConsentGuard><PageTransition><PathBPage /></PageTransition></ConsentGuard>} />
+          <Route path="/path-c" element={<ConsentGuard><PageTransition><PathCPage /></PageTransition></ConsentGuard>} />
+          <Route path="/path-d" element={<ConsentGuard><PageTransition><PathDPage /></PageTransition></ConsentGuard>} />
+          <Route path="/community" element={<ConsentGuard><PageTransition><Community /></PageTransition></ConsentGuard>} />
+          <Route path="/community-feed" element={<ConsentGuard><PageTransition><CommunityFeed /></PageTransition></ConsentGuard>} />
+          <Route path="/feed" element={<ConsentGuard><PageTransition><Feed /></PageTransition></ConsentGuard>} />
+          <Route path="/profile/:userId?" element={<ConsentGuard><PageTransition><Profile /></PageTransition></ConsentGuard>} />
 
           {/* 灰度功能路由 — 协议 + 灰度权限双守卫 */}
           <Route path="/mv-generate" element={<GrayRoute featureKey="mv_generate"><PathAPage /></GrayRoute>} />
