@@ -44,3 +44,26 @@ body {
   background-color: #121212;
   color: #e0e0e0;
 }
+
+/* === UI 全局动效 === */
+.btn-base {
+  @apply rounded-btn transition-all duration-200 ease-out;
+}
+.btn-base:hover {
+  @apply -translate-y-0.5 shadow-card-hover;
+}
+.btn-base:active {
+  @apply translate-y-0 shadow-none scale-[0.97];
+}
+.card-glass {
+  @apply bg-[rgba(30,30,30,0.72)] backdrop-blur-[16px] rounded-card border border-border-default shadow-glass;
+}
+.card-solid {
+  @apply bg-bg-elevated rounded-card border border-border-default shadow-card;
+}
+.progress-track {
+  @apply h-1 bg-border-default rounded-full overflow-hidden cursor-pointer;
+}
+.progress-fill {
+  @apply h-full bg-gradient-to-r from-[#ff6a10] to-[#ee0979] rounded-full transition-all duration-150;
+}

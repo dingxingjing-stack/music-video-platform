@@ -154,3 +154,14 @@ export function reportFCP() {
     observer.observe({ type: 'paint', buffered: true });
   }
 }
+
+// ========== 按钮防抖 (短时间重复点击只执行第一次) ==========
+export function useDebounceClick<T extends (...args: any[]) => any>(
+  fn: T, delay = 500
+): (...args: Parameters<T>) => void {
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  return (...args: Parameters<T>) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => fn(...args), delay);
+  };
+}
