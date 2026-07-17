@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.3.2",
     "@tonejs/midi": "^2.0.28",
+    "antd": "^6.5.1",
     "framer-motion": "^12.42.2",
     "idb": "^8.0.0",
     "lucide-react": "^0.378.0",

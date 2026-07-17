@@ -118,6 +118,13 @@ export interface StockVideo {
   fps?: 24 | 30 | 60;
 }
 
+export interface StockCategory {
+  id: string;
+  name: string;
+  icon: string;
+  count: number;
+}
+
 // 项目配置
 export interface VideoProject {
   id: string;
