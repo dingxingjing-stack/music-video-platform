@@ -16,6 +16,7 @@ const CommunityFeed = lazy(() => import('./pages/CommunityFeed').then(m => ({ de
 const Feed = lazy(() => import('./pages/Feed').then(m => ({ default: m.Feed })));
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const StockLibrary = lazy(() => import('./pages/StockLibrary'));
+const MyWorks = lazy(() => import('./pages/MyWorks'));
 
 const Loading = () => (
   <div className="flex items-center justify-center h-screen bg-[#121212]">
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/path-d" element={<ConsentGuard><PageTransition><PathDPage /></PageTransition></ConsentGuard>} />
           <Route path="/community" element={<ConsentGuard><PageTransition><Community /></PageTransition></ConsentGuard>} />
           <Route path="/community-feed" element={<ConsentGuard><PageTransition><CommunityFeed /></PageTransition></ConsentGuard>} />
+          <Route path="/my-works" element={<ConsentGuard><PageTransition><MyWorks /></PageTransition></ConsentGuard>} />
           <Route path="/feed" element={<ConsentGuard><PageTransition><Feed /></PageTransition></ConsentGuard>} />
           <Route path="/profile/:userId?" element={<ConsentGuard><PageTransition><Profile /></PageTransition></ConsentGuard>} />
 

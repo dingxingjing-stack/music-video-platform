@@ -11,6 +11,7 @@ const NAV_OPEN = [
   { to: '/path-c', label: '扒带 Remix', icon: '🔊', group: 'open' },
   { to: '/path-d', label: '原创编曲', icon: '✍️', group: 'open' },
   { to: '/community', label: '社区排行榜', icon: '🏆', group: 'open' },
+  { to: '/my-works', label: '我的作品', icon: '💿', group: 'open' },
 ];
 
 // 灰度测试专区（仅资深测试用户可见）
@@ -128,10 +129,6 @@ export function AppLayout() {
           </div>
         )}
 
-        {/* AI Team Section (collapsed) */}
-        <div className="border-t border-[#2a2a2a]">
-          <AITeamSection collapsed={sidebarCollapsed} />
-        </div>
       </aside>
 
       {/* 主内容区 */}
