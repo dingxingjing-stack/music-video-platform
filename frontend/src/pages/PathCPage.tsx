@@ -185,8 +185,17 @@ export function PathCPage() {
       {activeTab === 'library' && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">可用声音</h2>
-          <div className="grid gap-4">
-            {voices.map((voice) => (
+          {voices.length === 0 ? (
+            <div className="card-solid p-10 text-center">
+              <div className="text-5xl mb-4">🎤</div>
+              <p className="text-secondary mb-2">还没有声音样本</p>
+              <p className="text-muted text-sm mb-6">去「上传声音」标签页添加你的第一个声音</p>
+              <button onClick={() => setActiveTab('upload')}
+                className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-medium"
+              >📤 上传声音</button>
+            </div>
+          ) : (
+                      {voices.map((voice) => (
               <div
                 key={voice.id}
                 className={`p-4 rounded-lg border transition cursor-pointer ${
@@ -217,7 +226,7 @@ export function PathCPage() {
       {/* Tab 2: 上传声音 */}
       {activeTab === 'upload' && (
         <div className="space-y-4">
-          <div className="bg-zinc-900 p-6 rounded-lg">
+          <div className="card-solid p-6">
             <h2 className="text-xl font-semibold mb-4">上传声音样本</h2>
             
             <div className="space-y-4">
@@ -230,7 +239,7 @@ export function PathCPage() {
                   value={uploadUrl}
                   onChange={(e) => setUploadUrl(e.target.value)}
                   placeholder="https://example.com/audio.wav"
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-orange-400 text-white"
+                  className="w-full px-4 py-2 bg-bg-elevated border border-border-default rounded-lg input-glow text-white"
                 />
               </div>
 
@@ -243,7 +252,7 @@ export function PathCPage() {
                   value={uploadName}
                   onChange={(e) => setUploadName(e.target.value)}
                   placeholder="我的声音"
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-orange-400 text-white"
+                  className="w-full px-4 py-2 bg-bg-elevated border border-border-default rounded-lg input-glow text-white"
                 />
               </div>
 
@@ -268,7 +277,7 @@ export function PathCPage() {
       {/* Tab 3: 克隆合成 */}
       {activeTab === 'clone' && (
         <div className="space-y-4">
-          <div className="bg-zinc-900 p-6 rounded-lg">
+          <div className="card-solid p-6">
             <h2 className="text-xl font-semibold mb-4">声音克隆合成</h2>
 
             <div className="space-y-4">
@@ -280,7 +289,7 @@ export function PathCPage() {
                 <select
                   value={selectedVoice}
                   onChange={(e) => setSelectedVoice(e.target.value)}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-orange-400 text-white"
+                  className="w-full px-4 py-2 bg-bg-elevated border border-border-default rounded-lg input-glow text-white"
                 >
                   {voices.map((voice) => (
                     <option key={voice.id} value={voice.id}>
