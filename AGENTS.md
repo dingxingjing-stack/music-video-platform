@@ -10,7 +10,6 @@
 |---|---|
 | 前端 | React 18 + TypeScript + Vite + Tailwind CSS |
 | 后端 | Python FastAPI + uvicorn |
-| 数据库 | SQLite（开发/灰度）/ Supabase（生产，DNS 待修复）|
 | 部署（前端） | Cloudflare Pages |
 | 部署（后端） | Render.com（免费实例，冷启动约 2 分钟）|
 | 存储 | Cloudflare R2（音频/视频文件）|
@@ -98,7 +97,6 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 
 - Render 免费实例冷启动约 2 分钟
 - SQLite 部署重启后数据重置（灰度阶段可接受）
-- Supabase 项目 DNS 已停用，待修复
 - 旧文件存在 TS 错误（已禁用 tsc 检查，Vite esbuild 直接编译）
 - antd 已安装但部分组件未使用，按需清理
 

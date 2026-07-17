@@ -37,7 +37,6 @@
 **修复**：两步法：`pkill -f uvicorn` → `taskkill /PID xxx /F`
 
 ### 6. SQLite 数据库自动建表 (2026-07-15)
-**背景**：Supabase 项目 DNS 解析失败，改用 SQLite
 **方案**：`beta_service.py` 启动时自动建表，零手动 SQL
 **注意**：Render 重启后数据重置（灰度阶段可接受）
 
@@ -97,7 +96,6 @@ done
 ## 🔮 已知待处理
 
 - GPT-SoVITS / MusicGen / CogVideoX 的 HuggingFace URL 尚未配置
-- Supabase 项目 DNS 修复
 - `my-finance-project` 自动部署关闭
 - PWA 离线缓存策略需验证
 - VST 编译环境搭建 (JUCE)
