@@ -121,12 +121,12 @@ export function Feed() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-bg-deep text-white">
       {/* 头部 */}
-      <header className="sticky top-0 z-10 bg-zinc-900/80 backdrop-blur-sm border-b border-zinc-800">
+      <header className="sticky top-0 z-10 bg-bg-elevated/80 backdrop-blur-sm border-b border-border-default">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-orange-500">个性化推荐</h1>
-          <p className="text-zinc-400 text-sm mt-1">根据你的喜好推荐的音乐作品</p>
+          <p className="text-text-secondary text-sm mt-1">根据你的喜好推荐的音乐作品</p>
         </div>
       </header>
 
@@ -134,10 +134,10 @@ export function Feed() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-zinc-500 animate-pulse">加载中...</div>
+            <div className="text-text-muted animate-pulse">加载中...</div>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
+          <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             <Music size={48} className="mb-4 opacity-50" />
             <p>暂无推荐作品</p>
             <p className="text-sm mt-2">先去探索更多音乐吧~</p>
@@ -147,12 +147,12 @@ export function Feed() {
             {items.map((item) => (
               <article
                 key={item.work_id}
-                className="bg-zinc-900 rounded-lg p-4 hover:bg-zinc-800/80 transition-colors"
+                className="bg-bg-elevated rounded-lg p-4 hover:bg-bg-elevated/80 transition-colors"
               >
                 <div className="flex gap-4">
                   {/* 封面 */}
                   <div className="relative w-32 h-32 flex-shrink-0">
-                    <div className="w-full h-full bg-zinc-800 rounded-md overflow-hidden">
+                    <div className="w-full h-full bg-bg-elevated rounded-md overflow-hidden">
                       {item.cover_url ? (
                         <img
                           src={item.cover_url}
@@ -160,7 +160,7 @@ export function Feed() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                        <div className="w-full h-full flex items-center justify-center text-text-muted">
                           <Music size={32} />
                         </div>
                       )}
@@ -191,15 +191,15 @@ export function Feed() {
 
                   {/* 信息 */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-zinc-100 truncate">
+                    <h3 className="text-lg font-semibold text-white truncate">
                       {item.title}
                     </h3>
-                    <p className="text-zinc-400 text-sm mt-1">
+                    <p className="text-text-secondary text-sm mt-1">
                       作者：{item.author_id}
                     </p>
 
                     {/* 统计 */}
-                    <div className="flex items-center gap-4 mt-3 text-zinc-500 text-sm">
+                    <div className="flex items-center gap-4 mt-3 text-text-muted text-sm">
                       <span className="flex items-center gap-1">
                         <Play size={14} />
                         {formatCount(item.plays)} 播放
@@ -213,7 +213,7 @@ export function Feed() {
                         {formatCount(item.favorites)} 收藏
                       </span>
                       {item.duration && (
-                        <span className="text-zinc-600">
+                        <span className="text-text-muted">
                           {formatDuration(item.duration)}
                         </span>
                       )}

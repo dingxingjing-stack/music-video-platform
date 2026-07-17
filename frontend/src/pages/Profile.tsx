@@ -165,17 +165,17 @@ export function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-bg-deep text-white">
       {/* 头部 */}
-      <header className="bg-gradient-to-b from-orange-900/20 to-zinc-950 border-b border-zinc-800">
+      <header className="bg-gradient-to-b from-orange-900/20 to-zinc-950 border-b border-border-default">
         <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="flex items-start gap-6">
             {/* 头像 */}
-            <div className="w-24 h-24 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden border-2 border-orange-500/50">
+            <div className="w-24 h-24 rounded-full bg-bg-elevated flex items-center justify-center overflow-hidden border-2 border-orange-500/50">
               {profile?.avatar ? (
                 <img src={profile.avatar} alt={profile.username} className="w-full h-full object-cover" />
               ) : (
-                <User size={48} className="text-zinc-600" />
+                <User size={48} className="text-text-muted" />
               )}
             </div>
 
@@ -188,7 +188,7 @@ export function Profile() {
                     onClick={handleFollow}
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       profile.is_following
-                        ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                        ? 'bg-bg-elevated text-text-secondary hover:bg-bg-elevated'
                         : 'bg-orange-600 text-white hover:bg-orange-700'
                     }`}
                   >
@@ -196,31 +196,31 @@ export function Profile() {
                   </button>
                 )}
               </div>
-              <p className="text-zinc-400 mt-2">{profile?.bio}</p>
+              <p className="text-text-secondary mt-2">{profile?.bio}</p>
               
               {/* 统计 */}
               <div className="flex items-center gap-6 mt-4">
-                <span className="text-zinc-400">
-                  <strong className="text-zinc-100">{formatCount(profile?.following || 0)}</strong> 关注
+                <span className="text-text-secondary">
+                  <strong className="text-white">{formatCount(profile?.following || 0)}</strong> 关注
                 </span>
-                <span className="text-zinc-400">
-                  <strong className="text-zinc-100">{formatCount(profile?.followers || 0)}</strong> 粉丝
+                <span className="text-text-secondary">
+                  <strong className="text-white">{formatCount(profile?.followers || 0)}</strong> 粉丝
                 </span>
-                <span className="text-zinc-400">
-                  <strong className="text-zinc-100">{works.length}</strong> 作品
+                <span className="text-text-secondary">
+                  <strong className="text-white">{works.length}</strong> 作品
                 </span>
               </div>
             </div>
           </div>
 
           {/* 标签页 */}
-          <div className="flex gap-6 mt-8 border-b border-zinc-800">
+          <div className="flex gap-6 mt-8 border-b border-border-default">
             <button
               onClick={() => setActiveTab('works')}
               className={`pb-3 px-2 transition-colors relative ${
                 activeTab === 'works'
                   ? 'text-orange-500'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  : 'text-text-secondary hover:text-zinc-200'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ export function Profile() {
               className={`pb-3 px-2 transition-colors relative ${
                 activeTab === 'favorites'
                   ? 'text-orange-500'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  : 'text-text-secondary hover:text-zinc-200'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -255,18 +255,18 @@ export function Profile() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-zinc-500 animate-pulse">加载中...</div>
+            <div className="text-text-muted animate-pulse">加载中...</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(activeTab === 'works' ? works : favorites).map((work) => (
               <article
                 key={work.work_id}
-                className="bg-zinc-900 rounded-lg overflow-hidden hover:bg-zinc-800/80 transition-colors group"
+                className="bg-bg-elevated rounded-lg overflow-hidden hover:bg-bg-elevated/80 transition-colors group"
               >
                 {/* 封面 */}
                 <div className="relative aspect-square">
-                  <div className="w-full h-full bg-zinc-800">
+                  <div className="w-full h-full bg-bg-elevated">
                     {work.cover_url ? (
                       <img
                         src={work.cover_url}
@@ -274,7 +274,7 @@ export function Profile() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                      <div className="w-full h-full flex items-center justify-center text-text-muted">
                         <Music size={48} />
                       </div>
                     )}
@@ -287,8 +287,8 @@ export function Profile() {
 
                 {/* 信息 */}
                 <div className="p-4">
-                  <h3 className="font-medium text-zinc-100 truncate">{work.title}</h3>
-                  <div className="flex items-center gap-4 mt-3 text-zinc-500 text-sm">
+                  <h3 className="font-medium text-white truncate">{work.title}</h3>
+                  <div className="flex items-center gap-4 mt-3 text-text-muted text-sm">
                     <span className="flex items-center gap-1">
                       <Play size={14} />
                       {formatCount(work.plays)}
@@ -304,7 +304,7 @@ export function Profile() {
                   </div>
 
                   {/* 社交按钮 */}
-                  <div className="mt-3 pt-3 border-t border-zinc-800">
+                  <div className="mt-3 pt-3 border-t border-border-default">
                     <SocialSystem workId={work.work_id} />
                   </div>
                 </div>
@@ -314,7 +314,7 @@ export function Profile() {
         )}
 
         {(activeTab === 'works' ? works : favorites).length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
+          <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             {activeTab === 'works' ? <Music size={48} className="mb-4 opacity-50" /> : <Heart size={48} className="mb-4 opacity-50" />}
             <p>暂无{activeTab === 'works' ? '作品' : '收藏'}</p>
           </div>
