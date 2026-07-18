@@ -38,6 +38,19 @@ const translations: Record<Language, Translation> = {
       downloadAudio: '下载音频',
       regenerate: '重新生成',
     },
+    cloneConsent: {
+      title: '声音克隆法律授权协议',
+      agree: '我已阅读并同意以上全部条款',
+      confirm: '✓ 已同意，开始克隆',
+      cancel: '取消',
+      warning: '违规克隆他人声音将承担全部法律责任。',
+      terms: {
+        own: '本人承诺上传的音频为本人自有合法录音，绝不上传他人、公众人物、明星人声；',
+        prohibited: '禁止利用克隆音色制作造谣、侵权、诈骗、色情暴力等内容；',
+        retention: '平台永久留存操作日志、上传音频、生成记录，用于监管溯源，存储时长≥6个月；',
+        penalty: '违规账号将直接删除全部私有音色并封禁，相关内容平台有权清除。'
+      }
+    },
     mvGeneration: {
       templateTitle: 'MV 模板',
       selectTemplate: '选择模板',
