@@ -36,7 +36,7 @@ export default function CopyrightCheckPanel() {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const API_BASE = 'http://localhost:8001/api/v1/copyright';
+  const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/copyright';
 
   // 分析音频文件
   const analyzeAudio = useCallback(async (file: File) => {

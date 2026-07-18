@@ -35,7 +35,7 @@ interface GenerateResult {
 }
 
 async function callGenerateAPI(params: GenerateParams): Promise<GenerateResult> {
-  const response = await fetch('http://localhost:8000/api/v1/ai/generate', {
+  const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/ai/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),

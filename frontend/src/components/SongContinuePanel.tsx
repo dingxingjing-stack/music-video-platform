@@ -115,7 +115,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  const API_BASE = 'http://localhost:8000';
+  const API_BASE = 'https://ai-music-backend-8e85.onrender.com';
 
   // ===========================================================================
   // P0-1 歌曲续写: POST /api/v1/music/continue

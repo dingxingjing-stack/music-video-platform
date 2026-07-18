@@ -48,7 +48,7 @@ export function PathCPage() {
 
   const fetchVoices = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/v1/voice/voices');
+      const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/voice/voices');
       const data = await res.json();
       setVoices(data);
       if (data.length > 0 && !selectedVoice) {
@@ -73,7 +73,7 @@ export function PathCPage() {
         ...(uploadName && { name: uploadName })
       });
 
-      const res = await fetch(`http://localhost:8000/api/v1/voice/upload?${params}`, {
+      const res = await fetch(`https://ai-music-backend-8e85.onrender.com/api/v1/voice/upload?${params}`, {
         method: 'POST'
       });
 
@@ -111,7 +111,7 @@ export function PathCPage() {
     setCloneResult(null);
 
     try {
-      const res = await fetch('http://localhost:8000/api/v1/voice/clone', {
+      const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/voice/clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -26,7 +26,7 @@ export interface SocialStats {
   isFollowing?: boolean;
 }
 
-const API_BASE = 'http://localhost:8000/api/v1/social';
+const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/social';
 
 // 获取当前用户 ID (从 localStorage 或生成随机 ID)
 const getCurrentUserId = (): string => {

@@ -35,7 +35,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
   // 加载声音库
   useEffect(() => {
     if (activeTab === 'library') {
-      fetch('http://localhost:8000/api/v1/voice/voices?limit=20')
+      fetch('https://ai-music-backend-8e85.onrender.com/api/v1/voice/voices?limit=20')
         .then(r => r.json())
         .then(data => {
           if (data.success) {

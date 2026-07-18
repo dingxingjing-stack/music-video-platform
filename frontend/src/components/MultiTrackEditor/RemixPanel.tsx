@@ -34,7 +34,7 @@ export function RemixPanel({ onClose }: Props) {
 
   // 加载风格列表
   useEffect(() => {
-    fetch('http://localhost:8000/api/v1/remix/styles')
+    fetch('https://ai-music-backend-8e85.onrender.com/api/v1/remix/styles')
       .then(r => r.json())
       .then(data => {
         if (data.success) {

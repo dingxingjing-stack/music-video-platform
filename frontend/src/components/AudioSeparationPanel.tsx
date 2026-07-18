@@ -42,7 +42,7 @@ export function AudioSeparationPanel() {
     formData.append('model', model);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/audio/separate', {
+      const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/audio/separate', {
         method: 'POST',
         body: formData,
       });

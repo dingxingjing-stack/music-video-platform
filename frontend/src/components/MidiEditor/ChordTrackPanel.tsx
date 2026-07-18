@@ -65,7 +65,7 @@ export function ChordTrackPanel({ onClose }: Props) {
   useEffect(() => {
     const loadChords = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/chords/library?quality=${selectedQuality === 'all' ? '' : selectedQuality}`);
+        const response = await fetch(`https://ai-music-backend-8e85.onrender.com/api/v1/chords/library?quality=${selectedQuality === 'all' ? '' : selectedQuality}`);
         const data = await response.json();
         setChords(data);
       } catch (error) {
@@ -88,7 +88,7 @@ export function ChordTrackPanel({ onClose }: Props) {
       formData.append('tempo', '120');
       formData.append('bars', '4');
 
-      const response = await fetch('http://localhost:8000/api/v1/chords/generate', {
+      const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/chords/generate', {
         method: 'POST',
         body: formData,
       });

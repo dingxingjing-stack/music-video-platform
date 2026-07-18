@@ -35,7 +35,7 @@ export function AudioMasteringPanel() {
 
   // 加载预设
   useState(() => {
-    fetch('http://localhost:8000/api/v1/audio/master/presets')
+    fetch('https://ai-music-backend-8e85.onrender.com/api/v1/audio/master/presets')
       .then(res => res.json())
       .then(data => setPresets(data.presets))
       .catch(console.error);
@@ -66,7 +66,7 @@ export function AudioMasteringPanel() {
     formData.append('stereo_width', customStereoWidth.toString());
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/audio/master', {
+      const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/audio/master', {
         method: 'POST',
         body: formData,
       });
