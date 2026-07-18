@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import { compression } from 'vite-plugin-compression2';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -30,8 +29,6 @@ export default defineConfig({
       },
       workbox: { globPatterns: [], runtimeCaching: [] },
     }),
-    // Brotli 压缩（CF Pages 自动 gzip，brotli 需插件预生成 .br 文件）
-    isProd && compression({ algorithm: 'brotliCompress', exclude: [/\.br$/, /\.gz$/, /\.html$/] }),
     // 打包体积分析（仅 build --mode analyze 时生成）
     process.env.ANALYZE && visualizer({
       filename: 'dist/stats.html',
