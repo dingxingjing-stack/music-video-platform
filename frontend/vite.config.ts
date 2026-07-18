@@ -38,36 +38,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\.mureka\.ai\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'mureka-api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 小时
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/images\..*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'images-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 天
-              }
-            }
-          }
-        ]
+        globPatterns: [],
+        runtimeCaching: []
       }
-    })
+    }),
   ],
   server: {
     port: 3000,
