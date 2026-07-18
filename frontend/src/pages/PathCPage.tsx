@@ -195,7 +195,7 @@ export function PathCPage() {
               >📤 上传声音</button>
             </div>
           ) : (
-                      {voices.map((voice) => (
+            voices.map((voice) => (
               <div
                 key={voice.id}
                 className={`p-4 rounded-lg border transition cursor-pointer ${
@@ -219,7 +219,6 @@ export function PathCPage() {
                 )}
               </div>
             ))}
-          </div>
         </div>
       )}
 

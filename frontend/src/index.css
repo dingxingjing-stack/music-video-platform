@@ -1,9 +1,9 @@
+@import './styles/mobile.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* 移动端适配样式 */
-@import './styles/mobile.css';
 
 :root {
   --bg-deep: #121212;
