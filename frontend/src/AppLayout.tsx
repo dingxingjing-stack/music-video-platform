@@ -4,6 +4,7 @@ import { useUserGrayStatus } from './hooks/useUserGrayStatus';
 import { BetaConsentModal } from './components/BetaConsentModal';
 import { useSound } from './context/SoundContext';
 import { useAuth } from './context/AuthContext';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 
 // 公测导航 — 普通创作大厅（全开放）
 const NAV_OPEN = [
@@ -128,10 +129,20 @@ export function AppLayout() {
                 <button onClick={logout} className="ml-auto text-[10px] text-zinc-600 hover:text-red-400 transition">退出</button>
               </div>
             ) : (
-              <button onClick={() => setShowLogin(true)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-gradient-to-r from-orange-400/10 to-pink-500/10 border border-orange-400/20 text-[11px] text-orange-400 hover:opacity-80 transition">
+              <button 
+                onClick={() => setShowLogin(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
+              >
                 <span>🔑</span>
                 <span>登录解锁全部功能</span>
               </button>
+            )}
+            
+            {/* 语言切换 */}
+            {!sidebarCollapsed && (
+              <div className="pt-2">
+                <LanguageSwitcher />
+              </div>
             )}
           </div>
         )}
