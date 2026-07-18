@@ -10,6 +10,8 @@
  */
 
 import { useState, useEffect } from 'react';
+import { isPeakHour } from '../hooks/useAudioGeneration';
+import { PeakHourModal, RechargeModal } from '../hooks/useAudioGeneration';
 
 interface VoiceSample {
   id: string;
@@ -40,6 +42,9 @@ export function PathCPage() {
   const [uploadUrl, setUploadUrl] = useState('');
   const [uploadName, setUploadName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showPeakModal, setShowPeakModal] = useState(false);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [pendingClone, setPendingClone] = useState(false);
 
   // 加载声音列表
   useEffect(() => {
@@ -97,15 +102,10 @@ export function PathCPage() {
 
   // 声音克隆
   const handleClone = async () => {
-    if (!cloneText.trim()) {
-      alert('请输入要合成的文本');
-      return;
-    }
+    if (!cloneText.trim()) { alert('请输入要合成的文本'); return; }
+    if (!selectedVoice) { alert('请选择声音'); return; }
 
-    if (!selectedVoice) {
-      alert('请选择声音');
-      return;
-    }
+    if (isPeakHour()) { setShowPeakModal(true); setPendingClone(true); return; }
 
     setIsCloning(true);
     setCloneResult(null);
@@ -114,22 +114,15 @@ export function PathCPage() {
       const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/voice/clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voice_id: selectedVoice,
-          text: cloneText,
-          speed,
-          pitch_shift: pitchShift
-        })
+        body: JSON.stringify({ voice_id: selectedVoice, text: cloneText, speed, pitch_shift: pitchShift })
       });
+
+      if (res.status === 402) { setShowRechargeModal(true); return; }
 
       if (res.ok) {
         const data: CloneResult = await res.json();
         setCloneResult(data);
-        if (data.success) {
-          // 自动播放
-          const audio = new Audio(data.audio_url!);
-          audio.play();
-        }
+        if (data.success) { const audio = new Audio(data.audio_url!); audio.play(); }
       } else {
         const error = await res.json();
         alert(`❌ 克隆失败：${error.detail || '未知错误'}`);
@@ -139,6 +132,12 @@ export function PathCPage() {
     } finally {
       setIsCloning(false);
     }
+  };
+
+  const handlePeakProceed = () => {
+    setShowPeakModal(false);
+    setPendingClone(false);
+    handleClone();
   };
 
   return (
@@ -393,6 +392,8 @@ export function PathCPage() {
           )}
         </div>
       )}
+      {showPeakModal && <PeakHourModal onClose={() => setShowPeakModal(false)} />}
+      {showRechargeModal && <RechargeModal onClose={() => setShowRechargeModal(false)} />}
     </div>
   );
 }

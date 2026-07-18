@@ -5,12 +5,14 @@ import { AILyricsCompletion } from '../components/Audio/AILyricsCompletion';
 import { MixConsole } from '../components/TrackStudio/MixConsole';
 import { StemExporter } from '../components/Audio/StemExporter';
 import { useTranslation } from '../i18n/useTranslation';
+import { ComingSoonModal } from '../hooks/useAudioGeneration';
 
 export function PathBPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [audioUrl, _setAudioUrl] = useState<string | null>(null);
   const [lyrics, setLyrics] = useState('');
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -20,7 +22,6 @@ export function PathBPage() {
       </div>
       <p className="text-sm text-[var(--text-muted)]">音频 + 歌词 + 风格参考 → 混合生成</p>
 
-      {/* Upload + Input */}
       <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-4">
         <h2 className="font-display font-semibold">🎛️ 混合输入</h2>
         <div className="grid md:grid-cols-2 gap-4">
@@ -35,20 +36,15 @@ export function PathBPage() {
             <textarea className="w-full h-24 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-3 text-sm resize-none focus:outline-none focus:border-[var(--accent-gradient-start)]" placeholder="描述混合后的风格方向..." />
           </div>
         </div>
-        <button className="btn-primary">🎛️ 开始混合生成</button>
+        <button onClick={() => setShowComingSoon(true)} className="btn-primary">🎛️ 开始混合生成</button>
       </section>
 
-      {/* Waveform */}
       {audioUrl && <WaveformEditor url={audioUrl} />}
-
-      {/* Lyrics */}
       <AILyricsCompletion value={lyrics} onChange={setLyrics} />
-
-      {/* Mix Console */}
       <MixConsole history={[]} />
-
-      {/* Stem Export */}
       {audioUrl && <StemExporter audioUrl={audioUrl} />}
+
+      {showComingSoon && <ComingSoonModal onClose={() => setShowComingSoon(false)} />}
     </div>
   );
 }

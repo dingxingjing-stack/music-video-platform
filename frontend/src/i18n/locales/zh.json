@@ -22,7 +22,10 @@
     "clearConfirm": "清空所有已保存轨道？",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "轨道{n}"
+    "trackNum": "轨道{n}",
+    "back": "返回",
+    "preview": "预览",
+    "reset": "重置"
   },
   "paths": {
     "pathA": "路径 A — Suno 风格",
