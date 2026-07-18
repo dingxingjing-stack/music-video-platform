@@ -1,5 +1,4 @@
-name = "music-api-gateway"
-main = "workers/gateway.js"
+name = "music-video-platform"
 compatibility_date = "2026-07-13"
 pages_build_output_dir = "frontend/dist"
 
@@ -12,9 +11,4 @@ bucket_name = "music-audio-storage"
 [vars]
 API_BASE_URL = "https://ai-music-backend-8e85.onrender.com"
 RATE_LIMIT = "100"
-CORS_ORIGIN = "https://music-video-platform.pages.dev"
-
-# 生产环境
-[env.production]
-API_BASE_URL = "https://ai-music-backend-8e85.onrender.com"
 CORS_ORIGIN = "https://music-video-platform.pages.dev"
