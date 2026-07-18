@@ -93,6 +93,21 @@ done
 | `src/types/audio.ts` | `multiTrackRecorder.ts`, `aiQualityOptimizer.ts` | 已创建 |
 | `StockCategory` | `StockLibrary.tsx` | 已加到 `video-sync.ts` |
 
+
+### 13. Cloudflare Pages @import顺序错误 (2026-07-18)
+**症状**：构建失败，vite:css 报 @import must precede all other statements
+**根因**：`@import './styles/mobile.css'` 写在 `@tailwind` 指令之后
+**修复**：移到文件第一行，`@tailwind` 指令之前
+
+### 14. JSX三元表达式花括号错误 (2026-07-18)
+**症状**：`Expected "}" but found "."` at PathCPage.tsx:198
+**根因**：三元 `:` 后多了一层 `{voices.map(...)}`，`{}` 导致解析器期望 `}` 但却遇到 `.`
+**修复**：去掉多余的 `{`，三元分支直接返回 JSX 元素
+
+### 15. Cloudflare构建配置 (2026-07-18)
+**配置**：Root Directory = `frontend`，Build = `npm install && npm run build`，Output = `dist`
+**注意**：wrangler.toml 位于仓库根目录，需忽略或删除
+
 ## 🔮 已知待处理
 
 - GPT-SoVITS / MusicGen / CogVideoX 的 HuggingFace URL 尚未配置

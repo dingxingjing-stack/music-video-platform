@@ -107,7 +107,26 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 - 用户额度：每日 20 次，消耗后弹窗
 - 路由守卫：`ConsentGuard`（协议拦截）+ `GrayRoute`（灰度拦截）
 
-## 📚 核心依赖
+
+## 2026-07-18 迭代记录
+
+### 完成
+1. 侧边栏「AI员工团队」整组删除
+2. 新增「我的作品」页面（/my-works）
+3. 新增全局进度弹窗 ProgressModal
+4. 路径D音频生成模块（Mock生成+预览+导出+发布社区）
+5. 路径C空状态引导 + card-solid统一 + input-glow替换
+6. Feed + Profile 锌类替换为统一卡片样式
+7. 路由淡入过渡动画（PageTransition）
+8. 输入框聚焦发光效果 + 全局CSS规范
+9. Cloudflare Pages构建修复（Root Directory=frontend + JSX语法修复 + CSS @import顺序）
+10. Hermes节流配置（max_tokens=4096, max_turns=30）
+
+### 待办
+- VST JUCE 编译环境搭建（开发音频插件时）
+- UGC推广方案落地（6K预算）
+
+## 🔑 核心依赖
 
 前端：react, antd, tailwindcss, zustand, @ant-design/icons
 后端：fastapi, uvicorn, sqlite3, httpx, sentry-sdk
