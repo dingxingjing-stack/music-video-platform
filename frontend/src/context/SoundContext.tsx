@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { isMuted, setMuted, toggleMuted, playSound, preloadSounds } from '../utils/sound';
+import { isMuted, toggleMuted, playSound, preloadSounds } from '../utils/sound';
 
 interface SoundCtx {
   muted: boolean;
@@ -13,7 +13,8 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   const [muted, setMutedState] = useState(isMuted());
 
   useEffect(() => {
-    const handler = () => { preloadSounds(); };
+    // 首次交互预热音效（不阻塞首屏）
+    const handler = () => preloadSounds();
     document.addEventListener('click', handler, { once: true });
     document.addEventListener('keydown', handler, { once: true });
     return () => {
@@ -23,10 +24,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggle = () => setMutedState(toggleMuted());
-  const play = (s: Parameters<typeof playSound>[0]) => {
-    setMutedState(isMuted());
-    playSound(s);
-  };
+  const play = (s: Parameters<typeof playSound>[0]) => playSound(s);
 
   return <Ctx.Provider value={{ muted, toggle, play }}>{children}</Ctx.Provider>;
 }

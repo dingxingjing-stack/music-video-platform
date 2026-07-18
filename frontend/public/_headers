@@ -1,26 +1,38 @@
 # Cloudflare CDN 缓存规则
-# 静态资源 — 长期缓存（带 hash 的文件名）
+# 1. 静态资源 — 长效缓存（带 hash 文件名，改版自动换 hash）
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# 图片/字体
-*.svg
+# 2. 图片 — 7 天缓存
+/*.png
   Cache-Control: public, max-age=604800
-*.png
+/*.jpg
   Cache-Control: public, max-age=604800
-*.woff2
+/*.webp
+  Cache-Control: public, max-age=604800
+/*.svg
+  Cache-Control: public, max-age=604800
+
+# 3. 字体 — 1 年长效缓存
+/*.woff2
   Cache-Control: public, max-age=31536000, immutable
 
-# HTML — 短期缓存
-/index.html
+# 4. HTML — 不缓存，保证每次拿到最新版本
+/*.html
   Cache-Control: public, max-age=0, must-revalidate
 
-# API 响应缓存（通过 Workers）
+# 5. API 响应 — CDN 边缘缓存 5 分钟
 /api/*
   Cache-Control: public, max-age=60, s-maxage=300
 
-# 安全头
+# 6. 安全头
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
+
+# 7. Brotli 压缩（CF Pages 自动开启，这里仅声明）
+/*.js
+  Content-Encoding: br
+/*.css
+  Content-Encoding: br
