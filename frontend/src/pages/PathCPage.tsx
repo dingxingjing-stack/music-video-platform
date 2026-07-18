@@ -8,6 +8,7 @@
  */
 import { useState, useEffect } from 'react';
 import { RateLimitBanner } from '../hooks/useAudioGeneration';
+import { useAuth } from '../context/AuthContext';
 
 interface VoiceSample { id: string; name: string; audio_url: string; duration: number; created_at: string; is_private?: boolean; }
 

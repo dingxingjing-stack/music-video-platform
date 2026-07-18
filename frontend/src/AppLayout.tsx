@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useUserGrayStatus } from './hooks/useUserGrayStatus';
 import { BetaConsentModal } from './components/BetaConsentModal';
 import { useSound } from './context/SoundContext';
+import { useAuth } from './context/AuthContext';
 
 // 公测导航 — 普通创作大厅（全开放）
 const NAV_OPEN = [
@@ -46,6 +47,7 @@ export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { status } = useUserGrayStatus('beta_user');
   const { muted, toggle } = useSound();
+  const { isLoggedIn, user, setShowLogin, logout } = useAuth();
 
   // 合并导航：普通用户只看 NAV_OPEN，灰度用户加 NAV_GRAY
   const allNav = status.isGray ? [...NAV_OPEN, ...NAV_GRAY] : NAV_OPEN;
@@ -116,18 +118,21 @@ export function AppLayout() {
           )}
         </nav>
 
-        {/* 灰度状态指示器 */}
+        {/* 用户状态 & 登录 */}
         {!sidebarCollapsed && (
-          <div className="px-3 py-2 border-t border-[#2a2a2a]">
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
-              <span className={`w-2 h-2 rounded-full ${status.isGray ? 'bg-[#ff6a10]' : 'bg-[#34d399]'}`} />
-              <span className="text-[11px] text-[#888888] truncate">
-                {status.isGray ? '资深测试用户' : '普通创作者'}
-              </span>
-              {!status.isGray && (
-                <span className="ml-auto text-[10px] text-[#555555]">额度 {status.dailyCredits - status.usedToday}/{status.dailyCredits}</span>
-              )}
-            </div>
+          <div className="px-3 py-2 border-t border-[#2a2a2a] space-y-2">
+            {isLoggedIn ? (
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+                <span className={`w-2 h-2 rounded-full bg-[#34d399]`} />
+                <span className="text-[11px] text-[#888888] truncate">{user?.username || user?.email}</span>
+                <button onClick={logout} className="ml-auto text-[10px] text-zinc-600 hover:text-red-400 transition">退出</button>
+              </div>
+            ) : (
+              <button onClick={() => setShowLogin(true)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-gradient-to-r from-orange-400/10 to-pink-500/10 border border-orange-400/20 text-[11px] text-orange-400 hover:opacity-80 transition">
+                <span>🔑</span>
+                <span>登录解锁全部功能</span>
+              </button>
+            )}
           </div>
         )}
 

@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App';
 import { SoundProvider } from './context/SoundContext';
+import { AuthProvider } from './context/AuthContext';
+import { LoginModal } from './components/LoginModal';
 
 // 注销所有旧的 Service Worker，防止 PWA 缓存导致功能失效
 if ('serviceWorker' in navigator) {
@@ -18,9 +20,12 @@ if ('serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <SoundProvider>
-        <App />
-      </SoundProvider>
+      <AuthProvider>
+        <SoundProvider>
+          <App />
+        </SoundProvider>
+        <LoginModal />
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );
