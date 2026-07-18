@@ -30,6 +30,11 @@ export function useAudioGeneration(opts?: UseAudioGenOptions) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = await res.json();
+      // HTTP 200 但 body.success=false → 回退 Mock
+      if (data.success === false && !data.audio_url) {
+        console.warn('API returned success=false:', data.error);
+        throw new Error(data.error || 'API failed');
+      }
       const url = data.audio_url || data.url;
       if (url) opts?.onSuccess?.(url);
       return url as string | null;
