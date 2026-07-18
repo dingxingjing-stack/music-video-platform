@@ -108,6 +108,7 @@
     "batchEmpty": "请至少输入一个提示词（每行一个）。",
     "batchNotSupported": "路径 C（扒带）不支持批量模式",
     "midiProjectRequired": "需要 MIDI 项目",
-    "unknownError": "未知错误"
+    "unknownError": "未知错误",
+    "rateLimited": "请求过于频繁，免费额度已达上限，请稍后再试"
   }
 }

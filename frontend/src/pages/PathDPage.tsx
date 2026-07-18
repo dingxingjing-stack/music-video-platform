@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MidiTrack } from '../types/trackStudio';
 import { MidiEditor } from '../components/MidiEditor/MidiEditor';
 import { useTranslation } from '../i18n/useTranslation';
+import { useAudioGeneration, RateLimitBanner } from '../hooks/useAudioGeneration';
 
 const API = 'https://ai-music-backend-8e85.onrender.com/api/v1';
 
@@ -15,7 +16,6 @@ export function PathDPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'form' | 'midi'>('form');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   
@@ -45,16 +45,17 @@ export function PathDPage() {
     setMidiTrack(track);
   }, []);
 
-  // Mock 音频生成
+  const { loading, generate, rateLimited, setRateLimited } = useAudioGeneration({ onSuccess: setAudioUrl });
+
+  // 音频生成
   const handleGenerateAudio = useCallback(async () => {
-    setIsGenerating(true);
-    setAudioUrl(null);
-    // 模拟生成延迟
-    await new Promise(r => setTimeout(r, 2000));
-    // 返回模拟音频URL（实际应调用后端API）
-    setAudioUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-    setIsGenerating(false);
-  }, []);
+    if (midiTrack.notes.length === 0) return;
+    await generate('/ai/generate', {
+      prompt: `MIDI composition with ${midiTrack.notes.length} notes, instrument ${midiTrack.instrument}`,
+      style: 'classical',
+      type: 'music',
+    });
+  }, [midiTrack.notes.length, midiTrack.instrument, generate]);
 
   const handlePlayPreview = useCallback(() => {
     if (!audioUrl) return;
@@ -153,10 +154,10 @@ export function PathDPage() {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleGenerateAudio}
-            disabled={isGenerating || midiTrack.notes.length === 0}
+            disabled={loading || midiTrack.notes.length === 0}
             className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {isGenerating ? (
+            {loading ? (
               <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> 生成中...</>
             ) : '🎛️ 生成音频'}
           </button>
@@ -195,6 +196,7 @@ export function PathDPage() {
           <p className="text-xs text-[#555555]">💡 先在 MIDI 编辑器中添加音符，然后生成音频</p>
         )}
       </section>
+      {rateLimited && <RateLimitBanner onDismiss={() => setRateLimited(false)} />}
     </div>
   );
 }

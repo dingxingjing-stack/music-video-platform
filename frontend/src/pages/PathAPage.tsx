@@ -5,7 +5,7 @@ import { AILyricsCompletion } from '../components/Audio/AILyricsCompletion';
 import { MixConsole } from '../components/TrackStudio/MixConsole';
 import { StemExporter } from '../components/Audio/StemExporter';
 import { useTranslation } from '../i18n/useTranslation';
-import { useAudioGeneration, PeakHourModal, RechargeModal } from '../hooks/useAudioGeneration';
+import { useAudioGeneration, RateLimitBanner } from '../hooks/useAudioGeneration';
 
 const RANDOM_PROMPTS = [
   '一首轻快的流行歌曲，钢琴伴奏，温暖治愈',
@@ -22,8 +22,7 @@ export function PathAPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [lyrics, setLyrics] = useState('');
 
-  const { loading, generate, showPeakModal, setShowPeakModal, showRechargeModal, setShowRechargeModal } =
-    useAudioGeneration({ onSuccess: setAudioUrl });
+  const { loading, generate, rateLimited, setRateLimited } = useAudioGeneration({ onSuccess: setAudioUrl });
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
@@ -31,8 +30,7 @@ export function PathAPage() {
   };
 
   const handleRandom = () => {
-    const r = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)];
-    setPrompt(r);
+    setPrompt(RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)]);
   };
 
   return (
@@ -41,7 +39,7 @@ export function PathAPage() {
         <button onClick={() => navigate('/')} className="text-sm text-[var(--text-secondary)] hover:text-white transition">&larr; {t('common.back') || '返回'}</button>
         <h1 className="text-2xl font-display font-bold gradient-text">路径 A — Suno 风格</h1>
       </div>
-      <p className="text-sm text-[var(--text-muted)]">提示词 → MusicGen → 全曲生成</p>
+      <p className="text-sm text-[var(--text-muted)]">提示词 → Agnes AI → 全曲生成（免费）</p>
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-4">
         <h2 className="font-display font-semibold">🎤 音乐提示词</h2>
@@ -73,8 +71,7 @@ export function PathAPage() {
         <p className="text-sm text-[var(--text-muted)]">暂无历史记录。生成的音乐会自动保存到这里。</p>
       </section>
 
-      {showPeakModal && <PeakHourModal onClose={() => setShowPeakModal(false)} />}
-      {showRechargeModal && <RechargeModal onClose={() => setShowRechargeModal(false)} />}
+      {rateLimited && <RateLimitBanner onDismiss={() => setRateLimited(false)} />}
     </div>
   );
 }

@@ -10,8 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { isPeakHour } from '../hooks/useAudioGeneration';
-import { PeakHourModal, RechargeModal } from '../hooks/useAudioGeneration';
+import { RateLimitBanner } from '../hooks/useAudioGeneration';
 
 interface VoiceSample {
   id: string;
@@ -42,9 +41,7 @@ export function PathCPage() {
   const [uploadUrl, setUploadUrl] = useState('');
   const [uploadName, setUploadName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [showPeakModal, setShowPeakModal] = useState(false);
-  const [showRechargeModal, setShowRechargeModal] = useState(false);
-  const [pendingClone, setPendingClone] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
 
   // 加载声音列表
   useEffect(() => {
@@ -105,8 +102,6 @@ export function PathCPage() {
     if (!cloneText.trim()) { alert('请输入要合成的文本'); return; }
     if (!selectedVoice) { alert('请选择声音'); return; }
 
-    if (isPeakHour()) { setShowPeakModal(true); setPendingClone(true); return; }
-
     setIsCloning(true);
     setCloneResult(null);
 
@@ -117,7 +112,7 @@ export function PathCPage() {
         body: JSON.stringify({ voice_id: selectedVoice, text: cloneText, speed, pitch_shift: pitchShift })
       });
 
-      if (res.status === 402) { setShowRechargeModal(true); return; }
+      if (res.status === 429) { setRateLimited(true); return; }
 
       if (res.ok) {
         const data: CloneResult = await res.json();
@@ -132,12 +127,6 @@ export function PathCPage() {
     } finally {
       setIsCloning(false);
     }
-  };
-
-  const handlePeakProceed = () => {
-    setShowPeakModal(false);
-    setPendingClone(false);
-    handleClone();
   };
 
   return (
@@ -392,8 +381,7 @@ export function PathCPage() {
           )}
         </div>
       )}
-      {showPeakModal && <PeakHourModal onClose={() => setShowPeakModal(false)} />}
-      {showRechargeModal && <RechargeModal onClose={() => setShowRechargeModal(false)} />}
+      {rateLimited && <RateLimitBanner onDismiss={() => setRateLimited(false)} />}
     </div>
   );
 }
