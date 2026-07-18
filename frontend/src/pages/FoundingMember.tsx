@@ -226,7 +226,7 @@ export default function FoundingMemberPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-800 py-8 text-center text-gray-500">
-        <p>© 2026 Music Video Platform. All rights reserved.</p>
+        <p>© 2026 Zyvexo. All rights reserved.</p>
       </footer>
     </div>
   );

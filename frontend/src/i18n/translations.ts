@@ -530,7 +530,7 @@ const translations: Record<Language, Translation> = {
 
   'en-US': {
     common: {
-      appName: 'Music Video Platform',
+      appName: 'Zyvexo',
       generate: 'Generate',
       upload: 'Upload',
       download: 'Download',

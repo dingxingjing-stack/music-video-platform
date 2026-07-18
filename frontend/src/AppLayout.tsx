@@ -67,7 +67,7 @@ export function AppLayout() {
         <div className="h-14 flex items-center px-3 gap-2 border-b border-[#2a2a2a]">
           <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="text-[#777777] hover:text-white transition-colors text-lg" title={sidebarCollapsed ? '展开' : '收起'}>{sidebarCollapsed ? '▸' : '◂'}</button>
           {!sidebarCollapsed && (
-            <span className="font-bold text-base gradient-text cursor-pointer truncate" onClick={() => navigate('/')}>MV Studio</span>
+            <span className="font-bold text-base gradient-text cursor-pointer truncate" onClick={() => navigate('/')}>Zyvexo</span>
           )}
           <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden ml-auto text-[#777777] hover:text-white">✕</button>
         </div>

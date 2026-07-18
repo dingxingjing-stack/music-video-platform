@@ -202,7 +202,7 @@ export function Landing() {
             <div><h4 className="font-medium text-white mb-3">联系</h4><ul className="space-y-2 text-[#888888]"><li className="cursor-pointer">反馈 Bug</li><li className="cursor-pointer">意见建议</li></ul></div>
           </div>
           <div className="pt-6 border-t border-[#2a2a2a] flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-xs text-[#555555]">© 2026 MV Studio · 公测测试版 v2.0 · All rights reserved</p>
+            <p className="text-xs text-[#555555]">© 2026 Zyvexo · All rights reserved</p>
             <p className="text-xs text-[#555555]">公测期间所有作品禁止商用 · Powered by Render & Cloudflare</p>
           </div>
         </div>

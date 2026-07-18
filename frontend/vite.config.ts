@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Music Video Platform',
-        short_name: 'MVP',
-        description: 'AI 音乐 + MV 一体化创作平台',
+        name: 'Zyvexo',
+        short_name: 'Zyvexo',
+        description: 'Zyvexo — Global Digital Platform',
         theme_color: '#121212',
         background_color: '#121212',
         display: 'standalone',
