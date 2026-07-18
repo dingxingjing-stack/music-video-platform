@@ -194,7 +194,7 @@ export function PathCPage() {
                 className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-medium"
               >📤 上传声音</button>
             </div>
-          ) : (
+          ) :
             voices.map((voice) => (
               <div
                 key={voice.id}
