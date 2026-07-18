@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 # ==============================================================================
 # 日志器初始化（必须在 Sentry 之前，Sentry 需要用到 logger）
@@ -259,6 +260,18 @@ app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
 # ---------- 合规中间件 ----------
 app.add_middleware(PrivacyMiddleware)
+
+# ---------- CORS 跨域（前端 Cloudflare Pages + 本地开发） ----------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://music-video-platform.pages.dev",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------- router 挂载 ----------
 # 开发阶段：使用 Gemini 临时方案（免费额度）
