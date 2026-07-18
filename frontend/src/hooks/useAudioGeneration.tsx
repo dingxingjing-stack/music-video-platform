@@ -28,11 +28,17 @@ export function useAudioGeneration(opts?: UseAudioGenOptions) {
 
     setLoading(true);
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000); // 15s 超时
+
       const res = await fetch(`${API}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+
+      clearTimeout(timer);
 
       if (res.status === 402) { setShowRechargeModal(true); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
