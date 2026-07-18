@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { BetaConsentModal } from '../components/BetaConsentModal';
 
 const FEATURES = [
   { icon: '🎵', title: 'AI 作曲', desc: '一句话生成完整歌曲，支持多种风格、BPM 调控', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
@@ -43,6 +44,7 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#e0e0e0] relative overflow-x-hidden">
+      <BetaConsentModal />
       {/* 波形背景装饰 */}
       <div className="fixed inset-0 pointer-events-none opacity-30">
         <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-[#ff6a10]/10 to-transparent" />
