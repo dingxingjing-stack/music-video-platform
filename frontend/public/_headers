@@ -1,14 +1,26 @@
+# Cloudflare CDN 缓存规则
+# 静态资源 — 长期缓存（带 hash 的文件名）
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
-/static/*
-  Cache-Control: public, max-age=31536000, immutable
-*.css
-  Cache-Control: public, max-age=31536000, immutable
-*.js
-  Cache-Control: public, max-age=31536000, immutable
+
+# 图片/字体
+*.svg
+  Cache-Control: public, max-age=604800
 *.png
-  Cache-Control: public, max-age=86400
-*.jpg
-  Cache-Control: public, max-age=86400
-*.webp
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800
+*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML — 短期缓存
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# API 响应缓存（通过 Workers）
+/api/*
+  Cache-Control: public, max-age=60, s-maxage=300
+
+# 安全头
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

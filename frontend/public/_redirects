@@ -1,0 +1,5 @@
+# SPA fallback — 所有路由返回 index.html
+/*    /index.html   200
+
+# API 代理（如果使用 Workers）
+/api/*  https://ai-music-backend-8e85.onrender.com/api/:splat  200

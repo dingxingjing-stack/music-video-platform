@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useUserGrayStatus } from './hooks/useUserGrayStatus';
 import { BetaConsentModal } from './components/BetaConsentModal';
+import { useSound } from './context/SoundContext';
 
 // 公测导航 — 普通创作大厅（全开放）
 const NAV_OPEN = [
@@ -44,6 +45,7 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { status } = useUserGrayStatus('beta_user');
+  const { muted, toggle } = useSound();
 
   // 合并导航：普通用户只看 NAV_OPEN，灰度用户加 NAV_GRAY
   const allNav = status.isGray ? [...NAV_OPEN, ...NAV_GRAY] : NAV_OPEN;
@@ -126,6 +128,16 @@ export function AppLayout() {
                 <span className="ml-auto text-[10px] text-[#555555]">额度 {status.dailyCredits - status.usedToday}/{status.dailyCredits}</span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* 音效开关 */}
+        {!sidebarCollapsed && (
+          <div className="px-3 pt-2 pb-1">
+            <button onClick={toggle} className="flex items-center gap-2 text-[11px] text-[#888888] hover:text-white transition w-full">
+              <span className="text-sm">{muted ? '🔇' : '🔊'}</span>
+              <span>音效{muted ? '已关' : '已开'}</span>
+            </button>
           </div>
         )}
 
