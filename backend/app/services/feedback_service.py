@@ -10,3 +10,19 @@ def create_feedback(name: str, text: str) -> Dict[str, Any]:
         return response.data[0]
     except APIError as e:
         raise e
+
+
+def get_feedback(limit: int = 50, offset: int = 0) -> list[Dict[str, Any]]:
+    """Fetch feedback entries, newest first."""
+    try:
+        response = (
+            supabase.table("feedback")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .offset(offset)
+            .execute()
+        )
+        return response.data or []
+    except APIError as e:
+        raise e
