@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from app.services.feedback_service import create_feedback, get_feedback
-from app.core.security import get_current_user_optional  # Assuming we have optional auth
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["feedback"])
 
