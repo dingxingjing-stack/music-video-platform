@@ -1,0 +1,12 @@
+from app.services.supabase_service import supabase
+from postgrest.exceptions import APIError
+from typing import Dict, Any
+
+def create_feedback(name: str, text: str) -> Dict[str, Any]:
+    """Create a new feedback entry in the database."""
+    data = {"name": name, "text": text}
+    try:
+        response = supabase.table("feedback").insert(data).execute()
+        return response.data[0]
+    except APIError as e:
+        raise e

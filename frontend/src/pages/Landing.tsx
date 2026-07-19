@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BetaConsentModal } from '../components/BetaConsentModal';
@@ -28,18 +28,64 @@ const fadeIn = (delay = 0) => ({
 export function Landing() {
   const navigate = useNavigate();
   const [showBugModal, setShowBugModal] = useState(false);
-  const [feedbacks, setFeedbacks] = useState<{ name: string; text: string }[]>([
-    { name: '音乐爱好者', text: '公测体验非常好，AI 生成速度很快！期待 MV 功能解锁。' },
-    { name: '独立音乐人', text: 'DAW 编辑器功能丰富，比想象中专业。希望能增加更多效果器。' },
-  ]);
+  const [feedbacks, setFeedbacks] = useState<{ name: string; text: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackName, setFeedbackName] = useState('');
+  const [toast, setToast] = useState<{ id: string; message: string; type: 'success' | 'error' } | null>(null);
 
-  const submitFeedback = () => {
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/feedback');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setFeedbacks(data.map((f: any) => ({ name: f.name, text: f.text })));
+      } catch (err) {
+        console.error('Failed to fetch feedback:', err);
+        // Fallback to hardcoded
+        setFeedbacks([
+          { name: '音乐爱好者', text: '公测体验非常好，AI 生成速度很快！期待 MV 功能解锁。' },
+          { name: '独立音乐人', text: 'DAW 编辑器功能丰富，比想象中专业。希望能增加更多效果器。' }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFeedback();
+  }, []);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToast({ id, message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const submitFeedback = async () => {
     if (!feedbackText.trim()) return;
-    setFeedbacks([...feedbacks, { name: feedbackName.trim() || '匿名用户', text: feedbackText.trim() }]);
-    setFeedbackText('');
-    setFeedbackName('');
+    try {
+      const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: feedbackName.trim() || '匿名用户',
+          text: feedbackText.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error('Network response was not ok');
+      const data = await res.json();
+      // Optimistically update the list
+      setFeedbacks(prev => [
+        { name: feedbackName.trim() || '匿名用户', text: feedbackText.trim() },
+        ...prev
+      ]);
+      setFeedbackText('');
+      setFeedbackName('');
+      showToast('感谢反馈！', 'success');
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+      showToast('提交失败，请重试', 'error');
+    }
   };
 
   return (
@@ -94,162 +140,4 @@ export function Landing() {
           <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">五大核心功能</span></h2>
           <p className="text-sm text-[#888888]">从灵感到成片，一站搞定</p>
         </motion.div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map((f, i) => (
-            <motion.div key={i} {...fadeIn(i * 0.1)} onClick={() => navigate('/')} className={`cursor-pointer rounded-2xl border border-[#2a2a2a] bg-gradient-to-br ${f.color} p-6 hover:border-[#ff6a10]/30 transition-all group`}>
-              <span className="text-4xl mb-4 block group-hover:scale-110 transition-transform">{f.icon}</span>
-              <h3 className="text-lg font-bold text-white mb-2">{f.title}</h3>
-              <p className="text-sm text-[#888888]">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ========== 公测福利 ========== */}
-      <section className="relative z-10 px-4 py-16 max-w-4xl mx-auto">
-        <motion.div {...fadeIn()} className="rounded-2xl border border-[#2a2a2a] bg-gradient-to-b from-[#1e1e1e] to-[#0e0e0e] overflow-hidden">
-          <div className="px-6 py-5 border-b border-[#2a2a2a] bg-gradient-to-r from-[#ff6a10]/10 to-[#ee0979]/5">
-            <h2 className="text-xl font-bold gradient-text">🎁 公测福利</h2>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-5 rounded-xl bg-[#121212] border border-[#2a2a2a]">
-              <h3 className="font-medium text-white mb-2 flex items-center gap-2"><span>👤</span> 普通用户</h3>
-              <ul className="text-sm text-[#888888] space-y-1.5">
-                <li>• 每日免费生成 10 次额度</li>
-                <li>• 全部基础功能无限制</li>
-                <li>• 作品自动带公测水印</li>
-                <li>• 社区浏览、点赞、收藏</li>
-              </ul>
-            </div>
-            <div className="p-5 rounded-xl bg-[#121212] border border-[#ff6a10]/20">
-              <h3 className="font-medium text-white mb-2 flex items-center gap-2"><span>🏆</span> 资深测试用户</h3>
-              <ul className="text-sm text-[#888888] space-y-1.5">
-                <li>• 每日免费生成 30 次额度</li>
-                <li>• 解锁 MV 生成、协作编辑</li>
-                <li>• HF 高级模型、字幕识别</li>
-                <li>• 一键多平台发布</li>
-                <li className="text-[#ff6a10]">→ 活跃度≥100 且生成≥50 次可申请</li>
-              </ul>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ========== 作品案例 ========== */}
-      <section className="relative z-10 px-4 py-16 max-w-5xl mx-auto">
-        <motion.div {...fadeIn()} className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2"><span className="gradient-text">公测作品展示</span></h2>
-          <p className="text-sm text-[#888888]">来自社区的精选作品</p>
-        </motion.div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {CASES.map((c, i) => (
-            <motion.div key={i} {...fadeIn(i * 0.08)} onClick={() => navigate('/community')} className="cursor-pointer rounded-xl border border-[#2a2a2a] bg-[#1e1e1e] overflow-hidden hover:border-[#ff6a10]/30 transition-all">
-              <div className="aspect-square flex items-center justify-center text-5xl bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">{c.cover}</div>
-              <div className="p-3">
-                <div className="text-sm font-medium text-white truncate">{c.title}</div>
-                <div className="text-xs text-[#555555] mt-1">{c.author}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#2a2a2a] text-[#888888]">{c.genre}</span>
-                  <span className="text-[10px] text-[#555555]">▶ {c.plays}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ========== 用户反馈 ========== */}
-      <section className="relative z-10 px-4 py-16 max-w-3xl mx-auto">
-        <motion.div {...fadeIn()} className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-2"><span className="gradient-text">用户反馈</span></h2>
-          <p className="text-sm text-[#888888]">告诉我们你的想法</p>
-        </motion.div>
-        <div className="space-y-3 mb-6">
-          {feedbacks.map((f, i) => (
-            <motion.div key={i} {...fadeIn(i * 0.05)} className="p-4 rounded-xl bg-[#1e1e1e] border border-[#2a2a2a]">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff6a10] to-[#ee0979] flex items-center justify-center text-xs font-bold text-white flex-shrink-0">{f.name[0]}</div>
-                <div>
-                  <div className="text-xs font-medium text-[#888888]">{f.name}</div>
-                  <div className="text-sm text-white mt-1">{f.text}</div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input value={feedbackName} onChange={(e) => setFeedbackName(e.target.value)} placeholder="昵称（选填）" className="sm:w-40 rounded-lg bg-[#1e1e1e] border border-[#2a2a2a] px-3 py-2 text-sm text-white placeholder:text-[#555555] focus:border-[#ff6a10]/50 focus:outline-none" />
-          <input value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitFeedback()} placeholder="说点什么..." className="flex-1 rounded-lg bg-[#1e1e1e] border border-[#2a2a2a] px-3 py-2 text-sm text-white placeholder:text-[#555555] focus:border-[#ff6a10]/50 focus:outline-none" />
-          <button onClick={submitFeedback} disabled={!feedbackText.trim()} className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] disabled:opacity-40 whitespace-nowrap">发送</button>
-        </div>
-      </section>
-
-      {/* ========== Bug 反馈按钮 + 弹窗 ========== */}
-      <button onClick={() => setShowBugModal(true)} className="fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#ff6a10] to-[#ee0979] text-white text-sm font-medium shadow-lg shadow-[#ff6a10]/30 hover:scale-105 transition-transform">
-        🐛 反馈 Bug
-      </button>
-      {showBugModal && (
-        <BugReportModal onClose={() => setShowBugModal(false)} />
-      )}
-
-      {/* ========== 页脚 ========== */}
-      <footer className="relative z-10 border-t border-[#2a2a2a] bg-[#0e0e0e] px-4 py-10 mt-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 text-sm">
-            <div><h4 className="font-medium text-white mb-3">产品</h4><ul className="space-y-2 text-[#888888]"><li className="hover:text-[#ff6a10] cursor-pointer" onClick={() => navigate('/')}>工作台</li><li className="hover:text-[#ff6a10] cursor-pointer" onClick={() => navigate('/path-a')}>AI 作曲</li><li className="hover:text-[#ff6a10] cursor-pointer" onClick={() => navigate('/community')}>社区</li></ul></div>
-            <div><h4 className="font-medium text-white mb-3">公测</h4><ul className="space-y-2 text-[#888888]"><li className="cursor-pointer">公测须知</li><li className="cursor-pointer">灰度申请</li><li className="cursor-pointer">每日额度</li></ul></div>
-            <div><h4 className="font-medium text-white mb-3">法律</h4><ul className="space-y-2 text-[#888888]"><li className="cursor-pointer">版权声明</li><li className="cursor-pointer">用户协议</li><li className="cursor-pointer">隐私政策</li></ul></div>
-            <div><h4 className="font-medium text-white mb-3">联系</h4><ul className="space-y-2 text-[#888888]"><li className="cursor-pointer">反馈 Bug</li><li className="cursor-pointer">意见建议</li></ul></div>
-          </div>
-          <div className="pt-6 border-t border-[#2a2a2a] flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-xs text-[#555555]">© 2026 Zyvexo · All rights reserved</p>
-            <p className="text-xs text-[#555555]">公测期间所有作品禁止商用 · Powered by Render & Cloudflare</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-function BugReportModal({ onClose }: { onClose: () => void }) {
-  const [type, setType] = useState('bug');
-  const [desc, setDesc] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-
-  const submit = async () => {
-    try {
-      await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/beta/apply-gray', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-ID': 'beta_user' },
-        body: JSON.stringify({ feature_key: 'bug_report', reason: `[${type}] ${desc}`, contact: '' }),
-      });
-    } catch { /* 公测容错 */ }
-    setSubmitted(true);
-    setTimeout(onClose, 2000);
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={(e) => e.target === e.currentTarget && onClose} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-md bg-gradient-to-b from-[#1e1e1e] to-[#0e0e0e] border border-[#2a2a2a] rounded-2xl overflow-hidden">
-        {submitted ? (
-          <div className="p-10 text-center"><span className="text-4xl">✅</span><p className="mt-3 text-white font-medium">感谢反馈！</p><p className="mt-1 text-xs text-[#888888]">我们会尽快处理</p></div>
-        ) : (
-          <>
-            <div className="px-5 pt-5 pb-3 border-b border-[#2a2a2a]"><h3 className="font-bold gradient-text text-lg">🐛 问题反馈</h3></div>
-            <div className="p-5 space-y-3">
-              <div className="flex gap-2">
-                {[{ k: 'bug', l: '🐛 Bug' }, { k: 'suggestion', l: '💡 建议' }, { k: 'other', l: '📝 其他' }].map((o) => (
-                  <button key={o.k} onClick={() => setType(o.k)} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${type === o.k ? 'border-[#ff6a10]/50 bg-[#ff6a10]/10 text-[#ff6a10]' : 'border-[#2a2a2a] text-[#888888]'}`}>{o.l}</button>
-                ))}
-              </div>
-              <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="详细描述问题..." rows={4} className="w-full rounded-lg bg-[#121212] border border-[#2a2a2a] px-3 py-2 text-sm text-white placeholder:text-[#555555] focus:border-[#ff6a10]/50 focus:outline-none resize-none" />
-              <div className="flex gap-2">
-                <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm border border-[#2a2a2a] text-[#888888]">取消</button>
-                <button onClick={submit} disabled={!desc.trim()} className="flex-1 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] disabled:opacity-40">提交</button>
-              </div>
-            </div>
-          </>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-

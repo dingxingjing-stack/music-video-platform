@@ -291,6 +291,7 @@ from app.routers import audio_processing
 from app.routers import song_continuation
 from app.routers import subtitle_recognition
 from app.routers import one_click_publish
+from app.routers import feedback
 app.include_router(mv_app,       prefix="/api/v1/mv")
 app.include_router(workflow_app, prefix="/api/v1/workflow")
 app.include_router(batch_app,    prefix="/api/v1/batch")
@@ -321,6 +322,7 @@ app.include_router(store_app)
 app.include_router(copyright_app)
 app.include_router(audio_quality_app)
 app.include_router(ugc_app)
+app.include_router(feedback.router)
 
 # ---------- Rhythm analysis router (P0-6 节拍检测) ----------
 from app.routers.rhythm_analysis import router as rhythm_app
