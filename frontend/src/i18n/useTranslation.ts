@@ -1,24 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { locales, defaultLocale, localeNames, type Locale } from './config';
 
+const LOCALE_EVENT = 'app:locale-change';
+
+function readStoredLocale(): Locale {
+  const saved = localStorage.getItem('locale') as Locale | null;
+  if (saved && locales.includes(saved)) return saved;
+  const browserLang = navigator.language.split('-')[0] as Locale;
+  if (locales.includes(browserLang)) {
+    localStorage.setItem('locale', browserLang);
+    return browserLang;
+  }
+  return defaultLocale;
+}
+
 export function useTranslation() {
-  const [locale, setLocale] = useState<Locale>(defaultLocale);
+  const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
   const [t, setT] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
+  // 全局监听语言切换事件（其他组件触发时同步本组件）
   useEffect(() => {
-    const saved = localStorage.getItem('locale') as Locale | null;
-    if (saved && locales.includes(saved)) {
-      setLocale(saved);
-    } else {
-      const browserLang = navigator.language.split('-')[0] as Locale;
-      if (locales.includes(browserLang)) {
-        setLocale(browserLang);
-        localStorage.setItem('locale', browserLang);
+    const onLocaleChange = (e: Event) => {
+      const newLocale = (e as CustomEvent<Locale>).detail;
+      if (newLocale && locales.includes(newLocale)) {
+        setLocaleState(newLocale);
       }
-    }
+    };
+    window.addEventListener(LOCALE_EVENT, onLocaleChange as EventListener);
+    return () => window.removeEventListener(LOCALE_EVENT, onLocaleChange as EventListener);
   }, []);
 
   useEffect(() => {
@@ -36,10 +48,12 @@ export function useTranslation() {
     loadTranslations();
   }, [locale]);
 
-  const changeLocale = (newLocale: Locale) => {
+  const changeLocale = useCallback((newLocale: Locale) => {
     localStorage.setItem('locale', newLocale);
-    setLocale(newLocale);
-  };
+    setLocaleState(newLocale);
+    // 广播给所有 useTranslation 实例 — 实现全局实时切换
+    window.dispatchEvent(new CustomEvent(LOCALE_EVENT, { detail: newLocale }));
+  }, []);
 
   const translate = (key: string, params?: Record<string, string | number>): string => {
     const keys = key.split('.');

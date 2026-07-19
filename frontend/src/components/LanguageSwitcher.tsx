@@ -1,9 +1,9 @@
 /** 全局语言切换组件 v2 */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '../i18n/useTranslation';
 
 const LANGUAGES = [
-  { code: 'zh-CN', name: '中文', flag: '🇨🇳' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'ja', name: '日本語', flag: '🇯🇵' },
   { code: 'ko', name: '한국어', flag: '🇰🇷' },
@@ -16,22 +16,13 @@ const LANGUAGES = [
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { setLocale, locale, t } = useTranslation();
-  const [currentLang, setCurrentLang] = useState('zh-CN');
+  const { changeLocale, locale, t } = useTranslation();
 
-  useEffect(() => {
-    const saved = localStorage.getItem('locale');
-    if (saved && LANGUAGES.find(l => l.code === saved)) {
-      setCurrentLang(saved);
-    } else {
-      // 使用 useTranslation 的 locale 状态，而不是重复读取 localStorage
-      setCurrentLang(locale);
-    }
-  }, [locale]);
+  // 直接用 hook 的 locale 作为单一数据源，同步本地、全局广播已由 changeLocale 处理
+  const currentLang = locale;
 
   const handleSwitch = (code: string) => {
-    setCurrentLang(code);
-    setLocale(code);
+    changeLocale(code);
     setIsOpen(false);
   };
 
