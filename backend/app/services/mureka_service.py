@@ -8,6 +8,11 @@ from typing import Optional, Dict, Any
 from pydantic import BaseModel
 
 
+class QuotaExceededError(Exception):
+    """API 配额耗尽异常"""
+    pass
+
+
 class MurekaSongRequest(BaseModel):
     """Mureka 歌曲生成请求"""
     lyrics: str  # 歌词/提示词（必填）
@@ -109,11 +114,8 @@ class MurekaService:
                         task_id=task_id,
                     )
                 elif response.status_code == 429:
-                    # 配额限制
-                    return MurekaSongResponse(
-                        success=False,
-                        error="API 配额已用完，请稍后重试",
-                    )
+                    # 配额限制 - 抛出异常让上层降级
+                    raise QuotaExceededError("Mureka API 配额已用完，启用 Mock 降级")
                 elif response.status_code == 400:
                     # 请求格式错误
                     error_data = response.json()

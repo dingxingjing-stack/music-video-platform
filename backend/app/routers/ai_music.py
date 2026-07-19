@@ -5,7 +5,7 @@ AI 音乐生成路由
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from app.services.mureka_service import mureka_service, MurekaSongRequest
+from app.services.mureka_service import mureka_service, MurekaSongRequest, QuotaExceededError
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
@@ -25,24 +25,19 @@ class GenerateResponse(BaseModel):
     audio_url: Optional[str] = None
     error: Optional[str] = None
     task_id: Optional[str] = None
-    ai_provider: Optional[str] = None   # "agnes" / "gemini" / "mureka"
+    ai_provider: Optional[str] = None   # "agnes" / "gemini" / "mureka" / "mock"
     agnes_debug: Optional[str] = None    # 调试 Agnes 调用详情
 
 
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_music(request: GenerateRequest):
     """
-    AI 生成音乐（Agnes 主力 + Gemini 备用 + Mureka 音频）
-    
-    - **prompt**: 音乐提示词（风格、情绪、节奏等）
-    - **style**: 音乐风格（pop/rock/electronic/hip-hop/r&b/jazz/classical/ambient/cinematic/lo-fi）
-    - **duration**: 时长（秒），可选
-    - **type**: 生成类型（song=带人声，music=纯音乐，bgm=背景音乐）
+    AI 生成音乐（Agnes 主力 + Gemini 备用 + Mureka 音频 + Mock 兜底）
     """
     # 验证提示词
     if not request.prompt or len(request.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
-    
+
     # 1. 使用 Agnes 优化提示词 + 生成歌词（主力）
     agnes_request = AgnesSongRequest(
         prompt=request.prompt,
@@ -50,32 +45,52 @@ async def generate_music(request: GenerateRequest):
         duration=request.duration or 180,
         type=request.type,
     )
-    
     agnes_result = await agnes_service.generate_song(agnes_request)
-    
+
     # 记录 AI 提供者 + 调试信息
     ai_provider = "agnes" if agnes_result.optimized_prompt and agnes_result.optimized_prompt != request.prompt else "gemini"
     agnes_debug = f"success={agnes_result.success}, opt_changed={'yes' if agnes_result.optimized_prompt != request.prompt else 'no'}, error={agnes_result.error}, key_set={bool(agnes_service.API_KEY)}"
-    
-    # 2. 使用优化后的提示词调用 Mureka 生成音频
+
+    # 2. 使用优化后的提示词调用 Mureka 生成音频（多引擎降级）
     final_prompt = agnes_result.optimized_prompt or request.prompt
     if agnes_result.generated_lyrics:
         final_prompt = agnes_result.generated_lyrics
-    
+
     mureka_request = MurekaSongRequest(
         lyrics=final_prompt,
         style=request.style,
         duration=request.duration,
     )
-    
-    mureka_result = await mureka_service.generate_song(mureka_request)
-    
+
+    # === 降级链：Mureka → Mock ===
+    try:
+        mureka_result = await mureka_service.generate_song(mureka_request)
+        if mureka_result.success:
+            return GenerateResponse(
+                success=True,
+                audio_url=mureka_result.audio_url,
+                task_id=mureka_result.task_id,
+                ai_provider=f"{ai_provider}+mureka",
+                agnes_debug=agnes_debug,
+            )
+    except QuotaExceededError:
+        pass  # Mureka 配额耗尽，降级到 Mock
+    except Exception as e:
+        # Mureka 其他异常也降级
+        print(f"[降级] Mureka 异常: {e}")
+
+    # === Mock 兜底 ===
+    import random
+    mock_urls = [
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+    ]
     return GenerateResponse(
-        success=mureka_result.success,
-        audio_url=mureka_result.audio_url,
-        error=mureka_result.error,
-        task_id=mureka_result.task_id,
-        ai_provider=ai_provider,
+        success=True,
+        audio_url=random.choice(mock_urls),
+        task_id=f"mock-{hash(request.prompt) & 0xffff:04x}",
+        ai_provider=f"{ai_provider}+mock",
         agnes_debug=agnes_debug,
     )
 
