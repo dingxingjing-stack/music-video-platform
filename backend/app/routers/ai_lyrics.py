@@ -4,12 +4,19 @@ AI 作词 API 路由
 
 import logging
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ValidationError
 from typing import Optional, List
 from app.services.lyric_service import lyric_service, LyricRequest
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_str(value, default: str) -> str:
+    """安全转字符串，None 或非 str 一律回退默认值（避免类型错误导致 422/500）"""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value
+    return str(value)
 
 router = APIRouter(prefix="/api/v1/lyrics", tags=["lyrics"])
 
@@ -47,21 +54,31 @@ async def get_lyric_moods():
 
 
 @router.post("/generate", response_model=GenerateLyricResponse)
-async def generate_lyrics(request: GenerateLyricRequest):
-    """生成歌词"""
+async def generate_lyrics(request: Request):
+    """生成歌词（手动解析 body，彻底规避 Pydantic 自动 422）"""
     try:
+        # 手动解析请求体，字段缺失/类型错误一律兜底，绝不抛 422
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+
         lyric_request = LyricRequest(
-            theme=request.theme,
-            style=request.style,
-            language=request.language,
-            mood=request.mood,
-            structure=request.structure,
-            custom_lyrics=request.custom_lyrics,
-            rhyme_scheme=request.rhyme_scheme
+            theme=_safe_str(body.get("theme"), "无主题") or "无主题",
+            style=_safe_str(body.get("style"), "pop"),
+            language=_safe_str(body.get("language"), "zh"),
+            mood=_safe_str(body.get("mood"), "happy"),
+            structure=_safe_str(
+                body.get("structure"), "verse-chorus-verse-chorus-bridge-chorus"
+            ),
+            custom_lyrics=body.get("custom_lyrics"),
+            rhyme_scheme=_safe_str(body.get("rhyme_scheme"), "AABB"),
         )
-        
+
         response = await lyric_service.generate_lyrics(lyric_request)
-        
+
         if not response.success:
             # 服务层失败，返回 200 + 友好提示（不抛 500）
             logger.warning("Lyric generation failed: %s", response.message)
@@ -72,7 +89,7 @@ async def generate_lyrics(request: GenerateLyricRequest):
                 rhyme_analysis=None,
                 message=f"生成服务暂时不可用: {response.message}"
             )
-        
+
         return response
     except Exception as e:
         logger.exception("Lyric generation exception")
@@ -84,22 +101,6 @@ async def generate_lyrics(request: GenerateLyricRequest):
             rhyme_analysis=None,
             message=f"服务异常: {str(e)}"
         )
-
-
-@router.exception_handler(ValidationError)
-async def validation_exception_handler(request: Request, exc: ValidationError):
-    """捕获 Pydantic 422，返回 200 + 友好提示"""
-    logger.warning("Validation error in %s: %s", request.url.path, exc)
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": False,
-            "lyrics": "（请求参数错误）",
-            "structure": "",
-            "rhyme_analysis": None,
-            "message": f"参数格式错误: {exc.errors()[0]['msg'] if exc.errors() else '请检查输入'}"
-        }
-    )
 
 
 @router.post("/continue", response_model=GenerateLyricResponse)
