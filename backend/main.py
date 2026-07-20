@@ -1267,14 +1267,12 @@ async def generate_lyrics(request: Request):
         {"role": "user", "content": user_prompt},
     ]
 
-    try:
-        raw = await llm_factory.call(messages=messages, temperature=0.8, max_tokens=2048)
-        return _parse_lyric_response(raw, style, language)
-    except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=f"LLM unavailable: {e}")
-    except Exception as e:
-        logger.exception("Lyrics generation failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    # generate_safe 永不抛异常：单个/全部大模型失败时返回 mock 占位文本，
+    # 保证 /lyrics/generate 始终 200，不阻断前端。
+    result = await llm_factory.generate_safe(
+        messages=messages, temperature=0.8, max_tokens=2048
+    )
+    return _parse_lyric_response(result["text"], style, language)
 
 
 def _parse_lyric_response(raw: str, style: str, language: str) -> dict:

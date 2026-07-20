@@ -11,6 +11,24 @@ def _enabled(name: str, default: str = "0") -> bool:
     return os.getenv(name, default).strip().lower() in ("1", "true", "yes", "on")
 
 
+def _extract_text(obj):
+    """递归查找响应中的首个非空 text 字段，兼容 Gemini 各种返回结构。"""
+    if isinstance(obj, dict):
+        text = obj.get("text")
+        if isinstance(text, str) and text.strip():
+            return text
+        for value in obj.values():
+            found = _extract_text(value)
+            if found:
+                return found
+    elif isinstance(obj, list):
+        for item in obj:
+            found = _extract_text(item)
+            if found:
+                return found
+    return None
+
+
 # --- 临时方案：默认仅启用 agnes（免费主力，稳定）。 ---
 # Gemini / NVIDIA 需显式设置环境变量开启，避免其失败拖垮 LLM 接口：
 #   LLM_ENABLE_GEMINI=1   /   LLM_ENABLE_NVIDIA=1
@@ -116,10 +134,17 @@ class LLMFactory:
         """
         永不抛出：单个/全部大模型失败时返回 mock 占位文本，保证接口返回 200，
         不阻断前端流程。返回 {text, provider, model, mock}。
+
+        Fallback 策略：优先使用显式指定的 provider（若已加载），失败或不可用则
+        自动回退到默认顺序中的其余可用 provider（无论前端选 gemini/nvidia 与否，
+        只要 agnes 可用就走 agnes）。全部失败才返回 mock。
         """
-        providers = [provider] if provider != "auto" else self.provider_order
+        order: List[str] = []
+        if provider != "auto" and provider in self.clients:
+            order.append(provider)
+        order += [p for p in self.provider_order if p not in order]
         last_err = None
-        for prov in providers:
+        for prov in order:
             if prov not in self.clients:
                 continue
             try:
@@ -252,21 +277,30 @@ class LLMFactory:
     @staticmethod
     def _parse_gemini(data: dict) -> str:
         """
-        兼容新版 Gemini 返回体：candidates[].content.parts[].text 可能缺失
-        （安全过滤 / finishReason=SAFETY|MAX_TOKENS / 空 candidates）。
-        任意异常结构均安全降级，抛出可读错误交由上层兜底。
+        兼容新版 Gemini 返回体：candidates[].content 结构多样——
+        标准 parts[].text、部分代理直出 content.text、甚至嵌套 text。
+        任意异常结构（空 candidates / 安全过滤 / 缺字段）均安全降级，
+        抛出可读错误交由上层兜底。
         """
         candidates = data.get("candidates") or []
         if not candidates:
             block = (data.get("promptFeedback") or {}).get("blockReason")
             raise RuntimeError(f"Gemini returned no candidates (blockReason={block})")
         content = candidates[0].get("content") or {}
+        # 1) 标准：parts[].text
         parts = content.get("parts") or []
         texts = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")]
         if texts:
             return "".join(texts)
+        # 2) 部分代理直出 content.text
+        if isinstance(content.get("text"), str) and content["text"].strip():
+            return content["text"]
+        # 3) 递归查找任意 text 字段（兼容未知结构）
+        found = _extract_text(candidates[0])
+        if found:
+            return found
         finish = candidates[0].get("finishReason")
-        raise RuntimeError(f"Gemini response missing parts (finishReason={finish})")
+        raise RuntimeError(f"Gemini response missing text (finishReason={finish})")
 
     async def _stream_request(self, client, url, payload, provider):
         async with client.stream("POST", url, json=payload) as resp:
