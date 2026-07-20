@@ -140,4 +140,99 @@ export function Landing() {
           <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">五大核心功能</span></h2>
           <p className="text-sm text-[#888888]">从灵感到成片，一站搞定</p>
         </motion.div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-
+        {/* TODO: Feature 网格、案例、反馈列表、footer 由后续 Landing 重构补齐。
+            本块仅为 JSX 闭合占位，保证 vite build 通过，让核心 bug 修复可先上线。 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {FEATURES.map((f, i) => (
+            <motion.div key={f.title} {...fadeIn(i * 0.08)} className={`rounded-2xl p-6 bg-gradient-to-br ${f.color} border border-[#2a2a2a]`}>
+              <div className="text-3xl mb-3">{f.icon}</div>
+              <h3 className="text-lg font-semibold text-white mb-2">{f.title}</h3>
+              <p className="text-sm text-[#999999]">{f.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========== 案例展示 ========== */}
+      <section className="relative z-10 px-4 py-16 max-w-6xl mx-auto">
+        <motion.div {...fadeIn()} className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">社区作品</span></h2>
+          <p className="text-sm text-[#888888]">来自公测用户的真实创作</p>
+        </motion.div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {CASES.map((c, i) => (
+            <motion.div key={c.title} {...fadeIn(i * 0.06)} className="rounded-2xl p-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#ff6a10]/30 transition">
+              <div className="text-4xl mb-3">{c.cover}</div>
+              <h3 className="text-base font-semibold text-white mb-1">{c.title}</h3>
+              <p className="text-xs text-[#888888] mb-2">{c.author} · {c.genre}</p>
+              <p className="text-xs text-[#555555]">▶ {c.plays} 次播放</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========== 用户反馈 ========== */}
+      <section className="relative z-10 px-4 py-16 max-w-3xl mx-auto">
+        <motion.div {...fadeIn()} className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">用户反馈</span></h2>
+          <p className="text-sm text-[#888888]">公测用户真实声音</p>
+        </motion.div>
+        {loading ? (
+          <div className="text-center text-sm text-[#555555] py-8">加载中...</div>
+        ) : (
+          <div className="space-y-3">
+            {feedbacks.map((f, i) => (
+              <motion.div key={i} {...fadeIn(i * 0.05)} className="rounded-xl p-5 bg-[#1a1a1a] border border-[#2a2a2a]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#ff6a10] to-[#ee0979] text-white text-xs font-bold flex items-center justify-center">
+                    {f.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-white">{f.name}</span>
+                </div>
+                <p className="text-sm text-[#999999]">{f.text}</p>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* 反馈输入区 */}
+        <motion.div {...fadeIn(0.1)} className="mt-8 rounded-2xl p-6 bg-[#1a1a1a] border border-[#2a2a2a]">
+          <h3 className="text-base font-semibold text-white mb-3">📝 留下你的反馈</h3>
+          <input
+            type="text"
+            value={feedbackName}
+            onChange={e => setFeedbackName(e.target.value)}
+            placeholder="昵称（可选）"
+            className="w-full mb-3 px-4 py-2.5 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-[#ff6a10]"
+          />
+          <textarea
+            value={feedbackText}
+            onChange={e => setFeedbackText(e.target.value)}
+            placeholder="说说你的使用感受..."
+            rows={3}
+            className="w-full mb-3 px-4 py-2.5 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-[#ff6a10] resize-none"
+          />
+          <button
+            onClick={submitFeedback}
+            disabled={!feedbackText.trim()}
+            className="px-6 py-2.5 rounded-lg font-medium text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            提交反馈
+          </button>
+        </motion.div>
+      </section>
+
+      {/* ========== 页脚 ========== */}
+      <footer className="relative z-10 border-t border-[#2a2a2a] py-8 px-4 text-center">
+        <p className="text-xs text-[#555555]">© 2026 Zyvexo · AI 音乐 / MV 创作平台 · 公测期间免费体验</p>
+      </footer>
+
+      {/* ========== Toast ========== */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl shadow-2xl text-sm font-medium ${toast.type === 'success' ? 'bg-[#1a3a1a] border border-[#34d399]/40 text-[#34d399]' : 'bg-[#3a1a1a] border border-[#cc3333]/40 text-[#fca5a5]'}`}>
+          {toast.message}
+        </div>
+      )}
+    </div>
+  );
+}

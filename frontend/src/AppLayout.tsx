@@ -139,11 +139,9 @@ export function AppLayout() {
             )}
             
             {/* 语言切换 */}
-            {!sidebarCollapsed && (
-              <div className="pt-2">
-                <LanguageSwitcher />
-              </div>
-            )}
+            <div className="pt-2">
+              <LanguageSwitcher />
+            </div>
           </div>
         )}
 

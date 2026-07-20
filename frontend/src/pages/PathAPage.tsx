@@ -49,15 +49,19 @@ export function PathAPage() {
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
         />
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <button
             onClick={handleGenerate}
             disabled={loading || !prompt.trim()}
+            title={!prompt.trim() ? '请输入提示词后再生成' : loading ? '正在生成，请稍候' : '点击生成音乐'}
             className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> 生成中...</> : '✨ 🎵 生成音乐'}
           </button>
           <button onClick={handleRandom} className="btn-secondary">🔀 随机提示</button>
+          {!prompt.trim() && !loading && (
+            <span className="text-xs text-[var(--text-muted)]">先输入提示词，或点击 🔺 随机提示</span>
+          )}
         </div>
       </section>
 
