@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import time
 import httpx
 from typing import AsyncGenerator, Any, Dict, List, Union
 
@@ -71,6 +72,10 @@ class LLMProviderError(Exception):
         self.status_code = status_code
         super().__init__(f"[{provider}] {reason}")
 
+class LLMFatalError(LLMProviderError):
+    """致命错误：额度耗尽/限流，应跳过该provider，尝试更高优先级"""
+    pass
+
 
 class LLMFactory:
     """Unified LLM client with retry, fallback and concurrency control."""
@@ -95,8 +100,8 @@ class LLMFactory:
         if not self.clients:
             logger.error("No LLM provider configured! All calls will return mock fallback.")
         self.sem = asyncio.Semaphore(4)
-        # 新降级顺序：agnes → NVIDIA → Gemini → mock
-        order = os.getenv("PROVIDER_ORDER", "agnes,nvidia,gemini")
+        # 新降级顺序：agnes → Gemini → NVIDIA → mock（用户确认2026-07-20）
+        order = os.getenv("PROVIDER_ORDER", "agnes,gemini,nvidia")
         self.provider_order = [
             p.strip() for p in order.split(",") if p.strip() and p.strip() in self.clients
         ]
@@ -124,18 +129,13 @@ class LLMFactory:
                 return await self._call_with_retry(
                     prov, messages, model, temperature, max_tokens, stream, **kwargs
                 )
+            except LLMFatalError as e:
+                last_err = e
+                logger.warning("[%s] %s，跳过该模型，尝试前序优先级更高模型", prov, e.reason)
+                continue
             except Exception as e:
                 last_err = e
-                # 增强日志：区分限流、密钥失效、超时
-                if "429" in str(e) or "rate limit" in str(e).lower():
-                    logger.warning("[%s] 触发限流(429)，切换至下一厂商", prov)
-                elif "401" in str(e) or "403" in str(e) or "unauthorized" in str(e).lower():
-                    logger.warning("[%s] 密钥失效(401/403)，切换至下一厂商", prov)
-                elif "timeout" in str(e).lower() or "timed out" in str(e).lower():
-                    logger.warning("[%s] 接口超时，切换至下一厂商", prov)
-                else:
-                    logger.warning("[%s] 调用失败: %s，切换至下一厂商", prov, e)
-                logger.info("当前尝试: %s → 下一厂商", prov)
+                logger.warning("[%s] 调用失败: %s，切换至下一厂商", prov, e)
 
         raise RuntimeError(f"All providers exhausted. Last error: {last_err}")
 
@@ -174,17 +174,13 @@ class LLMFactory:
                     "model": model or MODELS[prov]["model_default"],
                     "mock": False,
                 }
+            except LLMFatalError as e:
+                last_err = e
+                logger.warning("[%s] %s，跳过该模型，尝试前序优先级更高模型", prov, e.reason)
+                continue
             except Exception as e:
                 last_err = e
-                # 增强日志
-                if "429" in str(e) or "rate limit" in str(e).lower():
-                    logger.warning("[%s] generate_safe 触发限流(429)，切换至下一厂商", prov)
-                elif "401" in str(e) or "403" in str(e):
-                    logger.warning("[%s] generate_safe 密钥失效(401/403)，切换至下一厂商", prov)
-                elif "timeout" in str(e).lower():
-                    logger.warning("[%s] generate_safe 接口超时，切换至下一厂商", prov)
-                else:
-                    logger.warning("[%s] generate_safe 调用失败: %s", prov, e)
+                logger.warning("[%s] generate_safe 调用失败: %s", prov, e)
                 continue
 
         logger.error("All LLM providers failed, returning mock fallback. Last error: %s", last_err)
@@ -226,6 +222,8 @@ class LLMFactory:
         model_name = model or conf["model_default"]
         payload = self._build_payload(provider, messages, model_name, temperature, max_tokens, stream, **kwargs)
         url = self._get_endpoint(provider, model_name)
+        
+        nvidia_last_call_time = 0  # 40RPM避让：记录上次调用时间
 
         async with self.sem:
             for attempt in range(3):
@@ -236,21 +234,38 @@ class LLMFactory:
                     return self._handle_response(provider, resp)
                 except httpx.HTTPStatusError as e:
                     status = e.response.status_code
-                    # 捕获 NVIDIA/Gemini 专属报错，转为可降级错误
+                    
+                    # 致命错误：402额度耗尽、429限流 → 跳过该provider，回退前序更高优先级
+                    if status == 402:
+                        logger.error("[%s] 402 额度/积分耗尽，判定该模型临时不可用，回退调用Agnes免费模型", provider)
+                        raise LLMFatalError(provider, "402 额度耗尽", 402)
                     if status == 429:
-                        raise LLMProviderError(provider, "Rate limit exceeded", 429)
-                    if status in (401, 403):
-                        raise LLMProviderError(provider, f"Authentication failed ({status})", status)
-                    if status not in (500, 502, 503, 504):
+                        logger.warning("[%s] 429 速率超限，判定该模型临时不可用，回退调用Agnes免费模型", provider)
+                        raise LLMFatalError(provider, "429 速率超限", 429)
+                    
+                    # NVIDIA 40RPM 避让逻辑
+                    if provider == "nvidia":
+                        now = time.time()
+                        elapsed = now - nvidia_last_call_time
+                        if elapsed < 1.5:  # 40RPM ≈ 1.5s间隔
+                            wait = 1.5 - elapsed
+                            logger.info("[%s] 40RPM避让：等待 %.1fs", provider, wait)
+                            await asyncio.sleep(wait)
+                        nvidia_last_call_time = time.time()
+                    
+                    # 可重试错误
+                    if status in (500, 502, 503, 504):
+                        wait = 2 ** attempt + (attempt * 0.1)
+                        logger.warning(
+                            "[%s] HTTP %s (attempt %d/3), retry in %.1fs",
+                            provider, status, attempt + 1, wait,
+                        )
+                        await asyncio.sleep(wait)
+                    else:
+                        # 其他HTTP错误，转为provider错误
                         raise LLMProviderError(provider, f"HTTP error {status}", status)
-                    wait = 2 ** attempt + (attempt * 0.1)
-                    logger.warning(
-                        "[%s] HTTP %s (attempt %d/3), retry in %.1fs",
-                        provider, status, attempt + 1, wait,
-                    )
-                    await asyncio.sleep(wait)
+                        
                 except (httpx.RequestError, asyncio.TimeoutError) as e:
-                    raise LLMProviderError(provider, f"Network/Timeout error: {e}")
                     wait = 2 ** attempt + (attempt * 0.1)
                     logger.warning(
                         "[%s] Network error: %s (attempt %d/3), retry in %.1fs",
