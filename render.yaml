@@ -16,6 +16,8 @@ services:
       # 修复兼容后设 LLM_ENABLE_GEMINI=1 / LLM_ENABLE_NVIDIA=1 重新开启。
       - key: PROVIDER_ORDER
         value: "agnes,nvidia,gemini"
+      - key: NVIDIA_MODEL
+        value: "nvidia/llama-3.3-nemotron-super-49b-v1"
       - key: GEMINI_MODEL
         value: "gemini-2.5-flash"
       - key: MUREKA_API_KEY

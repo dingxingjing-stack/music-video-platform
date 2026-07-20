@@ -43,7 +43,7 @@ MODELS = {
     "nvidia": {
         "base_url": "https://integrate.api.nvidia.com/v1",
         "key": os.getenv("NVIDIA_API_KEY"),
-        "model_default": "nvidia/nemotron-3-ultra",
+        "model_default": os.getenv("NVIDIA_MODEL", "nvidia/llama-3.3-nemotron-super-49b-v1"),
         "fmt": "openai",
         "enabled": True,  # 默认启用，有密钥则加载
     },
