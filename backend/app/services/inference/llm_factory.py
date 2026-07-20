@@ -6,26 +6,43 @@ from typing import AsyncGenerator, Any, Dict, List, Union
 
 logger = logging.getLogger(__name__)
 
+
+def _enabled(name: str, default: str = "0") -> bool:
+    return os.getenv(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
+# --- 临时方案：默认仅启用 agnes（免费主力，稳定）。 ---
+# Gemini / NVIDIA 需显式设置环境变量开启，避免其失败拖垮 LLM 接口：
+#   LLM_ENABLE_GEMINI=1   /   LLM_ENABLE_NVIDIA=1
 MODELS = {
     "agnes": {
         "base_url": "https://apihub.agnes-ai.com/v1",
         "key": os.getenv("AGNES_API_KEY"),
         "model_default": "agnes-2.0-flash",
         "fmt": "openai",
+        "enabled": True,  # 永久主力，始终启用
     },
     "nvidia": {
         "base_url": "https://integrate.api.nvidia.com/v1",
         "key": os.getenv("NVIDIA_API_KEY"),
         "model_default": "nvidia/nemotron-3-ultra",
         "fmt": "openai",
+        "enabled": _enabled("LLM_ENABLE_NVIDIA"),
     },
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
         "key": os.getenv("GEMINI_API_KEY"),
-        "model_default": "gemini-2.5-flash",
+        "model_default": os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         "fmt": "gemini",
+        "enabled": _enabled("LLM_ENABLE_GEMINI"),
     },
 }
+
+# 全部大模型失败时返回的占位文本（不阻断前端流程）
+MOCK_FALLBACK_TEXT = os.getenv(
+    "LLM_MOCK_FALLBACK",
+    "（AI 服务暂时繁忙，这是占位文本。请稍后重试以获取完整生成结果。）",
+)
 
 
 class LLMFactory:
@@ -34,7 +51,7 @@ class LLMFactory:
     def __init__(self):
         self.clients: Dict[str, httpx.AsyncClient] = {}
         for name, conf in MODELS.items():
-            if conf["key"]:
+            if conf.get("enabled") and conf["key"]:
                 headers = (
                     {"Authorization": f"Bearer {conf['key']}"}
                     if conf["fmt"] == "openai"
@@ -45,9 +62,19 @@ class LLMFactory:
                     headers=headers,
                     timeout=120.0,
                 )
+                logger.info("LLM provider loaded: %s (%s)", name, conf["model_default"])
+            elif conf.get("enabled") and not conf["key"]:
+                logger.warning("LLM provider %s enabled but missing API key, skipped", name)
+        if not self.clients:
+            logger.error("No LLM provider configured! All calls will return mock fallback.")
         self.sem = asyncio.Semaphore(4)
-        order = os.getenv("PROVIDER_ORDER", "agnes,gemini")
-        self.provider_order = [p.strip() for p in order.split(",") if p.strip()]
+        # 默认仅 agnes；用 PROVIDER_ORDER 可覆盖（逗号分隔）
+        order = os.getenv("PROVIDER_ORDER", "agnes,gemini,nvidia")
+        self.provider_order = [
+            p.strip() for p in order.split(",") if p.strip() and p.strip() in self.clients
+        ]
+        if not self.provider_order:
+            self.provider_order = list(self.clients.keys())
 
     async def call(
         self,
@@ -73,11 +100,50 @@ class LLMFactory:
             except Exception as e:
                 last_err = e
                 logger.warning("[%s] attempt failed: %s", prov, e)
-                if idx == len(providers) - 1:
-                    break
                 logger.info("Falling back to next provider...")
 
         raise RuntimeError(f"All providers exhausted. Last error: {last_err}")
+
+    async def generate_safe(
+        self,
+        messages: List[Dict[str, str]],
+        provider: str = "auto",
+        model: str = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        永不抛出：单个/全部大模型失败时返回 mock 占位文本，保证接口返回 200，
+        不阻断前端流程。返回 {text, provider, model, mock}。
+        """
+        providers = [provider] if provider != "auto" else self.provider_order
+        last_err = None
+        for prov in providers:
+            if prov not in self.clients:
+                continue
+            try:
+                text = await self._call_with_retry(
+                    prov, messages, model, temperature, max_tokens, False, **kwargs
+                )
+                return {
+                    "text": text,
+                    "provider": prov,
+                    "model": model or MODELS[prov]["model_default"],
+                    "mock": False,
+                }
+            except Exception as e:
+                last_err = e
+                logger.warning("[%s] generate_safe attempt failed: %s", prov, e)
+                continue
+
+        logger.error("All LLM providers failed, returning mock fallback. Last error: %s", last_err)
+        return {
+            "text": MOCK_FALLBACK_TEXT,
+            "provider": "mock",
+            "model": "mock",
+            "mock": True,
+        }
 
     async def health_check(self) -> Dict[str, Dict[str, Any]]:
         """Check all configured providers."""
@@ -180,8 +246,27 @@ class LLMFactory:
         if MODELS[provider]["fmt"] == "openai":
             return data["choices"][0]["message"]["content"]
         if provider == "gemini":
-            return data["candidates"][0]["content"]["parts"][0]["text"]
+            return self._parse_gemini(data)
         raise ValueError(f"Unknown provider {provider}")
+
+    @staticmethod
+    def _parse_gemini(data: dict) -> str:
+        """
+        兼容新版 Gemini 返回体：candidates[].content.parts[].text 可能缺失
+        （安全过滤 / finishReason=SAFETY|MAX_TOKENS / 空 candidates）。
+        任意异常结构均安全降级，抛出可读错误交由上层兜底。
+        """
+        candidates = data.get("candidates") or []
+        if not candidates:
+            block = (data.get("promptFeedback") or {}).get("blockReason")
+            raise RuntimeError(f"Gemini returned no candidates (blockReason={block})")
+        content = candidates[0].get("content") or {}
+        parts = content.get("parts") or []
+        texts = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")]
+        if texts:
+            return "".join(texts)
+        finish = candidates[0].get("finishReason")
+        raise RuntimeError(f"Gemini response missing parts (finishReason={finish})")
 
     async def _stream_request(self, client, url, payload, provider):
         async with client.stream("POST", url, json=payload) as resp:

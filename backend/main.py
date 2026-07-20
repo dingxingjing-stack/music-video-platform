@@ -499,20 +499,21 @@ async def llm_generate(request: LLMRequest):
       - Generate MV concepts from audio analysis
       - Any text-to-text generation
     """
-    try:
-        messages = [{"role": m.role, "content": m.content} for m in request.messages]
-        text = await llm_factory.call(
-            messages=messages,
-            provider=request.provider,
-            model=request.model,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            stream=False,
-        )
-        return LLMResponse(text=text, provider=request.provider, model=request.model or "auto")
-    except Exception as exc:
-        logger.exception("LLM generation failed")
-        raise HTTPException(status_code=500, detail=f"LLM generation failed: {exc}")
+    messages = [{"role": m.role, "content": m.content} for m in request.messages]
+    # generate_safe 永不抛异常：单个/全部大模型失败时返回 mock 占位文本，
+    # 保证接口返回 200，不阻断前端流程。
+    result = await llm_factory.generate_safe(
+        messages=messages,
+        provider=request.provider,
+        model=request.model,
+        temperature=request.temperature,
+        max_tokens=request.max_tokens,
+    )
+    return LLMResponse(
+        text=result["text"],
+        provider=result["provider"],
+        model=result["model"],
+    )
 
 
 @app.post("/api/v1/llm/stream", tags=["llm"])
