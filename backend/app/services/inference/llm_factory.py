@@ -45,14 +45,14 @@ MODELS = {
         "key": os.getenv("NVIDIA_API_KEY"),
         "model_default": "nvidia/nemotron-3-ultra",
         "fmt": "openai",
-        "enabled": _enabled("LLM_ENABLE_NVIDIA"),
+        "enabled": True,  # 默认启用，有密钥则加载
     },
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
         "key": os.getenv("GEMINI_API_KEY"),
         "model_default": os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         "fmt": "gemini",
-        "enabled": _enabled("LLM_ENABLE_GEMINI"),
+        "enabled": True,  # 默认启用，有密钥则加载
     },
 }
 
@@ -61,6 +61,15 @@ MOCK_FALLBACK_TEXT = os.getenv(
     "LLM_MOCK_FALLBACK",
     "（AI 服务暂时繁忙，这是占位文本。请稍后重试以获取完整生成结果。）",
 )
+
+
+class LLMProviderError(Exception):
+    """厂商专属错误，用于区分可降级场景"""
+    def __init__(self, provider: str, reason: str, status_code: int = None):
+        self.provider = provider
+        self.reason = reason
+        self.status_code = status_code
+        super().__init__(f"[{provider}] {reason}")
 
 
 class LLMFactory:
@@ -86,8 +95,8 @@ class LLMFactory:
         if not self.clients:
             logger.error("No LLM provider configured! All calls will return mock fallback.")
         self.sem = asyncio.Semaphore(4)
-        # 默认仅 agnes；用 PROVIDER_ORDER 可覆盖（逗号分隔）
-        order = os.getenv("PROVIDER_ORDER", "agnes,gemini,nvidia")
+        # 新降级顺序：agnes → NVIDIA → Gemini → mock
+        order = os.getenv("PROVIDER_ORDER", "agnes,nvidia,gemini")
         self.provider_order = [
             p.strip() for p in order.split(",") if p.strip() and p.strip() in self.clients
         ]
@@ -117,8 +126,16 @@ class LLMFactory:
                 )
             except Exception as e:
                 last_err = e
-                logger.warning("[%s] attempt failed: %s", prov, e)
-                logger.info("Falling back to next provider...")
+                # 增强日志：区分限流、密钥失效、超时
+                if "429" in str(e) or "rate limit" in str(e).lower():
+                    logger.warning("[%s] 触发限流(429)，切换至下一厂商", prov)
+                elif "401" in str(e) or "403" in str(e) or "unauthorized" in str(e).lower():
+                    logger.warning("[%s] 密钥失效(401/403)，切换至下一厂商", prov)
+                elif "timeout" in str(e).lower() or "timed out" in str(e).lower():
+                    logger.warning("[%s] 接口超时，切换至下一厂商", prov)
+                else:
+                    logger.warning("[%s] 调用失败: %s，切换至下一厂商", prov, e)
+                logger.info("当前尝试: %s → 下一厂商", prov)
 
         raise RuntimeError(f"All providers exhausted. Last error: {last_err}")
 
@@ -159,7 +176,15 @@ class LLMFactory:
                 }
             except Exception as e:
                 last_err = e
-                logger.warning("[%s] generate_safe attempt failed: %s", prov, e)
+                # 增强日志
+                if "429" in str(e) or "rate limit" in str(e).lower():
+                    logger.warning("[%s] generate_safe 触发限流(429)，切换至下一厂商", prov)
+                elif "401" in str(e) or "403" in str(e):
+                    logger.warning("[%s] generate_safe 密钥失效(401/403)，切换至下一厂商", prov)
+                elif "timeout" in str(e).lower():
+                    logger.warning("[%s] generate_safe 接口超时，切换至下一厂商", prov)
+                else:
+                    logger.warning("[%s] generate_safe 调用失败: %s", prov, e)
                 continue
 
         logger.error("All LLM providers failed, returning mock fallback. Last error: %s", last_err)
@@ -209,15 +234,22 @@ class LLMFactory:
                     resp = await client.post(url, json=payload)
                     return self._handle_response(provider, resp)
                 except httpx.HTTPStatusError as e:
-                    if e.response.status_code not in (429, 500, 502, 503, 504):
-                        raise
+                    status = e.response.status_code
+                    # 捕获 NVIDIA/Gemini 专属报错，转为可降级错误
+                    if status == 429:
+                        raise LLMProviderError(provider, "Rate limit exceeded", 429)
+                    if status in (401, 403):
+                        raise LLMProviderError(provider, f"Authentication failed ({status})", status)
+                    if status not in (500, 502, 503, 504):
+                        raise LLMProviderError(provider, f"HTTP error {status}", status)
                     wait = 2 ** attempt + (attempt * 0.1)
                     logger.warning(
                         "[%s] HTTP %s (attempt %d/3), retry in %.1fs",
-                        provider, e.response.status_code, attempt + 1, wait,
+                        provider, status, attempt + 1, wait,
                     )
                     await asyncio.sleep(wait)
                 except (httpx.RequestError, asyncio.TimeoutError) as e:
+                    raise LLMProviderError(provider, f"Network/Timeout error: {e}")
                     wait = 2 ** attempt + (attempt * 0.1)
                     logger.warning(
                         "[%s] Network error: %s (attempt %d/3), retry in %.1fs",
