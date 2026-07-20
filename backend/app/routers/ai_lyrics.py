@@ -4,6 +4,7 @@ AI 作词 API 路由
 
 import logging
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from typing import Optional, List
 from app.services.lyric_service import lyric_service, LyricRequest
 
@@ -19,17 +20,6 @@ def _safe_str(value, default: str) -> str:
     return str(value)
 
 router = APIRouter(prefix="/api/v1/lyrics", tags=["lyrics"])
-
-
-class GenerateLyricRequest(BaseModel):
-    """歌词生成请求"""
-    theme: str
-    style: Optional[str] = "pop"
-    language: Optional[str] = "zh"
-    mood: Optional[str] = "happy"
-    structure: Optional[str] = "verse-chorus-verse-chorus-bridge-chorus"
-    custom_lyrics: Optional[str] = None
-    rhyme_scheme: Optional[str] = "AABB"
 
 
 class GenerateLyricResponse(BaseModel):
