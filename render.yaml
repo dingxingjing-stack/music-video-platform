@@ -16,6 +16,12 @@ services:
         sync: false
       - key: HF_TOKEN
         sync: false
+      - key: TTS_FORCE_MOCK
+        value: "true"
+      - key: MUSIC_FORCE_MOCK
+        value: "true"
+      - key: VIDEO_FORCE_MOCK
+        value: "true"
       - key: SENTRY_DSN
         sync: false
       - key: R2_BUCKET_NAME
