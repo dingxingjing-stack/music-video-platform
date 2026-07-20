@@ -7,15 +7,23 @@ from typing import AsyncGenerator, Any, Dict, List, Union
 logger = logging.getLogger(__name__)
 
 MODELS = {
+    "agnes": {
+        "base_url": "https://apihub.agnes-ai.com/v1",
+        "key": os.getenv("AGNES_API_KEY"),
+        "model_default": "agnes-2.0-flash",
+        "fmt": "openai",
+    },
     "nvidia": {
         "base_url": "https://integrate.api.nvidia.com/v1",
         "key": os.getenv("NVIDIA_API_KEY"),
         "model_default": "nvidia/nemotron-3-ultra",
+        "fmt": "openai",
     },
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
         "key": os.getenv("GEMINI_API_KEY"),
-        "model_default": "gemini-1.5-flash-latest",
+        "model_default": "gemini-2.5-flash",
+        "fmt": "gemini",
     },
 }
 
@@ -29,7 +37,7 @@ class LLMFactory:
             if conf["key"]:
                 headers = (
                     {"Authorization": f"Bearer {conf['key']}"}
-                    if name == "nvidia"
+                    if conf["fmt"] == "openai"
                     else {"x-goog-api-key": conf["key"]}
                 )
                 self.clients[name] = httpx.AsyncClient(
@@ -38,7 +46,7 @@ class LLMFactory:
                     timeout=120.0,
                 )
         self.sem = asyncio.Semaphore(4)
-        order = os.getenv("PROVIDER_ORDER", "nvidia,gemini")
+        order = os.getenv("PROVIDER_ORDER", "agnes,gemini")
         self.provider_order = [p.strip() for p in order.split(",") if p.strip()]
 
     async def call(
@@ -129,7 +137,7 @@ class LLMFactory:
         raise RuntimeError(f"{provider} failed after 3 retries")
 
     def _build_payload(self, provider, messages, model, temperature, max_tokens, stream, **kwargs):
-        if provider == "nvidia":
+        if MODELS[provider]["fmt"] == "openai":
             return {
                 "model": model,
                 "messages": messages,
@@ -160,7 +168,7 @@ class LLMFactory:
         raise ValueError(f"Unknown provider {provider}")
 
     def _get_endpoint(self, provider, model):
-        if provider == "nvidia":
+        if MODELS[provider]["fmt"] == "openai":
             return "/chat/completions"
         if provider == "gemini":
             return f"/models/{model}:generateContent"
@@ -169,7 +177,7 @@ class LLMFactory:
     def _handle_response(self, provider, resp: httpx.Response) -> str:
         resp.raise_for_status()
         data = resp.json()
-        if provider == "nvidia":
+        if MODELS[provider]["fmt"] == "openai":
             return data["choices"][0]["message"]["content"]
         if provider == "gemini":
             return data["candidates"][0]["content"]["parts"][0]["text"]
@@ -187,7 +195,7 @@ class LLMFactory:
                 import json
                 try:
                     j = json.loads(chunk)
-                    if provider == "nvidia":
+                    if MODELS[provider]["fmt"] == "openai":
                         delta = j["choices"][0]["delta"].get("content")
                     else:
                         delta = None
