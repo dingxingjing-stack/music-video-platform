@@ -15,7 +15,7 @@ services:
       # 临时方案：仅启用 agnes（免费主力）。gemini/nvidia 默认关闭，
       # 修复兼容后设 LLM_ENABLE_GEMINI=1 / LLM_ENABLE_NVIDIA=1 重新开启。
       - key: PROVIDER_ORDER
-        value: "agnes,nvidia,gemini"
+        value: "nvidia"
       - key: NVIDIA_MODEL
         value: "nvidia/llama-3.3-nemotron-super-49b-v1"
       - key: GEMINI_MODEL
