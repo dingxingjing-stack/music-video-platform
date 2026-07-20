@@ -513,6 +513,7 @@ async def llm_generate(request: LLMRequest):
         text=result["text"],
         provider=result["provider"],
         model=result["model"],
+        error=result.get("error"),
     )
 
 

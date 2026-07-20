@@ -24,3 +24,4 @@ class LLMResponse(BaseModel):
     text: str
     provider: str
     model: str
+    error: Optional[str] = None  # 调试用：所有 provider 失败时的最后错误

@@ -193,6 +193,7 @@ class LLMFactory:
             "provider": "mock",
             "model": "mock",
             "mock": True,
+            "error": str(last_err) if last_err else None,
         }
 
     async def health_check(self) -> Dict[str, Dict[str, Any]]:
@@ -301,7 +302,14 @@ class LLMFactory:
         resp.raise_for_status()
         data = resp.json()
         if MODELS[provider]["fmt"] == "openai":
-            return data["choices"][0]["message"]["content"]
+            try:
+                return data["choices"][0]["message"]["content"]
+            except (KeyError, TypeError, IndexError):
+                # 兜底：递归查找任意 text 字段，兼容 NVIDIA 各 NIM 模型返回结构差异
+                found = _extract_text(data)
+                if found:
+                    return found
+                raise ValueError(f"OpenAI-format response missing content for {provider}: {data}")
         if provider == "gemini":
             return self._parse_gemini(data)
         raise ValueError(f"Unknown provider {provider}")
