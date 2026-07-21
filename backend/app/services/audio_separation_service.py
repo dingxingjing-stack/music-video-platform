@@ -1,12 +1,15 @@
 """
-音频分离服务 (Demucs) - 进程内常驻模型版本
-使用 Meta 开源 Demucs 模型进行音频分离（人声/鼓/贝斯/其他 四轨分离）
+音频分离服务 (Spleeter 5stems) - 进程内常驻单例版本
+使用 Spleeter 5stems 模型进行人声/鼓/贝斯/其他/伴奏 5 轨分离
+输出对前端对齐 4 轨接口：vocals/drums/bass/other
 
-核心改造：
-- 彻底移除 subprocess 调用 demucs CLI
-- 改用原生 Python API：load_model + apply_model
-- 模型单例常驻主进程内存，仅首次请求加载一次，后续复用
-- 消除 "每次请求重复加载模型" 导致的内存峰值
+核心架构：
+- 彻底替换 Demucs，单进程内 Spleeter Separator 单例常驻
+- 仅首次请求加载 5stems 模型（约 70MB），后续复用内存
+- Spleeter 原生 5 轨输出：vocals, drums, bass, other, accompaniment
+  → 业务上对齐前端消费约定，丢弃 accompaniment，保留 4 轨
+- 复用原有临时目录、wav 输出、自动清理逻辑
+- 保留 10 秒音频时长校验、异常捕获、进度日志
 """
 
 import os
@@ -17,79 +20,80 @@ from pathlib import Path
 from typing import Optional, Callable, List
 
 import librosa
-import soundfile as sf
-import torch
-import torchaudio
+import numpy as np
 
 
-# 全局模型缓存（懒加载，线程安全）
-_DEMUCS_MODEL = None
-_MODEL_NAME = "htdemucs"  # 固定使用 htdemucs，避免多模型占内存
-_MODEL_LOCK = threading.Lock()
-_AVAILABLE = None
+# 全局单例 Separator 缓存（懒加载，线程安全）
+_SEPARATOR = None
+_SEPARATOR_LOCK = threading.Lock()
+_SPLEETER_AVAILABLE: Optional[bool] = None
 _AVAILABLE_LOCK = threading.Lock()
 
 
-def _check_demucs_available() -> bool:
-    """懒加载检查 demucs 是否可用（线程安全，仅首次调用时检查）"""
-    global _AVAILABLE
-    if _AVAILABLE is not None:
-        return _AVAILABLE
+def _check_spleeter_available() -> bool:
+    """懒加载检查 spleeter 是否可用（线程安全，仅首次调用时检查）"""
+    global _SPLEETER_AVAILABLE
+    if _SPLEETER_AVAILABLE is not None:
+        return _SPLEETER_AVAILABLE
     with _AVAILABLE_LOCK:
-        if _AVAILABLE is not None:
-            return _AVAILABLE
+        if _SPLEETER_AVAILABLE is not None:
+            return _SPLEETER_AVAILABLE
         try:
-            import demucs  # noqa: F401
-            _AVAILABLE = True
+            import spleeter  # noqa: F401
+            _SPLEETER_AVAILABLE = True
         except ImportError:
-            _AVAILABLE = False
-            print("⚠️  Demucs 未安装，音频分离功能将使用 Mock 模式")
-        return _AVAILABLE
+            _SPLEETER_AVAILABLE = False
+            print("⚠️  Spleeter 未安装，音频分离功能将使用 Mock 模式")
+        return _SPLEETER_AVAILABLE
 
 
-def _get_model() -> Optional[torch.nn.Module]:
-    """获取单例模型实例（懒加载，线程安全）"""
-    global _DEMUCS_MODEL
-    if _DEMUCS_MODEL is not None:
-        return _DEMUCS_MODEL
+def _get_separator():
+    """获取单例 Separator 实例（懒加载，线程安全）"""
+    global _SEPARATOR
+    if _SEPARATOR is not None:
+        return _SEPARATOR
     
-    if not _check_demucs_available():
+    if not _check_spleeter_available():
         return None
     
-    with _MODEL_LOCK:
-        if _DEMUCS_MODEL is not None:
-            return _DEMUCS_MODEL
+    with _SEPARATOR_LOCK:
+        if _SEPARATOR is not None:
+            return _SEPARATOR
         try:
-            # 使用 demucs 预训练模型加载器（Dockerfile 已预下载到 TORCH_HOME）
-            from demucs.pretrained import get_model
-            print(f"🔄 正在加载 Demucs 模型 ({_MODEL_NAME})...")
-            _DEMUCS_MODEL = get_model(_MODEL_NAME)
-            _DEMUCS_MODEL.eval()
-            # 强制 CPU 推理（Render 免费实例无 GPU）
-            _DEMUCS_MODEL.to("cpu")
-            print(f"✅ Demucs 模型加载完成，常驻内存")
-            return _DEMUCS_MODEL
+            from spleeter.separator import Separator
+            
+            print("🔄 正在加载 Spleeter Separator (5stems)...")
+            # 关闭多进程 Spleeter 内部多 worker，保持 WEB_CONCURRENCY=1
+            # 使用预训练模型 '5stems'，固定使用 tensorflow 默认 backend
+            _SEPARATOR = Separator('spleeter:5stems', multiprocess=False)
+            print(f"✅ Spleeter 5stems 已加载，常驻内存（~70MB）")
+            return _SEPARATOR
         except Exception as e:
-            print(f"❌ Demucs 模型加载失败：{e}")
+            print(f"❌ Spleeter Separator 初始化失败：{e}")
             return None
 
 
 class DemucsService:
-    """Demucs 音频分离服务（进程内常驻模型版本）"""
+    """音频分离服务 - Spleeter 5stems 适配版
     
-    # 输出轨道名称
+    类名保持 DemucsService 是为了兼容性（router 端 import 路径不变）
+    实际底层实现已切换为 Spleeter
+    """
+    
+    # 对前端输出 4 轨：vocals/drums/bass/other
     STEM_NAMES = ["vocals", "drums", "bass", "other"]
     
     # 音频时长限制（秒）— 适配 Render 512MB 内存上限
     MAX_AUDIO_DURATION = 10.0
     
+    # 兼容字段（保留，便于 router 端使用与历史接口一致）
+    MODELS = {
+        "htdemucs": "高性能 Demucs 5 轨（保留兼容说明，实际由 Spleeter 提供）",
+        "htdemucs_ft": "Demucs 微调版（保留兼容说明）",
+        "htdemucs_6s": "Demucs 6 轨（保留兼容说明）",
+    }
+    
     def __init__(self, output_dir: Optional[str] = None):
-        """
-        初始化服务（轻量级，不加载模型）
-        
-        Args:
-            output_dir: 输出目录，默认使用系统临时目录
-        """
         if output_dir:
             self.output_dir = Path(output_dir)
             self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -103,132 +107,110 @@ class DemucsService:
         model: str = "htdemucs",
         progress_callback: Optional[Callable[[float], None]] = None,
     ) -> dict:
-        """
-        分离音频为多轨（进程内推理，模型常驻内存）
-        
-        Args:
-            input_path: 输入音频文件路径
-            model: 模型名称（当前仅支持 htdemucs）
-            progress_callback: 进度回调 (0.0-1.0)
-        
-        Returns:
-            {
-                "success": bool,
-                "stems": List[str],  # 分离后的文件路径
-                "duration": float,   # 音频时长 (秒)
-                "message": str
-            }
-        """
+        """分离音频为 4 轨（Spleeter 5stems 内部处理，丢弃 accompaniment）"""
         # 1. 基础校验
         input_path = Path(input_path)
         if not input_path.exists():
             return {
-                "success": False,
-                "stems": [],
-                "duration": 0,
+                "success": False, "stems": [], "duration": 0,
                 "message": f"文件不存在：{input_path}"
             }
         
-        # 2. 音频时长前置校验（双层保护：router 层 + service 层）
+        # 2. 时长校验
         try:
             duration = librosa.get_duration(path=str(input_path))
         except Exception as e:
             return {
-                "success": False,
-                "stems": [],
-                "duration": 0,
+                "success": False, "stems": [], "duration": 0,
                 "message": f"无法读取音频时长：{e}"
             }
         
         if duration > self.MAX_AUDIO_DURATION:
             return {
-                "success": False,
-                "stems": [],
-                "duration": duration,
+                "success": False, "stems": [], "duration": duration,
                 "message": f"音频过长：{duration:.1f}s，最大允许 {self.MAX_AUDIO_DURATION}s（512MB 内存保护）"
             }
         
-        # 3. 获取模型实例（懒加载单例）
-        if not _check_demucs_available():
+        # 3. 获取 Separator 单例
+        if not _check_spleeter_available():
             return self._mock_separate(input_path, progress_callback)
         
-        model_instance = _get_model()
-        if model_instance is None:
+        separator = _get_separator()
+        if separator is None:
             return {
-                "success": False,
-                "stems": [],
-                "duration": duration,
-                "message": "模型加载失败，请检查日志"
+                "success": False, "stems": [], "duration": duration,
+                "message": "Separator 初始化失败，请检查日志"
             }
         
         # 4. 准备输出目录
-        temp_output = self.output_dir / input_path.stem
+        stem_name = input_path.stem
+        temp_output = self.output_dir / stem_name
         if temp_output.exists():
             shutil.rmtree(temp_output)
         temp_output.mkdir(parents=True, exist_ok=True)
         
+        # 5. 读取音频
+        if progress_callback:
+            progress_callback(0.1)
+        print(f"📥 读取音频：{input_path}")
+        
         try:
-            # 5. 读取音频（使用 torchaudio，保持张量格式）
-            print(f"📥 读取音频：{input_path}")
-            waveform, sample_rate = torchaudio.load(str(input_path))
-            
-            # 确保单声道转立体声（Demucs 期望 [channels, samples]）
-            if waveform.shape[0] == 1:
-                waveform = waveform.repeat(2, 1)
-            elif waveform.shape[0] > 2:
-                waveform = waveform[:2, :]
-            
-            # 重采样到 44.1kHz（Demucs 要求）
-            if sample_rate != 44100:
-                waveform = torchaudio.functional.resample(waveform, sample_rate, 44100)
-                sample_rate = 44100
-            
-            # 添加 batch 维度：[batch=1, channels, samples]
-            waveform = waveform.unsqueeze(0)
-            
-            if progress_callback:
-                progress_callback(0.1)
-            
-            # 6. 执行推理（核心：apply_model，进程内、无子进程、模型已加载）
-            print("🔄 执行 Demucs 推理（segment=4, shifts=1, overlap=0.25）...")
-            
-            from demucs.apply import apply_model
-            
-            with torch.no_grad():  # 关闭梯度，降低显存/内存
-                sources = apply_model(
-                    model_instance,
-                    waveform,
-                    device="cpu",
-                    segment=4,        # 分片 4 秒（默认 7.8s），降低推理峰值内存
-                    shifts=1,         # 单次推理（默认 2），减少内存开销
-                    overlap=0.25,     # 重叠比例
-                    split=True,       # 启用分片
-                    progress=progress_callback is not None,
-                )
+            waveform, sample_rate = librosa.load(str(input_path), sr=None, mono=False)
+        except Exception as e:
+            return {
+                "success": False, "stems": [], "duration": duration,
+                "message": f"音频读取失败：{e}"
+            }
+        
+        # Spleeter 要求格式: (channels, samples) float32
+        if waveform.ndim == 1:
+            waveform = np.stack([waveform, waveform], axis=0)  # 单声道转双声道
+        elif waveform.shape[0] == 1:
+            waveform = np.concatenate([waveform, waveform], axis=0)
+        elif waveform.shape[0] > 2:
+            waveform = waveform[:2, :]
+        
+        # 重采样到 44100（Spleeter 期望）
+        if sample_rate != 44100:
+            waveform = librosa.resample(waveform, orig_sr=sample_rate, target_sr=44100, axis=-1)
+            sample_rate = 44100
+        
+        # 转为 shape: (batch, channels, samples) = (1, 2, samples)
+        waveform_input = waveform.astype(np.float32)[np.newaxis, :, :]
+        
+        if progress_callback:
+            progress_callback(0.3)
+        
+        # 6. Spleeter 核心分离
+        print("🔄 执行 Spleeter 5stems 分离...")
+        try:
+            prediction = separator.separate(waveform_input)
+            # prediction shape: (1, 5, 2, samples)
+            stems_data = prediction[0]  # (5, 2, samples)
             
             if progress_callback:
                 progress_callback(0.8)
             
-            # 7. 保存分离结果
-            # sources shape: [batch, sources, channels, samples]
-            sources = sources.squeeze(0)  # 去掉 batch 维度
+            # 7. 保存 4 轨（丢弃 accompaniment）
+            # Spleeter 5stems 输出顺序固定: ['vocals', 'drums', 'bass', 'other', 'accompaniment']
+            spleeter_stem_order = ['vocals', 'drums', 'bass', 'other', 'accompaniment']
+            
+            import soundfile as sf
             
             stems = []
-            for i, stem_name in enumerate(self.STEM_NAMES):
-                stem_audio = sources[i]  # [channels, samples]
+            for target_name in self.STEM_NAMES:  # vocals/drums/bass/other
+                idx = spleeter_stem_order.index(target_name)
+                stem_audio = stems_data[idx]  # (2, samples)
                 
-                # 转为单声道保存（或保留立体声）
-                if stem_audio.shape[0] == 2:
-                    stem_mono = stem_audio.mean(dim=0, keepdim=True)  # 转单声道
-                else:
-                    stem_mono = stem_audio
+                # 转单声道保存（接口约定）
+                stem_mono = stem_audio.mean(axis=0)  # (samples,)
                 
-                stem_path = temp_output / f"{stem_name}.wav"
+                stem_path = temp_output / f"{target_name}.wav"
                 sf.write(
                     str(stem_path),
-                    stem_mono.squeeze().numpy(),
+                    stem_mono,
                     sample_rate,
-                    subtype="PCM_16"  # 16-bit 输出，文件更小、内存更省
+                    subtype="PCM_16"  # 16-bit 输出
                 )
                 stems.append(str(stem_path))
                 print(f"  ✅ 已保存：{stem_path}")
@@ -240,24 +222,16 @@ class DemucsService:
                 "success": True,
                 "stems": stems,
                 "duration": duration,
-                "message": f"分离成功，{len(stems)} 轨音频"
+                "message": f"分离成功，{len(stems)} 轨音频（Spleeter 5stems）"
             }
             
-        except torch.cuda.OutOfMemoryError as e:
-            # CPU 模式不应触发，但以防万一
-            return {
-                "success": False,
-                "stems": [],
-                "duration": duration,
-                "message": f"显存不足（CPU 模式不应发生）：{e}"
-            }
         except Exception as e:
-            print(f"❌ 分离失败：{e}")
+            print(f"❌ Spleeter 分离失败：{e}")
+            import traceback
+            traceback.print_exc()
             return {
-                "success": False,
-                "stems": [],
-                "duration": duration,
-                "message": f"分离失败：{str(e)}"
+                "success": False, "stems": [], "duration": duration,
+                "message": f"Spleeter 分离失败：{str(e)}"
             }
     
     def _mock_separate(
@@ -265,30 +239,27 @@ class DemucsService:
         input_path: Path,
         progress_callback: Optional[Callable[[float], None]] = None
     ) -> dict:
-        """Mock 模式（Demucs 未安装时）"""
+        """Mock 模式——Spleeter 未安装或初始化失败时退回"""
         import time
-        
         for i in range(20):
             if progress_callback:
                 progress_callback((i + 1) / 20)
             time.sleep(0.2)
-        
         if progress_callback:
             progress_callback(1.0)
-        
         return {
             "success": True,
-            "stems": [str(input_path)] * 4,  # Mock 数据
+            "stems": [str(input_path)] * 4,
             "duration": 3.0,
-            "message": "Mock 模式：Demucs 未安装 (pip install demucs)"
+            "message": "Mock 模式：Spleeter 未安装 (pip install spleeter)"
         }
     
     def get_available_models(self) -> List[str]:
-        """获取可用模型列表"""
-        if _check_demucs_available():
+        """保持与原有路由契约一致，返回 3 个模型名称字符串"""
+        if _check_spleeter_available():
             return ["htdemucs", "htdemucs_ft", "htdemucs_6s"]
         return ["mock"]
 
 
-# 全局实例（轻量级初始化，不加载模型）
+# 全局实例（轻量级初始化，不加载模型，也不导入 spleeter）
 demucs_service = DemucsService()
