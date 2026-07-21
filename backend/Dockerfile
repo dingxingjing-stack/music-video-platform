@@ -6,6 +6,8 @@ WORKDIR /app
 
 # Set TORCH_HOME to persist model cache across restarts
 ENV TORCH_HOME=/app/.torch
+# Limit OpenMP threads to 1 to reduce memory pressure
+ENV OMP_NUM_THREADS=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
