@@ -84,7 +84,7 @@
 
 | Key | Value |
 |-----|-------|
-| `MUREKA_API_KEY` | `op_pw90y7tcbmf2at4afa9crzd1ltzvzghzb` |
+| `MUREKA_API_KEY` | 在 Render Dashboard 注入；本机用 `backend/secrets.local.json` |
 | `GEMINI_API_KEY` | （如有） |
 
 ---

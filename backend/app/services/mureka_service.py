@@ -3,9 +3,10 @@ Mureka AI 音乐生成服务
 """
 
 import httpx
-import os
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
+
+from app.core.secrets import get_secret
 
 
 class QuotaExceededError(Exception):
@@ -32,7 +33,7 @@ class MurekaService:
     """Mureka AI 音乐生成服务"""
     
     BASE_URL = "https://api.mureka.ai/v1"
-    API_KEY = os.getenv("MUREKA_API_KEY", "op_pw90y7tcbmf2at4afa9crzd1ltzvzghzb")
+    API_KEY = get_secret("MUREKA_API_KEY", required=True)
     
     def __init__(self):
         self.headers = {

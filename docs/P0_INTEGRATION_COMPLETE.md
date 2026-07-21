@@ -257,7 +257,7 @@ OpenAPI docs: /docs
    ```
 
 2. **接入 Mureka API** → 真实歌曲续写
-   - 使用现有 API Key: `op_pw90y7tcbmf2at4afa9crzd1ltzvzghzb`
+   - 使用 `MUREKA_API_KEY` 环境变量提供（参见 `backend/secrets.local.json.example`）
    - 调用 `/api/v1/ai/generate` endpoint
 
 3. **集成模板/转场到导出** → 实际效果

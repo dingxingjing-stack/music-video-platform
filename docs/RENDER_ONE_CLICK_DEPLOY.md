@@ -61,7 +61,7 @@ git push -u origin main
    SUPABASE_ANON_KEY = sb_publishable_HgKv9LIR0-_CPK1sASyzWw_W_vvaOda
    SUPABASE_SERVICE_ROLE_KEY = sb_secret_rETZ_hbLnEdJvr_-IEZPyA_nZv6HMzd
    R2_BUCKET_NAME = music-audio-storage
-   MUREKA_API_KEY = op_pw90y7tcbmf2at4afa9crzd1ltzvzghzb
+   MUREKA_API_KEY = <在 Render Dashboard 注入；本机用 backend/secrets.local.json>
    ```
 6. 点击 **Create Web Service**
 
