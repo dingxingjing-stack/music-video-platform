@@ -205,7 +205,7 @@ class DemucsService:
                 progress_callback(0.1)
             
             # 6. 执行推理（核心：apply_model，进程内、无子进程、模型已加载+量化）
-            print("🔄 执行 Demucs 推理（segment=2, shifts=1, overlap=0.25，4-bit 量化模型）...")
+            print("🔄 执行 Demucs 推理（segment=1, shifts=1, overlap=0.25，4-bit 量化模型）...")
             
             from demucs.apply import apply_model
             
@@ -214,7 +214,7 @@ class DemucsService:
                     model_instance,
                     waveform,
                     device="cpu",
-                    segment=2,        # 【关键优化】分片 2 秒（默认 7.8s），极大降低推理峰值内存
+                    segment=1,        # 【关键优化】分片 1 秒（默认 7.8s），极大降低推理峰值内存
                     shifts=1,         # 单次推理（默认 2），减少内存开销
                     overlap=0.25,     # 重叠比例
                     split=True,       # 启用分片
@@ -255,7 +255,7 @@ class DemucsService:
                 "success": True,
                 "stems": stems,
                 "duration": duration,
-                "message": f"分离成功，{len(stems)} 轨音频（4-bit 量化 + segment=2）"
+                "message": f"分离成功，{len(stems)} 轨音频（4-bit 量化 + segment=1）"
             }
             
         except torch.cuda.OutOfMemoryError as e:
