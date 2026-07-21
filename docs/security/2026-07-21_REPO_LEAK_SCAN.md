@@ -194,3 +194,69 @@ git push --force-with-lease origin main
 - ✅ 仅做：子代理只读扫 + Grep 工作树扫 + `git log -S` 历史追溯 + 远端 origin/main 状态核查
 
 待用户批准后，严格按照本报告第 6 节操作清单执行。
+
+---
+
+## 九、2026-07-21 闭环验收记录
+
+本节由 TRAE 在整改推送完成后追加，作为本报告的闭环验收章节，不另起新文件。
+
+### 9.1 最终达成的效果
+
+| 维度 | 状态 |
+| --- | --- |
+| GitHub `origin/main` HEAD = `c0154e1` | ✅ 已推送（push 7abcb34..c0154e1 main -> main） |
+| 仓库工作树零 Mureka Key 真值 | ✅ Grep `op_pw90y...` 全工作树 No matches |
+| 仓库工作树零 Sentry DSN 真值 | ✅ Grep `1a4acc7b...` 全工作树 No matches |
+| `backend/app/core/secrets.py` 统一密钥读取入口 | ✅ 已上线，环境变量 → secrets.local.json → secrets.json → 抛错 |
+| `backend/secrets.local.json.example` 模板 | ✅ 已入仓，无真值 |
+| `backend/secrets.local.json` 真值文件 | ✅ 本机存在，`.gitignore` 屏蔽，不进 git |
+| `.gitignore` 通配规则收紧 | ✅ `.env*` + `!.env.example` + 显式 `secrets.local.json` / `secrets.json` |
+| `.env.v1_production` 解除跟踪 | ✅ `git rm --cached`，本地文件保留 |
+| 5 处脱敏文案（3 docs + 2 自家报告行） | ✅ 全部完成 |
+| 5 处 Sentry DSN 真值（amend 补做） | ✅ amend 进 `c0154e1` 同 commit |
+| Python 语法 + 运行时核验 | ✅ py_compile OK；`get_secret('MUREKA_API_KEY', required=True)` 返回 36 字节 Key |
+| 前端构建二次核验 | ✅ `npx vite build` exit 0，✓ built in 10.97s，PWA 产物正常 |
+
+### 9.2 严格遵守的边界
+
+- ❌ 未触碰 Supabase 两个 key（按用户指示保持原定边界）
+- ❌ 未触碰 Sentry DSN 在 hermes memories 中的本机记录
+- ❌ 未做密钥轮换
+- ❌ 未改写 git 历史（不做 `git filter-repo` force push）
+
+### 9.3 遗留事项（按用户当前指令：本次不处理）
+
+| 项 | 处置 | 何时执行 |
+| --- | --- | --- |
+| 历史 commit `90cab11` 等仍含 Mureka Key 真值 | 预置 `git filter-repo --replace-text` 脚本已留在本报告第 6.2 节 | 用户决定有更高安全要求时再 force push |
+| Supabase `sb_publishable_...` / `sb_secret_...` 两个 key 在 `docs/RENDER_ONE_CLICK_DEPLOY.md:61-62` | 保留不动 | 用户扩展边界时再处理 |
+| Sentry DSN 在本机 hermes memories `MEMORY.md` / `USER.md` | 保留本机备忘 | 用户决定是否清理 Agent 本机记忆 |
+| Mureka Key 轮换 | 未轮换 | 用户决定后台轮换时机（GitHub 历史已暴露，建议轮换） |
+| Render 部署环境加 SENTRY_DSN 环境变量 | 待用户在 Render Dashboard 手动操作 | Mureka Key 已通过 secrets.py 读取 Render 环境变量，下次 Render 部署会自动对接 |
+
+### 9.4 git filter-repo 一键脚本（后续如需执行）
+
+```bash
+pip install git-filter-repo
+
+# replacements.txt 内容（已在第 6.2 节示例中预置）：
+echo "op_pw90****crzd1lt****zb==>MUREKA_API_KEY_REDACTED" > replacements.txt
+echo "1a4a****bda==>SENTRY_DSN_TOKEN_REDACTED" >> replacements.txt
+
+git filter-repo --replace-text replacements.txt
+git push --force-with-lease origin main
+```
+
+注意：force push 会改写 `origin/main` 历史，所有已 clone 仓库下次 pull 失败。仅在你确认只有本机这一份 working copy 时再执行。
+
+### 9.5 最终 Git 状态快照
+
+```
+HEAD = c0154e1 security: 迁移 Mureka Key 到 secrets.local.json，移除仓库内硬编码与 .env.v1_production 跟踪
+              （修正 amend：5 处 Sentry DSN 真值也已脱敏）
+父 = 7abcb34 fix: 修复语言切换/登录状态/生成按钮与 Landing 构建  ← 已 push
+远端 origin/main：c0154e1  （与本地同步）
+```
+
+本报告闭环验收结束。
