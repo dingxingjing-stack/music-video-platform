@@ -1,5 +1,5 @@
 """
-音频分离服务 (Demucs)
+音频分离服务 (Demucs) - 懒加载版本
 使用 Meta 开源 Demucs 模型进行人声/鼓/贝斯/其他 四轨分离
 
 功能:
@@ -7,6 +7,7 @@
 - 支持多种 Demucs 变体 (htdemucs, htdemucs_ft)
 - 进度回调
 - 临时文件管理
+- 懒加载：仅在首次调用分离接口时检查/加载 demucs，避免启动阻塞
 """
 
 import os
@@ -15,19 +16,38 @@ import shutil
 from pathlib import Path
 from typing import Optional, Callable, List
 import tempfile
+import threading
 
-# Demucs 安装检查
-try:
-    import demucs
-    DEMUCS_AVAILABLE = True
-except ImportError:
-    DEMUCS_AVAILABLE = False
-    print("⚠️  Demucs 未安装，音频分离功能将使用 Mock 模式")
-    print("   安装命令：pip install -U demucs")
+
+# Demucs 可用性缓存（懒加载，线程安全）
+_DEMUCS_AVAILABLE: Optional[bool] = None
+_DEMUCS_LOCK = threading.Lock()
+
+
+def _check_demucs_available() -> bool:
+    """
+    懒加载检查 demucs 是否可用（线程安全，仅首次调用时检查）
+    首次调用时导入 demucs，后续直接返回缓存结果
+    """
+    global _DEMUCS_AVAILABLE
+    if _DEMUCS_AVAILABLE is not None:
+        return _DEMUCS_AVAILABLE
+    
+    with _DEMUCS_LOCK:
+        if _DEMUCS_AVAILABLE is not None:
+            return _DEMUCS_AVAILABLE
+        try:
+            import demucs  # noqa: F401
+            _DEMUCS_AVAILABLE = True
+        except ImportError:
+            _DEMUCS_AVAILABLE = False
+            print("⚠️  Demucs 未安装，音频分离功能将使用 Mock 模式")
+            print("   安装命令：pip install -U demucs")
+        return _DEMUCS_AVAILABLE
 
 
 class DemucsService:
-    """Demucs 音频分离服务"""
+    """Demucs 音频分离服务（懒加载版本）"""
     
     # Demucs 模型列表
     MODELS = {
@@ -41,7 +61,7 @@ class DemucsService:
     
     def __init__(self, output_dir: Optional[str] = None):
         """
-        初始化服务
+        初始化服务（轻量级初始化，不加载模型）
         
         Args:
             output_dir: 输出目录，默认使用系统临时目录
@@ -60,7 +80,7 @@ class DemucsService:
         progress_callback: Optional[Callable[[float], None]] = None,
     ) -> dict:
         """
-        分离音频为多轨
+        分离音频为多轨（首次调用时才检查 demucs 可用性）
         
         Args:
             input_path: 输入音频文件路径
@@ -75,7 +95,8 @@ class DemucsService:
                 "message": str
             }
         """
-        if not DEMUCS_AVAILABLE:
+        # 懒加载检查：首次调用时才检查 demucs 是否可用
+        if not _check_demucs_available():
             return self._mock_separate(input_path, progress_callback)
         
         input_path = Path(input_path)
@@ -189,11 +210,11 @@ class DemucsService:
         }
     
     def get_available_models(self) -> List[str]:
-        """获取可用模型列表"""
-        if DEMUCS_AVAILABLE:
+        """获取可用模型列表（懒加载检查）"""
+        if _check_demucs_available():
             return list(self.MODELS.keys())
         return ["mock"]
 
 
-# 全局实例
+# 全局实例（轻量级初始化，不加载模型，不导入 demucs）
 demucs_service = DemucsService()
