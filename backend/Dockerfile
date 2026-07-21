@@ -4,6 +4,9 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
+# Set TORCH_HOME to persist model cache across restarts
+ENV TORCH_HOME=/app/.torch
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -18,6 +21,11 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download htdemucs model during build to avoid runtime download
+# and fix model cache path for Render restarts
+RUN mkdir -p /app/.torch && \
+    python -c "from demucs.pretrained import get_model; get_model('htdemucs')"
 
 # Copy application code
 COPY . .

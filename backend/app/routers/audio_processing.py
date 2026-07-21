@@ -11,6 +11,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import librosa  # 音频时长校验
+
 from app.services.audio_separation_service import demucs_service
 from app.services.mastering_service import mastering_service
 
@@ -78,6 +80,21 @@ async def separate_audio(
     with open(input_path, "wb") as f:
         content = await file.read()
         f.write(content)
+    
+    # 【内存保护】前置音频时长校验：>10 秒直接返回 400，防止 OOM
+    try:
+        duration = librosa.get_duration(path=str(input_path))
+    except Exception as e:
+        input_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=f"无法读取音频文件：{e}")
+    
+    MAX_AUDIO_DURATION = 10.0
+    if duration > MAX_AUDIO_DURATION:
+        input_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"音频过长：{duration:.1f}s，最大允许 {MAX_AUDIO_DURATION}s（512MB 内存保护）"
+        )
     
     # 执行分离
     result = demucs_service.separate(

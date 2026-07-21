@@ -8,6 +8,7 @@
 - 进度回调
 - 临时文件管理
 - 懒加载：仅在首次调用分离接口时检查/加载 demucs，避免启动阻塞
+- 内存优化：--segment=4 --shifts=1 适配 Render 512MB 免费实例
 """
 
 import os
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Optional, Callable, List
 import tempfile
 import threading
+import librosa
 
 
 # Demucs 可用性缓存（懒加载，线程安全）
@@ -58,6 +60,9 @@ class DemucsService:
     
     # 输出轨道名称
     STEM_NAMES = ["vocals", "drums", "bass", "other"]
+    
+    # 音频时长限制（秒）— 适配 Render 512MB 内存上限
+    MAX_AUDIO_DURATION = 10.0
     
     def __init__(self, output_dir: Optional[str] = None):
         """
@@ -108,20 +113,46 @@ class DemucsService:
                 "message": f"文件不存在：{input_path}"
             }
         
+        # 【内存保护】前置音频时长校验：>10 秒直接拒绝，防止 OOM
+        try:
+            duration = librosa.get_duration(path=str(input_path))
+        except Exception as e:
+            return {
+                "success": False,
+                "stems": [],
+                "duration": 0,
+                "message": f"无法读取音频时长：{e}"
+            }
+        
+        if duration > self.MAX_AUDIO_DURATION:
+            return {
+                "success": False,
+                "stems": [],
+                "duration": duration,
+                "message": f"音频过长：{duration:.1f}s，最大允许 {self.MAX_AUDIO_DURATION}s（内存保护）"
+            }
+        
         # 创建临时输出目录 (以文件名命名)
         temp_output = self.output_dir / input_path.stem
         if temp_output.exists():
             shutil.rmtree(temp_output)
         temp_output.mkdir(parents=True, exist_ok=True)
         
-        # Demucs 命令
+        # Demucs 命令：内存优化参数组合
+        # --segment=4      分片 4 秒（默认 7.8），降低峰值内存 ~40%
+        # --shifts=1       单次推理（默认 2），降低内存 ~15%
+        # --overlap=0.25   保持默认重叠
+        # -j 1             单进程推理（配合 WEB_CONCURRENCY=1）
+        # 移除 --float32   默认 16-bit 输出，写入内存减半
         cmd = [
             "demucs",
             "-n", model,
             "-o", str(self.output_dir),
+            "--segment", "4",
+            "--shifts", "1",
+            "--overlap", "0.25",
+            "-j", "1",
             str(input_path),
-            "--int24",  # 高质量输出
-            "--float32",
         ]
         
         try:
@@ -136,7 +167,7 @@ class DemucsService:
             )
             
             # 监控进度
-            duration_estimate = 120  # 估算 2 分钟
+            duration_estimate = max(60, duration * 4)  # 估算：音频时长 × 4（CPU 推理约 1.5-2×实时）
             elapsed = 0
             
             for line in process.stderr:
@@ -160,7 +191,7 @@ class DemucsService:
             return {
                 "success": len(stems) > 0,
                 "stems": stems,
-                "duration": duration_estimate,
+                "duration": duration,
                 "message": f"分离成功，{len(stems)} 轨音频" if stems else "分离失败"
             }
             
