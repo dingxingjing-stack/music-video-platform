@@ -1,11 +1,12 @@
 """
 AI 音乐生成路由
 
-降级链：Mureka -> HF (Hugging Face ACE-Step) -> Mock
+降级链：Mureka -> HF (Hugging Face MusicGen) -> Mock
 通过环境变量 HF_FALLBACK (默认 true) 控制是否启用 HF 兜底。
 """
 
 import os
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -19,18 +20,12 @@ HF_FALLBACK_ENABLED = os.getenv("HF_FALLBACK", "true").lower() in ("1", "true", 
 
 async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> Optional[str]:
     """
-    尝试调用 Hugging Face ACE-Step 模型生成音频。
+    尝试调用 Hugging Face Inference API 的 facebook/musicgen-large 模型生成音频。
 
-    返回生成的音频 URL（CDN / 临时直链），失败时返回 None。
+    返回生成的音频 CDN URL，失败时返回 None。
     仅在 HF_FALLBACK_ENABLED = True 时才会真正发起请求。
     """
     if not HF_FALLBACK_ENABLED:
-        return None
-
-    try:
-        from huggingface_hub import InferenceClient
-    except ImportError:
-        print("[HF 兜底] huggingface_hub 未安装，跳过")
         return None
 
     hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
@@ -39,30 +34,43 @@ async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> 
         return None
 
     try:
-        client = InferenceClient(token=hf_token)
-        # ACE-Step 是当前可用的开源文生音乐模型，可按需替换
-        result = client.text_to_speech(
-            inputs=prompt,
-            model="facebook/musicgen-large",
-            parameters={
-                "duration": min(int(duration or 30), 30),
-                "temperature": 0.7,
-            },
-        )
-        if isinstance(result, bytes):
-            import base64
-            import tempfile
+        # Hugging Face Inference API endpoint for text-to-audio
+        api_url = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
+        headers = {"Authorization": f"Bearer {hf_token}"}
+        payload = {"inputs": prompt}
 
-            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-            tmp.write(result)
-            tmp.close()
-            return tmp.name
-        if isinstance(result, str):
-            return result
-        if isinstance(result, dict):
-            return result.get("audio_url") or result.get("url")
-        print(f"[HF 兜底] 未知返回类型: {type(result)}")
-        return None
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(api_url, headers=headers, json=payload)
+
+        if response.status_code != 200:
+            print(f"[HF 兜底] HF API 错误: {response.status_code} - {response.text}")
+            return None
+
+        audio_data = response.content
+        if not audio_data:
+            print("[HF 兜底] HF API 返回空数据")
+            return None
+
+        # 将音频数据上传到 R2 获得 CDN URL
+        from app.services.cdn_uploader import CDN_Uploader
+        uploader = CDN_Uploader()
+        import tempfile
+        import uuid
+
+        file_ext = ".wav"
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+            tmp.write(audio_data)
+            tmp.flush()
+            upload_result = uploader.upload_file(tmp.name, file_type="audio")
+            import os
+            os.unlink(tmp.name)
+
+        if upload_result and upload_result.get("cdn_url"):
+            return upload_result["cdn_url"]
+        else:
+            print("[HF 兜底] 上传到 CDN 失败")
+            return None
+
     except Exception as e:
         print(f"[HF 兜底] 异常: {e}")
         return None
