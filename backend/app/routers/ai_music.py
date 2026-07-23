@@ -33,6 +33,7 @@ async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> 
         print("[HF 兜底] 未配置 HF_TOKEN / HUGGINGFACE_TOKEN，跳过")
         return None
 
+    tmp_path = None
     try:
         # Hugging Face Inference API endpoint for text-to-audio
         api_url = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
@@ -51,29 +52,32 @@ async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> 
             print("[HF 兜底] HF API 返回空数据")
             return None
 
-        # 将音频数据上传到 R2 获得 CDN URL
-        from app.services.cdn_uploader import CDN_Uploader
-        uploader = CDN_Uploader()
+        # 将音频数据写入临时文件后上传到 CDN
         import tempfile
-        import uuid
+        from app.services.cdn_uploader import CDNUploader
 
         file_ext = ".wav"
         with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
             tmp.write(audio_data)
             tmp.flush()
-            upload_result = uploader.upload_file(tmp.name, file_type="audio")
-            import os
-            os.unlink(tmp.name)
+            tmp_path = tmp.name
 
-        if upload_result and upload_result.get("cdn_url"):
-            return upload_result["cdn_url"]
-        else:
-            print("[HF 兜底] 上传到 CDN 失败")
-            return None
+        uploader = CDNUploader()
+        cdn_url = await uploader.upload_audio(tmp_path)
+        if cdn_url:
+            return cdn_url
+        print("[HF 兜底] 上传到 CDN 失败（返回空 URL）")
+        return None
 
     except Exception as e:
-        print(f"[HF 兜底] 异常: {e}")
+        print(f"[HF 兜底] 异常: {type(e).__name__}: {e}")
         return None
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 class GenerateRequest(BaseModel):
@@ -99,79 +103,92 @@ async def generate_music(request: GenerateRequest):
     """
     AI 生成音乐（Agnes 主力 + Gemini 备用 + Mureka 音频 + Mock 兜底）
     """
-    # 验证提示词
-    if not request.prompt or len(request.prompt.strip()) < 5:
-        raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
-
-    # 1. 使用 Agnes 优化提示词 + 生成歌词（主力）
-    agnes_request = AgnesSongRequest(
-        prompt=request.prompt,
-        style=request.style,
-        duration=request.duration or 180,
-        type=request.type,
-    )
-    agnes_result = await agnes_service.generate_song(agnes_request)
-
-    # 记录 AI 提供者 + 调试信息
-    ai_provider = "agnes" if agnes_result.optimized_prompt and agnes_result.optimized_prompt != request.prompt else "gemini"
-    agnes_debug = f"success={agnes_result.success}, opt_changed={'yes' if agnes_result.optimized_prompt != request.prompt else 'no'}, error={agnes_result.error}, key_set={bool(agnes_service.API_KEY)}"
-
-    # 2. 使用优化后的提示词调用 Mureka 生成音频（多引擎降级）
-    final_prompt = agnes_result.optimized_prompt or request.prompt
-    if agnes_result.generated_lyrics:
-        final_prompt = agnes_result.generated_lyrics
-
-    mureka_request = MurekaSongRequest(
-        lyrics=final_prompt,
-        style=request.style,
-        duration=request.duration,
-    )
-
-    # === 降级链：Mureka -> HF (Hugging Face ACE-Step) -> Mock ===
     try:
-        mureka_result = await mureka_service.generate_song(mureka_request)
-        if mureka_result.success:
-            return GenerateResponse(
-                success=True,
-                audio_url=mureka_result.audio_url,
-                task_id=mureka_result.task_id,
-                ai_provider=f"{ai_provider}+mureka",
-                agnes_debug=agnes_debug,
-            )
-    except QuotaExceededError:
-        print("[降级] Mureka 配额耗尽，降级到 HF")
-    except Exception as e:
-        print(f"[降级] Mureka 异常: {e}，降级到 HF")
+        # 验证提示词
+        if not request.prompt or len(request.prompt.strip()) < 5:
+            raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
 
-    # 2. Mureka 失败时尝试 HF 兑底
-    hf_audio = await _try_hf_fallback(
-        prompt=final_prompt,
-        style=request.style,
-        duration=request.duration,
-    )
-    if hf_audio:
-        return GenerateResponse(
-            success=True,
-            audio_url=hf_audio,
-            task_id=f"hf-{hash(final_prompt) & 0xffff:04x}",
-            ai_provider=f"{ai_provider}+hf",
-            agnes_debug=agnes_debug,
+        # 1. 使用 Agnes 优化提示词 + 生成歌词（主力）
+        agnes_request = AgnesSongRequest(
+            prompt=request.prompt,
+            style=request.style,
+            duration=request.duration or 180,
+            type=request.type,
+        )
+        agnes_result = await agnes_service.generate_song(agnes_request)
+
+        # 记录 AI 提供者 + 调试信息
+        ai_provider = "agnes" if agnes_result.optimized_prompt and agnes_result.optimized_prompt != request.prompt else "gemini"
+        agnes_debug = f"success={agnes_result.success}, opt_changed={'yes' if agnes_result.optimized_prompt != request.prompt else 'no'}, error={agnes_result.error}, key_set={bool(agnes_service.API_KEY)}"
+
+        # 2. 使用优化后的提示词调用 Mureka 生成音频（多引擎降级）
+        final_prompt = agnes_result.optimized_prompt or request.prompt
+        if agnes_result.generated_lyrics:
+            final_prompt = agnes_result.generated_lyrics
+
+        mureka_request = MurekaSongRequest(
+            lyrics=final_prompt,
+            style=request.style,
+            duration=request.duration,
         )
 
-    # 3. 最后 Mock 兑底
-    import random
-    mock_urls = [
-        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    ]
-    return GenerateResponse(
-        success=True,
-        audio_url=random.choice(mock_urls),
-        task_id=f"mock-{hash(request.prompt) & 0xffff:04x}",
-        ai_provider=f"{ai_provider}+mock",
-        agnes_debug=agnes_debug,
-    )
+        # === 降级链：Mureka -> HF (Hugging Face MusicGen) -> Mock ===
+        try:
+            mureka_result = await mureka_service.generate_song(mureka_request)
+            if mureka_result.success:
+                return GenerateResponse(
+                    success=True,
+                    audio_url=mureka_result.audio_url,
+                    task_id=mureka_result.task_id,
+                    ai_provider=f"{ai_provider}+mureka",
+                    agnes_debug=agnes_debug,
+                )
+        except QuotaExceededError:
+            print("[降级] Mureka 配额耗尽，降级到 HF")
+        except Exception as e:
+            print(f"[降级] Mureka 异常: {e}，降级到 HF")
+
+        # 2. Mureka 失败时尝试 HF 兜底
+        hf_audio = await _try_hf_fallback(
+            prompt=final_prompt,
+            style=request.style,
+            duration=request.duration,
+        )
+        if hf_audio:
+            return GenerateResponse(
+                success=True,
+                audio_url=hf_audio,
+                task_id=f"hf-{hash(final_prompt) & 0xffff:04x}",
+                ai_provider=f"{ai_provider}+hf",
+                agnes_debug=agnes_debug,
+            )
+
+        # 3. 最后 Mock 兜底
+        import random
+        mock_urls = [
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+        ]
+        return GenerateResponse(
+            success=True,
+            audio_url=random.choice(mock_urls),
+            task_id=f"mock-{hash(request.prompt) & 0xffff:04x}",
+            ai_provider=f"{ai_provider}+mock",
+            agnes_debug=agnes_debug,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"[generate_music 未捕获异常] {type(e).__name__}: {e}")
+        traceback.print_exc()
+        return GenerateResponse(
+            success=False,
+            error=f"{type(e).__name__}: {e}",
+            ai_provider="error",
+            agnes_debug="",
+        )
 
 
 @router.get("/styles")
