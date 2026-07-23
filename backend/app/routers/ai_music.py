@@ -1,7 +1,11 @@
 """
 AI 音乐生成路由
+
+降级链：Mureka -> HF (Hugging Face ACE-Step) -> Mock
+通过环境变量 HF_FALLBACK (默认 true) 控制是否启用 HF 兜底。
 """
 
+import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -9,6 +13,59 @@ from app.services.mureka_service import mureka_service, MurekaSongRequest, Quota
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
+
+HF_FALLBACK_ENABLED = os.getenv("HF_FALLBACK", "true").lower() in ("1", "true", "yes")
+
+
+async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> Optional[str]:
+    """
+    尝试调用 Hugging Face ACE-Step 模型生成音频。
+
+    返回生成的音频 URL（CDN / 临时直链），失败时返回 None。
+    仅在 HF_FALLBACK_ENABLED = True 时才会真正发起请求。
+    """
+    if not HF_FALLBACK_ENABLED:
+        return None
+
+    try:
+        from huggingface_hub import InferenceClient
+    except ImportError:
+        print("[HF 兜底] huggingface_hub 未安装，跳过")
+        return None
+
+    hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
+    if not hf_token:
+        print("[HF 兜底] 未配置 HF_TOKEN / HUGGINGFACE_TOKEN，跳过")
+        return None
+
+    try:
+        client = InferenceClient(token=hf_token)
+        # ACE-Step 是当前可用的开源文生音乐模型，可按需替换
+        result = client.text_to_speech(
+            inputs=prompt,
+            model="facebook/musicgen-large",
+            parameters={
+                "duration": min(int(duration or 30), 30),
+                "temperature": 0.7,
+            },
+        )
+        if isinstance(result, bytes):
+            import base64
+            import tempfile
+
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+            tmp.write(result)
+            tmp.close()
+            return tmp.name
+        if isinstance(result, str):
+            return result
+        if isinstance(result, dict):
+            return result.get("audio_url") or result.get("url")
+        print(f"[HF 兜底] 未知返回类型: {type(result)}")
+        return None
+    except Exception as e:
+        print(f"[HF 兜底] 异常: {e}")
+        return None
 
 
 class GenerateRequest(BaseModel):
@@ -62,7 +119,7 @@ async def generate_music(request: GenerateRequest):
         duration=request.duration,
     )
 
-    # === 降级链：Mureka → Mock ===
+    # === 降级链：Mureka -> HF (Hugging Face ACE-Step) -> Mock ===
     try:
         mureka_result = await mureka_service.generate_song(mureka_request)
         if mureka_result.success:
@@ -74,12 +131,26 @@ async def generate_music(request: GenerateRequest):
                 agnes_debug=agnes_debug,
             )
     except QuotaExceededError:
-        pass  # Mureka 配额耗尽，降级到 Mock
+        print("[降级] Mureka 配额耗尽，降级到 HF")
     except Exception as e:
-        # Mureka 其他异常也降级
-        print(f"[降级] Mureka 异常: {e}")
+        print(f"[降级] Mureka 异常: {e}，降级到 HF")
 
-    # === Mock 兜底 ===
+    # 2. Mureka 失败时尝试 HF 兑底
+    hf_audio = await _try_hf_fallback(
+        prompt=final_prompt,
+        style=request.style,
+        duration=request.duration,
+    )
+    if hf_audio:
+        return GenerateResponse(
+            success=True,
+            audio_url=hf_audio,
+            task_id=f"hf-{hash(final_prompt) & 0xffff:04x}",
+            ai_provider=f"{ai_provider}+hf",
+            agnes_debug=agnes_debug,
+        )
+
+    # 3. 最后 Mock 兑底
     import random
     mock_urls = [
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",

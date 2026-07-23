@@ -31,18 +31,38 @@ class CDNUploader:
     
     def __init__(self):
         self.provider = self._detect_provider()
-        self.base_url = os.getenv("CDN_BASE_URL", "")
+        self.base_url = (os.getenv("CDN_BASE_URL", "") or "").rstrip("/")
         self.bucket = os.getenv("CDN_BUCKET", "")
-        
+
         # R2 配置
         self.r2_account_id = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID")
         self.r2_access_key = os.getenv("CLOUDFLARE_R2_ACCESS_KEY")
         self.r2_secret_key = os.getenv("CLOUDFLARE_R2_SECRET_KEY")
-        
+
         # S3 配置
         self.s3_access_key = os.getenv("AWS_ACCESS_KEY")
         self.s3_secret_key = os.getenv("AWS_SECRET_KEY")
         self.s3_region = os.getenv("AWS_REGION", "us-east-1")
+
+    def _resolve_cdn_url(self, key: str) -> str:
+        """
+        根据 self.base_url 是否配置返回拼接后的 URL。
+
+        - 若设置 CDN_BASE_URL，则返回 {CDN_BASE_URL}/{key}（已去掉末尾斜杠）
+        - 若未配置，则退回 R2 / S3 默认 endpoint，并打印告警以提醒用户配置
+        """
+        if self.base_url:
+            return f"{self.base_url}/{key}"
+        if self.provider == CDNProvider.R2 and self.r2_account_id and self.bucket:
+            fallback = f"https://{self.r2_account_id}.r2.cloudflarestorage.com/{self.bucket}/{key}"
+            print(f"[R2 上传] ⚠️ 未设置 CDN_BASE_URL，返回 R2 默认 URL: {fallback}")
+            return fallback
+        if self.provider == CDNProvider.S3 and self.bucket:
+            fallback = f"https://{self.bucket}.s3.{self.s3_region}.amazonaws.com/{key}"
+            print(f"[S3 上传] ⚠️ 未设置 CDN_BASE_URL，返回 S3 默认 URL: {fallback}")
+            return fallback
+        print(f"[CDN 上传] ⚠️ 未配置 CDN_BASE_URL 且无默认 endpoint，返回相对路径 /{key}")
+        return f"/{key}"
     
     def _detect_provider(self) -> CDNProvider:
         """自动检测 CDN 提供商"""
@@ -144,7 +164,7 @@ class CDNUploader:
             )
         
         # 生成 CDN URL
-        cdn_url = f"{self.base_url}/{key}"
+        cdn_url = self._resolve_cdn_url(key)
         print(f"[R2 上传] ✅ {key} -> {cdn_url}")
         return cdn_url
     
@@ -244,8 +264,8 @@ class CDNUploader:
             ExpiresIn=900
         )
         
-        cdn_url = f"{self.base_url}/{key}"
-        
+        cdn_url = self._resolve_cdn_url(key)
+
         return {
             "upload_url": upload_url,
             "file_key": key,
