@@ -74,3 +74,6 @@ coverage/
 *.backup
 *~vst-plugins/
 vst-plugins/
+
+workers/.wrangler/
+
