@@ -1,10 +1,13 @@
 """
-AI 音乐生成路由
+AI 音乐生成路由（异步任务架构）
+
+POST /api/v1/ai/generate    提交生成任务，立即返回 task_id
+GET  /api/v1/ai/task/{id}   轮询任务状态，completed 时返回 audio_url
 
 降级链：Modal MusicGen (本地开源) -> HF (Hugging Face MusicGen) -> 明确报错（无 Mock）
-通过环境变量 HF_FALLBACK (默认 true) 控制是否启用 HF 兜底。
 """
 
+import asyncio
 import os
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -12,6 +15,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.services.musicgen_client import generate_music as musicgen_generate_music
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
+from app.services import task_store
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
 
@@ -19,12 +23,7 @@ HF_FALLBACK_ENABLED = os.getenv("HF_FALLBACK", "true").lower() in ("1", "true", 
 
 
 async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> Optional[str]:
-    """
-    尝试调用 Hugging Face Inference API 的 facebook/musicgen-large 模型生成音频。
-
-    返回生成的音频 CDN URL，失败时返回 None。
-    仅在 HF_FALLBACK_ENABLED = True 时才会真正发起请求。
-    """
+    """调用 Hugging Face Inference API 的 facebook/musicgen-large 生成音频，失败返回 None。"""
     if not HF_FALLBACK_ENABLED:
         return None
 
@@ -35,7 +34,6 @@ async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> 
 
     tmp_path = None
     try:
-        # Hugging Face Inference API endpoint for text-to-audio
         api_url = "https://api-inference.huggingface.co/models/facebook/musicgen-large"
         headers = {"Authorization": f"Bearer {hf_token}"}
         payload = {"inputs": prompt}
@@ -52,12 +50,10 @@ async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> 
             print("[HF 兜底] HF API 返回空数据")
             return None
 
-        # 将音频数据写入临时文件后上传到 CDN
         import tempfile
         from app.services.cdn_uploader import CDNUploader
 
-        file_ext = ".wav"
-        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp.write(audio_data)
             tmp.flush()
             tmp_path = tmp.name
@@ -82,33 +78,36 @@ async def _try_hf_fallback(prompt: str, style: str, duration: Optional[int]) -> 
 
 class GenerateRequest(BaseModel):
     """AI 生成请求"""
-    prompt: str  # 音乐提示词
-    style: str = "pop"  # 风格
-    duration: Optional[int] = None  # 时长（秒）
-    type: str = "song"  # song/music/bgm
+    prompt: str
+    style: str = "pop"
+    duration: Optional[int] = None
+    type: str = "song"
 
 
 class GenerateResponse(BaseModel):
-    """AI 生成响应"""
+    """AI 生成响应（提交成功即返回）"""
     success: bool
-    audio_url: Optional[str] = None
-    error: Optional[str] = None
     task_id: Optional[str] = None
-    ai_provider: Optional[str] = None   # "agnes" / "gemini" / "musicgen" / "hf"
-    agnes_debug: Optional[str] = None    # 调试 Agnes 调用详情
+    status_url: Optional[str] = None
+    error: Optional[str] = None
 
 
-@router.post("/generate", response_model=GenerateResponse)
-async def generate_music(request: GenerateRequest):
-    """
-    AI 生成音乐（Agnes 主力 + Gemini 备用 + MusicGen 本地音频，无 Mock）
-    """
+class TaskResponse(BaseModel):
+    """任务状态查询响应"""
+    task_id: str
+    state: str          # pending / processing / completed / failed
+    progress: int
+    audio_url: Optional[str] = None
+    video_url: Optional[str] = None
+    ai_provider: Optional[str] = None
+    error: Optional[str] = None
+
+
+async def _run_generation(task_id: str, request: GenerateRequest):
+    """后台执行完整生成链路：Agnes 优化 → MusicGen → HF 兜底。"""
     try:
-        # 验证提示词
-        if not request.prompt or len(request.prompt.strip()) < 5:
-            raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
+        task_store.update(task_id, state="processing", progress=10)
 
-        # 1. 使用 Agnes 优化提示词 + 生成歌词（主力）
         agnes_request = AgnesSongRequest(
             prompt=request.prompt,
             style=request.style,
@@ -117,64 +116,79 @@ async def generate_music(request: GenerateRequest):
         )
         agnes_result = await agnes_service.generate_song(agnes_request)
 
-        # 记录 AI 提供者 + 调试信息
         ai_provider = "agnes" if agnes_result.optimized_prompt and agnes_result.optimized_prompt != request.prompt else "gemini"
-        agnes_debug = f"success={agnes_result.success}, opt_changed={'yes' if agnes_result.optimized_prompt != request.prompt else 'no'}, error={agnes_result.error}, key_set={bool(agnes_service.API_KEY)}"
+        task_store.update(task_id, progress=40, ai_provider=f"{ai_provider}")
 
-        # 2. 使用优化后的提示词调用 MusicGen 本地生成音频
         final_prompt = agnes_result.optimized_prompt or request.prompt
         if agnes_result.generated_lyrics:
             final_prompt = agnes_result.generated_lyrics
 
-        # === 降级链：MusicGen (Modal 本地) -> HF -> 明确报错 ===
         audio_url = await musicgen_generate_music(
             prompt=final_prompt,
             duration=min(request.duration or 30, 60),
         )
         if audio_url:
-            return GenerateResponse(
-                success=True,
-                audio_url=audio_url,
-                task_id=f"musicgen-{hash(final_prompt) & 0xffff:04x}",
-                ai_provider=f"{ai_provider}+musicgen",
-                agnes_debug=agnes_debug,
+            task_store.update(
+                task_id, state="completed", progress=100,
+                audio_url=audio_url, ai_provider=f"{ai_provider}+musicgen",
             )
+            return
 
-        # 2. MusicGen 失败时尝试 HF 兜底
         hf_audio = await _try_hf_fallback(
             prompt=final_prompt,
             style=request.style,
             duration=request.duration,
         )
         if hf_audio:
-            return GenerateResponse(
-                success=True,
-                audio_url=hf_audio,
-                task_id=f"hf-{hash(final_prompt) & 0xffff:04x}",
-                ai_provider=f"{ai_provider}+hf",
-                agnes_debug=agnes_debug,
+            task_store.update(
+                task_id, state="completed", progress=100,
+                audio_url=hf_audio, ai_provider=f"{ai_provider}+hf",
             )
+            return
 
-        # 3. MusicGen 与 HF 兜底均失败 → 明确报错（已关闭 Mock 音频兜底）
-        print("[generate_music] MusicGen/HF 均失败，已关闭 Mock 兜底，返回错误")
-        return GenerateResponse(
-            success=False,
+        task_store.update(
+            task_id, state="failed",
             error="音乐生成失败：MusicGen 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
-            ai_provider=f"{ai_provider}+error",
-            agnes_debug=agnes_debug,
         )
     except HTTPException:
-        raise
+        task_store.update(task_id, state="failed", error="请求参数错误")
     except Exception as e:
         import traceback
-        print(f"[generate_music 未捕获异常] {type(e).__name__}: {e}")
+        print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
-        return GenerateResponse(
-            success=False,
-            error=f"{type(e).__name__}: {e}",
-            ai_provider="error",
-            agnes_debug="",
-        )
+        task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
+
+
+@router.post("/generate", response_model=GenerateResponse)
+async def generate_music(request: GenerateRequest):
+    """提交 AI 音乐生成任务，立即返回 task_id。"""
+    if not request.prompt or len(request.prompt.strip()) < 5:
+        raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
+
+    task_id = task_store.new_task()
+    asyncio.create_task(_run_generation(task_id, request))
+    return GenerateResponse(
+        success=True,
+        task_id=task_id,
+        status_url=f"/api/v1/ai/task/{task_id}",
+    )
+
+
+@router.get("/task/{task_id}", response_model=TaskResponse)
+async def get_task(task_id: str):
+    """轮询任务状态；completed 时返回 audio_url。"""
+    task = task_store.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return TaskResponse(
+        task_id=task["task_id"],
+        state=task["state"],
+        progress=task["progress"],
+        audio_url=task.get("audio_url"),
+        video_url=task.get("video_url"),
+        ai_provider=task.get("ai_provider"),
+        error=task.get("error"),
+    )
 
 
 @router.get("/styles")
