@@ -1,0 +1,12 @@
+name = "zyvexo-cdn"
+main = "zyvexo-cdn-worker.js"
+compatibility_date = "2026-07-23"
+
+# R2 binding：让 Worker 通过 env.BUCKET 直接读取 bucket（不需要把 bucket 设为 public）
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "music-audio-storage"
+
+# 不要加 routes / custom_domain；后续在 wrangler.toml 同目录用
+#   wrangler deploy --config wrangler.cdn.toml
+# 部署。自定义域名在第 5 步单独 add.

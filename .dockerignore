@@ -1,0 +1,39 @@
+# Dependencies (already bundled in Docker)
+frontend/node_modules/
+backend/__pycache__/
+frontend/__pycache__/
+*.pyc
+__pycache__/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Results (mounted as volume)
+backend/results/
+results/
+
+# Logs
+*.log
+
+# Env (keep .env.example, ignore .env)
+.env
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Git
+.git/
+.gitignore
+
+# Build artifacts
+frontend/dist/
+backend/dist/

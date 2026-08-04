@@ -1,0 +1,201 @@
+<!--
+P3-6: 离线页面 (PWA)
+
+当用户离线时显示的页面
+功能:
+- 提示离线状态
+- 显示已缓存内容
+- 提供重新连接按钮
+-->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>离线 - Hermes 音乐平台</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 500px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p {
+      font-size: 1.2rem;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .status {
+      margin: 2rem 0;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .status-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 32px;
+      background: linear-gradient(90deg, #FF6B6B, #4ECDC4);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: none;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .features {
+      margin-top: 3rem;
+      text-align: left;
+    }
+
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      margin: 1rem 0;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+    }
+
+    .feature-icon {
+      font-size: 1.5rem;
+      margin-right: 1rem;
+    }
+
+    .offline-badge {
+      margin-top: 2rem;
+      padding: 8px 16px;
+      background: rgba(78, 205, 196, 0.1);
+      border: 1px solid rgba(78, 205, 196, 0.3);
+      border-radius: 20px;
+      font-size: 0.9rem;
+      color: #4ECDC4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>离线模式</h1>
+    <p>您目前处于离线状态，但部分功能仍可使用</p>
+
+    <div class="status">
+      <div class="status-icon">📡</div>
+      <h3>网络状态</h3>
+      <p id="status-text">检测网络连接中...</p>
+    </div>
+
+    <button class="btn" onclick="window.location.reload()">
+      🔄 重新连接
+    </button>
+
+    <div class="features">
+      <h3>离线可用功能</h3>
+      <div class="feature">
+        <span class="feature-icon">🎹</span>
+        <div>
+          <strong>本地项目编辑</strong>
+          <p>已缓存的项目可以继续编辑</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🎵</span>
+        <div>
+          <strong>本地音频播放</strong>
+          <p>已下载的音频可以播放</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">💾</span>
+        <div>
+          <strong>离线保存</strong>
+          <p>修改会自动保存，联网后同步</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">📝</span>
+        <div>
+          <strong>MIDI 编辑</strong>
+          <p>MIDI 编辑器完全可用</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="offline-badge">
+      ✨ PWA 离线模式已启用
+    </div>
+  </div>
+
+  <script>
+    // 网络状态检测
+    function updateStatus() {
+      const statusText = document.getElementById('status-text');
+      if (navigator.onLine) {
+        statusText.textContent = '✅ 网络已连接，页面将自动刷新...';
+        statusText.style.color = '#4ECDC4';
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        statusText.textContent = '❌ 未检测到网络连接';
+        statusText.style.color = '#FF6B6B';
+      }
+    }
+
+    // 监听网络变化
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+
+    // 初始检测
+    updateStatus();
+
+    // Service Worker 注册检测
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(registration => {
+        if (registration) {
+          console.log('Service Worker 已注册，离线功能可用');
+        } else {
+          console.warn('Service Worker 未注册，离线功能不可用');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

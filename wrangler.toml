@@ -1,0 +1,14 @@
+name = "music-video-platform"
+compatibility_date = "2026-07-13"
+pages_build_output_dir = "frontend/dist"
+
+# R2 存储桶绑定
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "music-audio-storage"
+
+# 环境变量
+[vars]
+API_BASE_URL = "https://ai-music-backend-8e85.onrender.com"
+RATE_LIMIT = "100"
+CORS_ORIGIN = "https://music-video-platform.pages.dev"

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>竞品分析仪表板 - Music Video Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%); }
+    .card { backdrop-filter: blur(10px); }
+    .score-bar { transition: width 0.5s ease; }
+  </style>
+</head>
+<body class="bg-[#0e0e0e] text-[#e0e0e0] min-h-screen p-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+        🎯 竞品分析对比
+      </h1>
+      <p class="text-[#777777] text-sm">Music Video Platform vs Suno AI vs CapCut vs Cubase</p>
+      <p class="text-[#555555] text-xs mt-2">2026-07-12</p>
+    </div>
+
+    <!-- 综合评分雷达图 -->
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="gradient-bg rounded-2xl p-6 card border border-[#2a2a2a]">
+        <h3 class="text-lg font-bold mb-4 text-white">综合功能评分</h3>
+        <div class="space-y-4">
+          {[
+            {name: 'AI 音乐生成', suno: 95, capcut: 40, cubase: 20, us: 85},
+            {name: '视频制作', suno: 10, capcut: 95, cubase: 30, us: 80},
+            {name: '音频编辑', suno: 10, capcut: 60, cubase: 98, us: 75},
+            {name: '社交功能', suno: 70, capcut: 85, cubase: 10, us: 80},
+            {name: '易用性', suno: 95, capcut: 90, cubase: 40, us: 85},
+            {name: '性价比', suno: 70, capcut: 90, cubase: 50, us: 95}
+          ].map((item, idx) => (
+            <div key={idx}>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-[#aaa]">{item.name}</span>
+              </div>
+              <div className="relative h-6 bg-[#1a1a1a] rounded-full overflow-hidden">
+                <div className="absolute inset-0 flex">
+                  <div className="w-1/4 h-full bg-blue-500/30 flex items-center justify-center text-[9px] text-blue-300">
+                    Suno: {item.suno}
+                  </div>
+                  <div className="w-1/4 h-full bg-purple-500/30 flex items-center justify-center text-[9px] text-purple-300">
+                    CapCut: {item.capcut}
+                  </div>
+                  <div className="w-1/4 h-full bg-green-500/30 flex items-center justify-center text-[9px] text-green-300">
+                    Cubase: {item.cubase}
+                  </div>
+                  <div className="w-1/4 h-full bg-gradient-to-r from-orange-500 to-pink-500 flex items-center justify-center text-[9px] text-white font-bold">
+                    我们：{item.us}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- 价格对比 -->
+      <div class="gradient-bg rounded-2xl p-6 card border border-[#2a2a2a]">
+        <h3 class="text-lg font-bold mb-4 text-white">💰 价格对比 (月费 USD)</h3>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
+            <div>
+              <div class="font-medium text-white">Suno AI</div>
+              <div class="text-xs text-[#777777]">Pro & Pro+</div>
+            </div>
+            <div class="text-2xl font-bold text-blue-400">$10-30</div>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
+            <div>
+              <div class="font-medium text-white">CapCut</div>
+              <div class="text-xs text-[#777777]">Pro</div>
+            </div>
+            <div class="text-2xl font-bold text-purple-400">$7.99</div>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-[#1a1a1a] rounded-lg">
+            <div>
+              <div class="font-medium text-white">Cubase</div>
+              <div class="text-xs text-[#777777]">$120 一次性 (折算$10/月)</div>
+            </div>
+            <div class="text-2xl font-bold text-green-400">$10~</div>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-gradient-to-r from-orange-500/20 to-pink-500/20 rounded-lg border border-orange-500/50">
+            <div>
+              <div class="font-medium text-white">我们的平台</div>
+              <div class="text-xs text-[#777777]">免费 + 会员</div>
+            </div>
+            <div class="text-2xl font-bold bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">$0-14</div>
+          </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-[#1a1a1a] rounded-lg">
+          <div class="text-sm text-[#aaa] mb-2">💡 性价比优势</div>
+          <div class="text-xs text-[#777777] leading-relaxed">
+            免费版提供 80% 核心功能，会员价格仅为 Suno 的 1/3，专业版的 1/8
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 功能矩阵 -->
+    <div class="gradient-bg rounded-2xl p-6 card border border-[#2a2a2a] mb-6">
+      <h3 class="text-lg font-bold mb-4 text-white">📋 核心功能矩阵</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#2a2a2a]">
+              <th className="text-left py-3 px-2 text-[#aaa]">功能</th>
+              <th className="text-center py-3 px-2 text-blue-400">Suno</th>
+              <th className="text-center py-3 px-2 text-purple-400">CapCut</th>
+              <th className="text-center py-3 px-2 text-green-400">Cubase</th>
+              <th className="text-center py-3 px-2 bg-gradient-to-r from-orange-500/20 to-pink-500/20 text-orange-400">我们</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              {f: 'AI 音乐生成', suno: '✅ v4.5', capcut: '⚠️ 模板', cubase: '❌', us: '✅ v9'},
+              {f: 'MV 模板库', suno: '❌', capcut: '✅ 3000+', cubase: '❌', us: '✅ 20+'},
+              {f: '多轨编辑', suno: '❌', capcut: '⚠️ 视频', cubase: '✅ 384', us: '✅ 16'},
+              {f: 'MIDI 编辑', suno: '❌', capcut: '❌', cubase: '✅', us: '✅'},
+              {f: '视频同步', suno: '❌', capcut: '✅', cubase: '⚠️ 手动', us: '✅ AI'},
+              {f: '扒带/Remix', suno: '❌', capcut: '❌', cubase: '⚠️ 手动', us: '✅ 自动'},
+              {f: '实时协作', suno: '❌', capcut: '⚠️ 云端', cubase: '❌', us: '✅ WebSocket'},
+              {f: '版权检测', suno: '⚠️ 付费', capcut: '✅', cubase: '❌', us: '✅'},
+              {f: '私信系统', suno: '❌', capcut: '❌', cubase: '❌', us: '✅'},
+              {f: '价格', suno: '$$', capcut: '$', cubase: '$$$', us: 'FREE'}
+            ].map((row, idx) => (
+              <tr key={idx} className="border-b border-[#1a1a1a] hover:bg-[#1a1a1a]/50">
+                <td className="py-3 px-2 text-[#ddd]">{row.f}</td>
+                <td className="text-center py-3 px-2 text-xs">{row.suno}</td>
+                <td className="text-center py-3 px-2 text-xs">{row.capcut}</td>
+                <td className="text-center py-3 px-2 text-xs">{row.cubase}</td>
+                <td className="text-center py-3 px-2 text-xs font-bold bg-gradient-to-r from-orange-500/10 to-pink-500/10">{row.us}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SWOT 分析 -->
+    <div className="grid md:grid-cols-2 gap-6">
+      <!-- 优势 -->
+      <div className="gradient-bg rounded-2xl p-6 card border border-[#2a2a2a]">
+        <h3 className="text-lg font-bold mb-4 text-green-400">✅ 我们的优势</h3>
+        <div className="space-y-3">
+          {[
+            'AI 音乐 + MV 一体化 (独家)',
+            '扒带/Remix 引擎 (创新)',
+            '实时协作编辑 (差异化)',
+            '版权检测系统 (刚需)',
+            '价格优势 (免费 80% 功能)',
+            '云端原生 (无需安装)'
+          ].map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg">
+              <span className="text-green-400">✅</span>
+              <span className="text-sm text-[#ddd]">{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- 劣势 -->
+      <div className="gradient-bg rounded-2xl p-6 card border border-[#2a2a2a]">
+        <h3 className="text-lg font-bold mb-4 text-orange-400">⚠️ 需改进</h3>
+        <div className="space-y-3">
+          {[
+            'AI 音质 < Suno v4.5',
+            '素材库规模 << CapCut',
+            '0 品牌知名度',
+            '用户基数小 (冷启动)',
+            '移动端非原生 APP',
+            '专业深度 < Cubase'
+          ].map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3 p-3 bg-orange-500/10 rounded-lg">
+              <span className="text-orange-400">⚠️</span>
+              <span className="text-sm text-[#ddd]">{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- 战略建议 -->
+    <div className="mt-6 gradient-bg rounded-2xl p-6 card border border-[#2a2a2a]">
+      <h3 className="text-lg font-bold mb-4 text-white">🎯 战略定位</h3>
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+          <div className="text-blue-400 font-bold mb-2">短期 (0-6 月)</div>
+          <div className="text-xs text-[#aaa]">"Suno + CapCut 平替"</div>
+          <div className="text-xs text-[#777777] mt-2">强调性价比 + 快速迭代</div>
+        </div>
+        <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
+          <div className="text-purple-400 font-bold mb-2">中期 (6-18 月)</div>
+          <div className="text-xs text-[#aaa]">"创作者首选平台"</div>
+          <div className="text-xs text-[#777777] mt-2">自研模型 + 生态建设</div>
+        </div>
+        <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30">
+          <div className="text-green-400 font-bold mb-2">长期 (18 月+)</div>
+          <div className="text-xs text-[#aaa]">"下一代创作基建"</div>
+          <div className="text-xs text-[#777777] mt-2">区块链 + VR/AR + AI 艺人</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div className="text-center mt-8 text-xs text-[#555555]">
+      完整报告：<span className="text-orange-400">docs/COMPETITOR_ANALYSIS_REPORT.md</span>
+    </div>
+  </div>
+</body>
+</html>

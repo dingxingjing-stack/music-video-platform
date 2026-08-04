@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Secrets (local JSON stores for API keys / tokens / DSNs)
+secrets.json
+secrets.local.json
+*.secrets.json
+backend/secrets.json
+backend/secrets.local.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Application data
+data/
+uploads/
+results/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test media files (uploaded during local verification)
+test_440hz.wav
+*.wav
+*.mp3
+
+# Testing
+coverage/
+.htmlcov/
+.nox/
+test-results/
+playwright-report/
+
+# Docker
+.docker/
+
+# Misc
+*.bak
+*.backup
+*~vst-plugins/
+vst-plugins/
+
+workers/.wrangler/
+
