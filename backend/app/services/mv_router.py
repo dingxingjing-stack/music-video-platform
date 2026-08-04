@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 from app.services.inference import PredictResult, TaskStatus  # type: ignore
 from app.websocket_manager import manager  # type: ignore
-from app.services.musicgen_client import download_audio, generate_music
+from app.services.musicgen_client import download_audio, generate_music, QueueFullError
 from app.services.mv_composer import compose_slideshow_video
 from app.services import task_store
 
@@ -58,15 +58,31 @@ async def mv_render(request: Request):
     body = await request.json()
     audio_url = body.get("audio_url", "")
 
+    user_key = body.get("user_id") or (request.client.host if request.client else None)
+    if task_store.is_user_busy(user_key):
+        raise HTTPException(status_code=429, detail="您有一个生成任务正在进行中，请完成后再试")
+
     task_id = f"mv-{uuid.uuid4().hex[:8]}"
-    task_store.new_task(task_id)
-    asyncio.create_task(_run_mv(task_id, body, audio_url))
+    task_store.new_task(user_key=user_key, task_id=task_id)
+    if not task_store.acquire_lock(user_key, task_id):
+        task_store.delete(task_id)
+        raise HTTPException(status_code=429, detail="您有一个生成任务正在进行中，请完成后再试")
+
+    asyncio.create_task(_run_mv_with_timeout(task_id, body, audio_url))
     return {
         "task_id": task_id,
         "status_url": f"/api/v1/mv/status/{task_id}",
         "audio_url": audio_url or None,
         "video_url": None,
     }
+
+
+async def _run_mv_with_timeout(task_id: str, body: Dict[str, Any], audio_url: str):
+    try:
+        await asyncio.wait_for(_run_mv(task_id, body, audio_url), timeout=task_store.TASK_TIMEOUT)
+    except asyncio.TimeoutError:
+        task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
+        task_store.release_lock_for_task(task_id)
 
 
 async def _run_mv(task_id: str, body: Dict[str, Any], audio_url: str):
@@ -118,11 +134,17 @@ async def _run_mv(task_id: str, body: Dict[str, Any], audio_url: str):
             message="MV 生成完成（零成本 FFmpeg 拼接）",
             result_url=video_url,
         ))
+    except QueueFullError as e:
+        task_store.update(task_id, state="failed", error=str(e))
+    except asyncio.TimeoutError:
+        task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
     except Exception as e:
         import traceback
         logger.error("MV 任务异常: %s", e)
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
+    finally:
+        task_store.release_lock_for_task(task_id)
 
 # ═══════════════════════════════════════════════════════════════════════
 # Status endpoint

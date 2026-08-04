@@ -15,13 +15,21 @@ logger = logging.getLogger(__name__)
 _APP_NAME = "avireon-music-platform-musicgen"
 
 
+class QueueFullError(Exception):
+    """Modal GPU 请求队列已满（免费账号 503），需向业务层返回友好错误而非裸 503。"""
+    pass
+
+
 def local_dir() -> str:
     """本地（容器内）生成目录，与 GENERATED_DIR 保持一致。"""
     return os.getenv("GENERATED_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "generated"))
 
 
 async def generate_music(prompt: str, duration: int = 30) -> str | None:
-    """调用 MusicGen 生成音频，返回 /generated/{filename} URL；失败返回 None。"""
+    """调用 MusicGen 生成音频，返回 /generated/{filename} URL。
+
+    队列已满时抛 QueueFullError；其它失败返回 None。
+    """
     try:
         import modal
     except ImportError:
@@ -35,7 +43,13 @@ async def generate_music(prompt: str, duration: int = 30) -> str | None:
             logger.warning("MusicGen 返回空文件名")
             return None
         return f"/generated/{filename}"
+    except QueueFullError:
+        raise
     except Exception as exc:
+        # Modal 免费账号队列满 → 503 "The request queue is full"
+        if "queue is full" in str(exc).lower() or "503" in str(exc):
+            logger.warning("MusicGen 队列已满: %s", exc)
+            raise QueueFullError("服务器繁忙，生成队列已满，请稍后再试") from exc
         logger.warning("MusicGen 调用失败: %s", exc)
         return None
 

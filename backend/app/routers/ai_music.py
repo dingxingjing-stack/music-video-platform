@@ -10,10 +10,10 @@ GET  /api/v1/ai/task/{id}   轮询任务状态，completed 时返回 audio_url
 import asyncio
 import os
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
-from app.services.musicgen_client import generate_music as musicgen_generate_music
+from app.services.musicgen_client import generate_music as musicgen_generate_music, QueueFullError
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
 from app.services import task_store
 
@@ -82,6 +82,7 @@ class GenerateRequest(BaseModel):
     style: str = "pop"
     duration: Optional[int] = None
     type: str = "song"
+    user_id: Optional[str] = None  # 用于用户级任务锁
 
 
 class GenerateResponse(BaseModel):
@@ -150,23 +151,52 @@ async def _run_generation(task_id: str, request: GenerateRequest):
             task_id, state="failed",
             error="音乐生成失败：MusicGen 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
         )
+    except QueueFullError as e:
+        task_store.update(task_id, state="failed", error=str(e))
     except HTTPException:
         task_store.update(task_id, state="failed", error="请求参数错误")
+    except asyncio.TimeoutError:
+        task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
     except Exception as e:
         import traceback
         print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
+    finally:
+        task_store.release_lock_for_task(task_id)
+
+
+async def _run_with_timeout(task_id: str, request: GenerateRequest):
+    """包一层 180s 超时，超时自动标记 failed 并释放资源。"""
+    try:
+        await asyncio.wait_for(_run_generation(task_id, request), timeout=task_store.TASK_TIMEOUT)
+    except asyncio.TimeoutError:
+        task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
+        task_store.release_lock_for_task(task_id)
 
 
 @router.post("/generate", response_model=GenerateResponse)
-async def generate_music(request: GenerateRequest):
+async def generate_music(request: Request, req: GenerateRequest):
     """提交 AI 音乐生成任务，立即返回 task_id。"""
-    if not request.prompt or len(request.prompt.strip()) < 5:
+    if not req.prompt or len(req.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
 
-    task_id = task_store.new_task()
-    asyncio.create_task(_run_generation(task_id, request))
+    user_key = req.user_id or (request.client.host if request.client else None)
+    if task_store.is_user_busy(user_key):
+        return GenerateResponse(
+            success=False,
+            error="您有一个生成任务正在进行中，请完成后再试",
+        )
+
+    task_id = task_store.new_task(user_key=user_key)
+    if not task_store.acquire_lock(user_key, task_id):
+        task_store.delete(task_id)
+        return GenerateResponse(
+            success=False,
+            error="您有一个生成任务正在进行中，请完成后再试",
+        )
+
+    asyncio.create_task(_run_with_timeout(task_id, req))
     return GenerateResponse(
         success=True,
         task_id=task_id,

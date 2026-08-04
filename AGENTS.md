@@ -130,3 +130,58 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 
 前端：react, antd, tailwindcss, zustand, @ant-design/icons
 后端：fastapi, uvicorn, sqlite3, httpx, sentry-sdk
+---
+
+## 会话记录 (2026-08-04)
+
+### 背景
+- 部署平台: Modal,线上 URL: `https://dingxingjing-stack--music-platform.modal.run`
+- 后端:`backend/main.py::_MODAL_APP`(web) + `backend/musicgen_modal.py::_APP`(GPU)
+- 部署命令: `python -m modal deploy main.py::_MODAL_APP` / `python -m modal deploy musicgen_modal.py::_APP`(Windows 需 chcp 65001 + PYTHONIOENCODING=utf-8)
+
+### 一、Modal 零成本音乐+MV 全链路打通
+- MusicGen(开源,Modal T4 GPU 本地生成)→共享卷 `/root/data/generated/`→web 容器经 `/generated/{file}` 下载,零外部付费 API
+- 音频生成 `/api/v1/ai/generate` 全链路: Agnes/Gemini 优化歌词 → MusicGen → HF 兜底 → 明确报错(无 mock),产出真实 wav
+- MV `/api/v1/mv/render`: MusicGen 音频 → FFmpeg Pillow 渐变图拼接 → h264+aac mp4,FFprobe 验证双流
+
+### 二、跨容器共享卷关键修复(重要经验)
+- 问题: MusicGen 写入共享卷后 web 容器 404
+- 三个根因逐层修复:
+  1. Volume 写后必须显式 `_DATA_VOLUME.commit()` 才对他容器可见
+  2. warm 容器卷快照是启动时的旧图 → 新文件不可见 → `download_audio` 改三层取数(本地路径→Modal Volume API→公网 HTTP)
+  3. `vol.read_file` 返回的是 python `generator`(虽签名标 AsyncGenerator)→ 用 `b"".join(vol.read_file(path))`
+- `download_audio` 公网兜底 URL 由 env `PUBLIC_BASE_URL` 提供(Modal ASGI 容器内无 127.0.0.1:8000)
+
+### 三、异步任务架构
+- 原同步长耗时接口改为: 提交即返回 task_id → 前端轮询状态
+- 新增 `app/services/task_store.py`: 进程内任务存储
+- 音乐 `POST /api/v1/ai/generate` → `{task_id,status_url}`;状态 `GET /api/v1/ai/task/{id}` → `{state,progress,audio_url}`
+- MV `POST /api/v1/mv/render` → `{task_id,status_url}`;状态 `GET /api/v1/mv/status/{id}` → `{state,progress,video_url,audio_url}`
+- 后台用 `asyncio.create_task` 执行,`app.mount("/generated", StaticFiles(...))` 挂载下载
+
+### 四、适配 Modal 免费 GPU 503"queue is full"(4 点改造)
+1. **并发=1**: `musicgen_modal.py` `max_containers=1` + `@modal.concurrent(max_inputs=1)`,单实例只处理 1 个 GPU 任务
+2. **用户任务锁**: `task_store.is_user_busy/acquire_lock/release_lock`,同一用户(user_id 或客户端 IP)禁止同时提交;音乐接口返回 `success=false`+中文提示,MV 接口返回 HTTP 429
+3. **任务超时**: `TASK_TIMEOUT` 默认 180s(可环境变量覆盖),`asyncio.wait_for` 包裹后台任务,超时自动标记 `failed` 并释放锁;`task_store.get()` 惰性超时兜底
+4. **队列满友好提示**: `musicgen_client.QueueFullError` 捕获 Modal 503"queue is full",转中文业务错误文本;音乐/MV 后台捕获并写入任务 error
+
+### 五、前端 Vue3(MusicGenDemo)
+- `backend/frontend-web/` 极简 Vue3 + Vite 工程,`src/App.vue` 为 Tailwind 版卡片 UI
+- 构建产物输出到 `backend/static_dist/`(index.html + assets/*.js)
+- 4 点逻辑改造,与后端任务锁/429/失败状态严格对应:
+  1. genMusic `if(!r.success) throw new Error(r.error)` 不启动轮询直接展示后端 error
+  2. post 封装解析 `data.detail/error/message`,非 2xx 抛带 status 的 Error;两处 catch `e.status===429` → "服务器当前忙碌,请稍后再提交任务"
+  3. 音乐/MV 按钮 `:disabled="busy"`,任务 `busy=true`,`finally{busy=false}` 三场景均能复位
+  4. poll `state==='failed'` → `throw new Error(t.error)` 抛后端原始错误文本
+
+### 关键经验教训
+- Modal Volume 写入是最终一致,跨容器必须先 `commit()`
+- 运行中容器文件系统是启动时快照,新 commit 文件未必立即可见 → 首选 Volume API 读取
+- `modal.Volume.read_file` 实际返回同步 generator(文档标 AsyncGenerator)
+- 免费 Modal GPU 队列有限,并发/锁/超时必须同时到位
+- `unzip` Modal ASGI 容器内没有 127.0.0.1 监听,自引用用线上 PUBLIC_BASE_URL
+
+### 阻塞项(需用户后续)
+- SiliconFlow key 平台侧 403(需用户在 siliconflow.cn 核实/充值),MV 生图现走 Slideshow 兜底
+- Runway/Agnes/本地音乐优化 key 未配,MV 无动态镜头
+- 若需真 AI 歌词/音乐,Modal 侧 secrets 需配 OPENROUTER/相关 key

@@ -33,7 +33,7 @@ _IMAGE = (
     image=_IMAGE,
     gpu="T4",
     timeout=60 * 20,
-    max_containers=2,
+    max_containers=1,
     volumes={"/models": _MODEL_VOLUME, "/root/data": _DATA_VOLUME},
     env={"GENERATED_DIR": "/root/data/generated"},
 )
