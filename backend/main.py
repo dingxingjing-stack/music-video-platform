@@ -258,6 +258,11 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
+# Serve MusicGen / MV 生成的音频视频（挂载共享数据卷，Modal 下由 GENERATED_DIR 覆盖）
+GENERATED_DIR = os.getenv("GENERATED_DIR", os.path.join(os.path.dirname(__file__), "generated"))
+os.makedirs(GENERATED_DIR, exist_ok=True)
+app.mount("/generated", StaticFiles(directory=GENERATED_DIR), name="generated")
+
 # ---------- 合规中间件 ----------
 app.add_middleware(PrivacyMiddleware)
 
@@ -416,10 +421,10 @@ async def services_status():
              "description": "歌词生成、文案优化、MV 概念生成（主力，永久免费无限额度）", "category": "llm"},
             {"name": "gemini", "label": "Gemini AI (备用文本接口)", "env_var": "GEMINI_API_KEY",
              "description": "备用 LLM，当 Agnes 不可用时切换", "category": "llm"},
+            {"name": "musicgen", "label": "MusicGen (Modal 本地开源音乐生成)", "env_var": "",
+             "description": "本地开源 MusicGen-small，零外部付费 API", "category": "audio"},
             {"name": "huggingface", "label": "Hugging Face (音频生成)", "env_var": "HF_TOKEN",
-         "description": "MusicGen / ACE-Step / YuE 音乐生成", "category": "audio"},
-        {"name": "mureka", "label": "Mureka API (商业级音乐生成)", "env_var": "MUREKA_API_KEY",
-         "description": "商业级音乐生成、录取、扒带", "category": "audio"},
+         "description": "MusicGen / ACE-Step / YuE 音乐生成兜底", "category": "audio"},
         {"name": "nvidia_nvapi", "label": "NVIDIA NVAPI (LLM/音乐生成)", "env_var": "NVAPI_API_KEY",
          "description": "备用 LLM、音乐生成", "category": "llm"},
         {"name": "supabase", "label": "Supabase (数据库/存储/认证)", "env_var": "SUPABASE_URL",
@@ -430,10 +435,8 @@ async def services_status():
          "description": "事务性邮件、验证码、通知", "category": "notification"},
         {"name": "sentry", "label": "Sentry (错误监控)", "env_var": "SENTRY_DSN",
          "description": "异常捕获、性能监控、告警", "category": "monitoring"},
-        {"name": "creatomate", "label": "Creatomate (视频渲染)", "env_var": "CREATOMATE_API_KEY",
-         "description": "MV 模板渲染、视频合成", "category": "video"},
-        {"name": "runwayml", "label": "RunwayML (AI 视频特效)", "env_var": "RUNWAYML_API_KEY",
-         "description": "视频生成、背景移除、特效", "category": "video"},
+        {"name": "mv_local", "label": "MV 合成 (FFmpeg 图片拼接)", "env_var": "",
+         "description": "零成本 FFmpeg 图片拼接简易视频，无付费视频 API", "category": "video"},
     ]
 
     results = []
@@ -1601,7 +1604,7 @@ try:
 
     _MODAL_IMAGE = (
         modal.Image.debian_slim(python_version="3.12")
-        .apt_install("ffmpeg")
+        .apt_install("ffmpeg", "fonts-dejavu-core")
         .pip_install("librosa", "soundfile", "pydub")
         .pip_install_from_requirements("requirements.txt")
         .add_local_dir(
@@ -1609,7 +1612,7 @@ try:
             "/root",
             copy=True,
             ignore=[
-                "data/", "results/", "voice_models/", "__pycache__/",
+                "data/", "results/", "generated/", "voice_models/", "__pycache__/",
                 ".git/", ".pytest_cache/", "tests/", "scripts/", "database/",
                 "*.db", "*.db-wal", "*.db-shm", "*.wav", "*.mp3",
                 ".env", ".envrc", "secrets.local.json", "secrets.json",
@@ -1619,7 +1622,18 @@ try:
 
     _MODAL_APP = modal.App("avireon-music-platform", secrets=[modal.Secret.from_dotenv(".env")])
 
-    @_MODAL_APP.function(image=_MODAL_IMAGE, timeout=900)
+    # 共享数据卷：MusicGen 生成的 wav / MV 视频写入此处，web 容器经 /generated 下载
+    _DATA_VOLUME = modal.Volume.from_name("avireon-music-platform-data-v1", create_if_missing=True)
+
+    @_MODAL_APP.function(
+        image=_MODAL_IMAGE,
+        timeout=900,
+        volumes={"/root/data": _DATA_VOLUME},
+        env={
+            "GENERATED_DIR": "/root/data/generated",
+            "PUBLIC_BASE_URL": "https://dingxingjing-stack--music-platform.modal.run",
+        },
+    )
     @modal.concurrent(max_inputs=50)
     @modal.asgi_app(label="music-platform")
     def _web():

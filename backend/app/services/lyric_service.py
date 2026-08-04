@@ -14,7 +14,7 @@ from pydantic import BaseModel
 import httpx
 import os
 
-# Gemini API Key (与现有 Gemini 配置共享)
+# 歌词生成由 LLMFactory 统一调度：AGNES 优先 -> Gemini 兜底（无 Mock）
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your_gemini_key")
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
@@ -221,10 +221,36 @@ class LyricService:
         return lang_map.get(lang_code, "中文")
     
     async def _call_gemini(self, prompt: str) -> str:
-        """调用 Gemini API 生成歌词（已关闭 Mock 兜底，无 key/失败均明确报错）"""
+        """调用 LLM 生成歌词：AGNES 优先，Gemini 兜底（已关闭 Mock，全失败明确报错）"""
+        try:
+            from app.services.inference.llm_factory import llm_factory
+        except Exception:
+            llm_factory = None
+
+        # AGNES 优先（llm_factory 内部按 agnes -> gemini -> nvidia 顺序降级）
+        if llm_factory is not None:
+            messages = [
+                {"role": "system", "content": "你是一位专业的歌词创作人，输出结构化的歌曲歌词。"},
+                {"role": "user", "content": prompt},
+            ]
+            try:
+                text = await llm_factory.call(
+                    messages=messages,
+                    provider="auto",
+                    temperature=0.7,
+                    max_tokens=2048,
+                )
+                if text and text.strip():
+                    return text
+            except Exception as e:
+                # llm_factory 全部失败，降级到直连 Gemini
+                import logging
+                logging.warning("LLMFactory 歌词生成失败，降级直连 Gemini: %s", e)
+
+        # Gemini 直连兜底
         if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_key":
             raise RuntimeError("GEMINI_API_KEY 未配置，无法生成真实歌词（Mock 兜底已关闭）")
-        
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -243,13 +269,13 @@ class LyricService:
                     },
                     params={"key": GEMINI_API_KEY}
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     return data["candidates"][0]["content"]["parts"][0]["text"]
                 else:
                     raise Exception(f"Gemini API error: {response.status_code}")
-        
+
         except RuntimeError:
             raise
         except Exception as e:

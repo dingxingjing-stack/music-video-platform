@@ -1,7 +1,7 @@
 """
 AI 音乐生成路由
 
-降级链：Mureka -> HF (Hugging Face MusicGen) -> Mock
+降级链：Modal MusicGen (本地开源) -> HF (Hugging Face MusicGen) -> 明确报错（无 Mock）
 通过环境变量 HF_FALLBACK (默认 true) 控制是否启用 HF 兜底。
 """
 
@@ -10,7 +10,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from app.services.mureka_service import mureka_service, MurekaSongRequest, QuotaExceededError
+from app.services.musicgen_client import generate_music as musicgen_generate_music
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
@@ -94,14 +94,14 @@ class GenerateResponse(BaseModel):
     audio_url: Optional[str] = None
     error: Optional[str] = None
     task_id: Optional[str] = None
-    ai_provider: Optional[str] = None   # "agnes" / "gemini" / "mureka" / "mock"
+    ai_provider: Optional[str] = None   # "agnes" / "gemini" / "musicgen" / "hf"
     agnes_debug: Optional[str] = None    # 调试 Agnes 调用详情
 
 
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_music(request: GenerateRequest):
     """
-    AI 生成音乐（Agnes 主力 + Gemini 备用 + Mureka 音频 + Mock 兜底）
+    AI 生成音乐（Agnes 主力 + Gemini 备用 + MusicGen 本地音频，无 Mock）
     """
     try:
         # 验证提示词
@@ -121,34 +121,26 @@ async def generate_music(request: GenerateRequest):
         ai_provider = "agnes" if agnes_result.optimized_prompt and agnes_result.optimized_prompt != request.prompt else "gemini"
         agnes_debug = f"success={agnes_result.success}, opt_changed={'yes' if agnes_result.optimized_prompt != request.prompt else 'no'}, error={agnes_result.error}, key_set={bool(agnes_service.API_KEY)}"
 
-        # 2. 使用优化后的提示词调用 Mureka 生成音频（多引擎降级）
+        # 2. 使用优化后的提示词调用 MusicGen 本地生成音频
         final_prompt = agnes_result.optimized_prompt or request.prompt
         if agnes_result.generated_lyrics:
             final_prompt = agnes_result.generated_lyrics
 
-        mureka_request = MurekaSongRequest(
-            lyrics=final_prompt,
-            style=request.style,
-            duration=request.duration,
+        # === 降级链：MusicGen (Modal 本地) -> HF -> 明确报错 ===
+        audio_url = await musicgen_generate_music(
+            prompt=final_prompt,
+            duration=min(request.duration or 30, 60),
         )
+        if audio_url:
+            return GenerateResponse(
+                success=True,
+                audio_url=audio_url,
+                task_id=f"musicgen-{hash(final_prompt) & 0xffff:04x}",
+                ai_provider=f"{ai_provider}+musicgen",
+                agnes_debug=agnes_debug,
+            )
 
-        # === 降级链：Mureka -> HF (Hugging Face MusicGen) -> Mock ===
-        try:
-            mureka_result = await mureka_service.generate_song(mureka_request)
-            if mureka_result.success:
-                return GenerateResponse(
-                    success=True,
-                    audio_url=mureka_result.audio_url,
-                    task_id=mureka_result.task_id,
-                    ai_provider=f"{ai_provider}+mureka",
-                    agnes_debug=agnes_debug,
-                )
-        except QuotaExceededError:
-            print("[降级] Mureka 配额耗尽，降级到 HF")
-        except Exception as e:
-            print(f"[降级] Mureka 异常: {e}，降级到 HF")
-
-        # 2. Mureka 失败时尝试 HF 兜底
+        # 2. MusicGen 失败时尝试 HF 兜底
         hf_audio = await _try_hf_fallback(
             prompt=final_prompt,
             style=request.style,
@@ -163,11 +155,11 @@ async def generate_music(request: GenerateRequest):
                 agnes_debug=agnes_debug,
             )
 
-        # 3. Mureka 与 HF 兜底均失败 → 明确报错（已关闭 Mock 音频兜底）
-        print("[generate_music] Mureka/HF 均失败，已关闭 Mock 兜底，返回错误")
+        # 3. MusicGen 与 HF 兜底均失败 → 明确报错（已关闭 Mock 音频兜底）
+        print("[generate_music] MusicGen/HF 均失败，已关闭 Mock 兜底，返回错误")
         return GenerateResponse(
             success=False,
-            error="音乐生成失败：Mureka 与 HF 兜底均不可用（请检查 MUREKA_API_KEY / HF_TOKEN 配置）",
+            error="音乐生成失败：MusicGen 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
             ai_provider=f"{ai_provider}+error",
             agnes_debug=agnes_debug,
         )
