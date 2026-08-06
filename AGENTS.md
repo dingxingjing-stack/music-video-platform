@@ -211,9 +211,9 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 ### 二、Supabase 接入全过程(4 个 500 排查)
 - 真实 500 端点: `/songs/{id}`、`/songs/{id}/stats`、`/auth/{id}/stats`、`/feedback/`(均依赖 supabase)
 - **坑 1: 死密钥**: 项目里旧文档 URL `gdowyyvzvseheccisdfhl.supabase.co` 已删除(Non-existent domain),别再用
-- **坑 2: 新项目**: 用户提供新项目 ref `nmbkxbldxauvgsbdsljj` 的密钥:
+- **坑 2: 新项目**: 用户提供新项目 ref `nmbkxbldxauvgsbdsljj` 的密钥(真实值仅存于 `backend/.env`,此处脱敏):
   - `SUPABASE_URL=https://nmbkxbldxauvgsbdsljj.supabase.co`
-  - `SUPABASE_ANON_KEY=<anon_key>`(前端)
+  - `SUPABASE_ANON_KEY=<anon_key> `(前端,略)
   - `SUPABASE_SERVICE_ROLE_KEY=<service_role_secret>`(后端,注意字符串是 2Lz2useoC 不是 2LzuseoC,之前测 401 因漏字符)
 - **坑 3: 表缺失+列不全**: 初始只有 feedback/songs/tasks/user_stats(视图)且列极少;songs 缺 lyrics/style/status/is_public/play_count/like_count/metadata 等;users 表完全没有
 - **坑 4: GRANT 授权**: 即使密钥正确,service_role 对表无权限 → 403 "permission denied for table"(hint 会直接给出修复 SQL `GRANT ... TO service_role`)
