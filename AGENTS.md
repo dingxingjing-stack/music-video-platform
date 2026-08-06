@@ -185,3 +185,50 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 - SiliconFlow key 平台侧 403(需用户在 siliconflow.cn 核实/充值),MV 生图现走 Slideshow 兜底
 - Runway/Agnes/本地音乐优化 key 未配,MV 无动态镜头
 - 若需真 AI 歌词/音乐,Modal 侧 secrets 需配 OPENROUTER/相关 key
+
+
+---
+
+## 会话记录 (2026-08-06) — 全站审计 + Supabase 接入
+
+### 背景
+- 审计目标: 线上 `https://dingxingjing-stack--music-platform.modal.run`(187 路由,标题 "Inference Service API" 2.0.0)
+- 源代码仓库: `C:\Users\dingx\music-video-platform`(注意: 与 `music-website-skill-backup`(ai-service)是不同项目)
+- 部署命令同 08-04:`python -m modal deploy main.py::_MODAL_APP`(需 chcp 65001 + PYTHONIOENCODING=utf-8)
+- 本次 Git: commit `2e88b8f`(prefix 修复)+ 3 个未提交 supabase SQL 脚本
+
+### 一、全量审计初检(修复前)
+- 187 路由中: 200×60、422×103、404×16(全是 {param} 占位符路径)、401×4(需鉴权)、500×10
+- 冷启动: 首请求 ~20s 超时(容器拉起),warm 后 ~500ms
+- **发现严重 bug — 5 组路由重复前缀**:
+  - 路由器内部已声明 `APIRouter(prefix="/api/v1/beat")`,main.py 又 `include_router(rhythm_app, prefix="/api/v1/beat")` 二次拼接
+  - 线上真实路径变 `/api/v1/beat/api/v1/beat/detect`,文档/前端用的干净路径 `/api/v1/beat/detect` 全 404/405
+  - 涉及: rhythm_analysis(beat)、bg_removal(bg)、cdn_upload(cdn)、lyrics_rhyme(lyrics)、workflow_router(路由内嵌 /workflow)
+  - main.py:327 `copyright_app` 重复 include 两次
+- **修复(commit `2e88b8f`)**: 移除 4 处重复 `prefix=`;workflow_router 路由路径 `/workflow/a`→`/a`;删除重复 copyright_app
+- 修复后复验: 双前缀路径 187→0,干净路径全部 200(`/beat/detect`、`/bg/pricing`、`/cdn/info`、`/workflow/a`、`/lyrics/moods|styles`)
+
+### 二、Supabase 接入全过程(4 个 500 排查)
+- 真实 500 端点: `/songs/{id}`、`/songs/{id}/stats`、`/auth/{id}/stats`、`/feedback/`(均依赖 supabase)
+- **坑 1: 死密钥**: 项目里旧文档 URL `gdowyyvzvseheccisdfhl.supabase.co` 已删除(Non-existent domain),别再用
+- **坑 2: 新项目**: 用户提供新项目 ref `nmbkxbldxauvgsbdsljj` 的密钥:
+  - `SUPABASE_URL=https://nmbkxbldxauvgsbdsljj.supabase.co`
+  - `SUPABASE_ANON_KEY=<anon_key>`(前端)
+  - `SUPABASE_SERVICE_ROLE_KEY=<service_role_secret>`(后端,注意字符串是 2Lz2useoC 不是 2LzuseoC,之前测 401 因漏字符)
+- **坑 3: 表缺失+列不全**: 初始只有 feedback/songs/tasks/user_stats(视图)且列极少;songs 缺 lyrics/style/status/is_public/play_count/like_count/metadata 等;users 表完全没有
+- **坑 4: GRANT 授权**: 即使密钥正确,service_role 对表无权限 → 403 "permission denied for table"(hint 会直接给出修复 SQL `GRANT ... TO service_role`)
+- **坑 5: uuid 探测**: users.id 是 uuid 类型,探测传 `id=1` 报 "invalid input syntax for type uuid";真实 uuid(如 `00000000-0000-0000-0000-000000000001`)正常 → `/songs/{uuid}` 已返回 404 "Song not found"(非 500)
+- 已更新 `backend/.env` 密钥并重部署,`/api/v1/services/status` supabase configured=2(生效)
+- 已生成 3 个修复脚本(未提交,均在 `backend/scripts/`): `supabase_schema.sql`(建表)、`supabase_fix_grants.sql`(GRANT+users)、`supabase_fix_columns.sql`(补列)
+
+### 当前状态(下班时)
+- 数据库端已: 授权 service_role、新建 users 表
+- **待用户执行**: `supabase_fix_columns.sql` 补列脚本(songs/users/tasks/feedback 缺列是 500 的最后根因,如 `column songs.play_count does not exist`)
+- 补列完成后: 复验 `/songs/{uuid}`、`/songs/{uuid}/stats`、`/auth/{uuid}/stats`、`/feedback/`,再跑全量审计输出最终报告
+- 工作区: 3 个 supabase SQL 脚本未提交(建议补列验证通过后一并 commit)
+
+### 待办(下次上班)
+1. 用户跑 `backend/scripts/supabase_fix_columns.sql`
+2. 用合法 uuid 复验 4 个 Supabase 端点
+3. 全量审计(187 路由)确认 4 个 500 归零,输出最终审计报告
+4. 提交 3 个 SQL 脚本 + 更新 .env 说明(密钥不入库,.env 已 gitignore)
