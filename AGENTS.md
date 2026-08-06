@@ -232,3 +232,95 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 2. 用合法 uuid 复验 4 个 Supabase 端点
 3. 全量审计(187 路由)确认 4 个 500 归零,输出最终审计报告
 4. 提交 3 个 SQL 脚本 + 更新 .env 说明(密钥不入库,.env 已 gitignore)
+
+---
+
+## 🔒 防密钥泄露规范 (Secrets Safety)
+
+> 目的：防止 API Key、Secret、Token 等敏感信息进入 Git 历史、被 Push Protection 拦截或公开泄露。
+> 适用范围：本仓库所有提交、分支、文档、脚本、CI 流程。
+
+### 1. 分级：什么算敏感信息
+
+以下内容**禁止写入任何可提交文件**（代码、文档、SQL、配置模板、CI 文件）：
+
+- 认证密钥：`*_API_KEY`、`*_SECRET`、`*_TOKEN`、`*_PASSWORD`
+- 厂商 Secret：`sb_secret_*`（Supabase service_role）、`sk-or-*`（OpenRouter）、`sk-*`（SiliconFlow / OpenAI）、`ghp_*`/`github_pat_*`（GitHub Token）
+- 数据库连接串、redis URL 中的密码、JWT 签名密钥
+- 云端凭证：AWS/GCP/Cloudflare 的 access key / secret
+- 账户相关：用户名邮箱对应的登录密码、真实充值/实名信息
+
+**非敏感但需标注**：项目 ref、bucket 名、公开域名、UUID 等（不含凭证价值，但不要与密钥混淆）。
+
+### 2. 强制定位：密钥唯一存放处
+
+| 密钥存放位置 | 是否入库 | 说明 |
+|-------------|---------|------|
+| `backend/.env` 等本地 env 文件 | **否**（已 gitignore） | 本地 & 部署秘密的唯一权威来源 |
+| Modal Dashboard Secrets | 否 | 线上部署从这里读取 |
+| GitHub Actions Secrets / Repo Secrets | 否 | CI 流程读取 |
+| 仓库内任何 `.py/.md/.sql/.json/.yaml/.example` | **禁止** | 只准用 `<占位>`，真实值一律进 .env |
+
+### 3. 提交前强制自查（必做）
+
+推送前，先本地扫一遍暂存区，确认无密钥：
+
+```powershell
+# 扫描工作区所有文本是否含高危模式
+rg -i -n "sb_secret_|sk-or-v[12]_|sk-[a-z0-9]{20}|ghp_[A-Za-z0-9]{20}|AIza[0-9A-Za-z_-]{35}" . `
+  --glob '!**/.env' --glob '!.git/**' --glob '!**/*.db*'
+
+# 列出本次将暂存的文件，肉眼复核
+git status
+git diff --cached --name-only
+```
+
+若命中：先 `git checkout -- <file>` 还原，改代码用 `<占位>` 再重新提交。
+
+### 4. 已提交密钥的处理流程
+
+若密钥已进入某次提交（即使已删除）：
+
+1. **立即在对应平台轮换密钥**（最优先，历史改写无法撤销已同步的远端副本）。
+2. 本地从所有提交中清除历史：
+   - 新项目：用 `git filter-repo`（比 filter-branch 快且安全）
+   - 存量项目：`git filter-branch --tree-filter "<替换脚本>" -- 起点..HEAD`
+   - 脚本必须幂等（重复执行结果一致），路径用绝对绝对，防引号/换行解析失败
+3. 删除 filter-branch 备份引用：`git update-ref -d refs/original/refs/heads/master HEAD`
+4. 用 `git log master -S "<密钥串>"` 双确认无残留。
+5. 推送时必须是 fast-forward 或正常合并，**禁用 `-f` 强制覆盖远端**（会破坏远端其它分支/协作者历史）。
+6. 通知所有已 clone 该仓库的协作者重新同步（仅 copy 新历史无法清洗）。
+
+### 5. Git 红线
+
+- 禁止对远端 `main` 执行 `git push -f` / `--force`，除非明确协调且保护分支允许。
+- 合并用 `pull --allow-unrelated-histories` 后手工解决冲突，add/add 冲突**先问策略**再取舍，不得擅自删远端独有的文件。
+- 推送前建议 `git push --dry-run` 预检（但暂仍未做 Push Protection 的凭据校验，正式推送仍会被拦）。
+
+### 6. 文档与模板规范
+
+- AGENTS.md / README / 文档：会话记录、示例配置**一律写 `<占位>`**，并注明"真实值存 `backend/.env`"。
+- SQL 脚本 / 部署 yaml / docker-compose：只写 `{{ ENV }}` 或占位，不写真实 URL 之外的 key。
+- CI 里用环境的 secrets 注入，命令行里不出现明文。
+
+### 7. 敏感提交分离
+
+- 密钥变更、账号信息、域名绑定等**独立提交**，不与代码功能改动混在一起，便于回滚与审计。
+- 即便需要提交 `.env.example`，也只放键名 + 假值模板，绝不放真实值。
+
+### 8. 一处泄露，全量排查
+
+发现任何泄露后，除了轮换，还执行：
+
+```powershell
+git log --all -S "sb_secret_"
+git log --all -S "sk_live_"
+git reflog --all
+git for-each-ref refs/original   # filter-branch 残留备份
+```
+
+清理 `refs/original/*`，确认所有 ref（master/分支/tags）均干净后再推送。
+
+### 附：一句话清单
+
+> **写代码用占位，真实值只进 .env 与非 Git 秘密；提交前 grep 扫盘；泄露即轮换 + filter-repo 清洗后验证；推送永远不用 -f。**
