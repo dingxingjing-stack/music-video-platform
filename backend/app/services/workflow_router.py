@@ -55,7 +55,7 @@ async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/workflow/a", tags=["workflows"])
+@router.post("/a", tags=["workflows"])
 async def workflow_path_a(request: Request):
     """Path A: Suno-style — one-click music generation."""
     try:
@@ -93,7 +93,7 @@ async def workflow_path_a(request: Request):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/workflow/b", tags=["workflows"])
+@router.post("/b", tags=["workflows"])
 async def workflow_path_b(request: Request):
     """Path B: Hybrid — MusicGen background + TTS vocals."""
     try:
@@ -137,7 +137,7 @@ async def workflow_path_b(request: Request):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/workflow/c", tags=["workflows"])
+@router.post("/c", tags=["workflows"])
 async def workflow_path_c(request: Request):
     """Path C: Remix — upload audio -> Demucs stem separation."""
     try:
@@ -178,7 +178,7 @@ async def workflow_path_c(request: Request):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/workflow/d", tags=["workflows"])
+@router.post("/d", tags=["workflows"])
 async def workflow_path_d(request: Request):
     """Path D: Original Creation — MIDI project -> render to audio."""
     try:

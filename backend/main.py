@@ -324,26 +324,25 @@ app.include_router(notif_app)
 app.include_router(msg_app)
 app.include_router(sub_app)
 app.include_router(store_app)
-app.include_router(copyright_app)
 app.include_router(audio_quality_app)
 app.include_router(ugc_app)
 app.include_router(feedback.router)
 
 # ---------- Rhythm analysis router (P0-6 节拍检测) ----------
 from app.routers.rhythm_analysis import router as rhythm_app
-app.include_router(rhythm_app, prefix="/api/v1/beat")
+app.include_router(rhythm_app)
 
 # ---------- CDN upload router (P0-8 CDN 集成) ----------
 from app.routers.cdn_upload import router as cdn_app
-app.include_router(cdn_app, prefix="/api/v1/cdn")
+app.include_router(cdn_app)
 
 # ---------- BG removal router (P1-7 智能抠图) ----------
 from app.routers.bg_removal import router as bg_app
-app.include_router(bg_app, prefix="/api/v1/bg")
+app.include_router(bg_app)
 
 # ---------- Lyrics rhyme AI router (P3-7 歌词押韵) ----------
 from app.routers.lyrics_rhyme import router as lyrics_app
-app.include_router(lyrics_app, prefix="/api/v1/lyrics")
+app.include_router(lyrics_app)
 
 # ---------- Supabase 认证路由 ----------
 from app.routers.auth import router as auth_app
@@ -1573,7 +1572,12 @@ async def on_shutdown():
 
 @app.get("/", tags=["operations"])
 async def root():
-    """API root — returns basic info."""
+    """API root — 前端构建产物存在时返回 SPA index.html，否则返回 API 信息。"""
+    index_path = os.path.join(os.path.dirname(__file__), "static_dist", "index.html")
+    if os.path.isfile(index_path):
+        from fastapi.responses import HTMLResponse
+        with open(index_path, "r", encoding="utf-8") as fh:
+            return HTMLResponse(content=fh.read())
     return {
         "name": "Inference Service API",
         "version": "3.0.0",
@@ -1593,6 +1597,14 @@ async def root():
         "websocket": "/ws/progress/{task_id}",
         "mock_run": "/api/v1/mock/run",
     }
+
+
+# ==============================================================================
+# Vue3 前端静态托管（必须放在所有 API 路由注册之后，避免 "/" 挂载吞掉接口）
+# ==============================================================================
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "static_dist")
+if os.path.isdir(FRONTEND_DIST):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
 
 
 # ==============================================================================
