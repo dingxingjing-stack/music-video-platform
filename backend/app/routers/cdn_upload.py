@@ -6,7 +6,7 @@ CDN 上传 API
 - POST /cdn/presigned-url - 获取预签名上传 URL (前端直传)
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional, Dict
 
@@ -39,20 +39,23 @@ class PresignedUrlResponse(BaseModel):
 @router.post("/upload", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(..., description="要上传的文件"),
-    file_type: str = Form(..., description="文件类型：audio/video/image")
+    file_type: str = Form(..., description="文件类型：audio/video/image"),
+    x_user_id: Optional[str] = Header(None)
 ):
     """
     上传文件到 CDN
     
     支持:
-    - Cloudflare R2 (推荐)
+    - Cloudflare R2 (推�荐)
     - AWS S3
-    - 本地存储 (回退)
+    - 本地存�储 (回退)
     
-    费用估算:
+    �� 费用估算:
     - Cloudflare R2: 免费 10GB/月，超出后 $0.015/GB
     - AWS S3: $0.023/GB/月
     """
+    if not x_user_id:
+        raise HTTPException(status_code=403, detail="Missing X-User-ID header")
     try:
         # 1. 验证文件类型
         allowed_types = {
@@ -122,7 +125,8 @@ async def upload_file(
 @router.post("/presigned-url", response_model=PresignedUrlResponse)
 async def get_presigned_url(
     file_type: str = Form(..., description="文件类型：audio/video/image"),
-    file_ext: str = Form(..., description="文件扩展名：.wav/.mp4/.png")
+    file_ext: str = Form(..., description="文件�扩展名：.wav/.mp4/.png"),
+    x_user_id: Optional[str] = Header(None)
 ):
     """
     获取预签名上传 URL
@@ -134,6 +138,8 @@ async def get_presigned_url(
     2. 前端 PUT 文件到 upload_url
     3. CDN 返回 cdn_url
     """
+    if not x_user_id:
+        raise HTTPException(status_code=403, detail="Missing X-User-ID header")
     try:
         result = cdn_uploader.get_upload_url(file_type, file_ext)
         
