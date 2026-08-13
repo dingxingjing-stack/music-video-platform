@@ -168,6 +168,78 @@ class CDNUploader:
         print(f"[R2 上传] ✅ {key} -> {cdn_url}")
         return cdn_url
     
+    async def upload_private(self, file_path: str, key: str, content_type: str = "audio/wav") -> str:
+        """上传到 R2（私有对象，无公开读 ACL）。
+
+        用于商业下载资产：对象不公开，仅由后端授权检查后签发短期预签名 URL。
+        返回 R2 key；调用方应存储 key 而非拼接公网 URL。
+        """
+        if self.provider != CDNProvider.R2:
+            raise RuntimeError("upload_private 仅支持 Cloudflare R2")
+
+        import boto3
+        from botocore.config import Config
+
+        endpoint_url = f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=endpoint_url,
+            aws_access_key_id=self.r2_access_key,
+            aws_secret_access_key=self.r2_secret_key,
+            config=Config(signature_version='s3v4'),
+            region_name='auto'
+        )
+        s3_client.upload_file(
+            file_path,
+            self.bucket,
+            key,
+            ExtraArgs={'ContentType': content_type},
+        )
+        print(f"[R2 私有上传] ✅ {key}")
+        return key
+
+    def get_presigned_download_url(self, key: str, expires_in: int = 600) -> str:
+        """为私有对象生成短期预签名下载 URL（默认 10 分钟）。
+
+        只能由后端在授权检查通过后调用，禁止前端自行拼接对象存储 URL。
+        """
+        import boto3
+        from botocore.config import Config
+
+        endpoint_url = f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=endpoint_url,
+            aws_access_key_id=self.r2_access_key,
+            aws_secret_access_key=self.r2_secret_key,
+            config=Config(signature_version='s3v4'),
+            region_name='auto'
+        )
+        return s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': self.bucket, 'Key': key},
+            ExpiresIn=max(60, int(expires_in)),
+        )
+
+    async def upload_music_package(self, task_id: str, files: Dict[str, str]) -> Dict[str, str]:
+        """上传完整歌曲 + 4 分轨到私有 R2。
+
+        Args:
+            task_id: 任务 ID，用作目录前缀
+            files: {逻辑名: 本地路径}，逻辑名取值
+                   full_mp3 / full_wav / vocals / drums / bass / other
+        Returns:
+            {逻辑名: R2 key}；存储 key 而非 URL，后续经预签名签发下载。
+        """
+        manifest: Dict[str, str] = {}
+        for logical, local_path in files.items():
+            ext = os.path.splitext(local_path)[1].lower() or ".wav"
+            content_type = "audio/mpeg" if ext == ".mp3" else "audio/wav"
+            key = f"music/{task_id}/{logical}{ext}"
+            await self.upload_private(local_path, key, content_type)
+            manifest[logical] = key
+        return manifest
+    
     async def _upload_s3(self, file_path: str, key: str, content_type: str) -> str:
         """上传到 AWS S3"""
         import boto3

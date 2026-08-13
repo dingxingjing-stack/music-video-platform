@@ -1,54 +1,24 @@
 /**
- * AIGeneratePanel v2 — AI 音频生成面板（Suno 风格增强版）
- * 
- * 新增功能：
- * - 人声/性别选择 (auto/male/female/instrumental)
- * - 风格滑块控制 (Weirdness + Style Strength)
- * - 歌词编辑器 (自定义歌词 + AI 生成歌词)
- * - 歌曲结构编辑 (Intro/Verse/Chorus/Bridge/Outro 拖拽排列)
+ * AIGeneratePanel v3 — AI 生成音频面板（异步任务版）
+ *
+ * 对接后端异步协议（POST /ai/generate -> task_id -> 轮询 /ai/task/{id}），
+ * 展示完整阶段：排队中/准备中/生成中(ACE-Step)/分轨中(Demucs)/上传中/完成/失败。
+ * 完成后展示 完整歌曲 + vocals/drums/bass/other 四轨，均可播放与下载；
+ * 分轨失败时完整歌曲仍可播放/下载，并提供「重试分轨」（不重复扣额度）。
+ * 下载统一走后端授权接口返回的短期预签名 URL（X-User-ID 归属校验）。
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useAiMusicTask,
+  STAGE_LABEL,
+  STEM_NAMES,
+  AiStems,
+} from '../../hooks/useAiMusicTask';
 
 interface Props {
   onGenerated: (audioUrl: string, title: string) => void;
   onClose: () => void;
-}
-
-// ─── API 调用 ───────────────────────────────────────
-interface GenerateParams {
-  prompt: string;
-  style: string;
-  vocal_type: string;
-  weirdness: number;
-  style_strength: number;
-  duration: number;  // P0-2 长歌曲支持
-  structure: string | null;
-  lyrics: string | null;
-}
-
-interface GenerateResult {
-  audio_url: string;
-  optimized_prompt?: string;
-  generated_lyrics?: string;
-  style_suggestions?: string[];
-}
-
-async function callGenerateAPI(params: GenerateParams): Promise<GenerateResult> {
-  const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/ai/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  });
-  if (!response.ok) throw new Error(await response.text() || `HTTP ${response.status}`);
-  const data = await response.json();
-  if (!data.success || !data.audio_url) throw new Error(data.error || '生成失败');
-  return {
-    audio_url: data.audio_url,
-    optimized_prompt: data.optimized_prompt,
-    generated_lyrics: data.generated_lyrics,
-    style_suggestions: data.style_suggestions,
-  };
 }
 
 // ─── 歌曲结构类型 ───────────────────────────────────
@@ -91,23 +61,32 @@ const VOCAL_OPTIONS = [
   { value: 'instrumental', label: '纯音乐', icon: '🎹' },
 ];
 
-// ─── 组件 ───────────────────────────────────────────
+const DURATION_OPTIONS = [
+  { value: 60, label: '1 分钟', desc: '短片段' },
+  { value: 120, label: '2 分钟', desc: '短视频' },
+  { value: 180, label: '3 分钟', desc: '标准(上限)' },
+];
+
+const PROGRESS_STAGES = ['pending', 'processing', 'generating', 'separating', 'uploading'];
+
 export function AIGeneratePanel({ onGenerated, onClose }: Props) {
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('pop');
   const [vocalType, setVocalType] = useState('auto');
   const [weirdness, setWeirdness] = useState(0.5);
   const [styleStrength, setStyleStrength] = useState(0.7);
-  const [duration, setDuration] = useState(180); // 默认 3 分钟
+  const [duration, setDuration] = useState(180);
   const [lyrics, setLyrics] = useState('');
   const [showLyricsEditor, setShowLyricsEditor] = useState(false);
   const [generatedLyrics, setGeneratedLyrics] = useState('');
   const [sections, setSections] = useState<SongSection[]>(DEFAULT_SECTIONS);
   const [showStructure, setShowStructure] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
+  const [error, setError] = useState<string | null>(null);
+
+  const { task, loading, submit, retryStems, download } = useAiMusicTask();
+  const onGeneratedRef = useRef(onGenerated);
+  onGeneratedRef.current = onGenerated;
 
   const styles = [
     { value: 'pop', label: '流行' }, { value: 'rock', label: '摇滚' },
@@ -145,71 +124,172 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
     }]);
   }, [sections]);
 
-  // ─── 生成 ─────────────────────────────────────
+  // ─── 生成（异步任务）────────────────────────────
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) { setError('请输入音乐提示词'); return; }
-    setIsGenerating(true);
-    setProgress(0);
     setError(null);
     setGeneratedLyrics('');
-
-    const interval = setInterval(() => setProgress(p => Math.min(p + 8, 90)), 400);
-
-    try {
-      const result = await callGenerateAPI({
-        prompt,
-        style,
-        vocal_type: vocalType,
-        weirdness,
-        style_strength: styleStrength,
-        duration,  // P0-2 长歌曲支持
-        structure: showStructure ? JSON.stringify({ sections: sections.map(s => s.type) }) : null,
-        lyrics: showLyricsEditor && lyrics.trim() ? lyrics : null,
-      });
-      clearInterval(interval);
-      setProgress(100);
-      const title = prompt.length > 20 ? prompt.slice(0, 20) + '...' : prompt;
-      if (result.generated_lyrics) setGeneratedLyrics(result.generated_lyrics);
-      onGenerated(result.audio_url, title);
-      setIsGenerating(false);
-    } catch (e) {
-      clearInterval(interval);
-      setError(e instanceof Error ? e.message : '生成失败');
-      setIsGenerating(false);
-      setProgress(0);
+    const structure = showStructure ? JSON.stringify({ sections: sections.map(s => s.type) }) : null;
+    const lyricsVal = showLyricsEditor && lyrics.trim() ? lyrics : null;
+    const taskId = await submit({
+      prompt,
+      style,
+      duration,
+      lyrics: lyricsVal,
+      type: 'song',
+    });
+    if (!taskId) {
+      // submit 失败时 hook 已写入 task.error
+      setError(task.error || '提交失败，请稍后重试');
     }
-  }, [prompt, style, vocalType, weirdness, styleStrength, duration, sections, lyrics, showStructure, showLyricsEditor, onGenerated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt, style, duration, lyrics, showLyricsEditor, showStructure, sections, submit]);
+
+  // 完成 → 通知父组件（MultiTrackView 添加到音轨），仅触发一次
+  useEffect(() => {
+    if (task.stage === 'completed' && task.audioUrl) {
+      const title = prompt.length > 20 ? prompt.slice(0, 20) + '...' : prompt;
+      onGeneratedRef.current(task.audioUrl, title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.stage, task.audioUrl]);
+
+  // 失败/超限 → 展示错误
+  useEffect(() => {
+    if (task.stage === 'failed' && task.error) setError(task.error);
+  }, [task.stage, task.error]);
+
+  const handleDownload = useCallback(async (file: 'full' | 'vocals' | 'drums' | 'bass' | 'other', fmt = 'mp3') => {
+    try {
+      const url = await download(file, fmt);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${file === 'full' ? 'song_full' : file}.${fmt}`;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '下载失败');
+    }
+  }, [download]);
+
+  const handleRetryStems = useCallback(async () => {
+    setError(null);
+    await retryStems();
+  }, [retryStems]);
+
+  const inProgress = PROGRESS_STAGES.includes(task.stage);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="w-[700px] max-h-[85vh] bg-[#1e1e1e] rounded-xl border border-[#2a2a2a] overflow-hidden flex flex-col">
+      <div className="w-[720px] max-h-[90vh] bg-[#1e1e1e] rounded-xl border border-[#2a2a2a] overflow-hidden flex flex-col">
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
             <h2 className="text-lg font-bold text-[#e0e0e0]">✨ AI 生成音频</h2>
-            <p className="text-xs text-[#777777]">输入提示词，AI 自动创作音乐 · Suno 增强版</p>
+            <p className="text-xs text-[#777777]">输入提示词，AI 自动创作整曲并分轨 · 每日 1 首</p>
           </div>
-          <button onClick={onClose} className="text-[#777777] hover:text-white transition">✕</button>
+          <button onClick={onClose} className="text-[#777777] hover:text-white transition" disabled={loading}>✕</button>
         </div>
 
-        {/* Tab 切换 */}
-        <div className="flex border-b border-[#2a2a2a]">
-          <button
-            onClick={() => setActiveTab('basic')}
-            className={`flex-1 px-4 py-2 text-sm font-medium transition ${activeTab === 'basic' ? 'text-orange-400 border-b-2 border-orange-500 bg-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'}`}
-          >基础设置</button>
-          <button
-            onClick={() => setActiveTab('advanced')}
-            className={`flex-1 px-4 py-2 text-sm font-medium transition ${activeTab === 'advanced' ? 'text-orange-400 border-b-2 border-orange-500 bg-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'}`}
-          >高级控制</button>
-        </div>
+        {/* 结果区（完成后显示） */}
+        {task.stage === 'completed' && (
+          <div className="p-4 border-b border-[#2a2a2a] bg-[#141414]">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-emerald-400">✅ 生成完成</h3>
+              {task.stemsState === 'failed' && (
+                <button
+                  onClick={handleRetryStems}
+                  disabled={loading || (task.stemRetries ?? 0) >= 1}
+                  className="px-3 py-1 text-xs rounded bg-[#2a2a2a] text-orange-400 hover:bg-[#333] disabled:opacity-40"
+                >
+                  重试分轨{task.stemRetries ? ` (${task.stemRetries}/1)` : ''}
+                </button>
+              )}
+            </div>
+
+            {task.stemsState === 'failed' && (
+              <p className="text-xs text-orange-400/90 mb-2">
+                ⚠️ 分轨失败，完整歌曲仍可播放与下载，可点击「重试分轨」（不扣生成额度）。
+              </p>
+            )}
+            {task.stemsState === 'skipped' && (
+              <p className="text-xs text-[#777777] mb-2">ℹ️ 本次未生成分轨（兜底链路）。</p>
+            )}
+
+            {/* 完整歌曲 */}
+            <div className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-3 mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-[#e0e0e0]">完整歌曲</span>
+                <div className="flex gap-1.5">
+                  <button onClick={() => handleDownload('full', 'mp3')} className="px-2 py-0.5 text-[11px] rounded bg-orange-500/20 text-orange-400 hover:bg-orange-500/30">⬇ MP3</button>
+                  <button onClick={() => handleDownload('full', 'wav')} className="px-2 py-0.5 text-[11px] rounded bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333]">⬇ WAV</button>
+                </div>
+              </div>
+              {task.audioUrl && <audio controls src={task.audioUrl} className="w-full h-9" />}
+            </div>
+
+            {/* 四轨分轨 */}
+            <div className="grid grid-cols-1 gap-2">
+              {STEM_NAMES.map(({ key, label, color }) => {
+                const url = (task.stems as AiStems | null)?.[key];
+                if (!url) return null;
+                return (
+                  <div key={key} className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-2.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium" style={{ color }}>{label} ({key})</span>
+                      <button onClick={() => handleDownload(key)} className="px-2 py-0.5 text-[11px] rounded bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333]">⬇ 下载</button>
+                    </div>
+                    <audio controls src={url} className="w-full h-9" />
+                  </div>
+                );
+              })}
+              {(!task.stems || Object.keys(task.stems).length === 0) && task.stemsState !== 'failed' && (
+                <p className="text-xs text-[#777777]">无可用分轨。</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 内容区 */}
         <div className="p-4 space-y-4 overflow-auto">
+          {/* 进度 / 状态 */}
+          {(inProgress || loading) && (
+            <div>
+              <div className="flex items-center justify-between text-xs text-[#777777] mb-1">
+                <span>{task.stage ? STAGE_LABEL[task.stage] : '提交中...'}</span>
+                <span>{task.progress}%</span>
+              </div>
+              <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-orange-500 to-pink-500 transition-all" style={{ width: `${Math.max(4, task.progress || 5)}%` }} />
+              </div>
+              <p className="text-xs text-[#777777] mt-2 text-center">
+                {task.stage === 'generating' && 'AI 正在创作完整歌曲（ACE-Step GPU）...'}
+                {task.stage === 'separating' && '正在分离人声/鼓/贝斯/其他（Demucs）...'}
+                {task.stage === 'uploading' && '正在上传到私有存储...'}
+                {task.stage === 'pending' && '任务已排队，等待 GPU...'}
+                {!task.stage && '正在提交...'}
+              </p>
+            </div>
+          )}
+
+          {/* Tab 切换 */}
+          <div className="flex border-b border-[#2a2a2a]">
+            <button
+              onClick={() => setActiveTab('basic')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition ${activeTab === 'basic' ? 'text-orange-400 border-b-2 border-orange-500 bg-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'}`}
+            >基础设置</button>
+            <button
+              onClick={() => setActiveTab('advanced')}
+              className={`flex-1 px-4 py-2 text-sm font-medium transition ${activeTab === 'advanced' ? 'text-orange-400 border-b-2 border-orange-500 bg-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'}`}
+            >高级控制</button>
+          </div>
+
           {/* ── 基础设置 Tab ── */}
           {activeTab === 'basic' && (
             <>
-              {/* 提示词 */}
               <div>
                 <label className="text-xs text-[#777777] mb-1 block">音乐提示词</label>
                 <textarea
@@ -217,11 +297,10 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                   onChange={e => setPrompt(e.target.value)}
                   placeholder={'描述你想要的音乐风格、情绪、节奏... 例如：夏日午后，轻松愉悦的流行音乐，轻快的吉他旋律'}
                   className="w-full h-24 bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg px-3 py-2 text-sm text-[#e0e0e0] resize-none focus:border-orange-500/50"
-                  disabled={isGenerating}
+                  disabled={inProgress || loading}
                 />
               </div>
 
-              {/* 风格选择 */}
               <div>
                 <label className="text-xs text-[#777777] mb-1 block">音乐风格</label>
                 <div className="grid grid-cols-5 gap-2">
@@ -230,13 +309,12 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                       key={s.value}
                       onClick={() => setStyle(s.value)}
                       className={`px-2 py-1.5 rounded text-xs transition ${style === s.value ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white' : 'bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333333]'}`}
-                      disabled={isGenerating}
+                      disabled={inProgress || loading}
                     >{s.label}</button>
                   ))}
                 </div>
               </div>
 
-              {/* 人声选择 */}
               <div>
                 <label className="text-xs text-[#777777] mb-1 block">人声 / 性别</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -245,7 +323,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                       key={v.value}
                       onClick={() => setVocalType(v.value)}
                       className={`px-3 py-2 rounded-lg text-sm transition flex items-center gap-1.5 ${vocalType === v.value ? 'bg-gradient-to-r from-orange-500/30 to-pink-500/30 border border-orange-500/50 text-white' : 'bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333333] border border-transparent'}`}
-                      disabled={isGenerating}
+                      disabled={inProgress || loading}
                     >
                       <span>{v.icon}</span>
                       <span>{v.label}</span>
@@ -254,21 +332,15 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                 </div>
               </div>
 
-              {/* 时长选择 (P0-2 长歌曲支持) */}
               <div>
-                <label className="text-xs text-[#777777] mb-1 block">歌曲时长</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { value: 120, label: '2 分钟', desc: '短视频' },
-                    { value: 180, label: '3 分钟', desc: '标准' },
-                    { value: 240, label: '4 分钟', desc: '完整版' },
-                    { value: 300, label: '5 分钟', desc: '加长版' },
-                  ].map(opt => (
+                <label className="text-xs text-[#777777] mb-1 block">歌曲时长（上限 3 分钟）</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DURATION_OPTIONS.map(opt => (
                     <button
                       key={opt.value}
                       onClick={() => setDuration(opt.value)}
                       className={`px-2 py-2 rounded-lg text-xs transition flex flex-col items-center gap-0.5 ${duration === opt.value ? 'bg-gradient-to-r from-orange-500/30 to-pink-500/30 border border-orange-500/50 text-white' : 'bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333333] border border-transparent'}`}
-                      disabled={isGenerating}
+                      disabled={inProgress || loading}
                     >
                       <span className="font-medium">{opt.label}</span>
                       <span className="text-[10px] text-[#777777]">{opt.desc}</span>
@@ -277,18 +349,15 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <input
-                    type="range" min={120} max={480} step={30}
+                    type="range" min={30} max={180} step={15}
                     value={duration}
                     onChange={e => setDuration(parseInt(e.target.value))}
                     className="flex-1 mr-3 accent-orange-500"
-                    disabled={isGenerating}
+                    disabled={inProgress || loading}
                   />
                   <span className="text-xs text-orange-400 font-mono w-16 text-right">
                     {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
                   </span>
-                </div>
-                <div className="flex justify-between text-[10px] text-[#555555] mt-0.5">
-                  <span>2 分钟</span><span>8 分钟</span>
                 </div>
               </div>
             </>
@@ -297,7 +366,6 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
           {/* ── 高级控制 Tab ── */}
           {activeTab === 'advanced' && (
             <>
-              {/* 风格滑块 */}
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -309,13 +377,9 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                     value={styleStrength}
                     onChange={e => setStyleStrength(parseFloat(e.target.value))}
                     className="w-full accent-orange-500"
-                    disabled={isGenerating}
+                    disabled={inProgress || loading}
                   />
-                  <div className="flex justify-between text-[10px] text-[#555555] mt-0.5">
-                    <span>通用</span><span>强烈</span>
-                  </div>
                 </div>
-
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs text-[#777777]">🌀 风格偏离度 (Weirdness)</label>
@@ -326,11 +390,8 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                     value={weirdness}
                     onChange={e => setWeirdness(parseFloat(e.target.value))}
                     className="w-full accent-purple-500"
-                    disabled={isGenerating}
+                    disabled={inProgress || loading}
                   />
-                  <div className="flex justify-between text-[10px] text-[#555555] mt-0.5">
-                    <span>标准</span><span>实验性</span>
-                  </div>
                 </div>
               </div>
 
@@ -339,6 +400,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                 <button
                   onClick={() => setShowLyricsEditor(!showLyricsEditor)}
                   className="w-full flex items-center justify-between px-3 py-2 text-xs text-[#e0e0e0] hover:bg-[#2a2a2a] transition"
+                  disabled={inProgress || loading}
                 >
                   <span>📝 歌词编辑器</span>
                   <span className="text-[#777777]">{showLyricsEditor ? '▼' : '▶'}</span>
@@ -350,15 +412,9 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                       onChange={e => setLyrics(e.target.value)}
                       placeholder="[Verse 1]&#10;在这里输入你的歌词...&#10;用 [Verse] [Chorus] [Bridge] 标记段落"
                       className="w-full h-32 bg-[#2a2a2a] border border-[#3a3a3a] rounded px-2 py-1.5 text-sm text-[#e0e0e0] resize-none focus:border-orange-500/50"
-                      disabled={isGenerating}
+                      disabled={inProgress || loading}
                     />
                     <p className="text-[10px] text-[#555555] mt-1">留空则使用 AI 自动生成歌词</p>
-                    {generatedLyrics && (
-                      <div className="mt-2 p-2 bg-[#22c55e]/10 border border-[#22c55e]/20 rounded text-xs text-[#e0e0e0] max-h-32 overflow-auto whitespace-pre-wrap">
-                        <span className="text-[#22c55e]">AI 生成歌词：</span><br />
-                        {generatedLyrics}
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -368,6 +424,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                 <button
                   onClick={() => setShowStructure(!showStructure)}
                   className="w-full flex items-center justify-between px-3 py-2 text-xs text-[#e0e0e0] hover:bg-[#2a2a2a] transition"
+                  disabled={inProgress || loading}
                 >
                   <span>🏗️ 歌曲结构编辑</span>
                   <span className="text-[#777777]">{showStructure ? '▼' : '▶'}</span>
@@ -382,26 +439,25 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                         <span className="text-xs text-[#e0e0e0] w-5 text-center font-mono text-[#555555]">{idx + 1}</span>
                         <span className="text-xs text-[#e0e0e0] flex-1">{s.label}</span>
                         <button
-                          onClick={() => moveSection(s.id, 'up')} disabled={idx === 0 || isGenerating}
+                          onClick={() => moveSection(s.id, 'up')} disabled={idx === 0 || inProgress || loading}
                           className="text-xs text-[#777777] hover:text-white disabled:opacity-30 px-1 w-6 h-6"
                         >↑</button>
                         <button
-                          onClick={() => moveSection(s.id, 'down')} disabled={idx === sections.length - 1 || isGenerating}
+                          onClick={() => moveSection(s.id, 'down')} disabled={idx === sections.length - 1 || inProgress || loading}
                           className="text-xs text-[#777777] hover:text-white disabled:opacity-30 px-1 w-6 h-6"
                         >↓</button>
                         <button
-                          onClick={() => removeSection(s.id)} disabled={isGenerating || sections.length <= 1}
+                          onClick={() => removeSection(s.id)} disabled={inProgress || loading || sections.length <= 1}
                           className="text-xs text-red-400 hover:text-red-300 disabled:opacity-30 px-1 w-6 h-6"
                         >✕</button>
                       </div>
                     ))}
-                    {/* 添加段段 */}
                     <div className="flex gap-1 pt-1 flex-wrap">
                       {SECTION_TYPES.map(t => (
                         <button
                           key={t.value}
                           onClick={() => addSection(t.value)}
-                          disabled={isGenerating}
+                          disabled={inProgress || loading}
                           className="px-2 py-1 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-xs transition disabled:opacity-30"
                         >+ {t.label}</button>
                       ))}
@@ -412,20 +468,6 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
             </>
           )}
 
-          {/* 进度条 */}
-          {isGenerating && (
-            <div>
-              <div className="flex items-center justify-between text-xs text-[#777777] mb-1">
-                <span>正在生成...</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-orange-500 to-pink-500 transition-all" style={{ width: `${progress}%` }} />
-              </div>
-              <p className="text-xs text-[#777777] mt-2 text-center">AI 正在创作你的音乐，请稍候...</p>
-            </div>
-          )}
-
           {/* 错误 */}
           {error && (
             <div className="p-3 bg-[#ef4444]/20 border border-[#ef4444]/30 rounded text-sm text-[#ef4444]">{error}</div>
@@ -434,17 +476,20 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
 
         {/* 底部按钮 */}
         <div className="p-4 border-t border-[#2a2a2a] flex items-center justify-between">
-          <button onClick={onClose} disabled={isGenerating} className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50">取消</button>
+          <button onClick={onClose} disabled={inProgress || loading} className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50">
+            {task.stage === 'completed' ? '关闭' : '取消'}
+          </button>
           <div className="text-xs text-[#555555]">
-            {/* ✅ Enhanced AI Features */}
-            {vocalType !== 'auto' || weirdness !== 0.5 || showLyricsEditor || showStructure ? '⚡ 高级模式' : '基础模式'}
+            {task.stage === 'completed'
+              ? '✅ 已生成'
+              : (vocalType !== 'auto' || weirdness !== 0.5 || showLyricsEditor || showStructure) ? '⚡ 高级模式' : '基础模式'}
           </div>
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
+            disabled={inProgress || loading || !prompt.trim()}
             className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
           >
-            {isGenerating ? '生成中...' : '✨ 生成音频'}
+            {inProgress ? STAGE_LABEL[task.stage] + '...' : task.stage === 'completed' ? '✨ 再生成一首' : '✨ 生成音频'}
           </button>
         </div>
       </div>

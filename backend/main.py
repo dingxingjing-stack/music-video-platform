@@ -253,15 +253,12 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Serve generated audio files
+# Generated output directories (ACE-Step/MusicGen/MV 写入共享卷；不再公开静态挂载，下载走 R2 预签名)
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
-app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
-# Serve MusicGen / MV 生成的音频视频（挂载共享数据卷，Modal 下由 GENERATED_DIR 覆盖）
 GENERATED_DIR = os.getenv("GENERATED_DIR", os.path.join(os.path.dirname(__file__), "generated"))
 os.makedirs(GENERATED_DIR, exist_ok=True)
-app.mount("/generated", StaticFiles(directory=GENERATED_DIR), name="generated")
 
 # ---------- 合规中间件 ----------
 app.add_middleware(PrivacyMiddleware)
@@ -297,10 +294,10 @@ from app.routers import song_continuation
 from app.routers import subtitle_recognition
 from app.routers import one_click_publish
 from app.routers import feedback
-app.include_router(mv_app,       prefix="/api/v1/mv")
+# app.include_router(mv_app,       prefix="/api/v1/mv")  # P0-3: disabled MV router (MusicGen/MV)
 app.include_router(workflow_app, prefix="/api/v1/workflow")
 app.include_router(batch_app,    prefix="/api/v1/batch")
-app.include_router(hf_music.router, prefix="/api/v1/ai-hf")
+# app.include_router(hf_music.router, prefix="/api/v1/ai-hf")  # P0-2: disabled HF music router (MusicGen/Mock fallback)
 app.include_router(ai_music.router)
 app.include_router(user_app,    prefix="/api/v1/user")
 app.include_router(audio_app,   prefix="/api/v1/audio")
@@ -1645,6 +1642,7 @@ try:
             "GENERATED_DIR": "/root/data/generated",
             "PUBLIC_BASE_URL": "https://dingxingjing-stack--music-platform.modal.run",
         },
+        secrets=[modal.Secret.from_name("r2-storage-config")],
     )
     @modal.concurrent(max_inputs=50)
     @modal.asgi_app(label="music-platform")
