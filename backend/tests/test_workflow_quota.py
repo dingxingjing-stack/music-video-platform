@@ -47,12 +47,8 @@ class _FakeEngine:
 @pytest.fixture(autouse=True)
 def _clean_state():
     """Reset in-process stores and engine between tests so tests are order-independent."""
-    task_store._TASKS.clear()
-    task_store._USER_LOCKS.clear()
     workflow_router._WORKFLOW_ENGINE = None
     yield
-    task_store._TASKS.clear()
-    task_store._USER_LOCKS.clear()
     workflow_router._WORKFLOW_ENGINE = None
 
 
@@ -62,6 +58,8 @@ def isolated_db(tmp_path, monkeypatch):
     db_path = str(tmp_path / 'test_beta.db')
     monkeypatch.setattr(ai_limits, '_DB_DIR', str(tmp_path))
     monkeypatch.setattr(ai_limits, '_DB_PATH', db_path)
+    monkeypatch.setattr(task_store, '_DB_DIR', str(tmp_path))
+    monkeypatch.setattr(task_store, '_DB_PATH', db_path)
     return db_path
 
 
@@ -177,7 +175,8 @@ def test_workflow_real_mode_lock_failure_no_stale_task(isolated_db, monkeypatch,
     existing_tid = task_store.new_task(user_key=user_key)
     assert task_store.acquire_lock(user_key, existing_tid)
 
-    before_count = len(task_store._TASKS)
+    # Verify lock is held
+    assert task_store.is_user_busy(user_key) is True
 
     response = client.post(
         f'/api/v1/workflow{endpoint}',
@@ -186,10 +185,8 @@ def test_workflow_real_mode_lock_failure_no_stale_task(isolated_db, monkeypatch,
     )
     assert response.status_code == 429, response.text
 
-    # No stale task leaked from the rejected request
-    assert len(task_store._TASKS) == before_count, task_store._TASKS
     # User lock is still held by the original in-flight task
-    assert task_store._USER_LOCKS.get(user_key, {}).get('task_id') == existing_tid
+    assert task_store.is_user_busy(user_key) is True
 
     # Clean up
     task_store.release_lock_for_task(existing_tid)

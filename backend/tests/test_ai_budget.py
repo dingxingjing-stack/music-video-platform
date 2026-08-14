@@ -26,9 +26,9 @@ def isolated_db(tmp_path, monkeypatch):
     db_path = str(tmp_path / "budget.db")
     monkeypatch.setattr(ai_limits, "_DB_DIR", str(tmp_path))
     monkeypatch.setattr(ai_limits, "_DB_PATH", db_path)
+    monkeypatch.setattr(task_store, "_DB_DIR", str(tmp_path))
+    monkeypatch.setattr(task_store, "_DB_PATH", db_path)
     monkeypatch.setattr(ai_music, "HF_FALLBACK_ENABLED", False)
-    task_store._TASKS.clear()
-    task_store._USER_LOCKS.clear()
     return db_path
 
 
@@ -85,7 +85,8 @@ def test_under_budget_can_create_task(isolated_db, fake_modal, disable_bg, monke
     c = _client()
     rr = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "u2"})
     assert rr.status_code == 200 and rr.json()["success"] is True
-    assert any(t.get("user_key") == "u2" for t in task_store._TASKS.values())
+    # 任务已创建，通过 is_user_busy 验证
+    assert task_store.is_user_busy("u2") is True
 
 
 def test_at_budget_blocks_new_task(isolated_db, monkeypatch):
@@ -110,7 +111,8 @@ def test_blocked_does_not_start_gpu(isolated_db, fake_modal, disable_bg, monkeyp
     assert r.json()["success"] is False
     assert "预算" in r.json()["error"]
     assert fake_modal["generate"] == []  # 未启动 ACE-Step GPU
-    assert not any(t.get("user_key") == "u2" for t in task_store._TASKS.values())
+    # 任务未创建，is_user_busy 应为 False
+    assert task_store.is_user_busy("u2") is False
 
 
 def test_repeat_requests_cannot_bypass_budget(isolated_db, monkeypatch):

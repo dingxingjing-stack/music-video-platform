@@ -45,8 +45,7 @@ from app.services.ai_limits import (
     reserve_generation,
     refund_generation,
     generation_usage_status,
-    check_download_rate,
-    log_download,
+    check_and_log_download,
     budget_hard_stop_reached,
 )
 from app.services import task_store
@@ -431,9 +430,13 @@ async def download_file(
         raise HTTPException(status_code=404, detail="文件不存在（可能未生成 MP3）")
 
     ip = request.client.host if request else ""
-    if not check_download_rate(user_key):
+    if not check_and_log_download(
+        user_key,
+        task_id,
+        f"{file}:{fmt}",
+        ip,
+    ):
         raise HTTPException(status_code=429, detail="下载过于频繁，请稍后再试")
-    log_download(user_key, task_id, f"{file}:{fmt}", ip)
 
     expires_in = 600
     return {

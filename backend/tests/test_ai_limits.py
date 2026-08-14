@@ -14,6 +14,8 @@ def isolated_db(tmp_path, monkeypatch):
     db_path = str(tmp_path / "test_beta.db")
     monkeypatch.setattr(ai_limits, "_DB_DIR", str(tmp_path))
     monkeypatch.setattr(ai_limits, "_DB_PATH", db_path)
+    monkeypatch.setattr(task_store, "_DB_DIR", str(tmp_path))
+    monkeypatch.setattr(task_store, "_DB_PATH", db_path)
     return db_path
 
 

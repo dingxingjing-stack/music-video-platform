@@ -48,9 +48,9 @@ def isolated_db(tmp_path, monkeypatch):
     db_path = str(tmp_path / "flow.db")
     monkeypatch.setattr(ai_limits, "_DB_DIR", str(tmp_path))
     monkeypatch.setattr(ai_limits, "_DB_PATH", db_path)
+    monkeypatch.setattr(task_store, "_DB_DIR", str(tmp_path))
+    monkeypatch.setattr(task_store, "_DB_PATH", db_path)
     monkeypatch.setattr(ai_music, "HF_FALLBACK_ENABLED", False)
-    task_store._TASKS.clear()
-    task_store._USER_LOCKS.clear()
     return db_path
 
 
