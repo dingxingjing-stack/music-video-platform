@@ -8,7 +8,7 @@ GET  /api/v1/ai/limits                 额度/成本保护状态
 
 生成链（无 MusicGen 商业兜底）：
   Agnes 优化 prompt/歌词
-    -> ACE-Step 1.5 (Modal GPU，整曲生成 + Demucs 四轨分轨 + MP3)
+    -> ACE-Step 1.5 (Modal GPU，整曲生成) + Spleeter 四轨分轨（独立 Modal App） + MP3
     -> HF ACE-Step 兜底（真实音频，无 mock 假音频）
     -> 明确报错（失败自动重试 1 次后仍失败则失败）
 
@@ -449,7 +449,7 @@ async def retry_stems(
     task_id: str,
     x_user_id: str = Header(None, alias="X-User-ID"),
 ):
-    """分轨失败重试：对已生成的完整 WAV 重新执行 Demucs 四轨分离。"""
+    """分轨失败重试：对已生成的完整 WAV 重新执行四轨分离（独立 Spleeter App）。"""
     task = task_store.get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
@@ -463,7 +463,7 @@ async def retry_stems(
     if task.get("stems_state") == "ok":
         raise HTTPException(status_code=409, detail="分轨已生成，无需重试")
 
-    # GPU 预算硬停线：达到后不启动 Demucs（重试分轨同样消耗 GPU，不允许绕过预算）
+    # GPU 预算硬停线：达到后不启动分轨（重试分轨同样消耗算力，不允许绕过预算）
     if budget_hard_stop_reached():
         raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
 

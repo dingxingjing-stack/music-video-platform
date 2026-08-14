@@ -13,6 +13,7 @@ import tempfile
 logger = logging.getLogger(__name__)
 
 _APP_NAME = "avireon-music-platform-acestep"
+_SPLEETER_APP_NAME = "avireon-music-platform-spleeter"
 
 
 class QueueFullError(Exception):
@@ -27,7 +28,7 @@ def _client() -> "modal.Function":
 
 def _separate_client() -> "modal.Function":
     import modal
-    return modal.Function.from_name(_APP_NAME, "separate_audio")
+    return modal.Function.from_name(_SPLEETER_APP_NAME, "separate_audio")
 
 
 async def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict | None:
@@ -59,7 +60,7 @@ async def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> d
 
 
 async def separate_only(filename_in_volume: str) -> dict | None:
-    """分轨失败重试：对共享卷中的完整 WAV 单独执行 Demucs。返回 stems 文件名映射。"""
+    """分轨失败重试：对共享卷中的完整 WAV 单独执行四轨分离（独立 Spleeter App）。返回 stems 文件名映射。"""
     try:
         import modal  # noqa: F401
     except ImportError:
@@ -72,7 +73,7 @@ async def separate_only(filename_in_volume: str) -> dict | None:
             return None
         return result
     except Exception as exc:
-        logger.warning("Demucs 分轨重试失败: %s", exc)
+        logger.warning("Spleeter 分轨重试失败: %s", exc)
         return None
 
 

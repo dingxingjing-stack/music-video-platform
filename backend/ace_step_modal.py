@@ -1,4 +1,4 @@
-"""ACE-Step + Demucs 独立 Modal App — 一键完整歌曲生成 + 自动四轨分轨。
+"""ACE-Step 独立 Modal App — 一键完整歌曲生成（四轨分离由独立 Spleeter App 承担）。
 
 与 web App（main.py）分离，GPU 容器不加载 web 依赖。部署：
     modal deploy ace_step_modal.py::_APP
@@ -12,11 +12,11 @@ web 容器通过 modal.Function.from_name("avireon-music-platform-acestep", ...)
   2. generate_full_song(prompt, lyrics, duration)
        - 官方 acestep 包 pipeline（AceStepHandler + LLMHandler + generate_music）
        - 整曲生成（acestep-v15-turbo + acestep-5Hz-lm-4B，LM backend=pt）
-       - Demucs htdemucs GPU 四轨分离（vocals/drums/bass/other）
+       - 四轨分离（vocals/drums/bass/other）由独立 Spleeter App 执行
        - ffmpeg 转出 song_full.mp3（完整歌 MP3）
        - 全部写入共享 Volume 并 commit，返回文件名映射
   3. separate_audio(filename_in_volume)
-       - 分轨失败后的重试入口：对已生成的完整 WAV 单独跑 Demucs
+       - 分轨失败后的重试入口：对已生成的完整 WAV 调用独立 Spleeter App 四轨分离
 
 成本保护：
   - 按需 GPU：无 keep_warm，max_containers=1，concurrent=1
@@ -52,7 +52,7 @@ _IMAGE = (
         f"git clone --depth 1 {_ACE_STEP_REPO} {_ACE_STEP_SRC}",
         "pip install --no-cache-dir uv",
         f"cd {_ACE_STEP_SRC} && uv pip install --system --no-cache /opt/ace-step",
-        "pip install --no-cache-dir 'demucs>=4.0.0'",
+        # 四轨分离由独立 Spleeter App（spleeter_modal.py）承担，本容器不安装 demucs。
     )
     .env({
         "ACESTEP_CHECKPOINTS_DIR": _CHECKPOINTS_DIR,
@@ -161,7 +161,7 @@ def preload_models() -> dict:
 )
 @modal.concurrent(max_inputs=1)
 def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
-    """官方 ACE-Step pipeline 生成完整歌曲 + Demucs 四轨分离 + MP3 转换。
+    """官方 ACE-Step pipeline 生成完整歌曲 + Spleeter 四轨分离 + MP3 转换。
 
     返回文件名映射（全部位于共享 Volume /root/data/generated/）：
         {
@@ -174,6 +174,7 @@ def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
         }
     分轨失败时仅返回 full_wav/full_mp3（stems 缺失），由业务层标记
     completed_with_stems_failed，并可用 separate_audio 重试。
+    四轨分离由独立 Spleeter App（spleeter_modal.py）执行。
     """
     import shutil
 
@@ -208,20 +209,46 @@ def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
     else:
         shutil.move(src, full_wav)
 
-    stems = _separate_to_dir(full_wav, out_dir)
+    # 关键时序：跨容器 Volume 写必须显式 commit 才对他容器可见。
+    # 必须先提交 song_full.wav，Spleeter（独立容器）才能读到它做分轨。
+    _DATA_VOLUME.commit()
+
+    stems = _separate_via_spleeter(os.path.basename(full_wav))
     mp3 = _to_mp3(full_wav, os.path.join(out_dir, "song_full.mp3"))
 
     result_map = {
         "full_wav": "song_full.wav",
         "full_mp3": "song_full.mp3" if mp3 else None,
     }
+    # Spleeter 只在成功写出并 commit 后才返回对应 stem；本容器快照可能已过期，
+    # 不再用 os.path.exists 复检（会因快照滞后而漏报已存在的文件）。
     for name in ("vocals", "drums", "bass", "other"):
-        if name in stems and os.path.exists(stems[name]):
-            result_map[name] = f"{name}.wav"
+        if name in stems:
+            result_map[name] = stems[name]
 
     _DATA_VOLUME.commit()
     print(f"[ACE-Step] generated {result_map} bytes={os.path.getsize(full_wav)}")
     return result_map
+
+
+def _separate_via_spleeter(filename_in_volume: str) -> dict:
+    """调用独立 Spleeter App 执行四轨分离，返回 {stem_name: filename} 映射。
+
+    ACE-Step 容器不安装 Demucs/Spleeter/TensorFlow，分轨统一由独立 Spleeter App
+    （spleeter_modal.py::_APP）在共享数据卷上完成，结果写入 /root/data/generated/。
+
+    失败不阻断歌曲生成：返回空 dict（业务层标记 completed_with_stems_failed，
+    可稍后经 retry-stems 用 separate_audio 重试）。
+    """
+    import modal
+
+    try:
+        fn = modal.Function.from_name("avireon-music-platform-spleeter", "separate_audio")
+        stems = fn.remote(filename_in_volume)
+        return stems if isinstance(stems, dict) else {}
+    except Exception as exc:  # noqa: BLE001
+        print(f"[Spleeter] 分轨失败（不阻断歌曲生成）: {exc}")
+        return {}
 
 
 @_APP.function(
@@ -233,52 +260,16 @@ def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
 )
 @modal.concurrent(max_inputs=1)
 def separate_audio(filename_in_volume: str) -> dict:
-    """对共享卷中已有的完整 WAV 执行 Demucs 四轨分离（分轨失败重试入口）。"""
-    out_dir = _out_dir()
-    src = os.path.join(out_dir, os.path.basename(filename_in_volume))
-    if not os.path.exists(src):
-        raise FileNotFoundError(f"volume 中不存在 {filename_in_volume}")
-    stems = _separate_to_dir(src, out_dir)
-    result = {}
-    for name in ("vocals", "drums", "bass", "other"):
-        if name in stems and os.path.exists(stems[name]):
-            result[name] = f"{name}.wav"
-    _DATA_VOLUME.commit()
-    print(f"[Demucs] separated {result}")
-    return result
+    """分轨失败重试入口：转发到独立 Spleeter App 执行四轨分离。
 
+    本容器不安装 Demucs/Spleeter/TensorFlow；四轨分离统一由独立 Spleeter App
+    （spleeter_modal.py::_APP，avireon-music-platform-spleeter）承担，避免
+    TensorFlow 与 PyTorch/CUDA 环境冲突。返回 {stem_name: "stem_name.wav"}。
+    """
+    import modal
 
-def _separate_to_dir(wav_path: str, out_dir: str) -> dict:
-    """GPU 运行 Demucs htdemucs，返回 {stem_name: output_path}。"""
-    from demucs.api import Separator
-
-    separator = Separator(model="htdemucs", device="cuda", segment=7.8)
-    _wav, sources = separator.separate_audio_file(wav_path)
-    # sources: {stem_name: (channels, samples) tensor}，htdemucs 顺序为
-    # drums/bass/other/vocals，此处按逻辑名取
-    names = ["vocals", "drums", "bass", "other"]
-    paths: dict[str, str] = {}
-    for name in names:
-        tensor = sources.get(name)
-        if tensor is None:
-            continue
-        path = os.path.join(out_dir, f"{name}.wav")
-        _save_tensor(tensor, path)
-        paths[name] = path
-    return paths
-
-
-def _save_tensor(tensor, path: str) -> None:
-    import torch
-
-    arr = tensor.detach().float().cpu()
-    if arr.ndim == 2:
-        arr = arr.numpy().T  # (channels, samples) -> (samples, channels)
-    else:
-        arr = arr.numpy()
-    import soundfile as sf
-
-    sf.write(path, arr, samplerate=44100)
+    fn = modal.Function.from_name("avireon-music-platform-spleeter", "separate_audio")
+    return fn.remote(filename_in_volume)
 
 
 def _to_mp3(wav_path: str, mp3_path: str):
