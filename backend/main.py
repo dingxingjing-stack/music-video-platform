@@ -15,10 +15,19 @@ import asyncio
 import base64
 import logging
 import os
+import sys
 import time
 import uuid
 from datetime import datetime
 from typing import Any, Optional
+
+# 强制 UTF-8 输出，避免 Windows/GBK 控制台下 emoji/中文 print 抛 UnicodeEncodeError
+# 导致整个应用无法启动（模块导入期的 print 也会触发）。
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, OSError):
+    pass
 
 import httpx
 from dotenv import load_dotenv
