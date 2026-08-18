@@ -24,7 +24,9 @@ GET  /api/v1/ai/limits                 额度/成本保护状态
 """
 
 import asyncio
+import json
 import os
+import time
 import httpx
 from fastapi import APIRouter, HTTPException, Header, Request
 from fastapi.responses import JSONResponse
@@ -33,11 +35,11 @@ from typing import Optional
 
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
 from app.services.ace_step_client import (
-    generate_full_song as ace_step_generate,
     separate_only as ace_step_separate,
     download_file as ace_step_download,
     QueueFullError,
 )
+from app.services.provider_registry import get_provider_registry, gpu_rate_usd_per_sec
 from app.services.ai_limits import (
     MAX_AUDIO_DURATION_SECONDS,
     MAX_AUTO_RETRIES,
@@ -64,10 +66,11 @@ DOWNLOAD_FILES = {
     "bass": ("bass", True),
     "other": ("other", True),
 }
+# Provider 选择与注册见 app/services/provider_registry.py（唯一 production = modal_ace_step）。
 
 
 async def _try_hf_ace_step_fallback(prompt: str, lyrics: str, duration: int) -> Optional[str]:
-    """HF ACE-Step Space 兜底：仅接受真实音频 URL，禁止 mock/假音频（SoundHelix）。"""
+    """HF ACE-Step Space 兜底（Gradio 5 API）：仅接受真实音频 URL，禁止 mock/假音频（SoundHelix）。"""
     if not HF_FALLBACK_ENABLED:
         return None
 
@@ -76,30 +79,84 @@ async def _try_hf_ace_step_fallback(prompt: str, lyrics: str, duration: int) -> 
         print("[HF 兜底] 未配置 HF_TOKEN / HUGGINGFACE_TOKEN，跳过")
         return None
 
+    # Gradio 5 协议：POST /gradio_api/call/__call__ -> event_id -> GET SSE 轮询
+    base_url = "https://ace-step-ace-step.hf.space"
+    api_url = f"{base_url}/gradio_api/call/__call__"
+    headers = {"Authorization": f"Bearer {hf_token}", "Content-Type": "application/json"}
+
+    # 22 个 positional parameters（顺序必须与当前 LIVE API 一致）
+    data = [
+        float(duration),          # 1  Audio Duration
+        prompt,                   # 2  Tags
+        lyrics or "",             # 3  Lyrics
+        50,                       # 4  Infer Steps
+        15.0,                     # 5  Guidance Scale
+        "euler",                  # 6  Scheduler Type
+        "apg",                    # 7  CFG Type
+        10.0,                     # 8  Granularity Scale
+        None,                     # 9  manual seeds (default None)
+        0.5,                      # 10 Guidance Interval
+        0.0,                      # 11 Guidance Interval Decay
+        3.0,                      # 12 Min Guidance Scale
+        True,                     # 13 use ERG for tag
+        False,                    # 14 use ERG for lyric
+        True,                     # 15 use ERG for diffusion
+        None,                     # 16 OSS Steps
+        0.0,                      # 17 Guidance Scale Text
+        0.0,                      # 18 Guidance Scale Lyric
+        False,                    # 19 Enable Audio2Audio
+        0.5,                      # 20 Refer audio strength
+        None,                     # 21 Reference Audio (Audio2Audio)
+        "none",                   # 22 Lora Name or Path
+    ]
+
     try:
-        api_url = "https://ace-step-ace-step.hf.space/run/predict"
-        headers = {"Authorization": f"Bearer {hf_token}", "Content-Type": "application/json"}
-        payload = {"data": [prompt, lyrics or "", int(duration), 0.7], "fn_index": 0}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(api_url, headers=headers, json={"data": data})
+            if response.status_code != 200:
+                print(f"[HF 兜底] ACE-Step Space 提交失败: HTTP {response.status_code}")
+                return None
+            resp_data = response.json()
+            event_id = (resp_data or {}).get("event_id")
+            if not event_id:
+                print("[HF 兜底] ACE-Step Space 未返回 event_id")
+                return None
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(api_url, headers=headers, json=payload)
-
-        if response.status_code != 200:
-            print(f"[HF 兜底] ACE-Step Space 错误: {response.status_code}")
-            return None
-
-        data = response.json()
-        if not data or "data" not in data or not isinstance(data["data"], list):
-            return None
-        for item in data["data"]:
-            url = None
-            if isinstance(item, dict):
-                url = item.get("url") or item.get("name")
-            elif isinstance(item, str) and item.startswith("http"):
-                url = item
-            if url and url.startswith("http") and "soundhelix.com" not in url:
-                return url
-        print("[HF 兜底] ACE-Step Space 未返回可用音频 URL")
+            # SSE 轮询直到 event: complete / event: error
+            poll_url = f"{api_url}/{event_id}"
+            async with client.stream("GET", poll_url, headers=headers, timeout=300.0) as stream:
+                current_event = None
+                async for line in stream.aiter_lines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith("event:"):
+                        current_event = line[len("event:"):].strip()
+                    elif line.startswith("data:"):
+                        payload_text = line[len("data:"):].strip()
+                        if current_event == "error":
+                            print(f"[HF 兜底] ACE-Step Space 返回 error 事件: {payload_text[:200]}")
+                            return None
+                        if current_event == "complete":
+                            try:
+                                payload = json.loads(payload_text)
+                            except Exception as exc:
+                                print(f"[HF 兜底] SSE complete 事件解析失败: {exc}")
+                                return None
+                            # Gradio 5 complete 事件 data 是顶层 JSON 数组（兼容 dict 包装）
+                            items = payload if isinstance(payload, list) else (payload.get("data") if isinstance(payload, dict) else None)
+                            if isinstance(items, list):
+                                for item in items:
+                                    url = None
+                                    if isinstance(item, dict):
+                                        url = item.get("url") or item.get("name")
+                                    elif isinstance(item, str) and item.startswith("http"):
+                                        url = item
+                                    if url and url.startswith("http") and "soundhelix.com" not in url:
+                                        return url
+                            print("[HF 兜底] ACE-Step Space complete 事件未返回可用音频 URL")
+                            return None
+        print("[HF 兜底] ACE-Step Space SSE 流结束但未收到 complete 事件")
         return None
     except Exception as e:  # noqa: BLE001
         print(f"[HF 兜底] 异常: {type(e).__name__}: {e}")
@@ -139,6 +196,25 @@ class TaskResponse(BaseModel):
     stem_retries: Optional[int] = 0
 
 
+def _log_generation_cost(task_id: str, user_key: str, provider, result: str, total_duration_ms: int, retries: int):
+    """记录生成成本观测（估算口径：实测容器时长 × GPU 单价）。失败不影响生成主流程。"""
+    try:
+        task_store.log_generation_cost(
+            task_id=task_id,
+            user_key=user_key,
+            provider=provider.name,
+            gpu=provider.gpu,
+            result=result,
+            container_duration_ms=total_duration_ms,
+            retries=retries,
+            estimated_cost_usd=round(
+                total_duration_ms / 1000.0 * gpu_rate_usd_per_sec(provider.gpu), 8,
+            ),
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(f"[CostLog] log_generation_cost failed: {exc}")
+
+
 async def _run_generation(task_id: str, request: GenerateRequest, user_key: str):
     """后台执行完整生成链路：Agnes -> ACE-Step(Modal) -> HF(ACE-Step) -> 报错。"""
     try:
@@ -160,15 +236,24 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
         lyrics = request.lyrics or agnes_result.generated_lyrics or final_prompt
         duration = min(request.duration or 180, MAX_AUDIO_DURATION_SECONDS)
 
-        # ── ACE-Step (Modal GPU) ── 失败自动重试 MAX_AUTO_RETRIES 次
+        # ── Modal ACE-Step (GPU) ── 经 ProviderRegistry 选择；失败自动重试 MAX_AUTO_RETRIES 次
         task_store.update(task_id, state="generating", progress=40)
+        provider = get_provider_registry().select()
         volume_result: Optional[dict] = None
         retries_used = 0
+        total_duration_ms = 0
         for attempt in range(1 + MAX_AUTO_RETRIES):
             retries_used = attempt
-            volume_result = await ace_step_generate(
-                prompt=final_prompt, lyrics=lyrics, duration=duration,
-            )
+            t0 = time.monotonic()
+            try:
+                gen_result = await provider.generate(
+                    {"prompt": final_prompt, "lyrics": lyrics, "duration": duration},
+                )
+                total_duration_ms += int((time.monotonic() - t0) * 1000)
+            except QueueFullError:
+                total_duration_ms += int((time.monotonic() - t0) * 1000)
+                raise
+            volume_result = gen_result.get("volume_files") if gen_result and gen_result.get("success") else None
             if volume_result:
                 break
             task_store.update(task_id, retries=attempt, error=f"ACE-Step 第 {attempt} 次尝试失败，自动重试")
@@ -178,8 +263,12 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
                 task_id, state="uploading", progress=75,
                 volume_files=volume_result, ai_provider=f"{ai_provider}+acestep",
             )
+            _log_generation_cost(task_id, user_key, provider, "success", total_duration_ms, retries_used)
             await _upload_and_finalize(task_id, volume_result)
             return
+
+        # GPU 尝试失败：先记录成本观测，再走 HF 兜底
+        _log_generation_cost(task_id, user_key, provider, "failed", total_duration_ms, retries_used)
 
         # ── HF ACE-Step 兜底（真实音频，无 mock）──
         task_store.update(task_id, state="generating", progress=55)
@@ -197,6 +286,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
         )
         refund_generation(user_key)
     except QueueFullError as e:
+        _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms, retries_used)
         task_store.update(task_id, state="failed", error=str(e))
         refund_generation(user_key)
     except HTTPException:

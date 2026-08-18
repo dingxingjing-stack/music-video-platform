@@ -29,7 +29,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.services import ai_limits, task_store
+from app.services import ai_limits, task_store, provider_registry
 from app.routers import ai_music
 
 VOLUME_OK = {
@@ -96,7 +96,7 @@ def fake_modal(monkeypatch):
     def _presign(key, expires_in=600):
         return f"https://signed/{key}"
 
-    monkeypatch.setattr(ai_music, "ace_step_generate", _generate)
+    monkeypatch.setattr(provider_registry, "ace_step_generate", _generate)
     monkeypatch.setattr(ai_music, "ace_step_download", _download)
     monkeypatch.setattr(ai_music, "ace_step_separate", _separate)
     monkeypatch.setattr(ai_music.cdn_uploader, "upload_music_package", _upload)
@@ -217,7 +217,7 @@ def test_auto_retry_on_generate_failure(isolated_db, fake_modal, disable_bg, mon
             return None
         return dict(VOLUME_OK)
 
-    monkeypatch.setattr(ai_music, "ace_step_generate", flaky_generate)
+    monkeypatch.setattr(provider_registry, "ace_step_generate", flaky_generate)
     c = _client()
     r = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "uA"})
     tid = r.json()["task_id"]
@@ -234,7 +234,7 @@ def test_failed_flow_refunds_and_marks_failed(isolated_db, fake_modal, disable_b
     async def never(prompt=None, lyrics=None, duration=None):
         return None
 
-    monkeypatch.setattr(ai_music, "ace_step_generate", never)
+    monkeypatch.setattr(provider_registry, "ace_step_generate", never)
     c = _client()
     r = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "uA"})
     tid = r.json()["task_id"]

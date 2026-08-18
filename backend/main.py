@@ -1617,48 +1617,72 @@ if os.path.isdir(FRONTEND_DIST):
 # Modal 部署
 # ==============================================================================
 
-try:
-    import modal
+# Render 通过 Docker 直接部署 FastAPI 服务（uvicorn main:app），代码来源是 GitHub 仓库本身，
+# 不经过 Modal 打包（deploy_bundle 白名单只用于本地 `modal deploy` 上传 Modal 镜像）。
+# Render 环境（RENDER=true）跳过整个 Modal 定义块：deploy_bundle/ 是构建产物且被 .gitignore 忽略、
+# 不在仓库中，若在 Render 上强制校验 bundle 会导致服务启动崩溃。
+if os.environ.get("RENDER") != "true":
+    try:
+        import modal
 
-    _MODAL_IMAGE = (
-        modal.Image.debian_slim(python_version="3.12")
-        .apt_install("ffmpeg", "fonts-dejavu-core")
-        .pip_install("librosa", "soundfile", "pydub")
-        .pip_install_from_requirements("requirements.txt")
-        .add_local_dir(
-            ".",
-            "/root",
-            copy=True,
-            ignore=[
-                "data/", "results/", "generated/", "voice_models/", "__pycache__/",
-                ".git/", ".pytest_cache/", "tests/", "scripts/", "database/",
-                "*.db", "*.db-wal", "*.db-shm", "*.wav", "*.mp3",
-                ".env", ".envrc", "secrets.local.json", "secrets.json",
-            ],
+        # 生产部署隔离：镜像只打包 deploy_bundle/（scripts/build_deploy_bundle.py 生成的白名单 bundle）。
+        # 不再依赖整个 backend 工作区，杜绝 tests/docs/scripts/POC/未批准新服务等未提交改动被误部署。
+        _BUNDLE_DIR = os.path.join(os.path.dirname(__file__), "deploy_bundle")
+        if os.environ.get("MODAL_IS_REMOTE") != "1" and not os.path.isdir(_BUNDLE_DIR):
+            raise RuntimeError(
+                "deploy_bundle/ 不存在：生产部署只允许打包白名单 bundle，禁止直接打包整个工作区。"
+                "请先运行 `python scripts/build_deploy_bundle.py` 生成，"
+                "再运行 `python scripts/predeploy_check.py` 校验通过后再部署。"
+            )
+
+        # 容器内（MODAL_IS_REMOTE=1）：add_local_dir(_BUNDLE_DIR, "/root") 会把 bundle 内容直接挂到 /root，
+        # 运行目录本身必须是"纯净 bundle"（含 manifest.json 且无禁止文件/目录），防止误挂整个工作区。
+        if os.environ.get("MODAL_IS_REMOTE") == "1":
+            _RUN_DIR = os.path.dirname(os.path.abspath(__file__))
+            _FORBIDDEN_TOP_LEVEL = (
+                "tests", "docs", "scripts", "poc",
+                "asr_client.py", "tts_client.py", "voice_clone_task.py", "separation",
+                "ace_step_modal.py", "spleeter_modal.py", "musicgen_modal.py", "gpt_sovits_modal.py",
+            )
+            _pure_bundle = os.path.isfile(os.path.join(_RUN_DIR, "manifest.json")) and not any(
+                os.path.exists(os.path.join(_RUN_DIR, n)) for n in _FORBIDDEN_TOP_LEVEL
+            )
+            if not _pure_bundle:
+                raise RuntimeError(
+                    "容器运行目录非纯净 bundle：生产部署只允许打包白名单 bundle，禁止直接打包整个工作区。"
+                    "请先运行 `python scripts/build_deploy_bundle.py` 生成，"
+                    "再运行 `python scripts/predeploy_check.py` 校验通过后再部署。"
+                )
+
+        _MODAL_IMAGE = (
+            modal.Image.debian_slim(python_version="3.12")
+            .apt_install("ffmpeg", "fonts-dejavu-core")
+            .pip_install("librosa", "soundfile", "pydub")
+            .pip_install_from_requirements("requirements.txt")
+            .add_local_dir(_BUNDLE_DIR, "/root", copy=True)
         )
-    )
 
-    _MODAL_APP = modal.App("avireon-music-platform", secrets=[modal.Secret.from_dotenv(".env")])
+        _MODAL_APP = modal.App("avireon-music-platform", secrets=[modal.Secret.from_dotenv(".env")])
 
-    # 共享数据卷：MusicGen 生成的 wav / MV 视频写入此处，web 容器经 /generated 下载
-    _DATA_VOLUME = modal.Volume.from_name("avireon-music-platform-data-v1", create_if_missing=True)
+        # 共享数据卷：MusicGen 生成的 wav / MV 视频写入此处，web 容器经 /generated 下载
+        _DATA_VOLUME = modal.Volume.from_name("avireon-music-platform-data-v1", create_if_missing=True)
 
-    @_MODAL_APP.function(
-        image=_MODAL_IMAGE,
-        timeout=900,
-        volumes={"/root/data": _DATA_VOLUME},
-        env={
-            "GENERATED_DIR": "/root/data/generated",
-            "PUBLIC_BASE_URL": "https://dingxingjing-stack--music-platform.modal.run",
-        },
-        secrets=[modal.Secret.from_name("r2-storage-config")],
-    )
-    @modal.concurrent(max_inputs=50)
-    @modal.asgi_app(label="music-platform")
-    def _web():
-        return app
+        @_MODAL_APP.function(
+            image=_MODAL_IMAGE,
+            timeout=900,
+            volumes={"/root/data": _DATA_VOLUME},
+            env={
+                "GENERATED_DIR": "/root/data/generated",
+                "PUBLIC_BASE_URL": "https://dingxingjing-stack--music-platform.modal.run",
+            },
+            secrets=[modal.Secret.from_name("r2-storage-config")],
+        )
+        @modal.concurrent(max_inputs=50)
+        @modal.asgi_app(label="music-platform")
+        def _web():
+            return app
 
-except ImportError:
-    # 本地直接运行 (uvicorn main:app) 时不需要 modal
-    pass
+    except ImportError:
+        # 本地直接运行 (uvicorn main:app) 时不需要 modal
+        pass
 

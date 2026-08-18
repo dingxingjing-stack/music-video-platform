@@ -19,6 +19,9 @@ build/
 *.egg-info/
 .pytest_cache/
 
+# 生产部署白名单 bundle（scripts/build_deploy_bundle.py 生成，构建产物不入库）
+backend/deploy_bundle/
+
 # Environment variables
 .env
 .env.*

@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.routers import ai_music
-from app.services import ai_limits, task_store
+from app.services import ai_limits, task_store, provider_registry
 
 
 @pytest.fixture()
@@ -55,7 +55,7 @@ def fake_modal(monkeypatch):
         calls["separate"].append(full_wav)
         return {"vocals": "v.wav", "drums": "d.wav", "bass": "b.wav", "other": "o.wav"}
 
-    monkeypatch.setattr(ai_music, "ace_step_generate", _generate)
+    monkeypatch.setattr(provider_registry, "ace_step_generate", _generate)
     monkeypatch.setattr(ai_music, "ace_step_separate", _separate)
     return calls
 

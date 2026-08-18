@@ -97,7 +97,7 @@
 <script setup>
 import { ref } from 'vue'
 
-const BASE = import.meta.env.VITE_API_BASE || ''
+const BASE = import.meta.env.VITE_API_BASE_URL || ''
 const prompt = ref('欢快的电子流行歌曲，适合短视频')
 const duration = ref(30)
 const musicUrl = ref('')

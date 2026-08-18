@@ -63,6 +63,26 @@ def _init_tables(conn: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_ai_tasks_user_key ON ai_tasks(user_key);
         CREATE INDEX IF NOT EXISTS idx_ai_tasks_state ON ai_tasks(state);
+        CREATE TABLE IF NOT EXISTS generation_cost_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT NOT NULL,
+            user_key TEXT,
+            provider TEXT,
+            gpu TEXT,
+            result TEXT,                        -- success / failed / queue_full
+            container_duration_ms INTEGER DEFAULT 0,  -- web 容器侧实测远程调用墙钟
+            model_load_ms INTEGER,              -- 阶段二（Modal 端元数据）填充
+            generation_ms INTEGER,              -- 阶段二（Modal 端元数据）填充
+            cold_warm TEXT,                     -- cold / warm / NULL（阶段二实测）
+            container_id TEXT,                  -- 阶段二（Modal 端元数据）填充
+            retries INTEGER DEFAULT 0,
+            estimated_cost_usd REAL DEFAULT 0,  -- 估算口径：实测时长 × GPU 单价
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_cost_logs_task ON generation_cost_logs(task_id);
+        CREATE INDEX IF NOT EXISTS idx_cost_logs_created ON generation_cost_logs(created_at);
+        CREATE INDEX IF NOT EXISTS idx_cost_logs_provider ON generation_cost_logs(provider);
     """)
     conn.commit()
 
@@ -234,3 +254,36 @@ def _release_lock_for_task(task_id: str) -> None:
 
 def release_lock_for_task(task_id: str) -> None:
     _release_lock_for_task(task_id)
+
+
+def log_generation_cost(*, task_id: str, user_key: Optional[str] = None,
+                        provider: Optional[str] = None, gpu: Optional[str] = None,
+                        result: str = "success", container_duration_ms: int = 0,
+                        model_load_ms: Optional[int] = None, generation_ms: Optional[int] = None,
+                        cold_warm: Optional[str] = None, container_id: Optional[str] = None,
+                        retries: int = 0, estimated_cost_usd: Optional[float] = None) -> None:
+    """写入一次生成的成本观测记录（阶段一/二共用 schema）。失败不抛出。"""
+    now = time.time()
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("""
+            INSERT INTO generation_cost_logs (
+                task_id, user_key, provider, gpu, result, container_duration_ms,
+                model_load_ms, generation_ms, cold_warm, container_id, retries,
+                estimated_cost_usd, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            task_id, user_key, provider, gpu, result, container_duration_ms,
+            model_load_ms, generation_ms, cold_warm, container_id, retries,
+            estimated_cost_usd if estimated_cost_usd is not None else 0.0,
+            now, now,
+        ))
+        conn.commit()
+    except Exception:  # noqa: BLE001
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    finally:
+        conn.close()
