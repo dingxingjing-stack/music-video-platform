@@ -20,23 +20,23 @@ if BACKEND_ROOT not in sys.path:
 from app.services.mix_engine import (
     _build_filter_and_inputs,
     render_mix,
-    _resolve_audio_source,
+    _resolve_audio_path,
 )
 
 
-# ── _resolve_audio_source ──────────────────────────────────────────────
+# ── _resolve_audio_path ──────────────────────────────────────────────
 
-class TestResolveAudioSource:
+class TestResolveAudioPath:
     def test_results_dir_url(self):
-        src = _resolve_audio_source("/results/track.wav")
+        src = _resolve_audio_path("/results/track.wav")
         assert src == "/results/track.wav"
 
     def test_http_url(self):
-        src = _resolve_audio_source("https://example.com/audio.mp3")
+        src = _resolve_audio_path("https://example.com/audio.mp3")
         assert src == "https://example.com/audio.mp3"
 
     def test_local_path(self):
-        src = _resolve_audio_source("./data/song.flac")
+        src = _resolve_audio_path("./data/song.flac")
         assert src == "./data/song.flac"
 
 
