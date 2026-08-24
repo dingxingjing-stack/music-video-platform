@@ -1,0 +1,11 @@
+# HeartMuLa Kaggle 部署精确依赖版本
+# 必须与官方 HeartLib 兼容，不升级 transformers 5.x
+transformers==4.57.0
+tokenizers==0.22.1
+huggingface-hub==0.34.4
+tqdm==4.67.1
+numpy==2.0.2
+torch==2.13.0+cu121
+torchaudio==2.13.0+cu121
+einops==0.8.0
+safetensors==0.4.3
