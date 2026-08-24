@@ -7,14 +7,13 @@ HeartMuLa 最小生成测试脚本
 import sys
 import os
 import torch
+from pathlib import Path
 
 # === 强制路径优先级 (必须在最前面) ===
 HEARTMULA_ENV = Path("/kaggle/working/heartmula_env")
 HEARTLIB_SRC = Path("/kaggle/working/heartlib/src")
 sys.path.insert(0, str(HEARTMULA_ENV))
 sys.path.insert(0, str(HEARTLIB_SRC))
-
-from pathlib import Path
 
 MODEL_DIR = Path("/kaggle/working/pretrained")
 HEARTMULA_MODEL_DIR = MODEL_DIR / "HeartMuLa-oss-3B"

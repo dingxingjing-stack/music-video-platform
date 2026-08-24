@@ -1,5 +1,6 @@
 # HeartMuLa Kaggle 部署 - 笔记本单元格版本
 # 复制以下代码到 Kaggle 笔记本单元格中运行
+# 注意: 笔记本中使用 ! 前缀运行 shell 命令
 
 # ============================================================
 # 单元格 1: 环境检查 + Clone HeartLib
@@ -15,8 +16,9 @@ HEARTMULA_ENV = Path("/kaggle/working/heartmula_env")
 if HEARTLIB_DIR.exists():
     shutil.rmtree(HEARTLIB_DIR)
 
-# Clone 官方仓库
-!git clone --depth 1 https://github.com/HeartMuLa/heartlib.git /kaggle/working/heartlib
+# Clone 官方仓库 (笔记本中用: !git clone ...)
+# !git clone --depth 1 https://github.com/HeartMuLa/heartlib.git /kaggle/working/heartlib
+subprocess.run(["git", "clone", "--depth", "1", "https://github.com/HeartMuLa/heartlib.git", "/kaggle/working/heartlib"], check=True)
 
 # 验证
 for p in [
@@ -60,7 +62,13 @@ safetensors==0.4.3
 req_file = HEARTMULA_ENV / "requirements.txt"
 req_file.write_text(requirements.strip())
 
-!pip install --target /kaggle/working/heartmula_env --no-deps -r /kaggle/working/heartmula_env/requirements.txt
+# 笔记本中用: !pip install --target /kaggle/working/heartmula_env --no-deps -r /kaggle/working/heartmula_env/requirements.txt
+subprocess.run([
+    sys.executable, "-m", "pip", "install",
+    "--target", "/kaggle/working/heartmula_env",
+    "--no-deps",
+    "-r", "/kaggle/working/heartmula_env/requirements.txt"
+], check=True)
 
 print("依赖安装完成")
 
