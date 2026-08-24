@@ -66,8 +66,23 @@ def step1_check_env():
     print(f"PyTorch: {torch.__version__}")
     print(f"CUDA: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
-        print(f"GPU: {torch.cuda.get_device_name(0)}")
-        print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
+        gpu_name = torch.cuda.get_device_name(0)
+        vram = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        capability = torch.cuda.get_device_capability(0)
+        print(f"GPU: {gpu_name}")
+        print(f"VRAM: {vram:.2f} GB")
+        print(f"Compute Capability: {capability[0]}.{capability[1]} (sm_{capability[0]}{capability[1]})")
+        
+        # HeartLib 要求 sm_70+ (Volta/Turing/Ampere)
+        if capability[0] < 7:
+            raise RuntimeError(
+                f"GPU 架构不兼容: {gpu_name} (sm_{capability[0]}{capability[1]}) "
+                f"HeartLib 要求 sm_70+ (T4/V100/A100 等)。"
+                f"请在 Kaggle 设置中切换 Accelerator 为 GPU T4 或更高。"
+            )
+        print(f"✓ GPU 架构兼容 (sm_{capability[0]}{capability[1]} >= sm_70)")
+    else:
+        raise RuntimeError("未检测到 CUDA GPU，HeartMuLa 需要 GPU 推理")
     print(f"工作目录: {os.getcwd()}")
 
 # ============================================================
@@ -115,10 +130,11 @@ def step3_install_deps():
     HEARTMULA_ENV.mkdir(parents=True)
     
     req_file = Path(__file__).parent / "requirements.txt"
+    # 不使用 --no-deps，允许依赖解析；requirements.txt 已移除 torch/torchaudio，
+    # 将使用 Kaggle 预装的 PyTorch 2.10.0+cu128
     run_cmd([
         sys.executable, "-m", "pip", "install",
         "--target", str(HEARTMULA_ENV),
-        "--no-deps",
         "-r", str(req_file)
     ])
     
@@ -134,6 +150,14 @@ def step4_verify_imports():
     
     # 必须在导入前设置路径
     ensure_path_first([HEARTMULA_ENV, HEARTLIB_SRC])
+    
+    import torch
+    print(f"PyTorch: {torch.__version__}")
+    # 验证 torch 版本在 HeartLib 要求范围内 (>=2.4, <2.11)
+    from packaging import version
+    assert version.parse(torch.__version__) >= version.parse("2.4.0"), f"PyTorch 版本过低: {torch.__version__} < 2.4.0"
+    assert version.parse(torch.__version__) < version.parse("2.11.0"), f"PyTorch 版本过高: {torch.__version__} >= 2.11.0"
+    print(f"✓ PyTorch 版本符合要求: {torch.__version__} ∈ [2.4, 2.11)")
     
     import transformers
     import tokenizers
