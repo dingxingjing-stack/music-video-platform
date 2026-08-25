@@ -174,6 +174,40 @@ curl -X POST http://localhost:8000/api/v1/ai/generate \
   -d '{"prompt":"test","style":"pop"}'
 ```
 
+### Kaggle MVP 本地推理（T4 16GB）
+
+**包含模型**：`facebook/musicgen-small` (300M, MIT) + `FunAudioLLM/CosyVoice2-0.5B` (Apache 2.0)，总计 ~2.2GB
+
+**下载模型（Kaggle Notebook）**：
+```bash
+# Token 从 Kaggle Secrets HF_TOKEN 自动读取，不打印明文
+python backend/scripts/download_mvp_models.py
+# 输出：
+# === MUSICGEN ===  Model download: PASS  Size: 1.1GB
+# === COSYVOICE2 === Model download: PASS  Size: 1.2GB
+# === DISK === Used / Free
+```
+
+**本地推理**：
+```python
+from app.services.inference.musicgen_local import MusicGenSmallLocalService
+from app.services.inference.cosyvoice_local import CosyVoice2LocalService
+
+mg = MusicGenSmallLocalService()
+wav = mg.generate(prompt="upbeat pop piano", duration=10)
+
+vc = CosyVoice2LocalService()
+wav2 = vc.tts(text="你好，欢迎来到音乐工坊", reference_audio="/tmp/ref.wav")
+```
+
+**Provider 切换（不影响生产）**：
+```bash
+# 生产默认仍为 Modal ACE-Step，无需改动
+AI_GENERATION_PROVIDER=musicgen_small  # 或 cosyvoice2
+```
+
+**权重不入库**：`models/`, `*.safetensors`, `*.bin`, `*.pt`, `*.pth`, `*.ckpt` 已在 `.gitignore`。
+
 ### 浏览器测试
 访问 http://localhost:3000 并测试：
 - ✅ 多轨编辑器加载

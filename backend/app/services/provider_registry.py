@@ -76,23 +76,100 @@ class ModalACEStepProvider(BaseProvider):
 
     name = "modal_ace_step"
     provider_type = "modal_ace_step"
-    capabilities = ["text_to_music", "lyrics_to_music", "stem_separation"]
+    capabilities = ["text_to_music", "lyrics_to_music", "stem_separation", "audio2audio"]
     max_duration = 300
     gpu = "L40S"
     production = True
 
     async def generate(self, request: dict) -> dict:
         try:
-            result = await ace_step_generate(
-                prompt=request.get("prompt", ""),
-                lyrics=request.get("lyrics", ""),
-                duration=request.get("duration", 180),
-            )
+            # 仅在参数实际提供时传递，保持与旧版 Mock 兼容
+            kwargs = {
+                "prompt": request.get("prompt", ""),
+                "lyrics": request.get("lyrics", ""),
+                "duration": request.get("duration", 180),
+            }
+            # 仅在参数实际提供时传递新参数，保持向后兼容
+            ref_audio = request.get("reference_audio")
+            if ref_audio:
+                kwargs["reference_audio"] = ref_audio
+            enable_a2a = request.get("enable_audio2audio")
+            if enable_a2a:
+                kwargs["enable_audio2audio"] = enable_a2a
+            ref_strength = request.get("reference_strength")
+            if ref_strength is not None:
+                kwargs["reference_strength"] = ref_strength
+
+            result = await ace_step_generate(**kwargs)
             if result:
                 return {"success": True, "volume_files": result, "provider": self.name}
             return {"success": False, "error": "ACE-Step generation failed", "provider": self.name}
         except QueueFullError:
             raise
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "error": str(exc), "provider": self.name}
+
+
+class KaggleMusicGenSmallProvider(BaseProvider):
+    """Kaggle 本地 MusicGen-Small (300M) — 实验 Provider，不影响生产默认。"""
+
+    name = "musicgen_small"
+    provider_type = "musicgen_small"
+    capabilities = ["text_to_music"]
+    max_duration = 30
+    gpu = "T4"
+    production = False
+
+    async def generate(self, request: dict) -> dict:
+        try:
+            from app.services.inference.musicgen_local import MusicGenSmallLocalService
+
+            svc = MusicGenSmallLocalService()
+            if not svc.is_available():
+                return {"success": False, "error": "MusicGen-small 模型未就绪，请先运行 download_mvp_models.py", "provider": self.name}
+            import asyncio
+
+            def _run():
+                return svc.generate(
+                    prompt=request.get("prompt", ""),
+                    duration=float(request.get("duration", 10)),
+                    temperature=float(request.get("temperature", 1.0)),
+                )
+
+            out = await asyncio.to_thread(_run)
+            return {"success": True, "volume_files": {"full_wav": str(out)}, "provider": self.name}
+        except Exception as exc:  # noqa: BLE001
+            return {"success": False, "error": str(exc), "provider": self.name}
+
+
+class KaggleCosyVoice2Provider(BaseProvider):
+    """Kaggle 本地 CosyVoice2-0.5B — 实验 Provider (TTS/克隆)。"""
+
+    name = "cosyvoice2"
+    provider_type = "cosyvoice2"
+    capabilities = ["tts", "voice_clone", "cross_lingual"]
+    max_duration = 60
+    gpu = "T4"
+    production = False
+
+    async def generate(self, request: dict) -> dict:
+        try:
+            from app.services.inference.cosyvoice_local import CosyVoice2LocalService
+
+            svc = CosyVoice2LocalService()
+            if not svc.is_available():
+                return {"success": False, "error": "CosyVoice2 模型未就绪，请先运行 download_mvp_models.py", "provider": self.name}
+            import asyncio
+
+            def _run():
+                return svc.tts(
+                    text=request.get("text") or request.get("prompt") or "",
+                    reference_audio=request.get("reference_audio"),
+                    reference_text=request.get("reference_text"),
+                )
+
+            out = await asyncio.to_thread(_run)
+            return {"success": True, "volume_files": {"full_wav": str(out)}, "provider": self.name}
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "error": str(exc), "provider": self.name}
 
@@ -152,5 +229,7 @@ def get_provider_registry() -> ProviderRegistry:
     if _registry is None:
         _registry = ProviderRegistry()
         _registry.register(ModalACEStepProvider())
+        _registry.register(KaggleMusicGenSmallProvider())
+        _registry.register(KaggleCosyVoice2Provider())
         print("[Provider] Registry initialized:", list(_registry._providers.keys()))
     return _registry

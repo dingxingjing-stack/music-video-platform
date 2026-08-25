@@ -10,6 +10,7 @@ httpx==0.27.2
 numpy>=1.26.4,<2.0
 scipy==1.14.1
 librosa==0.10.2
+mido>=1.3.0
 python-multipart==0.0.20
 pypinyin==0.52.0
 sqlalchemy==2.0.35
@@ -18,3 +19,14 @@ soundfile>=0.12.1
 pydub>=0.25.1
 pillow>=10.0.0
 modal==1.5.3
+
+# --- MVP Kaggle 本地推理 (按需安装，生产镜像可不装) ---
+# musicgen-small: transformers + audiocraft + accelerate
+# cosyvoice2: cosyvoice (Apache-2.0) + torchaudio
+# Kaggle T4 中建议: pip install -r requirements-mvp.txt
+transformers>=4.36.0
+accelerate>=0.26.0
+audiocraft>=1.3.0
+encodec>=0.11.1
+# cosyvoice 官方包名 cosyvoice (若不可用可换 fun-cosyvoice)
+# cosyvoice>=0.1.0  # 取消注释以在 Kaggle 本地启用 CosyVoice2

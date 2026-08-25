@@ -87,3 +87,14 @@ vst-plugins/
 
 workers/.wrangler/
 
+# MVP model weights (never commit binary weights)
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+/kaggle/
+pretrained/
+heartmula_env/
+
