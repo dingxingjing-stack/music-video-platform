@@ -1,0 +1,41 @@
+# Kaggle T4 16GB (CUDA 12.4, Python 3.11) 专用依赖
+# 目标：兼容 Kaggle 官方镜像，避免破坏现有 Modal 生产配置
+# 安装：pip install -r requirements-kaggle.txt
+# 约束：19.5GB /kaggle/working 上限，HeartMuLa 3B 通过 Dataset 只读不占 working
+
+# --- 核心推理（与 modal_ace_step.py:22 对齐，已验证 CUDA 12.4 兼容）---
+# Kaggle 默认已预装 torch 2.5.x+cu124，如镜像已满足可注释此行
+torch==2.5.1
+torchaudio==2.5.1
+# 仅当镜像无 GPU 时切换为 --index-url https://download.pytorch.org/whl/cu124
+# pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+
+# --- Transformers / HF（关键修复：本地 transformers 5.14 与 huggingface_hub 1.2.3 冲突）---
+transformers>=4.40.0,<5.0.0
+accelerate>=0.30.0
+safetensors>=0.4.0
+huggingface_hub[hf_transfer]>=0.23.0,<1.0.0
+hf-xet>=1.0.0
+
+# --- 音频处理（无大权重，纯 CPU）---
+librosa==0.10.2
+soundfile>=0.12.1
+numpy>=1.26,<2.5
+scipy>=1.11
+
+# --- ASR（Kaggle 仅 small，int8 ~250MB，不装 large-v3 1.5GB）---
+faster-whisper==1.0.3
+ctranslate2>=4.0.0
+# 可选时长解析后端（asr_client 已兼容缺失回退到 WAV 头）
+# av>=10.0.0  # 仅当需解析 m4a 时启用
+
+# --- 服务 / 存储 ---
+fastapi>=0.109.0
+uvicorn>=0.29.0
+httpx>=0.27.0
+boto3>=1.35.0
+python-multipart>=0.0.6
+pydantic>=2.0
+
+# --- 可选（调试/日志）---
+# modal>=1.5.0  # Kaggle web 容器如需 modal.Function.from_name 调 Modal 远程，则安装
