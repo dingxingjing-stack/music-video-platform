@@ -287,6 +287,8 @@ app.add_middleware(
 # ---------- router 挂载 ----------
 # 开发阶段：使用 Gemini 临时方案（免费额度）
 # 生产阶段：使用 ai_music (Agnes AI 主力 + Gemini 备用 + Mureka 音频)
+# HeartMuLa 本地推理（HF Spaces / RunPod / Kaggle T4）
+from app.routers import heartmula
 from app.routers import ai_music
 from app.routers import hf_music
 from app.routers import stems_export
@@ -308,6 +310,7 @@ app.include_router(workflow_app, prefix="/api/v1/workflow")
 app.include_router(batch_app,    prefix="/api/v1/batch")
 # app.include_router(hf_music.router, prefix="/api/v1/ai-hf")  # P0-2: disabled HF music router (MusicGen/Mock fallback)
 app.include_router(ai_music.router)
+app.include_router(heartmula.router)  # HeartMuLa 本地推理 /api/v1/heartmula
 app.include_router(user_app,    prefix="/api/v1/user")
 app.include_router(audio_app,   prefix="/api/v1/audio")
 app.include_router(stems_export.router)
