@@ -1,0 +1,9 @@
+ Initialized. View run at 
+https://modal.com/apps/dingxingjing-stack/main/ap-vPmE37835S1N6Xkg3RFDOH
+ Created objects.
+├──  Created mount C:\c\Users\dingx\music-video-platform\modal_test_health.py
+└──  Created web function health => 
+    https://dingxingjing-stack--test-health-endpoint-health-dev.modal.run 
+    (label stolen)
+️️⚡️ Serving... hit Ctrl-C to stop!
+└── Watching C:\c\Users\dingx\music-video-platform.

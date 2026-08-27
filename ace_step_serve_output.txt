@@ -1,0 +1,14 @@
+✓ Initialized. View run at 
+https://modal.com/apps/dingxingjing-stack/main/ap-WRFy5AQ0AaaTy7yGVD4b7T
+✓ Created objects.
+├── 🔨 Created mount C:\c\Users\dingx\music-video-platform\modal_ace_step.py
+├── 🔨 Created web function health => 
+│   https://dingxingjing-stack--ace-step-music-health-dev.modal.run
+├── 🔨 Created web function generate => 
+│   https://dingxingjing-stack--ace-step-music-generate-dev.modal.run
+├── 🔨 Created web function continue_audio => 
+│   https://dingxingjing-stack--ace-step-music-continue-audio-dev.modal.run
+└── 🔨 Created web function separate => 
+    https://dingxingjing-stack--ace-step-music-separate-dev.modal.run
+️️⚡️ Serving... hit Ctrl-C to stop!
+└── Watching C:\c\Users\dingx\music-video-platform.

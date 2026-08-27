@@ -1,0 +1,11 @@
+{
+  "globalAllow": true,
+  "permissions": {
+    "read": {"defaultAllow": true},
+    "edit": {"defaultAllow": true},
+    "glob": {"defaultAllow": true},
+    "grep": {"defaultAllow": true},
+    "bash": {"defaultAllow": true}
+  },
+  "requireConfirm": false
+}

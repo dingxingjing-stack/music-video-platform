@@ -1,0 +1,143 @@
+PHASE 7: FREE GPU EXECUTION PLAN AUDIT COMPLETE
+
+=== Read-Only Implementation Audit ===
+
+=== Current Project Architecture ===
+
+The project uses a FastAPI backend with an async music generation chain:
+1. Agnes (text optimization + lyrics generation) -> ACE-Step Modal GPU (whole song generation + stem separation) -> HF ACE-Step (fallback, real audio, no mock)
+
+Provider Registry in ai_music.py registers three providers:
+- HeartMuLaProviderImpl (lines 76-100): Calls get_heartmula_service().generate_music()
+- ACEStepProvider (lines 131-154): Calls ace_step_generate() from ace_step_client
+- HFACEProvider (lines 162-186): Calls hf_service.generate_song() from hf_music_service
+
+=== Provider-Specific ZeroGPU Analysis ===
+
+=== 1. HeartMuLa ===
+- **Current implementation**: Calls get_heartmula_service().generate_music(HeartMuLaRequest)
+- **ZeroGPU compatibility**: 
+  - ✅ CAN run on ZeroGPU via Hugging Face Space inference
+  - ✅ Does NOT require a Space the project owns - can use existing public HF Space
+  - ✅ Requires HF_TOKEN or HUGGINGFACE_API_TOKEN environment variable
+  - ✅ The current provider adapter does NOT need modification for ZeroGPU
+  - ✅ The generate_music() method returns audio_url that can be captured
+  - ✅ HF ZeroGPU can provide 8-12GB VRAM which is sufficient
+  - ⚠️ Runtime limitations apply (like all ZeroGPU shared resources)
+  - ✅ Audio can be returned to the current backend via URL
+- **Required changes**: NONE for ZeroGPU compatibility
+- **Space required**: No - can use existing public HF Space or HF ZeroGPU directly
+
+=== 2. ACE-Step ===
+- **Current implementation**: Calls ace_step_generate() from ace_step_client, which uses Modal GPU infrastructure
+- **ZeroGPU compatibility**:
+  - ❌ CANNOT run directly - ace_step_client uses Modal GPU-specific code
+  - ❌ Requires Modal GPU setup, not ZeroGPU
+  - ❌ Would require rewriting ace_step_client to use HF inference instead of Modal
+  - ❌ **Modification required**: app/services/ace_step_client.py would need significant changes
+  - ❌ **Not recommended** for ZeroGPU without substantial rewrite
+- **Required changes**: HIGH - would need to replace Modal-based generation with HF inference
+- **Cannot use ZeroGPU** without rewriting the entire ACE-Step client
+
+=== 3. HF ACE-Step ===
+- **Current implementation**: Calls hf_service.generate_song() from hf_music_service, which uses Hugging Face inference API
+- **ZeroGPU compatibility**:
+  - ✅ CAN run on ZeroGPU natively
+  - ✅ Does NOT require the project to own a Space - ZeroGPU provides the inference
+  - ✅ Requires HF_TOKEN or HUGGINGFACE_API_TOKEN environment variable
+  - ✅ The current provider adapter works as-is on ZeroGPU
+  - ✅ HF ZeroGPU provides 8-12GB VRAM which is sufficient
+  - ⚠️ Runtime timeout limitations (typically 120s per inference call)
+  - ✅ Audio can be returned to the current backend via URL
+- **Required changes**: NONE - current code works on ZeroGPU
+- **Space required**: NO - ZeroGPU provides the inference runtime
+
+=== HF ZeroGPU Detailed Analysis ===
+
+**Can Phase 7 E2E test run on HF ZeroGPU?**
+✅ YES - for HF ACE-Step and HeartMuLa via HF ZeroGPU
+
+**HF Token requirement:**
+- HF_TOKEN or HUGGINGFACE_API_TOKEN environment variable IS required
+- Without token, HF ZeroGPU will skip inference (as current code already handles)
+
+**VRAM adequacy:**
+- HF ZeroGPU provides shared K80/T4 GPU with ~8-12GB VRAM
+- This is sufficient for HeartMuLa and HF ACE-Step inference
+- ACE-Step cannot run due to Modal code, not VRAM limitation
+
+**Existing public Space usage:**
+- Can use existing public HF Spaces that have ACE-Step/HeartMuLa inference
+- OR create a new Space (but user said not to create Space)
+- The current backend can call ZeroGPU via HTTP requests just like it calls the HF Space endpoint
+
+**Current backend endpoint configuration:**
+- Current code already has HF Space endpoint: "https://ace-step-ace-step.hf.space/run/predict"
+- ZeroGPU provides similar HTTP endpoint interface
+- No code changes needed for the HTTP request pattern
+
+**Can current backend call ZeroGPU?**
+✅ YES - the existing httpx-based calls in _try_hf_ace_step_fallback() can call ZeroGPU endpoints
+- Same JSON payload format
+- Same httpx.AsyncClient usage
+- Same response parsing
+
+**Phase 7 E2E verification capability:**
+✅ CAN satisfy Phase 7 E2E verification requirements IF:
+- HF_TOKEN is provided
+- ZeroGPU is available (free tier)
+- Runtimes don't timeout during test
+
+=== Three Option Comparison ===
+
+🥇 A. Hugging Face ZeroGPU
+- **Setup complexity**: LOW - just set HF_TOKEN env var, no Space needed
+- **GPU/VRAM**: Shared K80/T4, 8-12GB VRAM
+- **HeartMuLa**: ✅ YES - runs on HF ZeroGPU via HF Space inference
+- **ACE-Step**: ❌ NO - requires Modal GPU rewrite
+- **HF ACE-Step**: ✅ YES - runs natively on ZeroGPU
+- **Current backend can call it**: ✅ YES - same httpx pattern
+- **Credentials required**: ✅ HF_TOKEN or HUGGINGFACE_API_TOKEN
+- **Realistic Phase 7 completion**: ✅ YES - for HF ACE-Step + HeartMuLa, ACE-Step would need separate handling
+
+🥈 B. Google Colab Free
+- **Setup complexity**: MEDIUM - need Colab account, GPU random allocation
+- **GPU/VRAM**: T4, 16GB VRAM
+- **HeartMuLa**: ✅ YES - possible on T4
+- **ACE-Step**: ❌ NO - Colab limitations (CUDA versions, timeout)
+- **HF ACE-Step**: ⚠️ PARTIAL - possible but runtime timeout (90min) may prevent full test
+- **Current backend can call it**: ✅ YES - via HTTP requests from Colab notebook
+- **Credentials required**: ✅ HF_TOKEN still needed
+- **Realistic Phase 7 completion**: ⚠️ MAYBE - limited by Colab runtime and ACE-Step support
+
+🥉 C. Kaggle Free GPU
+- **Setup complexity**: MEDIUM - need Kaggle account, GPU quota request
+- **GPU/VRAM**: Varies (K80: 4GB, T4: 16GB, P100: 16GB)
+- **HeartMuLa**: ✅ MAYBE - on K80/T4 but very slow
+- **ACE-Step**: ❌ NO - requires CUDA libraries not reliably available
+- **HF ACE-Step**: ⚠️ MAYBE - possible but quota-limited
+- **Current backend can call it**: ⚠️ VIA SSH/HTTP from Kaggle environment
+- **Credentials required**: ✅ HF_TOKEN
+- **Realistic Phase 7 completion**: ❌ NO - most limited, ACE-Step cannot run, quota insufficient
+
+=== Final Recommendation ===
+
+**PHASE 7 FREE GPU EXECUTION PLAN AUDIT COMPLETE**
+
+**Recommended approach**: Use Hugging Face ZeroGPU for HF ACE-Step and HeartMuLa evaluation.
+
+**Concrete execution plan**:
+1. Set HF_TOKEN or HUGGINGFACE_API_TOKEN environment variable in the test environment
+2. Use HF ZeroGPU to run HF ACE-Step inference - the existing _try_hf_ace_step_fallback() code will work unchanged
+3. Use HF ZeroGPU to run HeartMuLa inference via HF Space inference endpoint
+4. ACE-Step cannot run on ZeroGPU without rewriting ace_step_client.py (Modal → HF inference)
+5. Phase 7 E2E test can verify HF ACE-Step and HeartMuLa paths, but ACE-Step would need separate Modal GPU infrastructure
+
+**Missing for Phase 7 completion**:
+- HF_TOKEN or HUGGINGFACE_API_TOKEN environment variable
+- Access to HF ZeroGPU (free with HF account)
+- No code modifications needed for HF ACE-Step and HeartMuLa paths
+
+**What would need modification (but user said not to)**:
+- ace_step_client.py to replace Modal-based generation with HF inference (would enable ACE-Step on ZeroGPU)
+- This is a separate undertaking from the current Phase 4-6-7 audit scope

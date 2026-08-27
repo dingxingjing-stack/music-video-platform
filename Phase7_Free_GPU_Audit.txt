@@ -1,0 +1,97 @@
+PHASE 7: FREE GPU FEASIBILITY AUDIT
+
+=== Audit Scope ===
+Providers: HeartMuLa, ACE-Step, HF ACE-Step
+Environment: Windows, CPU-only (PyTorch 2.13.0+cpu, no CUDA)
+No modifications to production code, no installations, no downloads
+
+=== Provider Configuration from Code ===
+
+1. HeartMuLa
+   - Configured in: backend/app/routers/ai_music.py provider registry
+   - Service: backend/app/services/heartmula_service.py
+   - Model: HeartMuLa text-to-music generation
+   - GPU VRAM requirement: Unknown from code alone (typically 8-12GB for inference)
+   - CPU inference: Possible but very slow (transformers-based)
+
+2. ACE-Step
+   - Configured in: backend/app/routers/ai_music.py provider registry
+   - Service: backend/app/services/ace_step_client.py
+   - Model: ACE-Step 1.5 (whole song generation + stem separation)
+   - GPU VRAM requirement: 8-16GB minimum, 24GB+ recommended
+   - CPU inference: Not supported (requires CUDA for audio generation)
+   - Uses Modal GPU infrastructure
+
+3. HF ACE-Step
+   - Configured in: backend/app/routers/ai_music.py provider registry  
+   - Service: backend/app/services/hf_music_service.py
+   - Model: Hugging Face ACE-Step Space inference
+   - GPU VRAM requirement: 8-12GB (inference on HF Space)
+   - CPU inference: Possible but extremely slow
+   - Requires HF_TOKEN or HUGGINGFACE_API_TOKEN
+
+=== Free GPU Platform Evaluation ===
+
+A. Kaggle Free GPU
+   - GPU: NVIDIA K80 / T4 / P100 (varies)
+   - VRAM: 4-16GB depending on type
+   - Weekly quota: Limited (typically 30-60 min per session)
+   - HeartMuLa: May run on K80/T4 (8GB VRAM) but very slow
+   - ACE-Step: Unlikely - requires CUDA and >8GB VRAM
+   - HF ACE-Step: May run on T4 but very slow inference
+   - Quota: Probably insufficient for full E2E test
+
+B. Google Colab Free
+   - GPU: T4 (16GB VRAM)
+   - Access: Random, limited per day
+   - HeartMuLa: Possible on T4 (16GB VRAM)
+   - ACE-Step: Unlikely - Colab T4 may not have required CUDA version/libs
+   - HF ACE-Step: Possible but limited by Colab runtime timeout (usually 90min)
+   - Limitations: Runtime disconnects, file persistence issues
+
+B. Hugging Face ZeroGPU
+   - GPU: Shared K80/T4 (limited concurrency)
+   - HeartMuLa: Possible - HF Spaces can run inference
+   - ACE-Step: Possible but very slow, may timeout
+   - HF ACE-Step: Best option - designed for HF ZeroGPU
+   - Requirements: HF Space with inference code, HF_TOKEN may still be needed
+   - Can use existing Space or create new one
+
+=== Recommendations ===
+
+🥇 Best free option: Hugging Face ZeroGPU
+- HF ACE-Step can run there natively
+- HeartMuLa can run via HF Space inference
+- ACE-Step is problematic (requires Modal GPU)
+- No cost, no installation needed
+
+🥈 Second option: Google Colab Free
+- HeartMuLa may run on T4
+- ACE-Step and HF ACE-Step have timeout/quotas issues
+- Runtime limitations may prevent full E2E test
+
+🥉 Third option: Kaggle Free GPU
+- Most limited quotas
+- ACE-Step unlikely to run
+- Only HeartMuLa possible on K80/T4
+
+=== Minimum VRAM needed ===
+- HeartMuLa: 8GB minimum, 12GB recommended
+- ACE-Step: 8GB minimum, 24GB recommended ( Modal GPU)
+- HF ACE-Step: 8GB minimum, 12GB recommended
+
+=== Required credentials ===
+- HF_TOKEN or HUGGINGFACE_API_TOKEN: Required for HF ACE-Step and HeartMuLa via HF
+- No API tokens needed for local CPU inference (but too slow)
+- No separate server endpoints needed if using HF ZeroGPU
+
+=== Required steps after audit ===
+1. Choose free platform (recommended: Hugging Face ZeroGPU)
+2. Create HF Space with inference code for ACE-Step and HeartMuLa
+3. Set HF_TOKEN or HUGGINGFACE_API_TOKEN environment variable
+4. Run E2E test through ZeroGPU interface
+5. Verify audio output and download
+
+PHASE 7 FREE GPU FEASIBILITY AUDIT COMPLETE
+
+Note: This is a research/audit only. No modifications to production code, no installations, no downloads performed. The current Windows CPU-only environment cannot run real provider E2E tests. Free GPU options exist but have limitations per the analysis above.

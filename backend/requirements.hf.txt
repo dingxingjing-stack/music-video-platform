@@ -1,0 +1,88 @@
+# HeartMuLa 3B + HeartCodec - Hugging Face Spaces Requirements
+# Target: NVIDIA T4 16GB VRAM (CUDA 12.1+ compatible)
+# 
+# Installation order matters:
+# 1. PyTorch with CUDA (cu121) - MUST be first
+# 2. heartlib from GitHub - CORE inference library
+# 3. Transformers ecosystem - model loading
+# 4. FastAPI + dependencies - API server
+# 5. Audio processing - output handling
+# 6. Cloud storage - R2 upload
+
+# ============================================================
+# 1. PyTorch with CUDA 12.1 (compatible with CUDA 12.4 runtime)
+# ============================================================
+torch==2.4.0
+torchvision==0.19.0
+torchaudio==2.4.0
+--index-url https://download.pytorch.org/whl/cu121
+
+# ============================================================
+# 2. HeartLib - Official HeartMuLa/HeartCodec library
+#    Installed from GitHub main branch (official source)
+# ============================================================
+git+https://github.com/HeartMuLa/heartlib.git@main
+
+# ============================================================
+# 3. Transformers & Tokenizers (HeartMuLa dependencies)
+#    HeartMuLa requires transformers>=4.45, tokenizers
+# ============================================================
+transformers==4.45.2
+tokenizers==0.20.3
+
+# ============================================================
+# 4. Vector Quantize PyTorch (HeartCodec dependency)
+# ============================================================
+vector_quantize_pytorch==1.18.3
+
+# ============================================================
+# 5. Hugging Face Hub (fast downloads via hf_transfer)
+# ============================================================
+huggingface_hub[hf_transfer]>=0.24.0
+
+# ============================================================
+# 6. FastAPI + Uvicorn (API Server)
+# ============================================================
+fastapi==0.115.0
+uvicorn==0.30.6
+
+# ============================================================
+# 7. HTTP Client & Cloud Storage
+# ============================================================
+httpx==0.27.2
+boto3==1.35.0
+aiohttp==3.10.5
+
+# ============================================================
+# 8. Configuration & Validation
+# ============================================================
+python-dotenv==1.0.1
+pydantic==2.11.7
+pydantic[email]==2.11.7
+
+# ============================================================
+# 9. Audio Processing
+# ============================================================
+soundfile==0.12.1
+scipy==1.14.1
+numpy==1.26.4
+pillow>=10.0.0
+pydub>=0.25.1
+
+# ============================================================
+# 10. Monitoring & Database (existing project dependencies)
+# ============================================================
+sentry-sdk[fastapi]==2.42.0
+supabase==2.31.0
+sqlalchemy==2.0.35
+pypinyin==0.52.0
+python-multipart==0.0.20
+
+# ============================================================
+# Notes:
+# - Modal is NOT included (not compatible with HF Spaces GPU)
+# - All model weights downloaded at runtime from HF Hub
+# - HEARTMULA_MODEL_REPO and HEARTCODEC_MODEL_REPO env vars control sources
+# - lazy_load=True enforced in code for T4 16GB VRAM
+# - No mock/fallback - explicit errors on any failure
+# ============================================================

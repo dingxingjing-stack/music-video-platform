@@ -80,16 +80,28 @@ class LLMFatalError(LLMProviderError):
 class LLMFactory:
     """Unified LLM client with retry, fallback and concurrency control."""
 
-    def __init__(self):
-        self.clients: Dict[str, httpx.AsyncClient] = {}
+def __init__(self):
+        self._clients: Dict[str, httpx.AsyncClient] = {}
+        self._initialized = False
+        self.sem = asyncio.Semaphore(4)
+        # 新降级顺序：agnes → Gemini → NVIDIA → mock（用户确认2026-07-20）
+        order = os.getenv("PROVIDER_ORDER", "agnes,gemini,nvidia")
+        self._provider_order_template = [p.strip() for p in order.split(",") if p.strip()]
+
+    async def _ensure_initialized(self):
+        """Initialize LLM clients lazily on first use."""
+        if self._initialized:
+            return
+        
         for name, conf in MODELS.items():
-            if conf.get("enabled") and conf["key"]:
+            # Check if provider is in our preferred order and has API key
+            if name in self._provider_order_template and conf.get("enabled") and conf["key"]:
                 headers = (
                     {"Authorization": f"Bearer {conf['key']}"}
                     if conf["fmt"] == "openai"
                     else {"x-goog-api-key": conf["key"]}
                 )
-                self.clients[name] = httpx.AsyncClient(
+                self._clients[name] = httpx.AsyncClient(
                     base_url=conf["base_url"],
                     headers=headers,
                     timeout=120.0,
@@ -97,18 +109,22 @@ class LLMFactory:
                 logger.info("LLM provider loaded: %s (%s)", name, conf["model_default"])
             elif conf.get("enabled") and not conf["key"]:
                 logger.warning("LLM provider %s enabled but missing API key, skipped", name)
-        if not self.clients:
+        
+        if not self._clients:
             logger.error("No LLM provider configured! All calls will return mock fallback.")
-        self.sem = asyncio.Semaphore(4)
-        # 新降级顺序：agnes → Gemini → NVIDIA → mock（用户确认2026-07-20）
-        order = os.getenv("PROVIDER_ORDER", "agnes,gemini,nvidia")
+        
+        # Build final provider order based on what's actually available
         self.provider_order = [
-            p.strip() for p in order.split(",") if p.strip() and p.strip() in self.clients
+            p for p in self._provider_order_template 
+            if p in self._clients
         ]
         if not self.provider_order:
-            self.provider_order = list(self.clients.keys())
+            self.provider_order = list(self._clients.keys())
+        
+        self._initialized = True
 
-    async def call(
+
+async def call(
         self,
         messages: List[Dict[str, str]],
         provider: str = "auto",
@@ -118,11 +134,12 @@ class LLMFactory:
         stream: bool = False,
         **kwargs,
     ) -> Union[str, AsyncGenerator[str, None]]:
+        await self._ensure_initialized()
         providers = [provider] if provider != "auto" else self.provider_order
         last_err = None
 
         for idx, prov in enumerate(providers):
-            if prov not in self.clients:
+            if prov not in self._clients:
                 logger.warning("Provider %s not configured, skip", prov)
                 continue
             try:
@@ -156,13 +173,14 @@ class LLMFactory:
         自动回退到默认顺序中的其余可用 provider（无论前端选 gemini/nvidia 与否，
         只要 agnes 可用就走 agnes）。全部失败才返回 mock。
         """
+        await self._ensure_initialized()
         order: List[str] = []
-        if provider != "auto" and provider in self.clients:
+        if provider != "auto" and provider in self._clients:
             order.append(provider)
         order += [p for p in self.provider_order if p not in order]
         last_err = None
         for prov in order:
-            if prov not in self.clients:
+            if prov not in self._clients:
                 continue
             try:
                 text = await self._call_with_retry(
@@ -194,14 +212,15 @@ class LLMFactory:
 
     async def health_check(self) -> Dict[str, Dict[str, Any]]:
         """Check all configured providers."""
+        await self._ensure_initialized()
         results = {}
-        for name in self.clients:
+        for name in self._clients:
             try:
                 model = MODELS[name]["model_default"]
                 payload = self._build_payload(name, [{"role": "user", "content": "hi"}], model, 0.1, 10, False)
                 url = self._get_endpoint(name, model)
                 async with self.sem:
-                    resp = await self.clients[name].post(url, json=payload)
+                    resp = await self._clients[name].post(url, json=payload)
                 results[name] = {"healthy": resp.status_code == 200, "status": resp.status_code}
             except Exception as exc:
                 results[name] = {"healthy": False, "error": str(exc)[:200]}
@@ -379,7 +398,8 @@ class LLMFactory:
                     pass
 
     async def close(self):
-        for c in self.clients.values():
+        await self._ensure_initialized()
+        for c in self._clients.values():
             await c.aclose()
 
 

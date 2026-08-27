@@ -1,0 +1,72 @@
+✓ Initialized. View run at 
+https://modal.com/apps/dingxingjing-stack/main/ap-opq1TjyTJJdshrwrU6veot
+✓ Created objects.
+├── 🔨 Created mount C:\c\Users\dingx\music-video-platform\modal_ace_step.py
+├── 🔨 Created web function health => 
+│   https://dingxingjing-stack--ace-step-music-health-dev.modal.run
+├── 🔨 Created web function generate => 
+│   https://dingxingjing-stack--ace-step-music-generate-dev.modal.run
+├── 🔨 Created web function continue_audio => 
+│   https://dingxingjing-stack--ace-step-music-continue-audio-dev.modal.run
+└── 🔨 Created web function separate => 
+    https://dingxingjing-stack--ace-step-music-separate-dev.modal.run
+️️⚡️ Serving... hit Ctrl-C to stop!
+└── Watching C:\c\Users\dingx\music-video-platform.
+    GET / -> 200 OK  (duration: 12.6 s, execution: 22.0 ms)
+   POST / -> 500 Internal Server Error  (duration: 33.1 s, execution: 9.68 s)
+[ACE-Step] Loading model from /models cache...
+Traceback (most recent call last):
+  File "/pkg/modal/_runtime/container_io_manager.py", line 977, in handle_input_exception
+    yield
+  File "/pkg/modal/_container_entrypoint.py", line 143, in run_input_async
+    async for value in gen:
+  File "/pkg/modal/_runtime/container_io_manager.py", line 315, in call_generator_async
+    async for result in gen:
+  File "/pkg/modal/_runtime/asgi.py", line 227, in fn
+    app_task.result()  # consume/raise exceptions if there are any!
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 1281, in handle
+    await super().handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 280, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 144, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 352, in run_endpoint_function
+    return await dependant.call(**values)
+  File "/root/modal_ace_step.py", line 180, in generate
+    pipeline = ACEStepPipeline.get()
+  File "/root/modal_ace_step.py", line 61, in get
+    cls._instance = cls()
+  File "/root/modal_ace_step.py", line 69, in __init__
+    self.pipeline = ACEPipeline.from_pretrained(
+AttributeError: type object 'ACEStepPipeline' has no attribute 'from_pretrained'
+

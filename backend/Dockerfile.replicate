@@ -1,0 +1,115 @@
+# Replicate Deployment for HeartMuLa 3B + HeartCodec
+# Target: NVIDIA T4 16GB VRAM (Community GPU Grant compatible)
+# Platform agnostic: Kaggle T4 → HF Spaces → Replicate → RunPod
+#
+# Key differences from Dockerfile.hf:
+# - Replicate Python runtime dependencies
+# - Predictor class structure
+# - scale-to-zero (min_instances=0, max_instances=1)
+# - No model weights in image (downloaded from HF Hub at container startup)
+
+FROM nvidia/cuda:12.4-devel-ubuntu22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.11
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Upgrade pip
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Create venv
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# === 1. PyTorch with CUDA 12.1 ===
+RUN pip install --no-cache-dir \
+    torch==2.4.0 \
+    torchvision==0.19.0 \
+    torchaudio==2.4.0 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# === 2. heartlib (Official HeartMuLa/HeartCodec) ===
+RUN pip install --no-cache-dir \
+    "git+https://github.com/HeartMuLa/heartlib.git@main"
+
+# === 3. Python dependencies ===
+RUN pip install --no-cache-dir \
+    transformers==4.45.2 \
+    tokenizers==0.20.3 \
+    vector_quantize_pytorch==1.18.3 \
+    "huggingface_hub[hf_transfer]>=0.24.0" \
+    fastapi==0.115.0 \
+    uvicorn==0.30.6 \
+    httpx==0.27.2 \
+    boto3==1.35.0 \
+    python-dotenv==1.0.1 \
+    pydantic==2.11.7 \
+    pydantic[email]==2.11.7 \
+    soundfile==0.12.1 \
+    scipy==1.14.1 \
+    numpy==1.26.4 \
+    sentry-sdk[fastapi]==2.42.0 \
+    supabase==2.31.0 \
+    aiohttp==3.10.5 \
+    python-multipart==0.0.20 \
+    pypinyin==0.52.0 \
+    sqlalchemy==2.0.35 \
+    pillow>=10.0.0 \
+    pydub>=0.25.1
+
+# === 4. Replicate Python runtime ===
+# Replicate 的 Python runtime 提供了 replicate.Predictor 基类
+# 和用于容器化的官方库
+RUN pip install --no-cache-dir \
+    replicate==1.5.0
+
+# === 5. Environment setup ===
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV HF_HOME=/models
+ENV TORCH_HOME=/models
+
+RUN mkdir -p /models
+
+WORKDIR /app
+
+# Copy only what's needed (exclude model weights - they download at runtime)
+COPY --chown=root:root . .
+
+# 只复制必要文件，排除大模型权重
+# (模型权重在 runtime 通过 HF Hub 下载，不打包进镜像)
+
+# Expose default Replicate port (though Replicate manages this)
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python3 -c "
+import torch, sys
+if torch.cuda.is_available():
+    sys.exit(0)
+else:
+    sys.exit(1)
+" || exit 1
+
+# Default command: Replicate will run the Predictor class
+# Replicate 会自动查找 Predictor 子类并运行其 setup() 和 predict()
+CMD ["python3", "-m", "replicate", "predict"]
+
+# ─── Replicate 健康检查端点 ──────────────────────────────────────────
+# Replicate 会在 /health 路径检查容器是否就绪
+# 我们复用 app.py 的健康逻辑（简化版）
+# 注意：Replicate 容器健康检查由平台自动管理，无需额外暴露端口

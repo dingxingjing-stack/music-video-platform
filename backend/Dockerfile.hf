@@ -1,0 +1,112 @@
+# HeartMuLa 3B + HeartCodec - Hugging Face Spaces Dockerfile
+# Target: NVIDIA T4 16GB VRAM (Community GPU Grant compatible)
+# Platform agnostic: Kaggle T4 -> HF Spaces -> RunPod Serverless
+# 
+# Key design decisions:
+# - Base: nvidia/cuda:12.4-devel-ubuntu22.04 (CUDA 12.4, matches PyTorch 2.4+cu121)
+# - No model weights in image (downloaded at runtime from HF Hub via HEARTMULA_MODEL_REPO)
+# - heartlib installed from GitHub main (official HeartMuLa/HeartCodec support)
+# - lazy_load=True enforced for T4 16GB VRAM constraint
+# - No mock fallback - explicit errors on GPU/model/CUDA issues
+
+FROM nvidia/cuda:12.4-devel-ubuntu22.04
+
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies
+# - ffmpeg: audio processing
+# - libsndfile1: soundfile dependency
+# - git: heartlib from GitHub
+# - python3.11-venv: virtual environment
+# - build-essential: for any compiled dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.11 as default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Upgrade pip and install wheel
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Create virtual environment for clean isolation
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install PyTorch with CUDA 12.1 support FIRST (must match base image CUDA 12.4 compatible)
+# PyTorch 2.4.0+cu121 is compatible with CUDA 12.4 runtime
+RUN pip install --no-cache-dir \
+    torch==2.4.0 \
+    torchvision==0.19.0 \
+    torchaudio==2.4.0 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Install heartlib from official GitHub (includes HeartMuLa, HeartCodec, pipelines)
+# This is the CORE dependency for real inference - no mock
+RUN pip install --no-cache-dir \
+    "git+https://github.com/HeartMuLa/heartlib.git@main"
+
+# Install remaining Python dependencies
+# - transformers>=4.45: HeartMuLa config/model loading
+# - tokenizers: HeartMuLa tokenizer
+# - vector_quantize_pytorch: HeartCodec VQ
+# - huggingface_hub[hf_transfer]: fast model downloads
+# - fastapi, uvicorn: API server
+# - httpx, boto3: R2 upload
+# - python-dotenv, pydantic: config/validation
+# - soundfile, scipy, numpy: audio processing
+RUN pip install --no-cache-dir \
+    transformers==4.45.2 \
+    tokenizers==0.20.3 \
+    vector_quantize_pytorch==1.18.3 \
+    "huggingface_hub[hf_transfer]>=0.24.0" \
+    fastapi==0.115.0 \
+    uvicorn==0.30.6 \
+    httpx==0.27.2 \
+    boto3==1.35.0 \
+    python-dotenv==1.0.1 \
+    pydantic==2.11.7 \
+    pydantic[email]==2.11.7 \
+    soundfile==0.12.1 \
+    scipy==1.14.1 \
+    numpy==1.26.4 \
+    sentry-sdk[fastapi]==2.42.0 \
+    supabase==2.31.0 \
+    aiohttp==3.10.5 \
+    python-multipart==0.0.20 \
+    pypinyin==0.52.0 \
+    sqlalchemy==2.0.35 \
+    pillow>=10.0.0 \
+    pydub>=0.25.1
+
+# Set HF_HUB_ENABLE_HF_TRANSFER for faster downloads
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV HF_HOME=/models
+ENV TORCH_HOME=/models
+
+# Create models cache directory
+RUN mkdir -p /models
+
+# Working directory
+WORKDIR /app
+
+# Copy application code
+COPY . .
+
+# Expose HF Spaces default port
+EXPOSE 7860
+
+# Health check endpoint (HF Spaces expects this)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python3 -c "import httpx; httpx.get('http://localhost:7860/health', timeout=5.0).raise_for_status()" || exit 1
+
+# Default command - runs FastAPI app (app.py is HF Spaces entry point)
+CMD ["python3", "app.py"]

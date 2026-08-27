@@ -1,0 +1,36 @@
+# Cog configuration for HeartMuLa 3B + HeartCodec
+# Reference: https://replicate.com/docs/reference/cog
+# Build: cog build  |  Push: cog push r8.im/<username>/<model>  |  Predict: cog predict
+
+build:
+  # Base image - CUDA 12.4 compatible with torch 2.4+cu121
+  gpu: true
+  cuda: "12.4"
+  python_version: "3.11"
+  python_packages:
+    - "torch==2.4.0"
+    - "torchaudio==2.4.0"
+    - "transformers==4.45.2"
+    - "tokenizers==0.20.3"
+    - "vector_quantize_pytorch==1.18.3"
+    - "huggingface_hub[hf_transfer]>=0.24.0"
+    - "soundfile==0.12.1"
+    - "scipy==1.14.1"
+    - "numpy==1.26.4"
+    - "boto3==1.35.0"
+    - "httpx==0.27.2"
+    - "python-dotenv==1.0.1"
+    - "pydantic==2.11.7"
+    - "fastapi==0.115.0"
+  system_packages:
+    - "ffmpeg"
+    - "libsndfile1"
+    - "git"
+
+# Install heartlib from GitHub (must be after system_packages)
+# Note: cog install runs after python_packages, use run for git sources
+run:
+  - "pip install git+https://github.com/HeartMuLa/heartlib.git@main"
+
+# Predictor entrypoint
+predict: "predict.py:Predictor"

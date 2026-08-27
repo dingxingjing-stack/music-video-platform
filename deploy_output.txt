@@ -1,0 +1,19 @@
+Return code: 0
+STDOUT:
+✓ Created objects.
+├── 🔨 Created mount C:\c\Users\dingx\music-video-platform\modal_ace_step.py
+├── 🔨 Created web function health => 
+│   https://dingxingjing-stack--ace-step-music-health.modal.run
+├── 🔨 Created web function generate => 
+│   https://dingxingjing-stack--ace-step-music-generate.modal.run
+├── 🔨 Created web function continue_audio => 
+│   https://dingxingjing-stack--ace-step-music-continue-audio.modal.run
+└── 🔨 Created web function separate => 
+    https://dingxingjing-stack--ace-step-music-separate.modal.run
+✓ App deployed in 3.150s! 🎉
+
+View Deployment: 
+https://modal.com/apps/dingxingjing-stack/main/deployed/ace-step-music
+
+STDERR:
+None

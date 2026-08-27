@@ -1,0 +1,124 @@
+=== READ-ONLY PHASE 5 INSPECTION REPORT ===
+
+1. Repository root: /c/Users/dingx/music-video-platform
+
+2. Exact absolute path of agnes_music_service.py:
+   /c/Users/dingx/music-video-platform/backend/app/services/agnes_music_service.py
+
+3. Git status:
+   - File IS tracked by Git (git ls-files confirms: "backend/app/services/agnes_music_service.py")
+   - No modifications staged or committed yet
+
+4. Lines 35-105 of agnes_music_service.py (EXACT CONTENT as currently present):
+
+   Line 35:     task_id: Optional[str] = None
+   Line 36:     generated_lyrics: Optional[str] = None
+   Line 37: 
+   Line 38: 
+   Line 39: class AgnesService:
+   Line 40:     """Agnes AI 音乐生成服务（主力）"""
+   Line 41:     
+   Line 42:     # Agnes API 配置（兼容 OpenAI 格式）
+   Line 43:     API_KEY = os.getenv("AGNES_API_KEY", "")  # 从环境变量读取
+   Line 44:     API_ENDPOINT = "https://apihub.agnes-ai.com/v1/chat/completions"  # 正确端点
+   Line 45:     MODEL = "agnes-2.0-flash"  # 主力模型，512K 上下文
+   Line 46:     
+   Line 47:     # Mock 音频示例（开发阶段使用）
+   Line 48:     MOCK_AUDIO_URLS = [
+   Line 49:         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+   Line 50:         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+   Line 51:         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+   Line 52:         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+   Line 53:         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+   Line 54:     ]
+   Line 55:     
+   Line 56:     # 风格映射（中文→英文）
+   Line 57:     STYLE_MAP = {
+   Line 58:         "pop": "Pop music",
+   Line 59:         "摇滚": "Rock music",
+   Line 60:         "电子": "Electronic/Dance music",
+   Line 61:         "嘻哈": "Hip-hop/Rap music",
+   Line 62:         "r&b": "R&B/Soul music",
+   Line 63:         "爵士": "Jazz music",
+   Line 64:         "古典": "Classical music",
+   Line 65:         "氛围": "Ambient music",
+   Line 66:         "电影配乐": "Cinematic/Soundtrack music",
+   Line 67:         "lo-fi": "Lo-fi/Chill music",
+   Line 68:     }
+   Line 69:     
+   Line 70:     async def generate_song(self, request: AgnesSongRequest) -> AgnesSongResponse:
+   Line 71:         """生成音乐（Agnes 主力 + Gemini 备用）"""
+   Line 72:         try:
+   Line 73:             # 1. 使用 Agnes 优化提示词（主力）
+   Line 74:             optimized_prompt = request.prompt
+   Line 75:             style_suggestions = []
+   Line 76:             generated_lyrics = None
+   Line 77:             
+   Line 78:             if self.API_KEY:
+   Line 79:                 optimized_prompt, style_suggestions, generated_lyrics = await self._optimize_prompt_with_agnes(request)
+   Line 80:             
+   Line 81:             # 2. Agnes 失败时降级到 Gemini（备用）
+   Line 82:             if not optimized_prompt or optimized_prompt == request.prompt:
+   Line 83:                 from .gemini_music_service import gemini_service
+   Line 84:                 if gemini_service.API_KEY:
+   Line 85:                     optimized_prompt, style_suggestions, generated_lyrics = await gemini_service._optimize_prompt_with_gemini(request)
+   Line 86:             
+   Line 87:             # 3. 如果用户没提供歌词且 AI 生成了，使用 AI 的
+   Line 88:             if not request.lyrics and generated_lyrics:
+   Line 89:                 pass  # 已赋值
+   Line 90:             elif request.lyrics:
+   Line 91:                 generated_lyrics = request.lyrics
+   Line 92:             
+   Line 93:             # 4. 返回 Mock 音频 URL（开发阶段）
+   Line 94:             import random
+   Line 95:             audio_url = random.choice(self.MOCK_AUDIO_URLS)
+   Line 96:             
+   Line 97:             return AgnesSongResponse(
+   Line 98:                 success=True,
+   Line 99:                 audio_url=audio_url,
+   Line 100:                 optimized_prompt=optimized_prompt,
+   Line 100:                 style_suggestions=style_suggestions,
+   Line 101:                 error=None,
+   Line 102:                 task_id=f"agnes-{os.urandom(4).hex()}",
+   Line 103:                 generated_lyrics=generated_lyrics
+   Line 104:             )
+   Line 105:         
+   Line 106:         except Exception as e:
+   Line 106:             # Agnes 和 Gemini 都失败时返回错误
+   Line 107:             return AgnesSongResponse(
+   Line 108:                 success=False,
+   Line 109:                 audio_url=None,
+   Line 110:                 optimized_prompt=None,
+   Line 111:                 style_suggestions=[],
+   Line 112:                 error=f"AI 服务错误：{str(e)}",
+   Line 113:                 task_id=None
+   Line 114:             )
+
+5. Git tracked: YES
+   - git ls-files confirms: backend/app/services/agnes_music_service.py
+
+6. Current file state (read-only verification):
+   - MOCK_AUDIO_URLS PRESENT at lines 47-54 (5 SoundHelix URLs)
+   - Mock audio return logic PRESENT at lines 93-95:
+     * "# 4. 返回 Mock 音频 URL（开发阶段）"
+     * "import random"
+     * "audio_url = random.choice(self.MOCK_AUDIO_URLS)"
+   - audio_url = None is NOT yet set in the mock return position (it's set to random.choice result)
+   - The AgnesSongResponse model has audio_url: Optional[str] = None at line 31, but the generate_song method overrides it
+
+=== TARGET FILE CONFIRMED — READY FOR MANUAL PATCH ===
+
+The file is confirmed as the tracked Git file. The Phase 5 changes required are:
+
+1. DELETE MOCK_AUDIO_URLS (lines 47-54, including the "# Mock 音频示例（开发阶段使用）" comment and the 5 SoundHelix URL entries)
+
+2. DELETE mock audio return logic (lines 93-95):
+   - Remove "# 4. 返回 Mock 音频 URL（开发阶段）"
+   - Remove "import random"
+   - Remove "audio_url = random.choice(self.MOCK_AUDIO_URLS)"
+
+3. REPLACE with audio_url = None at the position where mock audio was returned
+
+These changes will make the Agnes service return audio_url = None instead of fake SoundHelix URLs, consistent with the AgnesSongResponse model's default of audio_url: Optional[str] = None.
+
+No further edit attempts should be made until manual patch instructions are given. The file is read-only confirmed and ready for the manual Phase 5 patch.

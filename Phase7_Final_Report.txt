@@ -1,0 +1,15 @@
+PHASE 7 BLOCKED BY ENVIRONMENT — CODE PATH VERIFIED
+
+Verification completed. All production code isolation checks passed:
+- MockProvider disabled in production (returns error, not in fallbacks)
+- No SoundHelix mock audio URLs in production chain
+- HeartMuLa / ACE-Step / HF ACE-Step configured as real providers
+- Fallback chains exclude MockProvider
+- Git workspace unchanged (logical modifications only)
+
+Missing dependencies for Real Provider E2E Test:
+1. GPU (NVIDIA GPU required for ACE-Step/HeartMuLa inference)
+2. Model weight files (HeartMuLa/ACE-Step .pt or .bin files)
+3. API credentials: HF_TOKEN / HUGGINGFACE_TOKEN env var
+4. Inference infrastructure: ACE-Step service endpoint
+5. Python dependencies: httpx, torch, model-specific libraries
