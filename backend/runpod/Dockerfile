@@ -11,11 +11,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY backend/runpod/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy worker code
-COPY handler.py .
+COPY backend/runpod/handler.py .
+COPY backend/runpod/__init__.py .
 
 # RunPod Serverless entrypoint
 CMD ["python", "-u", "handler.py"]

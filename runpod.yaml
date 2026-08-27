@@ -1,0 +1,17 @@
+version: "1"
+build:
+  dockerfile: "backend/runpod/Dockerfile"
+  context: "."
+handler: "handler"
+image:
+  name: "your-dockerhub-username/runpod-worker"
+  tag: "latest"
+serverless:
+  endpoint: "runpod-worker"
+  gpu: "A100"
+  memory: "16GB"
+  workers: 1
+  scale:
+    min: 0
+    max: 3
+    idle-timeout: 30
