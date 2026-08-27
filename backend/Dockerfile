@@ -28,5 +28,5 @@ COPY . .
 # Expose port (Koyeb 注入 PORT)
 EXPOSE 8000
 
-# Step 5: 动态 PORT + workers 2 + 超时 600，兼容 Koyeb 无 GPU CPU
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
+# 动态 PORT，单 worker 避免 Render 端口扫描竞态
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
