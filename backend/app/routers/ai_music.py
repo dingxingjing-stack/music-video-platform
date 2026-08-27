@@ -795,6 +795,175 @@ async def delete_user_task(
             error_detail += ": " + "; ".join(r2_errors[:3])
         raise HTTPException(status_code=500, detail=error_detail)
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 临时 RunPod Smoke Test Endpoint
+# 用途：验证 Render → RunPod Endpoint → Worker → handler → CUDA 连通性
+# 保护：需 Header X-RunPod-Smoke-Token 与环境变量 RUNPOD_SMOKE_TEST_TOKEN 一致
+# 环境变量依赖：RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID, RUNPOD_SMOKE_TEST_TOKEN
+# 不影响生产生成链路，不记成本，不占额度
+# ──────────────────────────────────────────────────────────────────────────────
+class RunPodSmokeTestResponse(BaseModel):
+    success: bool
+    runpod_api_status: int
+    job_id: Optional[str] = None
+    final_status: Optional[str] = None
+    worker_started: bool = False
+    handler_success: Optional[bool] = None
+    cuda_available: Optional[bool] = None
+    gpu_info: Optional[dict] = None
+    error: Optional[str] = None
+    message: str = "RunPod smoke test completed"
+
+
+def _verify_smoke_token(x_token: Optional[str]) -> bool:
+    expected = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
+    if not expected:
+        return False
+    return x_token == expected
+
+
+@router.post("/runpod-smoke-test", response_model=RunPodSmokeTestResponse)
+async def runpod_smoke_test(
+    x_runpod_smoke_token: str = Header(None, alias="X-RunPod-Smoke-Token"),
+):
+    """RunPod Serverless 连通性 Smoke Test（临时端点，仅内部验证用）。
+
+    固定测试载荷：
+      {"input": {"prompt": "smoke test", "duration": 10, "test_mode": "smoke"}}
+
+    返回 RunPod API 调用链路关键指标，不返回任何密钥。
+    """
+    if not _verify_smoke_token(x_runpod_smoke_token):
+        raise HTTPException(status_code=403, detail="Invalid or missing smoke test token")
+
+    api_key = os.getenv("RUNPOD_API_KEY")
+    endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")
+
+    if not api_key:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=0,
+            error="RUNPOD_API_KEY not configured in environment",
+        )
+    if not endpoint_id:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=0,
+            error="RUNPOD_ENDPOINT_ID not configured in environment",
+        )
+
+    runpod_base = "https://api.runpod.ai/v2"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {"input": {"prompt": "smoke test", "duration": 10, "test_mode": "smoke"}}
+
+    # 1. Submit job
+    submit_url = f"{runpod_base}/{endpoint_id}/run"
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(submit_url, headers=headers, json=payload)
+    except Exception as e:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=0,
+            error=f"Submit request failed: {e}",
+        )
+
+    runpod_api_status = resp.status_code
+    if resp.status_code not in (200, 201, 202):
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=runpod_api_status,
+            error=f"RunPod submit failed: {resp.text[:500]}",
+        )
+
+    try:
+        data = resp.json()
+    except Exception:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=runpod_api_status,
+            error="RunPod submit response not JSON",
+        )
+
+    job_id = data.get("id") or data.get("request_id")
+    if not job_id:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=runpod_api_status,
+            error="No job_id in RunPod response",
+        )
+
+    # 2. Poll status
+    status_url = f"{runpod_base}/{endpoint_id}/status/{job_id}"
+    worker_started = False
+    final_status = "UNKNOWN"
+    handler_success = None
+    cuda_available = None
+    gpu_info = None
+    error_detail = None
+
+    max_polls = 60  # ~5 minutes max
+    poll_interval = 5
+
+    for _ in range(max_polls):
+        await asyncio.sleep(poll_interval)
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                s_resp = await client.get(status_url, headers=headers)
+        except Exception:
+            continue
+
+        if s_resp.status_code != 200:
+            continue
+
+        try:
+            s_data = s_resp.json()
+        except Exception:
+            continue
+
+        status = s_data.get("status", "").upper()
+        if s_data.get("worker_id"):
+            worker_started = True
+
+        if status in ("IN_QUEUE", "IN_PROGRESS"):
+            worker_started = True
+            continue
+
+        if status in ("COMPLETED", "SUCCEEDED"):
+            final_status = "COMPLETED"
+            output = s_data.get("output")
+            if output and isinstance(output, dict):
+                handler_success = output.get("success") is True
+                if handler_success:
+                    gpu_info = output.get("output", {}).get("gpu_info", {})
+                    cuda_available = gpu_info.get("cuda_available")
+            break
+
+        if status in ("FAILED", "ERROR"):
+            final_status = "FAILED"
+            error_detail = s_data.get("output") or s_data.get("error") or str(s_data)[:500]
+            worker_started = True
+            break
+
+    else:
+        final_status = "TIMEOUT"
+
+    success = (final_status == "COMPLETED" and handler_success is True)
+    return RunPodSmokeTestResponse(
+        success=success,
+        runpod_api_status=runpod_api_status,
+        job_id=job_id,
+        final_status=final_status,
+        worker_started=worker_started,
+        handler_success=handler_success,
+        cuda_available=cuda_available,
+        gpu_info=gpu_info,
+        error=str(error_detail)[:500] if error_detail else None,
+        message="RunPod smoke test completed",
+    )
+
+
 @router.get("/styles")
 async def list_styles():
     """获取支持的音乐风格"""
