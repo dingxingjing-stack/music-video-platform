@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import tempfile
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,28 @@ def _separate_client() -> "modal.Function":
     return modal.Function.from_name(_SPLEETER_APP_NAME, "separate_audio")
 
 
-async def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict | None:
+async def generate_full_song(
+    prompt: str,
+    lyrics: str,
+    duration: int = 180,
+    reference_audio_b64: Optional[str] = None,
+    enable_audio2audio: bool = False,
+    reference_strength: float = 0.7,
+) -> dict | None:
     """调用 Modal 生成完整歌曲 + 分轨，返回共享卷中的文件名映射；失败返回 None。
 
+    Step 4: ENVIRONMENT=production 时直接返回 None（Modal 已下线，生产走 Fal），
+    不尝试 import modal，避免 Koyeb 无凭据启动失败。
     队列满抛 QueueFullError；其它失败返回 None（由业务层决定重试/降级）。
+    
+    新增 Audio2Audio 支持：
+    - enable_audio2audio: 是否启用 Audio2Audio 续写模式
+    - reference_audio_b64: base64 编码的参考音频
+    - reference_strength: 参考音频强度 (0.0-1.0)
     """
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        logger.info("ACE-Step Modal 已在生产下线（ENVIRONMENT=production），跳过")
+        return None
     try:
         import modal  # noqa: F401
     except ImportError:
@@ -44,7 +62,15 @@ async def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> d
 
     try:
         fn = _client()
-        result = await asyncio.to_thread(fn.remote, prompt, lyrics or "", int(duration))
+        result = await asyncio.to_thread(
+            fn.remote,
+            prompt,
+            lyrics or "",
+            int(duration),
+            reference_audio_b64,
+            enable_audio2audio,
+            reference_strength,
+        )
         if not result or not isinstance(result, dict):
             logger.warning("ACE-Step 返回空结果")
             return None
@@ -61,6 +87,9 @@ async def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> d
 
 async def separate_only(filename_in_volume: str) -> dict | None:
     """分轨失败重试：对共享卷中的完整 WAV 单独执行四轨分离（独立 Spleeter App）。返回 stems 文件名映射。"""
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        logger.info("Spleeter Modal 已在生产下线，separate_only 跳过")
+        return None
     try:
         import modal  # noqa: F401
     except ImportError:

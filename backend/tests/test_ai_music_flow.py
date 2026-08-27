@@ -71,8 +71,8 @@ def fake_modal(monkeypatch):
     """模拟 Modal GPU 端：ACE-Step 生成 + Demucs 分轨 + 文件取回 + R2 上传/预签名。"""
     calls = {"generate": [], "separate": [], "download": []}
 
-    async def _generate(prompt=None, lyrics=None, duration=None):
-        calls["generate"].append({"prompt": prompt, "lyrics": lyrics, "duration": duration})
+    async def _generate(prompt=None, lyrics=None, duration=None, **kwargs):
+        calls["generate"].append({"prompt": prompt, "lyrics": lyrics, "duration": duration, **kwargs})
         return dict(VOLUME_OK)
 
     async def _download(name, local_dir):
@@ -97,6 +97,12 @@ def fake_modal(monkeypatch):
         return f"https://signed/{key}"
 
     monkeypatch.setattr(provider_registry, "ace_step_generate", _generate)
+    # Fal 为生产，测试需同时 mock fal 路径
+    try:
+        from app.services import fal_client
+        monkeypatch.setattr(fal_client, "generate_via_fal", _generate)
+    except Exception:
+        pass
     monkeypatch.setattr(ai_music, "ace_step_download", _download)
     monkeypatch.setattr(ai_music, "ace_step_separate", _separate)
     monkeypatch.setattr(ai_music.cdn_uploader, "upload_music_package", _upload)
@@ -211,13 +217,18 @@ def test_auto_retry_on_generate_failure(isolated_db, fake_modal, disable_bg, mon
     monkeypatch.setattr(ai_music, "MAX_AUTO_RETRIES", 1)
     calls = []
 
-    async def flaky_generate(prompt=None, lyrics=None, duration=None):
+    async def flaky_generate(prompt=None, lyrics=None, duration=None, **kwargs):
         calls.append(duration)
         if len(calls) == 1:
             return None
         return dict(VOLUME_OK)
 
     monkeypatch.setattr(provider_registry, "ace_step_generate", flaky_generate)
+    try:
+        from app.services import fal_client
+        monkeypatch.setattr(fal_client, "generate_via_fal", flaky_generate)
+    except Exception:
+        pass
     c = _client()
     r = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "uA"})
     tid = r.json()["task_id"]
@@ -231,10 +242,15 @@ def test_failed_flow_refunds_and_marks_failed(isolated_db, fake_modal, disable_b
     """生成彻底失败 → 任务 failed + 额度回退（可再次提交）。"""
     monkeypatch.setattr(ai_music, "MAX_AUTO_RETRIES", 1)
 
-    async def never(prompt=None, lyrics=None, duration=None):
+    async def never(prompt=None, lyrics=None, duration=None, **kwargs):
         return None
 
     monkeypatch.setattr(provider_registry, "ace_step_generate", never)
+    try:
+        from app.services import fal_client
+        monkeypatch.setattr(fal_client, "generate_via_fal", never)
+    except Exception:
+        pass
     c = _client()
     r = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "uA"})
     tid = r.json()["task_id"]

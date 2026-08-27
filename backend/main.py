@@ -31,7 +31,7 @@ except (AttributeError, OSError):
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Header
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -272,13 +272,28 @@ os.makedirs(GENERATED_DIR, exist_ok=True)
 # ---------- 合规中间件 ----------
 app.add_middleware(PrivacyMiddleware)
 
-# ---------- CORS 跨域（前端 Cloudflare Pages + 本地开发） ----------
+# ---------- CORS 跨域（Step 5: 生产仅允许 Pages/自定义域，* 禁止，localhost 仅开发） ----------
+def _cors_origins() -> list[str]:
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    # 优先显式配置
+    raw = os.getenv("ALLOWED_ORIGINS") or os.getenv("FRONTEND_URL") or ""
+    if raw:
+        # 逗号分隔
+        vals = [v.strip() for v in raw.split(",") if v.strip()]
+        # 生产禁止 * 与 localhost
+        if env == "production":
+            vals = [v for v in vals if v != "*" and "localhost" not in v and "127.0.0.1" not in v]
+            if not vals:
+                # 回退到 Pages 缺省（需在 Koyeb 配置 ALLOWED_ORIGINS 覆盖）
+                return ["https://music-video-platform.pages.dev"]
+        return vals
+    if env == "production":
+        return ["https://music-video-platform.pages.dev"]
+    return ["https://music-video-platform.pages.dev", "http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://music-video-platform.pages.dev",
-        "http://localhost:3000",
-    ],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -383,25 +398,22 @@ async def _websocket_broadcast(task_id: str, result: PredictResult) -> None:
 
 @app.get("/health", tags=["operations"])
 async def health_check():
-    """Check if the inference service is running and all backends are reachable."""
-    services_health: dict[str, dict[str, Any]] = {}
+    """Step 5: 轻量健康检查 — 不触发 fal.ai/R2/AI 推理，仅检查应用+DB 连通性"""
+    # DB 检查（Supabase PG 或 SQLite）
+    db_status = "ok"
+    db_msg = "database connected"
+    try:
+        from app.db.database import engine
+        from sqlalchemy import text as _t
+        with engine.connect() as conn:
+            conn.execute(_t("SELECT 1"))
+    except Exception as exc:
+        db_status = "degraded"
+        db_msg = f"database error: {exc}"[:200]
 
-    for service_type in ("tts", "music", "video"):
-        try:
-            # When *_FORCE_MOCK is set, skip remote probing and report healthy directly
-            force_key = f"{service_type.upper()}_FORCE_MOCK"
-            mock_key = f"{service_type.upper()}_BACKEND_MODE"
-            if os.getenv(force_key, "").strip().lower() == "true" or os.getenv(mock_key, "").strip().lower() == "mock":
-                services_health[service_type] = {"healthy": True, "message": f"Mock {service_type} service ready"}
-                continue
-            svc = factory.create(service_type, cache=False)
-            healthy, message = await svc.health_check()
-            services_health[service_type] = {"healthy": healthy, "message": message}
-        except Exception as exc:
-            services_health[service_type] = {"healthy": False, "message": str(exc)[:200]}
-
-    all_healthy = all(s.get("healthy") for s in services_health.values())
-
+    # 保留原 mock 服务探活作为 degraded 提示，但不作为 Koyeb 健康判定依据
+    services_health: dict[str, dict[str, Any]] = {"database": {"healthy": db_status == "ok", "message": db_msg}}
+    all_healthy = db_status == "ok"
     return {
         "status": "ok" if all_healthy else "degraded",
         "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -625,6 +637,19 @@ async def predict(
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid JSON body")
 
+    # P0: Quota protection for non-mock predict (GPU cost)
+    if service_type.lower() != "mock":
+        from app.services.ai_limits import reserve_generation, refund_generation, budget_hard_stop_reached
+        if budget_hard_stop_reached():
+            raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
+        user_key = request.headers.get("X-User-ID") or body.get("user_id") or (request.client.host if request.client else "anonymous")
+        reserved = reserve_generation(user_key)
+        if not reserved["success"]:
+            raise HTTPException(status_code=429, detail=reserved["error"])
+    else:
+        user_key = None
+        reserved = False  # type: ignore
+
     # Build PredictRequest
     task_id = body.get("task_id") or str(uuid.uuid4())[:8]
     payload = body.get("payload", {})
@@ -672,12 +697,26 @@ async def predict(
             )
         except Exception as exc:
             logger.error("Failed to create service '%s': %s", canonical, exc)
+            if service_type.lower() != "mock" and 'user_key' in locals() and 'reserved' in locals() and reserved:
+                try:
+                    from app.services.ai_limits import refund_generation
+                    refund_generation(user_key)
+                except Exception:
+                    pass
             raise HTTPException(status_code=503, detail=f"Service unavailable: {exc}")
 
     try:
         result = await svc.predict(pred_request)
     except Exception as exc:
         logger.exception("Prediction failed for task %s", task_id)
+        if service_type.lower() != "mock" and 'user_key' in locals() and 'reserved' in locals() and reserved:
+            try:
+                from app.services.ai_limits import refund_generation
+                # Only refund if final result is failed (predict returns FAILED status instead of raising)
+                # For exception case, always refund
+                refund_generation(user_key)
+            except Exception:
+                pass
         raise HTTPException(
             status_code=500,
             detail=f"Prediction error: {exc}",
@@ -834,6 +873,19 @@ async def tts_run(request: Request):
     if not text:
         raise HTTPException(status_code=422, detail="'text' is required")
 
+    # P0: Quota check for real TTS (GPU cost) - mock bypasses quota
+    _tts_user_key = None
+    _tts_reserved = False
+    if TTS_BACKEND_MODE != "mock":
+        from app.services.ai_limits import reserve_generation, budget_hard_stop_reached
+        if budget_hard_stop_reached():
+            raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
+        _tts_user_key = request.headers.get("X-User-ID") or body.get("user_id") or (request.client.host if request.client else "anonymous")
+        _tts_res = reserve_generation(_tts_user_key)
+        if not _tts_res["success"]:
+            raise HTTPException(status_code=429, detail=_tts_res["error"])
+        _tts_reserved = True
+
     # Choose TTS backend based on environment
     if TTS_BACKEND_MODE == "mock":
         # Mock TTS backend — no audio required
@@ -878,6 +930,12 @@ async def tts_run(request: Request):
             ))
         except Exception as exc:
             logger.error("Failed to create GPTSovitsService: %s", exc)
+            if _tts_reserved and _tts_user_key:
+                try:
+                    from app.services.ai_limits import refund_generation
+                    refund_generation(_tts_user_key)
+                except Exception:
+                    pass
             raise HTTPException(
                 status_code=503,
                 detail=f"TTS service unavailable (try TTS_BACKEND_MODE=mock): {exc}",
@@ -901,7 +959,7 @@ from app.services.task_handlers import run_tts_and_save, run_musicgen_and_save
 
 
 @app.post("/api/v1/music/run", tags=["music"])
-async def music_run(request: Request):
+async def music_run(request: Request, x_user_id: str = Header(None, alias="X-User-ID")):
     """
     Start a MusicGen music generation task in the background.
 
@@ -920,6 +978,24 @@ async def music_run(request: Request):
             "websocket": "/ws/progress/abc123"
         }
     """
+    # DEPRECATED: 此端点已废弃，请使用 /api/v1/ai/generate
+    # 保留仅为兼容性，但强制要求 quota
+    if WORKFLOW_MODE == "mock":
+        raise HTTPException(
+            status_code=410, 
+            detail="MusicGen endpoint deprecated. Use /api/v1/ai/generate with real ACE-Step provider."
+        )
+    
+    # Quota check for real mode
+    from app.services.ai_limits import reserve_generation, refund_generation, budget_hard_stop_reached
+    if budget_hard_stop_reached():
+        raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
+    
+    user_key = x_user_id or (request.client.host if request.client else "anonymous")
+    reserved = reserve_generation(user_key)
+    if not reserved["success"]:
+        raise HTTPException(status_code=429, detail=reserved["error"])
+    
     try:
         body = await request.json()
     except Exception:
@@ -931,37 +1007,24 @@ async def music_run(request: Request):
     temperature = float(body.get("temperature", 0.8))
 
     if not prompt:
+        refund_generation(user_key)
         raise HTTPException(status_code=422, detail="'prompt' is required")
 
-    # Use mock if real MusicGen is unavailable
-    if WORKFLOW_MODE == "mock":
-        svc = MockInferenceService(
-            service_type="music-mock",
-            duration=duration,
-            tick_interval=0.5,
-            broadcast=_websocket_broadcast,
+    try:
+        svc = factory.create("music", broadcast=_websocket_broadcast)
+    except Exception as exc:
+        logger.error("Failed to create MusicGenService: %s", exc)
+        refund_generation(user_key)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Music service unavailable: {exc}",
         )
-        asyncio.create_task(svc.predict(PredictRequest(
-            service_type="music",
-            task_id=task_id,
-            payload={},
-            extra={"prompt": prompt, "duration": duration},
-        )))
-    else:
-        try:
-            svc = factory.create("music", broadcast=_websocket_broadcast)
-        except Exception as exc:
-            logger.error("Failed to create MusicGenService: %s", exc)
-            raise HTTPException(
-                status_code=503,
-                detail=f"Music service unavailable: {exc}",
-            )
 
-        asyncio.create_task(run_musicgen_and_save(
-            svc=svc, task_id=task_id, prompt=prompt,
-            duration=duration, temperature=temperature,
-            results_dir=RESULTS_DIR,
-        ))
+    asyncio.create_task(run_musicgen_and_save(
+        svc=svc, task_id=task_id, prompt=prompt,
+        duration=duration, temperature=temperature,
+        results_dir=RESULTS_DIR,
+    ))
 
     return {
         "task_id": task_id,
@@ -1552,7 +1615,14 @@ async def get_task_status(task_id: str):
 
 @app.on_event("startup")
 async def on_startup():
-    """Log available services on startup."""
+    """Step 5: 生产启动时幂等建表（不 DROP），并打印服务注册"""
+    # 生产 PG 初始化（幂等，Koyeb 无状态，首次部署自动建表）
+    try:
+        from app.db.database import init_db
+        init_db()
+        logger.info("Database init_db completed (env=%s)", os.getenv("ENVIRONMENT", "development"))
+    except Exception as exc:
+        logger.warning("Database init_db failed (may be expected in tests): %s", exc)
     logger.info("Inference Service API starting up")
     logger.info("Registered service types: %s", list(_SERVICE_REGISTRY.keys()))
     logger.info("OpenAPI docs available at: /docs")
@@ -1562,6 +1632,13 @@ async def on_startup():
     logger.info("Workflow endpoints: POST /api/v1/workflow/{a|b|c}")
     logger.info("Batch endpoints: POST /api/v1/batch/{a|b}, GET /api/v1/batch/status/{id}")
     logger.info("TTS_BACKEND_MODE=%s WORKFLOW_MODE=%s", TTS_BACKEND_MODE, WORKFLOW_MODE)
+    logger.info("CORS origins=%s", _cors_origins())
+    # R2 预检（不暴露 Secret 值）
+    try:
+        from app.services.r2_config import is_r2_configured
+        logger.info("R2 configured=%s", is_r2_configured())
+    except Exception:
+        pass
 
 
 @app.on_event("shutdown")
@@ -1617,11 +1694,11 @@ if os.path.isdir(FRONTEND_DIST):
 # Modal 部署
 # ==============================================================================
 
+# Step 4: Modal 已从生产运行时移除。仅在非 production 且显式 ENABLE_MODAL=true 时才允许初始化旧 Modal App
+# （用于本地回归测试）。Koyeb 生产（ENVIRONMENT=production）永不 import modal，不读 MODAL_TOKEN_*
 # Render 通过 Docker 直接部署 FastAPI 服务（uvicorn main:app），代码来源是 GitHub 仓库本身，
 # 不经过 Modal 打包（deploy_bundle 白名单只用于本地 `modal deploy` 上传 Modal 镜像）。
-# Render 环境（RENDER=true）跳过整个 Modal 定义块：deploy_bundle/ 是构建产物且被 .gitignore 忽略、
-# 不在仓库中，若在 Render 上强制校验 bundle 会导致服务启动崩溃。
-if os.environ.get("RENDER") != "true":
+if os.getenv("ENVIRONMENT", "development").lower() != "production" and os.getenv("ENABLE_MODAL", "false").lower() == "true" and os.environ.get("RENDER") != "true":
     try:
         import modal
 

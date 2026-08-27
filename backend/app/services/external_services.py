@@ -148,15 +148,25 @@ class R2StorageService:
       2. 取消下面代码的注释即可启用
     """
     
+    # Step 3 统一：经 r2_config 归一（主 CDN_BUCKET，兼容旧 R2_BUCKET_NAME）
+    @classmethod
+    def _r2(cls):
+        from app.services.r2_config import get_r2_account_id, get_r2_access_key, get_r2_secret_key, get_r2_bucket
+        return get_r2_account_id(), get_r2_access_key(), get_r2_secret_key(), get_r2_bucket()
     ACCOUNT_ID = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID", "")
     ACCESS_KEY = os.getenv("CLOUDFLARE_R2_ACCESS_KEY", "")
     SECRET_KEY = os.getenv("CLOUDFLARE_R2_SECRET_KEY", "")
-    BUCKET = os.getenv("R2_BUCKET_NAME", "music-audio-storage")
+    # 保留常量兼容旧导入，但运行时以 _r2() 为准
+    BUCKET = os.getenv("CDN_BUCKET") or os.getenv("R2_BUCKET_NAME", "music-audio-storage")
     
     @classmethod
     def is_available(cls) -> bool:
-        """检查是否已配置 R2"""
-        return bool(cls.ACCOUNT_ID and cls.ACCESS_KEY and cls.SECRET_KEY)
+        """检查是否已配置 R2（经 r2_config 统一）"""
+        try:
+            from app.services.r2_config import is_r2_configured
+            return is_r2_configured()
+        except Exception:
+            return bool(cls.ACCOUNT_ID and cls.ACCESS_KEY and cls.SECRET_KEY)
     
     @classmethod
     def get_client(cls):

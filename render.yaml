@@ -32,7 +32,17 @@ services:
         value: "true"
       - key: SENTRY_DSN
         sync: false
-      - key: R2_BUCKET_NAME
+      - key: CDN_BUCKET
+        sync: false
+      - key: R2_BUCKET_NAME  # deprecated alias，兼容旧部署，优先 CDN_BUCKET
+        sync: false
+      - key: CDN_BASE_URL
+        sync: false
+      - key: CLOUDFLARE_R2_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_R2_ACCESS_KEY
+        sync: false
+      - key: CLOUDFLARE_R2_SECRET_KEY
         sync: false
       - key: SUPABASE_URL
         sync: false
@@ -40,7 +50,6 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: MODAL_TOKEN_ID
-        sync: false
-      - key: MODAL_TOKEN_SECRET
-        sync: false
+      # Step 4: Modal 生产已下线，下列仅 legacy 兼容，Koyeb 生产不再配置
+      # - key: MODAL_TOKEN_ID  # deprecated
+      # - key: MODAL_TOKEN_SECRET  # deprecated

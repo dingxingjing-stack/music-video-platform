@@ -18,34 +18,12 @@ PostgreSQL 数据库迁移与配置
 
 import os
 from typing import Optional
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+# Step 2: 统一入口改为 app.db.database，保留原导入兼容
+from app.db.database import Base, engine, SessionLocal, DATABASE_URL, init_db as _init_db_shared
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, JSON
+from sqlalchemy.orm import relationship
 from datetime import datetime
 import asyncio
-
-# ─── 数据库配置 ───────────────────────────────────────
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://hermes:hermes_password@localhost:5432/hermes_platform"
-)
-
-# 创建引擎
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=20,           # 连接池大小
-    max_overflow=40,        # 最大溢出连接
-    pool_recycle=3600,      # 连接回收时间 (秒)
-    pool_pre_ping=True,     # 自动检测失效连接
-    echo=False              # SQL 调试模式
-)
-
-# 会话工厂
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# 基类
-Base = declarative_base()
 
 
 # ─── 数据模型 ───────────────────────────────────────
@@ -188,9 +166,9 @@ class Collaboration(Base):
 # ─── 数据库操作 ───────────────────────────────────────
 
 def init_db():
-    """初始化数据库 (创建所有表)"""
-    print("[PostgreSQL] 正在创建数据表...")
-    Base.metadata.create_all(bind=engine)
+    """初始化数据库 (创建所有表) — 委托到 database.Base（涵盖 ai_limits/task_store/beta）"""
+    print("[PostgreSQL] 正在创建数据表（database.Base）...")
+    _init_db_shared()
     print("[PostgreSQL] ✅ 数据表创建完成")
 
 

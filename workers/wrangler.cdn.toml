@@ -3,6 +3,7 @@ main = "zyvexo-cdn-worker.js"
 compatibility_date = "2026-07-23"
 
 # R2 binding：让 Worker 通过 env.BUCKET 直接读取 bucket（不需要把 bucket 设为 public）
+# 必须与后端 CDN_BUCKET（r2_config.get_r2_bucket 缺省 music-audio-storage）一致
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "music-audio-storage"

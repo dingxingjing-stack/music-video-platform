@@ -90,9 +90,16 @@ class AgnesService:
             elif request.lyrics:
                 generated_lyrics = request.lyrics
             
-            # 4. 返回 Mock 音频 URL（开发阶段）
-            import random
-            audio_url = random.choice(self.MOCK_AUDIO_URLS)
+            # 4. 生产环境不返回 Mock 音频（真实音频由 ACE-Step 生成）
+            # 仅在开发/测试环境且未配置真实 AI 时返回 Mock
+            is_production = os.getenv("ENVIRONMENT", "").lower() == "production"
+            force_mock = os.getenv("MUSIC_FORCE_MOCK", "").lower() == "true"
+            
+            if not is_production and force_mock and not self.API_KEY:
+                import random
+                audio_url = random.choice(self.MOCK_AUDIO_URLS)
+            else:
+                audio_url = None  # 生产环境：真实音频由 ACE-Step 链路生成
             
             return AgnesSongResponse(
                 success=True,
