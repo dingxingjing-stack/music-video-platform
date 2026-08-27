@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 COPY backend/runpod/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy worker code
+# Copy worker code (backend handler has module-level runpod.serverless.start)
 COPY backend/runpod/handler.py .
 COPY backend/runpod/__init__.py .
 

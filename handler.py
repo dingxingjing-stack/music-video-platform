@@ -14,6 +14,5 @@ sys.path.insert(0, BACKEND_DIR)
 # 导入真实 handler
 from backend.runpod.handler import handler  # type: ignore
 
-if __name__ == "__main__":
-    import runpod
-    runpod.serverless.start({"handler": handler})
+import runpod
+runpod.serverless.start({"handler": handler})

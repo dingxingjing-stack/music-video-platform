@@ -157,6 +157,5 @@ def handler(job: dict) -> dict:
         }
 
 
-# RunPod Serverless 入口点
-if __name__ == "__main__":
-    runpod.serverless.start({"handler": handler})
+# RunPod Serverless 入口点 (module-level for static analysis detection)
+runpod.serverless.start({"handler": handler})
