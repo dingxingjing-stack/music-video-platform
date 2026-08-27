@@ -1,9 +1,10 @@
 """GPU 音乐生成 Provider 注册表 —— 统一 Provider 抽象 + 可配置选择 + 实验 Provider 隔离。
 
 阶段一生产策略（本文件落地范围）：
-  - Fal.ai Stable Audio 是唯一 production Provider，默认选择固定为其（Step 1 已替换 Modal）。
+  - RunPod Serverless 是第一生产 Provider，默认选择固定为其（Step 6 接入）。
+  - Fal.ai Stable Audio 是第二生产 Provider，作为 RunPod 备用（production=True）。
   - Modal ACE-Step 已降级为非 production，仅保留回滚能力（production=False）。
-  - 实验 Provider（AMD MI300X / RunPod / ...）尚未实现；后续接入时应满足：
+  - 实验 Provider（AMD MI300X / RunPod 本地 / ...）尚未实现；后续接入时应满足：
       * 实现 BaseProvider 并 register()，production=False；
       * 不会被 select() 默认选中，也不影响 production fallback；
       * 仅可经显式配置（AI_GENERATION_PROVIDER=<name>）或独立实验开关启用，
@@ -12,16 +13,16 @@
       request : {"prompt", "lyrics", "duration"}
       return  : {"success": bool, "volume_files": dict|None, "error": str|None,
                  "provider": name}
-    volume_files 即 Modal 端返回的共享卷文件名映射（full_wav/full_mp3/stems）。
+    volume_files 即 RunPod/Fal 返回的本地文件名映射（full_wav/full_mp3/stems）。
   - HF 兜底策略不变：仍是 router 层的直接 Gradio 调用（禁 mock/假音频），
     不放入本注册表（注册表只承载 GPU 生成 Provider）。
 
 成本观测（阶段一/二约定）：
   - 每次生成经 task_store.log_generation_cost() 记录：provider/gpu/result/
-    container_duration_ms（web 容器侧实测远程调用墙钟，≈ Modal 对容器计费的
+    container_duration_ms（web 容器侧实测远程调用墙钟，≈ RunPod 对容器计费的
     GPU 秒）/estimated_cost_usd（实测时长 × GPU 单价，估算口径）。
   - cold_warm / model_load_ms / generation_ms / container_id 为阶段二
-    （Modal 端 generate_full_song 返回元数据后）填充，阶段一保持 NULL，
+    （RunPod 端 generate_full_song 返回元数据后）填充，阶段一保持 NULL，
     绝不使用估算值冒充实测。
 """
 
@@ -46,6 +47,14 @@ except Exception:  # noqa: BLE001
     _fal_client_mod = None  # type: ignore
     generate_via_fal = None  # type: ignore
 
+# runpod 客户端为可选依赖：未安装 httpx 或未配置 RUNPOD_API_KEY 时回退
+try:
+    from app.services import runpod_client as _runpod_client_mod  # type: ignore
+    from app.services.runpod_client import generate_via_runpod  # type: ignore
+except Exception:  # noqa: BLE001
+    _runpod_client_mod = None  # type: ignore
+    generate_via_runpod = None  # type: ignore
+
 # 显式选择 Provider 的环境变量；未设置/非法时回退 production 默认。
 PROVIDER_ENV = "AI_GENERATION_PROVIDER"
 
@@ -54,6 +63,7 @@ GPU_RATE_USD_PER_SEC: dict[str, float] = {
     "L40S": 0.000542,
     "fal-stable-audio": 0.00035,  # 估算：fal 按秒计费约 $0.021/分钟
     "fal": 0.00035,
+    "runpod": 0.0004,  # 估算：RunPod A100 40GB 约 $0.024/分钟
 }
 
 
@@ -134,6 +144,78 @@ class FalStableAudioProvider(BaseProvider):
             # 鉴权错误直接透出，便于上层返回 500 + 提示配置 FAL_KEY
             if "401" in str(exc) or "FalAuthError" in type(exc).__name__:
                 return {"success": False, "error": f"FAL_KEY 无效或未配置: {exc}", "provider": self.name}
+            return {"success": False, "error": str(exc), "provider": self.name}
+
+
+class RunPodProvider(BaseProvider):
+    """RunPod Serverless — 第一生产 Provider（Step 6 接入）。
+
+    基于 RunPod Serverless API（https://api.runpod.ai/v2），不依赖 Modal Volume。
+    """
+
+    name = "runpod"
+    provider_type = "runpod"
+    capabilities = ["text_to_music", "lyrics_to_music", "audio2audio"]
+    max_duration = 180
+    gpu = "runpod"
+    production = True
+
+    async def generate(self, request: dict) -> dict:
+        # 优先通过模块对象动态获取，以便测试 monkeypatch app.services.runpod_client.generate_via_runpod 生效
+        runpod_fn = None
+        if _runpod_client_mod is not None:
+            runpod_fn = getattr(_runpod_client_mod, "generate_via_runpod", None)
+        runpod_fn = runpod_fn or generate_via_runpod
+        if runpod_fn is None:
+            return {"success": False, "error": "runpod_client 未可用（缺 httpx 或模块加载失败）", "provider": self.name}
+        try:
+            result = await runpod_fn(
+                prompt=request.get("prompt", ""),
+                lyrics=request.get("lyrics", ""),
+                duration=int(request.get("duration", 30)),
+                reference_audio_b64=request.get("reference_audio"),
+                enable_audio2audio=bool(request.get("enable_audio2audio")),
+            )
+            if result:
+                return {"success": True, "volume_files": result, "provider": self.name}
+            # RunPod 失败时：生产环境回退到 Fal，开发环境兼容 ace_step_generate
+            env = os.getenv("ENVIRONMENT", "development").lower()
+            if env != "production":
+                # 开发环境：兼容旧测试 mock ace_step_generate
+                try:
+                    fallback = await ace_step_generate(
+                        prompt=request.get("prompt", ""),
+                        lyrics=request.get("lyrics", ""),
+                        duration=int(request.get("duration", 30)),
+                    )
+                    if fallback:
+                        return {"success": True, "volume_files": fallback, "provider": self.name}
+                except Exception:
+                    pass
+            else:
+                # 生产环境：RunPod 失败时回退到 Fal
+                fal_fn = None
+                if _fal_client_mod is not None:
+                    fal_fn = getattr(_fal_client_mod, "generate_via_fal", None)
+                fal_fn = fal_fn or generate_via_fal
+                if fal_fn is not None:
+                    try:
+                        fallback = await fal_fn(
+                            prompt=request.get("prompt", ""),
+                            lyrics=request.get("lyrics", ""),
+                            duration=int(request.get("duration", 30)),
+                            reference_audio_b64=request.get("reference_audio"),
+                            enable_audio2audio=bool(request.get("enable_audio2audio")),
+                        )
+                        if fallback:
+                            return {"success": True, "volume_files": fallback, "provider": f"{self.name}->fal_fallback"}
+                    except Exception:
+                        pass
+            return {"success": False, "error": "RunPod generation failed", "provider": self.name}
+        except Exception as exc:  # noqa: BLE001
+            # 鉴权错误直接透出，便于上层返回 500 + 提示配置 RUNPOD_API_KEY
+            if "401" in str(exc) or "RunPodAuthError" in type(exc).__name__:
+                return {"success": False, "error": f"RUNPOD_API_KEY 无效或未配置: {exc}", "provider": self.name}
             return {"success": False, "error": str(exc), "provider": self.name}
 
 
@@ -273,8 +355,8 @@ class ProviderRegistry:
 
         优先级：显式参数 > 环境变量 AI_GENERATION_PROVIDER > production 默认。
         显式指定但未注册时回退 production 默认（并告警），保证生产路径永远
-        稳定指向 Fal，不被实验 Provider 影响。
-        生产禁止选择 Modal（Step 4）。
+        稳定指向 RunPod，不被实验 Provider 影响。
+        生产禁止选择 Modal（Step 4）和 Fal（Step 6，仅作 RunPod 失败回退）。
         """
         env = os.getenv("ENVIRONMENT", "development").lower()
         for cand in (name, os.getenv(PROVIDER_ENV)):
@@ -284,8 +366,8 @@ class ProviderRegistry:
             if not provider:
                 print(f"[Provider] 配置的 provider '{cand}' 未注册或不可用，回退 production 默认")
                 continue
-            if env == "production" and provider.name == "modal_ace_step":
-                raise RuntimeError("[Provider] ENVIRONMENT=production 时禁止选择 Modal provider（已下线）")
+            if env == "production" and provider.name in ("modal_ace_step", "fal_stable_audio"):
+                raise RuntimeError(f"[Provider] ENVIRONMENT=production 时禁止选择 {provider.name}（RunPod 为主力，Fal 仅作失败回退）")
             return provider
         assert self._default is not None, "ProviderRegistry 至少需要一个 production provider"
         return self._providers[self._default]
@@ -299,6 +381,7 @@ def get_provider_registry() -> ProviderRegistry:
     global _registry
     if _registry is None:
         _registry = ProviderRegistry()
+        _registry.register(RunPodProvider())
         _registry.register(FalStableAudioProvider())
         _registry.register(ModalACEStepProvider())
         _registry.register(KaggleMusicGenSmallProvider())

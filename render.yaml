@@ -50,6 +50,16 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      # Step 4: Modal 生产已下线，下列仅 legacy 兼容，Koyeb 生产不再配置
+      - key: RUNPOD_API_KEY
+        sync: false
+      - key: RUNPOD_ENDPOINT_ID
+        sync: false
+      - key: RUNPOD_TIMEOUT
+        value: "300"
+      - key: RUNPOD_POLL_INTERVAL
+        value: "2"
+      - key: RUNPOD_BUDGET_DAILY
+        value: "30"
+      # Step 4: Modal 生产已下线，下列仅 legacy 兼容，Render 生产不再配置
       # - key: MODAL_TOKEN_ID  # deprecated
       # - key: MODAL_TOKEN_SECRET  # deprecated
