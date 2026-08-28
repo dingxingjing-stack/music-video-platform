@@ -355,8 +355,8 @@ class ProviderRegistry:
 
         优先级：显式参数 > 环境变量 AI_GENERATION_PROVIDER > production 默认。
         显式指定但未注册时回退 production 默认（并告警），保证生产路径永远
-        稳定指向 RunPod，不被实验 Provider 影响。
-        生产禁止选择 Modal（Step 4）和 Fal（Step 6，仅作 RunPod 失败回退）。
+        稳定指向 Fal，不被实验 Provider 影响。
+        生产禁止选择 RunPod、Modal（Fal 为主力，RunPod/Modal 仅作失败回退或实验）。
         """
         env = os.getenv("ENVIRONMENT", "development").lower()
         for cand in (name, os.getenv(PROVIDER_ENV)):
@@ -366,8 +366,8 @@ class ProviderRegistry:
             if not provider:
                 print(f"[Provider] 配置的 provider '{cand}' 未注册或不可用，回退 production 默认")
                 continue
-            if env == "production" and provider.name in ("modal_ace_step", "fal_stable_audio"):
-                raise RuntimeError(f"[Provider] ENVIRONMENT=production 时禁止选择 {provider.name}（RunPod 为主力，Fal 仅作失败回退）")
+            if env == "production" and provider.name in ("runpod", "modal_ace_step"):
+                raise RuntimeError(f"[Provider] ENVIRONMENT=production 时禁止选择 {provider.name}（Fal 为主力，RunPod/Modal 仅作失败回退或实验）")
             return provider
         assert self._default is not None, "ProviderRegistry 至少需要一个 production provider"
         return self._providers[self._default]
@@ -381,8 +381,8 @@ def get_provider_registry() -> ProviderRegistry:
     global _registry
     if _registry is None:
         _registry = ProviderRegistry()
-        _registry.register(RunPodProvider())
         _registry.register(FalStableAudioProvider())
+        _registry.register(RunPodProvider())
         _registry.register(ModalACEStepProvider())
         _registry.register(KaggleMusicGenSmallProvider())
         _registry.register(KaggleCosyVoice2Provider())

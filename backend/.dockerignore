@@ -1,0 +1,69 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# Test media files
+test_*.wav
+test_*.mp3
+*.wav
+*.mp3
+*.mp4
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Deploy bundle
+deploy_bundle/
+
+# Test outputs
+test_*.wav
+test_*.mp3
+test_*.mp4
+continuation_result.wav
+original_song_*.mp3
+original_song_*.wav
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/

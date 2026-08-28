@@ -280,6 +280,15 @@ class CDNUploader:
         
         将文件复制到 data/static 目录
         """
+        # 生产环境不允许本地存储回退
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env == "production":
+            raise RuntimeError(
+                "Production environment cannot use local storage fallback. "
+                "Please configure R2 (CLOUDFLARE_R2_ACCOUNT_ID, CLOUDFLARE_R2_ACCESS_KEY, "
+                "CLOUDFLARE_R2_SECRET_KEY, CDN_BUCKET) or S3 credentials."
+            )
+        
         # 目标路径 - 使用相对路径，兼容 Windows/Linux/Mac
         base_dir = os.getenv("LOCAL_STORAGE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"))
         target_dir = os.path.join(base_dir, "static")
@@ -290,7 +299,7 @@ class CDNUploader:
         target_path = os.path.join(target_dir, key.replace("/", "_"))
         shutil.copy2(file_path, target_path)
         
-        # 生成本地 URL
+        # 生成本地 URL (仅开发环境使用)
         local_url = f"http://localhost:8000/static/{os.path.basename(target_path)}"
         print(f"[本地上传] ✅ {key} -> {local_url}")
         return local_url

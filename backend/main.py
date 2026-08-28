@@ -272,7 +272,7 @@ os.makedirs(GENERATED_DIR, exist_ok=True)
 # ---------- 合规中间件 ----------
 app.add_middleware(PrivacyMiddleware)
 
-# ---------- CORS 跨域（Step 5: 生产仅允许 Pages/自定义域，* 禁止，localhost 仅开发） ----------
+# ---------- CORS 跨域（生产仅允许 Pages/自定义域，* 禁止，localhost 仅开发） ----------
 def _cors_origins() -> list[str]:
     env = os.getenv("ENVIRONMENT", "development").lower()
     # 优先显式配置
@@ -284,7 +284,7 @@ def _cors_origins() -> list[str]:
         if env == "production":
             vals = [v for v in vals if v != "*" and "localhost" not in v and "127.0.0.1" not in v]
             if not vals:
-                # 回退到 Pages 缺省（需在 Koyeb 配置 ALLOWED_ORIGINS 覆盖）
+                # 回退到 Pages 缺省
                 return ["https://music-video-platform.pages.dev"]
         return vals
     if env == "production":
