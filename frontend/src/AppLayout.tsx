@@ -5,6 +5,7 @@ import { BetaConsentModal } from './components/BetaConsentModal';
 import { useSound } from './context/SoundContext';
 import { useAuth } from './context/AuthContext';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { Under13BlockedModal } from './components/Under13BlockedModal';
 
 // 公测导航 — 普通创作大厅（全开放）
 const NAV_OPEN = [
@@ -43,7 +44,20 @@ const AI_TEAM = [
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    async function checkAge() {
+      const age = await getUserAge();
+      if (age !== null && age < 13) {
+        setBlocked(true);
+      }
+    }
+    checkAge();
+  }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  if (blocked) {
+    return <Under13BlockedModal />;
+  }
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { status } = useUserGrayStatus('beta_user');
   const { muted, toggle } = useSound();
