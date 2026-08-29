@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { api } from '../config/api';
 
 export interface UserGrayStatus {
   isGray: boolean;
@@ -19,7 +20,7 @@ const DEFAULT_STATUS: UserGrayStatus = {
 };
 
 const STORAGE_KEY = 'beta_user_status';
-const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/beta';
+const API_BASE = api.url('/api/v1/beta');
 
 export function useUserGrayStatus(userId?: string) {
   const [status, setStatus] = useState<UserGrayStatus>(DEFAULT_STATUS);

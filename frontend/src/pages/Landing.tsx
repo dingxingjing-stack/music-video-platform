@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BetaConsentModal } from '../components/BetaConsentModal';
+import { api } from '../config/api';
 
 const FEATURES = [
   { icon: '🎵', title: 'AI 作曲', desc: '一句话生成完整歌曲，支持多种风格、BPM 调控', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
@@ -37,7 +38,7 @@ export function Landing() {
   useEffect(() => {
     const fetchFeedback = async () => {
       try {
-        const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/feedback');
+        const res = await fetch(api.url('/api/v1/feedback'));
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setFeedbacks(data.map((f: any) => ({ name: f.name, text: f.text })));
@@ -64,7 +65,7 @@ export function Landing() {
   const submitFeedback = async () => {
     if (!feedbackText.trim()) return;
     try {
-      const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/feedback', {
+      const res = await fetch(api.url('/api/v1/feedback'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

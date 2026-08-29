@@ -1,0 +1,12 @@
+# 防止误提交权重/缓存
+pretrained/
+heartmula_env/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+__pycache__/
+*.pyc
+/env
+/.venv

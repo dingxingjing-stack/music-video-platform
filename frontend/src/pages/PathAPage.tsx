@@ -68,7 +68,6 @@ export function PathAPage() {
       {audioUrl && <WaveformEditor url={audioUrl} />}
       <AILyricsCompletion value={lyrics} onChange={setLyrics} />
       <MixConsole history={[]} />
-      {audioUrl && <StemExporter audioUrl={audioUrl} />}
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
         <h2 className="font-display font-semibold mb-3">📋 版本历史</h2>

@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { api } from '../config/api';
 
 interface LyricStyle {
   name: string;
@@ -84,7 +85,7 @@ export function AILyricGenerator() {
   
   const loadStyles = async () => {
     try {
-      await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/lyrics/styles');
+      await fetch(api.url('/api/v1/lyrics/styles'));
       // 可以使用 API 返回的风格，这里先用预设的
     } catch (e) {
       console.error('加载风格失败:', e);
@@ -93,7 +94,7 @@ export function AILyricGenerator() {
   
   const loadMoods = async () => {
     try {
-      await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/lyrics/moods');
+      await fetch(api.url('/api/v1/lyrics/moods'));
       // 可以使用 API 返回的情绪
     } catch (e) {
       console.error('加载情绪失败:', e);
@@ -123,7 +124,7 @@ export function AILyricGenerator() {
         params.custom_lyrics = customLyrics.trim();
       }
       
-      const res = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/lyrics/generate', {
+      const res = await fetch(api.url('/api/v1/lyrics/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),

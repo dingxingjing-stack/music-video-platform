@@ -22,7 +22,10 @@
     "clearConfirm": "Limpar todas as faixas salvas?",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "Faixa {n}"
+    "trackNum": "Faixa {n}",
+    "back": "Voltar",
+    "preview": "Pré-visualizar",
+    "reset": "Redefinir"
   },
   "paths": {
     "pathA": "Caminho A — Estilo Suno",
@@ -84,7 +87,9 @@
     "elapsedTime": "Tempo decorrido",
     "musicGenPrefix": "MusicGen: ",
     "hybridPrefix": "Híbrido: ",
-    "remixProcessing": "Remix em andamento"
+    "remixProcessing": "Remix em andamento",
+    "done": "Concluído",
+    "selectTemplate": "Selecionar modelo"
   },
   "errors": {
     "promptRequired": "Prompt necessário",
@@ -105,6 +110,7 @@
     "batchEmpty": "Lista de lote vazia",
     "batchNotSupported": "Caminho C (Remix) não suporta modo lote",
     "midiProjectRequired": "Projeto MIDI necessário",
-    "unknownError": "Erro desconhecido"
+    "unknownError": "Erro desconhecido",
+    "rateLimited": "Muitas solicitações. Você atingiu o limite do plano gratuito. Tente novamente mais tarde."
   }
 }

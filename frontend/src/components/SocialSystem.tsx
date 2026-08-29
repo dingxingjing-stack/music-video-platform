@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { Heart, Star, User, UserCheck } from 'lucide-react';
+import { api } from '../config/api';
 
 interface SocialSystemProps {
   workId: string;
@@ -26,7 +27,7 @@ export interface SocialStats {
   isFollowing?: boolean;
 }
 
-const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/social';
+const API_BASE = api.url('/api/v1/social');
 
 // 获取当前用户 ID (从 localStorage 或生成随机 ID)
 const getCurrentUserId = (): string => {

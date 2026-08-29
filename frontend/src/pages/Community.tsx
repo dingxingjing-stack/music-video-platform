@@ -12,8 +12,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SocialSystem } from '../components/SocialSystem';
+import { api } from '../config/api';
 
-const API = 'https://ai-music-backend-8e85.onrender.com/api/v1/community';
+const API = api.url('/api/v1/community');
 
 interface CommunityTrack {
   id: string;

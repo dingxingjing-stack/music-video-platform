@@ -22,7 +22,10 @@
     "clearConfirm": "Effacer toutes les pistes sauvegardées ?",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "Piste {n}"
+    "trackNum": "Piste {n}",
+    "back": "Retour",
+    "preview": "Aperçu",
+    "reset": "Réinitialiser"
   },
   "paths": {
     "pathA": "Chemin A — Style Suno",
@@ -84,7 +87,9 @@
     "elapsedTime": "Temps écoulé",
     "musicGenPrefix": "MusicGen : ",
     "hybridPrefix": "Hybride : ",
-    "remixProcessing": "Remix en cours"
+    "remixProcessing": "Remix en cours",
+    "done": "Terminé",
+    "selectTemplate": "Sélectionner un modèle"
   },
   "errors": {
     "promptRequired": "Prompt requis",
@@ -105,6 +110,7 @@
     "batchEmpty": "Liste de lot vide",
     "batchNotSupported": "Chemin C (Remix) ne supporte pas le mode batch",
     "midiProjectRequired": "Projet MIDI requis",
-    "unknownError": "Erreur inconnue"
+    "unknownError": "Erreur inconnue",
+    "rateLimited": "Trop de requêtes. Vous avez atteint la limite du plan gratuit. Veuillez réessayer plus tard."
   }
 }

@@ -15,9 +15,9 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { api } from '../config/api';
 
-const API_HOST = (import.meta as any).env?.VITE_API_BASE || 'https://ai-music-backend-8e85.onrender.com';
-export const AI_API_BASE = `${API_HOST}/api/v1/ai`;
+export const AI_API_BASE = api.url('/api/v1/ai');
 
 export type AiStage =
   | 'idle' | 'pending' | 'processing' | 'generating' | 'separating' | 'uploading'

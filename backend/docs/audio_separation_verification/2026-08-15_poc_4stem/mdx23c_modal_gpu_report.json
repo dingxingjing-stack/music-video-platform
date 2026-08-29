@@ -1,0 +1,48 @@
+{
+  "model_name": "MDX23C-8KFFT-InstVoc_HQ",
+  "model_type": "MDX23C (2-stem: vocals + instrumental)",
+  "gpu": "A10G",
+  "input_duration_s": 210.0,
+  "model_load_elapsed_s": 1.5,
+  "cuda_available": true,
+  "gpu_name": "NVIDIA A10",
+  "gpu_total_vram_mb": 23685.0,
+  "vram_after_load_mb": 452.6,
+  "vram_reserved_after_load_mb": 490.7,
+  "rss_after_load_mb": 3582.9,
+  "separate_return": [
+    "poc_3m30s_(Instrumental)_MDX23C-8KFFT-InstVoc_HQ.wav",
+    "poc_3m30s_(Vocals)_MDX23C-8KFFT-InstVoc_HQ.wav"
+  ],
+  "separate_exception": null,
+  "inference_elapsed_s": 61.2,
+  "vram_peak_allocated_mb": 1694.2,
+  "vram_reserved_peak_mb": 2640.3,
+  "rss_after_inference_mb": 4799.5,
+  "total_elapsed_s": 62.8,
+  "produced_files": [
+    "poc_3m30s_(Instrumental)_MDX23C-8KFFT-InstVoc_HQ.wav",
+    "poc_3m30s_(Vocals)_MDX23C-8KFFT-InstVoc_HQ.wav"
+  ],
+  "produced_count": 2,
+  "produced_size_mb": 74.1,
+  "file_metrics": {
+    "poc_3m30s_(Instrumental)_MDX23C-8KFFT-InstVoc_HQ.wav": {
+      "duration_s": 210.0,
+      "sr": 44100,
+      "channels": 2,
+      "size_mb": 37.0
+    },
+    "poc_3m30s_(Vocals)_MDX23C-8KFFT-InstVoc_HQ.wav": {
+      "duration_s": 210.0,
+      "sr": 44100,
+      "channels": 2,
+      "size_mb": 37.0
+    }
+  },
+  "output_stem_labels": [
+    "instrumental",
+    "vocals"
+  ],
+  "stable_3m30s": true
+}

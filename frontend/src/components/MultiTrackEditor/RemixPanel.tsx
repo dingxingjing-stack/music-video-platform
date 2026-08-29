@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { api } from '../../config/api';
 
 interface RemixStyle {
   id: string;
@@ -34,7 +35,7 @@ export function RemixPanel({ onClose }: Props) {
 
   // 加载风格列表
   useEffect(() => {
-    fetch('https://ai-music-backend-8e85.onrender.com/api/v1/remix/styles')
+    fetch(api.url('/api/v1/remix/styles'))
       .then(r => r.json())
       .then(data => {
         if (data.success) {

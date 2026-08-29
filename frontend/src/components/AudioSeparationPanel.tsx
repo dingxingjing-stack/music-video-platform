@@ -10,6 +10,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { api } from '../config/api';
 
 export function AudioSeparationPanel() {
   const [file, setFile] = useState<File | null>(null);
@@ -42,7 +43,7 @@ export function AudioSeparationPanel() {
     formData.append('model', model);
 
     try {
-      const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/audio/separate', {
+      const response = await fetch(api.url('/api/v1/audio/separate'), {
         method: 'POST',
         body: formData,
       });

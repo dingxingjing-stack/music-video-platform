@@ -16,6 +16,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { api } from '../config/api';
 
 // ---------------------------------------------------------------------------
 // 类型定义
@@ -115,7 +116,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  const API_BASE = 'https://ai-music-backend-8e85.onrender.com';
+  const API_BASE = api.base;
 
   // ===========================================================================
   // P0-1 歌曲续写: POST /api/v1/music/continue
@@ -409,7 +410,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
               {continueResult.audio_url && (
                 <div className="mt-3">
                   <audio
-                    src={`${API_BASE}${continueResult.audio_url}`}
+                    src={continueResult.audio_url.startsWith('http') ? continueResult.audio_url : `${API_BASE}${continueResult.audio_url}`}
                     controls
                     className="w-full"
                   />

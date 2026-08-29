@@ -22,7 +22,10 @@
     "clearConfirm": "¿Borrar todas las pistas guardadas?",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "Pista {n}"
+    "trackNum": "Pista {n}",
+    "back": "Atrás",
+    "preview": "Vista previa",
+    "reset": "Restablecer"
   },
   "paths": {
     "pathA": "Ruta A — Estilo Suno",
@@ -84,7 +87,9 @@
     "elapsedTime": "Tiempo transcurrido",
     "musicGenPrefix": "MusicGen: ",
     "hybridPrefix": "Híbrido: ",
-    "remixProcessing": "Remix en proceso"
+    "remixProcessing": "Remix en proceso",
+    "done": "Hecho",
+    "selectTemplate": "Seleccionar plantilla"
   },
   "errors": {
     "promptRequired": "Se requiere prompt",
@@ -105,6 +110,7 @@
     "batchEmpty": "Lista de lote vacía",
     "batchNotSupported": "Ruta C (Remix) no admite modo por lotes",
     "midiProjectRequired": "Se requiere proyecto MIDI",
-    "unknownError": "Error desconocido"
+    "unknownError": "Error desconocido",
+    "rateLimited": "Demasiadas solicitudes. Has alcanzado el límite de la versión gratuita. Inténtalo de nuevo más tarde."
   }
 }

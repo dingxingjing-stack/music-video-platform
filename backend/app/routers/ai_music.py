@@ -834,8 +834,12 @@ async def runpod_smoke_test(
 
     返回 RunPod API 调用链路关键指标，不返回任何密钥。
     """
-    if not _verify_smoke_token(x_runpod_smoke_token):
-        raise HTTPException(status_code=403, detail="Invalid or missing smoke test token")
+    # 鉴权：X-RunPod-Smoke-Token → RUNPOD_SMOKE_TEST_TOKEN
+    expected_token = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
+    if not expected_token:
+        raise HTTPException(status_code=503, detail="RUNPOD_SMOKE_TEST_TOKEN not configured")
+    if not x_runpod_smoke_token or x_runpod_smoke_token != expected_token:
+        raise HTTPException(status_code=401, detail="Invalid X-RunPod-Smoke-Token")
 
     api_key = os.getenv("RUNPOD_API_KEY")
     endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")

@@ -11,7 +11,6 @@ const NAV_OPEN = [
   { to: '/', label: '工作台', icon: '🏠', group: 'open' },
   { to: '/path-a', label: 'AI 作曲', icon: '🎵', group: 'open' },
   { to: '/path-b', label: '混合模式', icon: '🎛️', group: 'open' },
-  { to: '/path-c', label: '扒带 Remix', icon: '🔊', group: 'open' },
   { to: '/path-d', label: '原创编曲', icon: '✍️', group: 'open' },
   { to: '/community', label: '社区排行榜', icon: '🏆', group: 'open' },
   { to: '/my-works', label: '我的作品', icon: '💿', group: 'open' },

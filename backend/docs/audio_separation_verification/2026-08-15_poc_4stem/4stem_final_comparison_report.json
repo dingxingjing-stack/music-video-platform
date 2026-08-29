@@ -1,0 +1,115 @@
+{
+  "report_name": "4-stem 可行性最终对比报告",
+  "generated_at": "2026-08-15",
+  "basis": "基于已完成的真实隔离验证 POC（未重新运行）：MDX-Net(本机CPU baseline) / MDX23C(Modal A10G) / Mega 53(Modal A10G)",
+  "test_audio": {
+    "file": "poc_3m30s.wav",
+    "duration_s": 210.0,
+    "sr": 44100,
+    "channels": 2,
+    "size_mb": 37.0
+  },
+  "sources": {
+    "mdx_net": "poc_4stem_report.json",
+    "mdx23c": "mdx23c_modal_gpu_report.json",
+    "mega53": "mega53_modal_gpu_report.json"
+  },
+  "comparison": {
+    "mdx_net": {
+      "model": "UVR_MDXNET_9482.onnx (MDX-Net)",
+      "architecture": "MDX-Net (UVR, ONNX)",
+      "env": "本机 CPU (16.8GB RAM, 无 GPU)",
+      "model_size_mb": 28.3,
+      "model_load_elapsed_s": 3.7,
+      "first_run_elapsed_s": 58.5,
+      "inference_elapsed_s": 54.8,
+      "gpu_vram_peak_mb": "N/A (CPU)",
+      "ram_peak_mb": 1660.1,
+      "produced_count": 2,
+      "produced_size_mb": 74.1,
+      "output_stems": ["vocals", "instrumental"],
+      "native_4_stem": false,
+      "needs_postprocess_for_4stem": true,
+      "stems_sum_to_mix": true,
+      "missing_for_4stem": ["drums", "bass", "other"],
+      "requirement_check": "能输出多个 stem ✅ / 能输出 4 个目标 stem ❌ / 原生独立 4-stem ❌ / 后处理聚合 4-stem 不可行(缺 drums/bass 源)",
+      "stable_3m30s": true,
+      "production_suitable": "否（2-stem 模型，无 drums/bass）",
+      "stage2_worthy": false
+    },
+    "mdx23c": {
+      "model": "MDX23C-8KFFT-InstVoc_HQ (MDX23C)",
+      "architecture": "MDX23C TFC-TDF (ckpt, 2-stem)",
+      "env": "Modal GPU A10G (24GB)",
+      "model_size_mb": 427.3,
+      "model_load_elapsed_s": 1.5,
+      "inference_elapsed_s": 61.2,
+      "total_elapsed_s": 62.8,
+      "gpu_vram_peak_mb": 2640.3,
+      "vram_peak_allocated_mb": 1694.2,
+      "ram_peak_mb": 4799.5,
+      "produced_count": 2,
+      "produced_size_mb": 74.1,
+      "output_stems": ["vocals", "instrumental"],
+      "native_4_stem": false,
+      "needs_postprocess_for_4stem": true,
+      "stems_sum_to_mix": true,
+      "missing_for_4stem": ["drums", "bass", "other"],
+      "requirement_check": "能输出多个 stem ✅ / 能输出 4 个目标 stem ❌ / 原生独立 4-stem ❌ / 后处理聚合 4-stem 不可行(缺 drums/bass 源)",
+      "stable_3m30s": true,
+      "production_suitable": "否（2-stem 模型，无 drums/bass；需 GPU，本机 CPU 首次加载超时）",
+      "stage2_worthy": false
+    },
+    "mega53": {
+      "model": "mvsep_mega_model_bs_roformer_53_stems_v1.ckpt (Mega 53)",
+      "architecture": "BS-RoFormer (PyTorch ckpt, num_stems=53)",
+      "env": "Modal GPU A10G (24GB)",
+      "model_size_mb": 1368.9,
+      "model_load_elapsed_s": 12.8,
+      "inference_elapsed_s": 49.4,
+      "total_elapsed_s": 76.9,
+      "gpu_vram_peak_mb": 10630.5,
+      "vram_peak_allocated_mb": 9238.7,
+      "ram_peak_mb": 12099.7,
+      "produced_count": 53,
+      "produced_size_mb": 3926.7,
+      "output_stems": "53 个细粒度 stem（含 lead-vocal/vocal/back-vocal、drums/kick/snare/hh/toms、bass/double-bass 等）",
+      "native_4_stem": false,
+      "needs_postprocess_for_4stem": true,
+      "stems_sum_to_mix": false,
+      "has_native_vocals_stem": false,
+      "has_native_drums_stem": true,
+      "has_native_bass_stem": true,
+      "has_native_other_stem": false,
+      "missing_for_4stem": ["other（无此标签）", "vocals（被拆为 vocal/lead-vocal/back-vocal）"],
+      "requirement_check": "能输出多个 stem ✅ / 能输出 4 个目标 stem ❌ / 原生独立 4-stem ❌ / 后处理聚合 4-stem：技术上可拼(vocals 3类+drums 类+bass 类+其余器乐)，但官方声明 stems 不求和为原曲且含重叠，聚合结果非原生、含信息重叠，质量低于专项模型",
+      "stable_3m30s": true,
+      "production_suitable": "否（无原生 other 与单一 vocals；VRAM 峰值 10.6GB、RAM 12.1GB，要求高；输出 3.9GB；stems 不求和）",
+      "stage2_worthy": false
+    }
+  },
+  "conclusion": {
+    "decision_a": "否——现有三个模型均无一个可以直接进入 production（均非原生独立 4-stem）。",
+    "decision_b": "明确结论：当前没有合格的真 4-stem 模型，不进入 Stage 2 集成。",
+    "decision_c": "production separation 保持现有状态不变：继续使用现有 2-stem MDX-Net (UVR_MDXNET_9482) 实现，不做任何替换或扩展。",
+    "decision_d": {
+      "next_model_spec": [
+        "架构必须原生输出 exactly 4 stems：vocals / drums / bass / other",
+        "优先考察 htdemucs / htdemucs_ft / htdemucs_6s / htdemucs_ft_6s（Demucs v4 原生 4-stem，BSD-3，无需后处理）",
+        "检查点在框架内置清单或可经官方 hash/配置加载（避免修改框架代码）",
+        "可接受模型大小与资源：<1GB；加载时间尽量短（CPU 可跑或 GPU 显存 <8GB）",
+        "3:30 推理在目标环境中 <2 分钟；RSS 峰值 <3GB（生产容器）",
+        "stems 需满足可求和还原或至少无重叠声明需书面确认",
+        "许可证：优先 MIT/BSD/Apache；B 级候选需数据来源书面确认"
+      ],
+      "screening_flow": [
+        "1. 检查是否原生 4-stem（vocals/drums/bass/other 均存在且为单一输出）",
+        "2. 若需后处理聚合 → 直接淘汰（本项目禁止伪造原生 4-stem）",
+        "3. 若原生 4-stem → 用同一 3:30 音频做隔离 POC（加载/推理/VRAM/RAM/输出规格/稳定性）",
+        "4. 与 MDX-Net 2-stem baseline 对比耗时与资源",
+        "5. 满足要求后单独评估是否进入 Stage 2 集成（不修改现有 separation 实现前先出集成方案）"
+      ]
+    },
+    "summary": "MDX-Net(2-stem) 与 MDX23C(2-stem) 均只输出 vocals+instrumental，缺 drums/bass/other；Mega 53(53-stem) 虽覆盖鼓与贝斯细分，但无原生 other、vocals 被拆分、stems 不求和且资源成本高。三者均不满足本项目'原生独立 4-stem'硬性要求。建议保持现有 2-stem MDX-Net 生产实现，下一阶段按 spec 筛选原生 4-stem 模型（首选 Demucs v4 系），先做隔离验证再决定集成。"
+  }
+}

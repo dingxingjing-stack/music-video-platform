@@ -1,0 +1,10 @@
+# HF Space ZeroGPU - MusicGen-Small MVP
+# 不固定 torch 版本（ZeroGPU 预装 2.8-2.11，Kaggle 已验 2.10.0+cu128 兼容）
+gradio>=4.44.0
+transformers>=4.44.0
+accelerate>=0.26.0
+soundfile
+huggingface_hub
+# audiocraft 不安装（MusicGen 走 transformers 路径，避免 torch 降级）
+# encodec==0.1.1 仅当显式需要时启用（transformers 已内置 EnCodec）
+# cosyvoice 本阶段 BLOCKED，不安装

@@ -22,7 +22,10 @@
     "clearConfirm": "Clear all saved tracks?",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "Track {n}"
+    "trackNum": "Track {n}",
+    "back": "Back",
+    "preview": "Preview",
+    "reset": "Reset"
   },
   "paths": {
     "pathA": "Path A — Suno Style",
@@ -84,7 +87,9 @@
     "elapsedTime": "Elapsed",
     "musicGenPrefix": "MusicGen: ",
     "hybridPrefix": "Hybrid: ",
-    "remixProcessing": "Remix Processing"
+    "remixProcessing": "Remix Processing",
+    "done": "Done",
+    "selectTemplate": "Select Template"
   },
   "errors": {
     "promptRequired": "Prompt is required",
@@ -105,6 +110,7 @@
     "batchEmpty": "Batch list is empty",
     "batchNotSupported": "Batch mode not supported for Path C (Remix)",
     "midiProjectRequired": "MIDI project required",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "rateLimited": "Too many requests. You have reached the free tier limit. Please try again later."
   }
 }

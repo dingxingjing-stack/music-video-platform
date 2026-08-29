@@ -9,6 +9,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { api } from '../../config/api';
 
 interface VoiceProfile {
   id: string;
@@ -35,7 +36,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
   // 加载声音库
   useEffect(() => {
     if (activeTab === 'library') {
-      fetch('https://ai-music-backend-8e85.onrender.com/api/v1/voice/voices?limit=20')
+      fetch(api.url('/api/v1/voice/voices?limit=20'))
         .then(r => r.json())
         .then(data => {
           if (data.success) {

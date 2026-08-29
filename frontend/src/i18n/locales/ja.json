@@ -22,7 +22,10 @@
     "clearConfirm": "保存済みトラックをすべて削除しますか？",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "トラック {n}"
+    "trackNum": "トラック {n}",
+    "back": "戻る",
+    "preview": "プレビュー",
+    "reset": "リセット"
   },
   "paths": {
     "pathA": "パス A — Suno スタイル",
@@ -84,7 +87,9 @@
     "elapsedTime": "経過時間",
     "musicGenPrefix": "MusicGen：",
     "hybridPrefix": "ハイブリッド：",
-    "remixProcessing": "リミックス処理中"
+    "remixProcessing": "リミックス処理中",
+    "done": "完了",
+    "selectTemplate": "テンプレートを選択"
   },
   "errors": {
     "promptRequired": "プロンプトが必要です",
@@ -105,6 +110,7 @@
     "batchEmpty": "バッチリストが空です",
     "batchNotSupported": "パスC（リミックス）ではバッチモードはサポートされていません",
     "midiProjectRequired": "MIDIプロジェクトが必要です",
-    "unknownError": "不明なエラー"
+    "unknownError": "不明なエラー",
+    "rateLimited": "リクエストが多すぎます。無料プランの上限に達しました。しばらくしてから再試行してください。"
   }
 }

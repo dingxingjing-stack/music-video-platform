@@ -22,7 +22,10 @@
     "clearConfirm": "Очистить все сохранённые треки?",
     "helloWorld": "Hello world",
     "stemCount4": "4",
-    "trackNum": "Трек {n}"
+    "trackNum": "Трек {n}",
+    "back": "Назад",
+    "preview": "Предпросмотр",
+    "reset": "Сбросить"
   },
   "paths": {
     "pathA": "Путь A — Стиль Suno",
@@ -84,7 +87,9 @@
     "elapsedTime": "Прошло времени",
     "musicGenPrefix": "MusicGen: ",
     "hybridPrefix": "Hybrid: ",
-    "remixProcessing": "Обработка ремикса"
+    "remixProcessing": "Обработка ремикса",
+    "done": "Готово",
+    "selectTemplate": "Выбрать шаблон"
   },
   "errors": {
     "promptRequired": "Требуется промпт",
@@ -105,6 +110,7 @@
     "batchEmpty": "Пакетный список пуст",
     "batchNotSupported": "Пакетный режим не поддерживается для пути C (Remix)",
     "midiProjectRequired": "Требуется MIDI проект",
-    "unknownError": "Неизвестная ошибка"
+    "unknownError": "Неизвестная ошибка",
+    "rateLimited": "Слишком много запросов. Вы достигли лимита бесплатного тарифа. Пожалуйста, попробуйте позже."
   }
 }
