@@ -353,22 +353,41 @@ class ProviderRegistry:
     def select(self, name: Optional[str] = None) -> BaseProvider:
         """返回生产使用的 Provider。
 
-        优先级：显式参数 > 环境变量 AI_GENERATION_PROVIDER > production 默认。
-        显式指定但未注册时回退 production 默认（并告警），保证生产路径永远
-        稳定指向 Fal，不被实验 Provider 影响。
-        生产禁止选择 RunPod、Modal（Fal 为主力，RunPod/Modal 仅作失败回退或实验）。
+        优先级：显式参数 > 环境变量 AI_GENERATION_PROVIDER > 环境默认。
+        - ENVIRONMENT=production：
+            - 默认 Provider = runpod（显式指定，不依赖注册顺序）
+            - 允许显式选择 runpod
+            - 禁止显式选择 fal_stable_audio（Fal 仅作为 RunPod 失败后的 fallback）与 modal_ace_step
+        - development/test：保留兼容逻辑，允许显式选择 Fal/Modal 等用于回归测试。
         """
         env = os.getenv("ENVIRONMENT", "development").lower()
+        is_prod = env == "production"
+
+        explicit_provider: Optional[BaseProvider] = None
         for cand in (name, os.getenv(PROVIDER_ENV)):
             if not cand:
                 continue
             provider = self._providers.get(cand)
             if not provider:
-                print(f"[Provider] 配置的 provider '{cand}' 未注册或不可用，回退 production 默认")
+                print(f"[Provider] 配置的 provider '{cand}' 未注册或不可用，回退默认")
                 continue
-            if env == "production" and provider.name in ("runpod", "modal_ace_step"):
-                raise RuntimeError(f"[Provider] ENVIRONMENT=production 时禁止选择 {provider.name}（Fal 为主力，RunPod/Modal 仅作失败回退或实验）")
-            return provider
+            explicit_provider = provider
+            break
+
+        if explicit_provider is not None:
+            if is_prod and explicit_provider.name in ("fal_stable_audio", "modal_ace_step"):
+                raise RuntimeError(
+                    f"[Provider] ENVIRONMENT=production 时禁止选择 {explicit_provider.name}"
+                    f"（RunPod 为主力 Provider，Fal 仅作为 RunPod 失败后的 fallback，Modal 非生产）"
+                )
+            # development/test 或 production 下显式 runpod：直接返回
+            return explicit_provider
+
+        # 无有效显式选择
+        if is_prod:
+            runpod = self._providers.get("runpod")
+            if runpod is not None:
+                return runpod
         assert self._default is not None, "ProviderRegistry 至少需要一个 production provider"
         return self._providers[self._default]
 

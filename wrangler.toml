@@ -1,12 +1,12 @@
 name = "music-video-platform"
 compatibility_date = "2026-07-13"
 
+[assets]
+directory = "frontend/dist"
+
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "music-audio-storage"
-
-[assets]
-directory = "frontend/dist"
 
 [vars]
 API_BASE_URL = "https://ai-music-backend-db6h.onrender.com"
