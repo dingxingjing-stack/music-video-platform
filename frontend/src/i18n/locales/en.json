@@ -89,7 +89,13 @@
     "hybridPrefix": "Hybrid: ",
     "remixProcessing": "Remix Processing",
     "done": "Done",
-    "selectTemplate": "Select Template"
+    "selectTemplate": "Select Template",
+    "promptPlaceholder": "Describe the music style, mood, instruments, and more...",
+    "generateMusic": "✨ 🎵 Generate Music",
+    "randomPrompt": "🔀 Random Prompt",
+    "promptHint": "Enter a prompt first, or click 🔺 Random Prompt",
+    "versionHistory": "📋 Version History",
+    "historyEmpty": "No history yet..."
   },
   "errors": {
     "promptRequired": "Prompt is required",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "MIDI project required",
     "unknownError": "Unknown error",
     "rateLimited": "Too many requests. You have reached the free tier limit. Please try again later."
+  },
+  "nav": {
+    "workbench": "Workbench",
+    "aiCompose": "AI Composition",
+    "hybrid": "Hybrid Mode",
+    "originalCompose": "Original Arrangement",
+    "community": "Community",
+    "myWorks": "My Works",
+    "mvGenerate": "MV Generation",
+    "liveCollab": "Live Collaboration",
+    "hfModels": "HF Advanced Models",
+    "subtitles": "Subtitle Recognition",
+    "oneClickPublish": "One-Click Publishing",
+    "betaTag": "Public Beta v2.0",
+    "sectionHall": "🎵 Creation Hub",
+    "sectionGray": "🔓 Experimental",
+    "logout": "Log out",
+    "loginCta": "Log in to unlock all features",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off",
+    "openMenu": "Open menu",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "aiTeam": "AI Team"
+  },
+  "landing": {
+    "heroBadge": "Public beta · Completely free",
+    "heroTitle1": "All-in-one AI",
+    "heroTitle2": "Music / MV Creation Platform",
+    "heroSub": "From inspiration and composition to arrangement and final production, let AI power your entire creative workflow.",
+    "ctaStart": "🎵 Start Creating",
+    "ctaExplore": "Explore the Community",
+    "featuresTitle": "Five Core Features",
+    "featuresSub": "From inspiration to finished work, all in one place.",
+    "cardCta": "Try Now →",
+    "casesTitle": "Community Works",
+    "casesSub": "Real creations from public beta users.",
+    "cases": {
+      "playsLabel": "▶ {count} plays"
+    },
+    "feedbackTitle": "User Feedback",
+    "feedbackSub": "Real feedback from public beta users.",
+    "anonymousUser": "Anonymous",
+    "feedbackSubmit": "Submit Feedback",
+    "feedbackToastOk": "Thank you for your feedback!",
+    "feedbackToastFail": "Submission failed",
+    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+  },
+  "pathA": {
+    "tagline": "Prompt → Agnes AI → Full-song generation (free)",
+    "tooltipNeedPrompt": "Enter a music prompt",
+    "tooltipGenerating": "Generating music",
+    "tooltipGenerate": "Generate music",
+    "promptSamples": {
+      "sample1": "A warm, uplifting piano pop song about night and hope",
+      "sample2": "An energetic electronic dance track with punchy drums and futuristic synths",
+      "sample3": "Cinematic epic score with sweeping strings and brass, building emotion gradually",
+      "sample4": "Laid-back jazz café music with mellow saxophone and brushed drums",
+      "sample5": "Dreamy ambient music with ethereal vocals, atmospheric textures, and slow pulses"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "aiCopyright": "AI Copyright Policy",
+      "voiceCloning": "Voice Cloning Policy",
+      "creditsRefund": "Credits & Refunds",
+      "aup": "Acceptable Use Policy"
+    }
   }
 }

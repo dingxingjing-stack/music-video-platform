@@ -89,7 +89,13 @@
     "hybridPrefix": "Hybrid: ",
     "remixProcessing": "Remix-Verarbeitung",
     "done": "Fertig",
-    "selectTemplate": "Vorlage auswählen"
+    "selectTemplate": "Vorlage auswählen",
+    "promptPlaceholder": "Beschreiben Sie Musikstil, Stimmung, Instrumente und mehr...",
+    "generateMusic": "✨ 🎵 Musik generieren",
+    "randomPrompt": "🔀 Zufälliger Prompt",
+    "promptHint": "Geben Sie zuerst einen Prompt ein oder klicken Sie auf 🔺 Zufälliger Prompt",
+    "versionHistory": "📋 Versionsverlauf",
+    "historyEmpty": "Noch kein Verlauf..."
   },
   "errors": {
     "promptRequired": "Prompt erforderlich",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "MIDI-Projekt erforderlich",
     "unknownError": "Unbekannter Fehler",
     "rateLimited": "Zu viele Anfragen. Sie haben das Limit des kostenlosen Tarifs erreicht. Bitte versuchen Sie es später erneut."
+  },
+  "nav": {
+    "workbench": "Arbeitsbereich",
+    "aiCompose": "KI-Komposition",
+    "hybrid": "Hybridmodus",
+    "originalCompose": "Originales Arrangement",
+    "community": "Community",
+    "myWorks": "Meine Werke",
+    "mvGenerate": "MV-Erstellung",
+    "liveCollab": "Echtzeit-Zusammenarbeit",
+    "hfModels": "Erweiterte HF-Modelle",
+    "subtitles": "Untertitelerkennung",
+    "oneClickPublish": "Veröffentlichung mit einem Klick",
+    "betaTag": "Öffentliche Beta v2.0",
+    "sectionHall": "🎵 Kreativbereich",
+    "sectionGray": "🔓 Experimentelle Funktionen",
+    "logout": "Abmelden",
+    "loginCta": "Anmelden, um alle Funktionen freizuschalten",
+    "soundOn": "Ton an",
+    "soundOff": "Ton aus",
+    "openMenu": "Menü öffnen",
+    "expand": "Erweitern",
+    "collapse": "Einklappen",
+    "aiTeam": "KI-Team"
+  },
+  "landing": {
+    "heroBadge": "Öffentliche Beta · Vollständig kostenlos",
+    "heroTitle1": "KI-All-in-One",
+    "heroTitle2": "Musik-/MV-Erstellungsplattform",
+    "heroSub": "Von der Inspiration und Komposition bis zum Arrangement und fertigen Werk unterstützt KI den gesamten kreativen Prozess.",
+    "ctaStart": "🎵 Jetzt kreativ werden",
+    "ctaExplore": "Community entdecken",
+    "featuresTitle": "Fünf Kernfunktionen",
+    "featuresSub": "Von der Idee bis zum fertigen Werk – alles an einem Ort.",
+    "cardCta": "Jetzt ausprobieren →",
+    "casesTitle": "Community-Werke",
+    "casesSub": "Echte Kreationen von Nutzern der öffentlichen Beta.",
+    "cases": {
+      "playsLabel": "▶ {count} Wiedergaben"
+    },
+    "feedbackTitle": "Nutzerfeedback",
+    "feedbackSub": "Echtes Feedback von Nutzern der öffentlichen Beta.",
+    "anonymousUser": "Anonymer Nutzer",
+    "feedbackSubmit": "Feedback senden",
+    "feedbackToastOk": "Vielen Dank für Ihr Feedback!",
+    "feedbackToastFail": "Übermittlung fehlgeschlagen",
+    "footerCopyright": "© 2026 Music Video Platform. Alle Rechte vorbehalten."
+  },
+  "pathA": {
+    "tagline": "Prompt → Agnes AI → Vollständige Songerstellung (kostenlos)",
+    "tooltipNeedPrompt": "Geben Sie einen Musik-Prompt ein",
+    "tooltipGenerating": "Musik wird generiert",
+    "tooltipGenerate": "Musik generieren",
+    "promptSamples": {
+      "sample1": "Ein warmer, hoffnungsvoller Piano-Pop-Song über die Nacht und Hoffnung",
+      "sample2": "Ein energiegeladener Electronic-Track mit druckvollen Drums und futuristischen Synthesizern",
+      "sample3": "Epische Filmmusik mit weiten Streichern und Blechbläsern, die die Spannung langsam steigert",
+      "sample4": "Entspannte Jazz-Café-Musik mit sanftem Saxofon und Besen-Schlagzeug",
+      "sample5": "Verträumte Ambient-Musik mit ätherischem Gesang, atmosphärischen Texturen und langsamen Pulsen"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "Nutzungsbedingungen",
+      "privacy": "Datenschutzerklärung",
+      "aiCopyright": "KI-Urheberrechtsrichtlinie",
+      "voiceCloning": "Richtlinie zum Stimmenklonen",
+      "creditsRefund": "Credits & Rückerstattungen",
+      "aup": "Richtlinie zur zulässigen Nutzung"
+    }
   }
 }

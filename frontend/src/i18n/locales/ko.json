@@ -89,7 +89,13 @@
     "hybridPrefix": "하이브리드: ",
     "remixProcessing": "리믹스 처리 중",
     "done": "완료",
-    "selectTemplate": "템플릿 선택"
+    "selectTemplate": "템플릿 선택",
+    "promptPlaceholder": "원하는 음악 스타일, 분위기, 악기 등을 입력하세요...",
+    "generateMusic": "✨ 🎵 음악 생성",
+    "randomPrompt": "🔀 랜덤 프롬프트",
+    "promptHint": "먼저 프롬프트를 입력하거나 🔺 랜덤 프롬프트를 클릭하세요",
+    "versionHistory": "📋 버전 기록",
+    "historyEmpty": "아직 기록이 없습니다..."
   },
   "errors": {
     "promptRequired": "프롬프트가 필요합니다",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "MIDI 프로젝트가 필요합니다",
     "unknownError": "알 수 없는 오류",
     "rateLimited": "요청이 너무 많습니다. 무료 플랜 한도에 도달했습니다. 잠시 후 다시 시도해 주세요."
+  },
+  "nav": {
+    "workbench": "작업실",
+    "aiCompose": "AI 작곡",
+    "hybrid": "하이브리드",
+    "originalCompose": "오리지널 편곡",
+    "community": "커뮤니티",
+    "myWorks": "내 작품",
+    "mvGenerate": "MV 생성",
+    "liveCollab": "실시간 협업",
+    "hfModels": "HF 고급 모델",
+    "subtitles": "자막 인식",
+    "oneClickPublish": "원클릭 게시",
+    "betaTag": "공개 베타 v2.0",
+    "sectionHall": "🎵 창작 허브",
+    "sectionGray": "🔓 실험 기능",
+    "logout": "로그아웃",
+    "loginCta": "로그인하여 모든 기능 잠금 해제",
+    "soundOn": "사운드 켜짐",
+    "soundOff": "사운드 꺼짐",
+    "openMenu": "메뉴 열기",
+    "expand": "펼치기",
+    "collapse": "접기",
+    "aiTeam": "AI 팀"
+  },
+  "landing": {
+    "heroBadge": "공개 베타 진행 중 · 완전 무료",
+    "heroTitle1": "올인원 AI",
+    "heroTitle2": "음악 / MV 제작 플랫폼",
+    "heroSub": "아이디어부터 작곡, 편곡, 완성까지 AI가 전체 창작 과정을 지원합니다.",
+    "ctaStart": "🎵 지금 창작 시작",
+    "ctaExplore": "커뮤니티 둘러보기",
+    "featuresTitle": "5가지 핵심 기능",
+    "featuresSub": "아이디어부터 완성까지 한곳에서 해결하세요.",
+    "cardCta": "지금 사용하기 →",
+    "casesTitle": "커뮤니티 작품",
+    "casesSub": "공개 베타 사용자들의 실제 창작물입니다.",
+    "cases": {
+      "playsLabel": "▶ {count}회 재생"
+    },
+    "feedbackTitle": "사용자 피드백",
+    "feedbackSub": "공개 베타 사용자들의 실제 의견입니다.",
+    "anonymousUser": "익명 사용자",
+    "feedbackSubmit": "피드백 제출",
+    "feedbackToastOk": "피드백 감사합니다!",
+    "feedbackToastFail": "제출에 실패했습니다",
+    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+  },
+  "pathA": {
+    "tagline": "프롬프트 → Agnes AI → 전체 곡 생성 (무료)",
+    "tooltipNeedPrompt": "음악 프롬프트를 입력하세요",
+    "tooltipGenerating": "음악 생성 중",
+    "tooltipGenerate": "음악 생성",
+    "promptSamples": {
+      "sample1": "밤과 희망을 주제로 한 따뜻하고 위로가 되는 피아노 팝",
+      "sample2": "강렬한 드럼과 미래적인 신스가 돋보이는 에너지 넘치는 EDM",
+      "sample3": "웅장한 스트링과 브라스로 감정이 점차 고조되는 영화 같은 서사 음악",
+      "sample4": "부드러운 색소폰과 브러시 드럼이 어우러진 편안한 재즈 카페 음악",
+      "sample5": "몽환적인 보컬과 앰비언트 질감, 느린 펄스가 어우러진 드림 앰비언트"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "서비스 약관",
+      "privacy": "개인정보 처리방침",
+      "aiCopyright": "AI 저작권 정책",
+      "voiceCloning": "음성 복제 정책",
+      "creditsRefund": "크레딧 및 환불",
+      "aup": "허용되는 사용 정책"
+    }
   }
 }

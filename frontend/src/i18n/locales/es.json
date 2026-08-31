@@ -89,7 +89,13 @@
     "hybridPrefix": "Híbrido: ",
     "remixProcessing": "Remix en proceso",
     "done": "Hecho",
-    "selectTemplate": "Seleccionar plantilla"
+    "selectTemplate": "Seleccionar plantilla",
+    "promptPlaceholder": "Describe el estilo musical, el ambiente, los instrumentos y más...",
+    "generateMusic": "✨ 🎵 Generar música",
+    "randomPrompt": "🔀 Prompt aleatorio",
+    "promptHint": "Introduce primero un prompt o pulsa 🔺 Prompt aleatorio",
+    "versionHistory": "📋 Historial de versiones",
+    "historyEmpty": "Aún no hay historial..."
   },
   "errors": {
     "promptRequired": "Se requiere prompt",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "Se requiere proyecto MIDI",
     "unknownError": "Error desconocido",
     "rateLimited": "Demasiadas solicitudes. Has alcanzado el límite de la versión gratuita. Inténtalo de nuevo más tarde."
+  },
+  "nav": {
+    "workbench": "Espacio de trabajo",
+    "aiCompose": "Composición con IA",
+    "hybrid": "Modo híbrido",
+    "originalCompose": "Arreglo original",
+    "community": "Comunidad",
+    "myWorks": "Mis obras",
+    "mvGenerate": "Generación de MV",
+    "liveCollab": "Colaboración en tiempo real",
+    "hfModels": "Modelos avanzados de HF",
+    "subtitles": "Reconocimiento de subtítulos",
+    "oneClickPublish": "Publicación con un clic",
+    "betaTag": "Beta pública v2.0",
+    "sectionHall": "🎵 Centro de creación",
+    "sectionGray": "🔓 Funciones experimentales",
+    "logout": "Cerrar sesión",
+    "loginCta": "Inicia sesión para desbloquear todas las funciones",
+    "soundOn": "Sonido activado",
+    "soundOff": "Sonido desactivado",
+    "openMenu": "Abrir menú",
+    "expand": "Expandir",
+    "collapse": "Contraer",
+    "aiTeam": "Equipo de IA"
+  },
+  "landing": {
+    "heroBadge": "Beta pública · Totalmente gratis",
+    "heroTitle1": "IA todo en uno",
+    "heroTitle2": "Plataforma de creación musical / MV",
+    "heroSub": "De la inspiración y composición al arreglo y la producción final, la IA impulsa todo tu proceso creativo.",
+    "ctaStart": "🎵 Empezar a crear",
+    "ctaExplore": "Explorar la comunidad",
+    "featuresTitle": "Cinco funciones principales",
+    "featuresSub": "De la inspiración al resultado final, todo en un solo lugar.",
+    "cardCta": "Probar ahora →",
+    "casesTitle": "Obras de la comunidad",
+    "casesSub": "Creaciones reales de usuarios de la beta pública.",
+    "cases": {
+      "playsLabel": "▶ {count} reproducciones"
+    },
+    "feedbackTitle": "Comentarios de usuarios",
+    "feedbackSub": "Opiniones reales de usuarios de la beta pública.",
+    "anonymousUser": "Usuario anónimo",
+    "feedbackSubmit": "Enviar comentarios",
+    "feedbackToastOk": "¡Gracias por tus comentarios!",
+    "feedbackToastFail": "Error al enviar",
+    "footerCopyright": "© 2026 Music Video Platform. Todos los derechos reservados."
+  },
+  "pathA": {
+    "tagline": "Prompt → Agnes AI → Generación de canciones completas (gratis)",
+    "tooltipNeedPrompt": "Introduce un prompt musical",
+    "tooltipGenerating": "Generando música",
+    "tooltipGenerate": "Generar música",
+    "promptSamples": {
+      "sample1": "Una canción pop de piano cálida y reconfortante sobre la noche y la esperanza",
+      "sample2": "Una pista electrónica enérgica con baterías potentes y sintetizadores futuristas",
+      "sample3": "Banda sonora épica y cinematográfica con cuerdas y metales que elevan gradualmente la emoción",
+      "sample4": "Jazz relajado de cafetería con saxofón suave y batería con escobillas",
+      "sample5": "Música ambiental onírica con voces etéreas, texturas atmosféricas y pulsos lentos"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "Términos del servicio",
+      "privacy": "Política de privacidad",
+      "aiCopyright": "Política de derechos de autor de IA",
+      "voiceCloning": "Política de clonación de voz",
+      "creditsRefund": "Créditos y reembolsos",
+      "aup": "Política de uso aceptable"
+    }
   }
 }

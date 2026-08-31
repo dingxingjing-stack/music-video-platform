@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUserGrayStatus } from './hooks/useUserGrayStatus';
 import { BetaConsentModal } from './components/BetaConsentModal';
 import { useSound } from './context/SoundContext';
 import { useAuth } from './context/AuthContext';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { Under13BlockedModal } from './components/Under13BlockedModal';
+import { getUserAge } from './hooks/useUserAge';
 
 // 公测导航 — 普通创作大厅（全开放）
 const NAV_OPEN = [

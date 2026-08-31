@@ -89,7 +89,13 @@
     "hybridPrefix": "混合：",
     "remixProcessing": "Remix 处理中",
     "done": "完成",
-    "selectTemplate": "选择模板"
+    "selectTemplate": "选择模板",
+    "promptPlaceholder": "输入提示词描述想要的音乐风格、情感、乐器...",
+    "generateMusic": "✨ 🎵 生成音乐",
+    "randomPrompt": "🔀 随机提示",
+    "promptHint": "先输入提示词，或点击 🔺 随机提示",
+    "versionHistory": "📋 版本历史",
+    "historyEmpty": "暂无历史记录..."
   },
   "errors": {
     "promptRequired": "需要提示词",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "需要 MIDI 项目",
     "unknownError": "未知错误",
     "rateLimited": "请求过于频繁，免费额度已达上限，请稍后再试"
+  },
+  "nav": {
+    "workbench": "工作台",
+    "aiCompose": "AI 作曲",
+    "hybrid": "混合模式",
+    "originalCompose": "原创编曲",
+    "community": "社区排行榜",
+    "myWorks": "我的作品",
+    "mvGenerate": "MV 生成",
+    "liveCollab": "实时协作",
+    "hfModels": "HF 高级模型",
+    "subtitles": "字幕识别",
+    "oneClickPublish": "一键发布",
+    "betaTag": "公测测试版 v2.0",
+    "sectionHall": "🎵 创作大厅",
+    "sectionGray": "🔓 灰度专区",
+    "logout": "退出",
+    "loginCta": "登录解锁全部功能",
+    "soundOn": "音效已开",
+    "soundOff": "音效已关",
+    "openMenu": "打开菜单",
+    "expand": "展开",
+    "collapse": "收起",
+    "aiTeam": "AI 员工团队"
+  },
+  "landing": {
+    "heroBadge": "公测进行中 · 完全免费",
+    "heroTitle1": "AI 一站式",
+    "heroTitle2": "音乐 / MV 创作平台",
+    "heroSub": "从灵感、作曲到编曲与成片，让 AI 帮你完成整个创作流程。",
+    "ctaStart": "🎵 立即开始创作",
+    "ctaExplore": "浏览作品社区",
+    "featuresTitle": "五大核心功能",
+    "featuresSub": "从灵感到成片，一站搞定",
+    "cardCta": "立即体验 →",
+    "casesTitle": "社区作品",
+    "casesSub": "来自公测用户的真实创作",
+    "cases": {
+      "playsLabel": "▶ {count} 次播放"
+    },
+    "feedbackTitle": "用户反馈",
+    "feedbackSub": "公测用户真实声音",
+    "anonymousUser": "匿名用户",
+    "feedbackSubmit": "提交反馈",
+    "feedbackToastOk": "感谢反馈！",
+    "feedbackToastFail": "提交失败",
+    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+  },
+  "pathA": {
+    "tagline": "提示词 → Agnes AI → 全曲生成（免费）",
+    "tooltipNeedPrompt": "请输入音乐提示词",
+    "tooltipGenerating": "正在生成音乐",
+    "tooltipGenerate": "生成音乐",
+    "promptSamples": {
+      "sample1": "一首温暖治愈的钢琴流行歌曲，关于夜晚和希望",
+      "sample2": "充满能量的电子舞曲，强烈鼓点和未来感合成器",
+      "sample3": "电影感史诗配乐，宏大的弦乐和铜管，情绪逐渐推进",
+      "sample4": "轻松慵懒的爵士咖啡馆音乐，柔和萨克斯和爵士鼓",
+      "sample5": "梦幻氛围音乐，空灵人声、环境音和缓慢脉冲"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "服务条款",
+      "privacy": "隐私政策",
+      "aiCopyright": "AI 版权政策",
+      "voiceCloning": "声音克隆政策",
+      "creditsRefund": "积分退款",
+      "aup": "可接受使用"
+    }
   }
 }

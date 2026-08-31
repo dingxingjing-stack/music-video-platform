@@ -89,7 +89,13 @@
     "hybridPrefix": "Hybride : ",
     "remixProcessing": "Remix en cours",
     "done": "Terminé",
-    "selectTemplate": "Sélectionner un modèle"
+    "selectTemplate": "Sélectionner un modèle",
+    "promptPlaceholder": "Décrivez le style musical, l’ambiance, les instruments, etc.…",
+    "generateMusic": "✨ 🎵 Générer de la musique",
+    "randomPrompt": "🔀 Prompt aléatoire",
+    "promptHint": "Saisissez d’abord un prompt ou cliquez sur 🔺 Prompt aléatoire",
+    "versionHistory": "📋 Historique des versions",
+    "historyEmpty": "Aucun historique pour le moment..."
   },
   "errors": {
     "promptRequired": "Prompt requis",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "Projet MIDI requis",
     "unknownError": "Erreur inconnue",
     "rateLimited": "Trop de requêtes. Vous avez atteint la limite du plan gratuit. Veuillez réessayer plus tard."
+  },
+  "nav": {
+    "workbench": "Espace de travail",
+    "aiCompose": "Composition IA",
+    "hybrid": "Mode hybride",
+    "originalCompose": "Arrangement original",
+    "community": "Communauté",
+    "myWorks": "Mes作品",
+    "mvGenerate": "Génération de MV",
+    "liveCollab": "Collaboration en temps réel",
+    "hfModels": "Modèles avancés HF",
+    "subtitles": "Reconnaissance des sous-titres",
+    "oneClickPublish": "Publication en un clic",
+    "betaTag": "Bêta publique v2.0",
+    "sectionHall": "🎵 Espace de création",
+    "sectionGray": "🔓 Fonctionnalités expérimentales",
+    "logout": "Se déconnecter",
+    "loginCta": "Connectez-vous pour débloquer toutes les fonctionnalités",
+    "soundOn": "Son activé",
+    "soundOff": "Son désactivé",
+    "openMenu": "Ouvrir le menu",
+    "expand": "Développer",
+    "collapse": "Réduire",
+    "aiTeam": "Équipe IA"
+  },
+  "landing": {
+    "heroBadge": "Bêta publique · Entièrement gratuit",
+    "heroTitle1": "IA tout-en-un",
+    "heroTitle2": "Plateforme de création musicale / MV",
+    "heroSub": "De l’inspiration à la composition, l’arrangement et la production finale, l’IA accompagne tout votre processus créatif.",
+    "ctaStart": "🎵 Commencer à créer",
+    "ctaExplore": "Explorer la communauté",
+    "featuresTitle": "Cinq fonctionnalités clés",
+    "featuresSub": "De l’inspiration au résultat final, tout au même endroit.",
+    "cardCta": "Essayer maintenant →",
+    "casesTitle": "Créations de la communauté",
+    "casesSub": "Des créations réelles des utilisateurs de la bêta publique.",
+    "cases": {
+      "playsLabel": "▶ {count} lectures"
+    },
+    "feedbackTitle": "Avis des utilisateurs",
+    "feedbackSub": "Les retours réels des utilisateurs de la bêta publique.",
+    "anonymousUser": "Utilisateur anonyme",
+    "feedbackSubmit": "Envoyer un avis",
+    "feedbackToastOk": "Merci pour votre retour !",
+    "feedbackToastFail": "Échec de l’envoi",
+    "footerCopyright": "© 2026 Music Video Platform. Tous droits réservés."
+  },
+  "pathA": {
+    "tagline": "Prompt → Agnes AI → Génération de chansons complètes (gratuite)",
+    "tooltipNeedPrompt": "Saisissez un prompt musical",
+    "tooltipGenerating": "Génération de musique",
+    "tooltipGenerate": "Générer de la musique",
+    "promptSamples": {
+      "sample1": "Une chanson pop au piano chaleureuse et réconfortante sur la nuit et l’espoir",
+      "sample2": "Un morceau électro énergique avec des batteries percutantes et des synthés futuristes",
+      "sample3": "Une musique épique et cinématographique avec cordes et cuivres, faisant monter progressivement l’émotion",
+      "sample4": "Une musique jazz de café décontractée avec saxophone doux et batterie aux balais",
+      "sample5": "Une musique ambient rêveuse avec voix éthérées, textures atmosphériques et pulsations lentes"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "Conditions d’utilisation",
+      "privacy": "Politique de confidentialité",
+      "aiCopyright": "Politique de droits d’auteur IA",
+      "voiceCloning": "Politique de clonage vocal",
+      "creditsRefund": "Crédits et remboursements",
+      "aup": "Politique d’utilisation acceptable"
+    }
   }
 }

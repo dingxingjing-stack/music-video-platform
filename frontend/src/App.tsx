@@ -17,6 +17,13 @@ const Feed = lazy(() => import('./pages/Feed').then(m => ({ default: m.Feed })))
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
 const StockLibrary = lazy(() => import('./pages/StockLibrary'));
 const MyWorks = lazy(() => import('./pages/MyWorks'));
+const StudioPage = lazy(() => import('./pages/StudioPage').then(m => ({ default: m.StudioPage })));
+const TermsOfService = lazy(() => import('./pages/legal/TermsOfService').then(m => ({ default: m.TermsOfService })));
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
+const AIMusicCopyrightPolicy = lazy(() => import('./pages/legal/AIMusicCopyrightPolicy').then(m => ({ default: m.AIMusicCopyrightPolicy })));
+const VoiceCloningPolicy = lazy(() => import('./pages/legal/VoiceCloningPolicy').then(m => ({ default: m.VoiceCloningPolicy })));
+const CreditsRefundPolicy = lazy(() => import('./pages/legal/CreditsRefundPolicy').then(m => ({ default: m.CreditsRefundPolicy })));
+const AcceptableUsePolicy = lazy(() => import('./pages/legal/AcceptableUsePolicy').then(m => ({ default: m.AcceptableUsePolicy })));
 
 const Loading = () => (
   <div className="flex items-center justify-center h-screen bg-[#121212]">
@@ -35,10 +42,12 @@ export default function App() {
         <Route element={<AppLayout />}>
           {/* 全开放功能 — 需同意协议 */}
           <Route path="/" element={<ConsentGuard><PageTransition><TrackStudio /></PageTransition></ConsentGuard>} />
+          <Route path="/generate" element={<ConsentGuard><PageTransition><PathAPage /></PageTransition></ConsentGuard>} />
           <Route path="/path-a" element={<ConsentGuard><PageTransition><PathAPage /></PageTransition></ConsentGuard>} />
           <Route path="/path-b" element={<ConsentGuard><PageTransition><PathBPage /></PageTransition></ConsentGuard>} />
           <Route path="/path-c" element={<ConsentGuard><PageTransition><PathCPage /></PageTransition></ConsentGuard>} />
           <Route path="/path-d" element={<ConsentGuard><PageTransition><PathDPage /></PageTransition></ConsentGuard>} />
+          <Route path="/studio" element={<ConsentGuard><PageTransition><StudioPage /></PageTransition></ConsentGuard>} />
           <Route path="/community" element={<ConsentGuard><PageTransition><Community /></PageTransition></ConsentGuard>} />
           <Route path="/community-feed" element={<ConsentGuard><PageTransition><CommunityFeed /></PageTransition></ConsentGuard>} />
           <Route path="/my-works" element={<ConsentGuard><PageTransition><MyWorks /></PageTransition></ConsentGuard>} />
@@ -51,7 +60,16 @@ export default function App() {
 
           {/* 关闭功能路由 — 公测期间保留路由但不显示入口 */}
           <Route path="/stock-library" element={<ConsentGuard><StockLibrary /></ConsentGuard>} />
+
+          {/* 法律政策路由 */}
+          <Route path="/legal/terms" element={<ConsentGuard><PageTransition><TermsOfService /></PageTransition></ConsentGuard>} />
+          <Route path="/legal/privacy" element={<ConsentGuard><PageTransition><PrivacyPolicy /></PageTransition></ConsentGuard>} />
+          <Route path="/legal/aimusic-copyright" element={<ConsentGuard><PageTransition><AIMusicCopyrightPolicy /></PageTransition></ConsentGuard>} />
+          <Route path="/legal/voice-cloning" element={<ConsentGuard><PageTransition><VoiceCloningPolicy /></PageTransition></ConsentGuard>} />
+          <Route path="/legal/credits-refund" element={<ConsentGuard><PageTransition><CreditsRefundPolicy /></PageTransition></ConsentGuard>} />
+          <Route path="/legal/aup" element={<ConsentGuard><PageTransition><AcceptableUsePolicy /></PageTransition></ConsentGuard>} />
         </Route>
+
       </Routes>
     </Suspense>
   );

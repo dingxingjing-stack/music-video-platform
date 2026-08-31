@@ -1,8 +1,10 @@
 name = "music-video-platform"
 compatibility_date = "2026-07-13"
+main = "./workers.js"
 
 [assets]
 directory = "frontend/dist"
+not_found_handling = "single-page-application"
 
 [[r2_buckets]]
 binding = "BUCKET"

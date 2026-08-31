@@ -5,11 +5,11 @@ import { BetaConsentModal } from '../components/BetaConsentModal';
 import { api } from '../config/api';
 
 const FEATURES = [
-  { icon: '🎵', title: 'AI 作曲', desc: '一句话生成完整歌曲，支持多种风格、BPM 调控', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
-  { icon: '🎤', title: '人声处理', desc: 'TTS 语音合成、人声分离、母带处理', color: 'from-[#38bdf8]/20 to-[#6366f1]/5' },
-  { icon: '🎛️', title: 'DAW 编辑器', desc: '多轨时间轴、音频剪辑、MIDI 钢琴卷帘', color: 'from-[#34d399]/20 to-[#06b6d4]/5' },
-  { icon: '🎬', title: 'MV 生成', desc: 'AI 驱动音乐视频自动生成，模板化渲染', color: 'from-[#f472b6]/20 to-[#ec4899]/5' },
-  { icon: '🎹', title: '编曲工具', desc: '和弦检测、节拍分析、MIDI CC 控制器', color: 'from-[#a78bfa]/20 to-[#8b5cf6]/5' },
+  { icon: '🎵', title: 'AI 作曲', desc: '一句话生成完整歌曲，支持多种风格、BPM 调控', path: '/generate', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
+  { icon: '✍️', title: 'AI 歌词创作', desc: 'AI 续写歌词，支持流行、摇滚、民谣、嘻哈等风格', path: '/generate', color: 'from-[#38bdf8]/20 to-[#6366f1]/5' },
+  { icon: '🎛️', title: 'DAW 编辑器', desc: '多轨时间轴、录音、钢琴卷帘、混音台', path: '/studio', color: 'from-[#34d399]/20 to-[#06b6d4]/5' },
+  { icon: '🎹', title: '编曲工具', desc: '和弦检测、节拍分析、MIDI 音符编辑', path: '/path-d', color: 'from-[#a78bfa]/20 to-[#8b5cf6]/5' },
+  { icon: '🏆', title: '社区互动', desc: '浏览全球创作者作品，点赞、收藏与排行', path: '/community', color: 'from-[#fb923c]/20 to-[#f59e0b]/5' },
 ];
 
 const CASES = [
@@ -116,7 +116,7 @@ export function Landing() {
             <span className="text-white">音乐 / MV 创作平台</span>
           </h1>
           <p className="text-base sm:text-lg text-[#888888] mb-8 max-w-xl mx-auto">
-            从 AI 作曲到 MV 生成，从 DAW 编辑到实时协作——<br className="hidden sm:block" />公测期间全部功能免费体验
+            AI 作曲、歌词创作、DAW 编辑、编曲工具、社区互动——<br className="hidden sm:block" />公测期间免费开放
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => navigate('/')} className="px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] hover:opacity-90 transition-opacity shadow-lg shadow-[#ff6a10]/20">
@@ -145,10 +145,16 @@ export function Landing() {
             本块仅为 JSX 闭合占位，保证 vite build 通过，让核心 bug 修复可先上线。 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f, i) => (
-            <motion.div key={f.title} {...fadeIn(i * 0.08)} className={`rounded-2xl p-6 bg-gradient-to-br ${f.color} border border-[#2a2a2a]`}>
+            <motion.div
+              key={f.title}
+              {...fadeIn(i * 0.08)}
+              onClick={() => navigate(f.path)}
+              className={`rounded-2xl p-6 bg-gradient-to-br ${f.color} border border-[#2a2a2a] cursor-pointer hover:border-[#ff6a10]/40 hover:scale-[1.02] transition-all`}
+            >
               <div className="text-3xl mb-3">{f.icon}</div>
               <h3 className="text-lg font-semibold text-white mb-2">{f.title}</h3>
               <p className="text-sm text-[#999999]">{f.desc}</p>
+              <div className="mt-3 text-xs text-[#ff6a10]">立即体验 →</div>
             </motion.div>
           ))}
         </div>
@@ -225,7 +231,29 @@ export function Landing() {
 
       {/* ========== 页脚 ========== */}
       <footer className="relative z-10 border-t border-[#2a2a2a] py-8 px-4 text-center">
-        <p className="text-xs text-[#555555]">© 2026 Zyvexo · AI 音乐 / MV 创作平台 · 公测期间免费体验</p>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4">
+            <a href="/legal/terms" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
+              服务条款
+            </a>
+            <a href="/legal/privacy" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
+              隐私政策
+            </a>
+            <a href="/legal/aimusic-copyright" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
+              AI 版权政策
+            </a>
+            <a href="/legal/voice-cloning" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
+              声音克隆政策
+            </a>
+            <a href="/legal/credits-refund" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
+              积分退款
+            </a>
+            <a href="/legal/aup" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
+              可接受使用
+            </a>
+          </div>
+          <p className="text-xs text-[#555555]">© 2026 Zyvexo · AI 音乐 / MV 创作平台 · 公测期间免费体验</p>
+        </div>
       </footer>
 
       {/* ========== Toast ========== */}

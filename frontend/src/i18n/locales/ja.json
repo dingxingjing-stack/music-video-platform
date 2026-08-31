@@ -79,7 +79,7 @@
     "bpm": "BPM",
     "history": "履歴",
     "clearHistory": "履歴クリア",
-"activeTracks": "アクティブトラック",
+    "activeTracks": "アクティブトラック",
     "idleStateTitle": "AI 音楽ワークベンチ",
     "idleStateDesc": "パスを選んで音楽制作を開始",
     "wsConnected": "接続済み",
@@ -89,7 +89,13 @@
     "hybridPrefix": "ハイブリッド：",
     "remixProcessing": "リミックス処理中",
     "done": "完了",
-    "selectTemplate": "テンプレートを選択"
+    "selectTemplate": "テンプレートを選択",
+    "promptPlaceholder": "音楽のスタイル、雰囲気、楽器などを入力してください…",
+    "generateMusic": "✨ 🎵 音楽を生成",
+    "randomPrompt": "🔀 ランダムプロンプト",
+    "promptHint": "まずプロンプトを入力するか、🔺 ランダムプロンプトをクリックしてください",
+    "versionHistory": "📋 バージョン履歴",
+    "historyEmpty": "履歴はまだありません…"
   },
   "errors": {
     "promptRequired": "プロンプトが必要です",
@@ -112,5 +118,75 @@
     "midiProjectRequired": "MIDIプロジェクトが必要です",
     "unknownError": "不明なエラー",
     "rateLimited": "リクエストが多すぎます。無料プランの上限に達しました。しばらくしてから再試行してください。"
+  },
+  "nav": {
+    "workbench": "ワークベンチ",
+    "aiCompose": "AI作曲",
+    "hybrid": "ハイブリッド",
+    "originalCompose": "オリジナル編曲",
+    "community": "コミュニティ",
+    "myWorks": "マイ作品",
+    "mvGenerate": "MV生成",
+    "liveCollab": "リアルタイム共同編集",
+    "hfModels": "HF高度モデル",
+    "subtitles": "字幕認識",
+    "oneClickPublish": "ワンクリック公開",
+    "betaTag": "パブリックベータ v2.0",
+    "sectionHall": "🎵 クリエイションハブ",
+    "sectionGray": "🔓 実験機能",
+    "logout": "ログアウト",
+    "loginCta": "ログインしてすべての機能を利用",
+    "soundOn": "サウンドオン",
+    "soundOff": "サウンドオフ",
+    "openMenu": "メニューを開く",
+    "expand": "展開",
+    "collapse": "折りたたむ",
+    "aiTeam": "AIチーム"
+  },
+  "landing": {
+    "heroBadge": "パブリックベータ開催中 · 完全無料",
+    "heroTitle1": "AIオールインワン",
+    "heroTitle2": "音楽 / MV 制作プラットフォーム",
+    "heroSub": "インスピレーションから作曲、編曲、完成まで、AIが創作プロセス全体をサポートします。",
+    "ctaStart": "🎵 今すぐ創作を始める",
+    "ctaExplore": "作品コミュニティを見る",
+    "featuresTitle": "5つの主要機能",
+    "featuresSub": "インスピレーションから完成まで、すべてを一か所で。",
+    "cardCta": "今すぐ試す →",
+    "casesTitle": "コミュニティ作品",
+    "casesSub": "パブリックベータユーザーによる実際の作品。",
+    "cases": {
+      "playsLabel": "▶ {count} 回再生"
+    },
+    "feedbackTitle": "ユーザーフィードバック",
+    "feedbackSub": "パブリックベータユーザーからのリアルな声。",
+    "anonymousUser": "匿名ユーザー",
+    "feedbackSubmit": "フィードバックを送信",
+    "feedbackToastOk": "フィードバックありがとうございます！",
+    "feedbackToastFail": "送信に失敗しました",
+    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+  },
+  "pathA": {
+    "tagline": "プロンプト → Agnes AI → フル楽曲生成（無料）",
+    "tooltipNeedPrompt": "音楽プロンプトを入力してください",
+    "tooltipGenerating": "音楽を生成しています",
+    "tooltipGenerate": "音楽を生成",
+    "promptSamples": {
+      "sample1": "夜と希望をテーマにした、温かく癒やしのあるピアノポップ",
+      "sample2": "力強いドラムと未来的なシンセが特徴のエネルギッシュなEDM",
+      "sample3": "壮大なストリングスとブラスで感情が徐々に高まる映画的なエピック音楽",
+      "sample4": "柔らかなサックスとブラシドラムが心地よい、ゆったりしたジャズカフェ音楽",
+      "sample5": "幻想的なアンビエント音楽。幻想的なボーカル、環境音、ゆっくりしたパルス"
+    }
+  },
+  "legal": {
+    "links": {
+      "terms": "利用規約",
+      "privacy": "プライバシーポリシー",
+      "aiCopyright": "AI著作権ポリシー",
+      "voiceCloning": "音声クローンポリシー",
+      "creditsRefund": "クレジットと返金",
+      "aup": "利用規定"
+    }
   }
 }
