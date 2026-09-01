@@ -264,12 +264,16 @@
     "durations": {
       "15s": "15s",
       "30s": "30s",
-      "60s": "60s",
-      "90s": "90s",
-      "120s": "120s"
+      "60s": "1 Min",
+      "90s": "1,5 Min",
+      "120s": "2 Min",
+      "180s": "3 Min",
+      "240s": "4 Min",
+      "300s": "5 Min · Erweiterte Generierung"
     },
     "rateLimited": "Zu viele Anfragen. Limit erreicht.",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "extendedHint": "5 Min nutzt erweiterte Generierung (150s + 150s)"
   },
   "voiceClone": {
     "title": "Voice Clone",

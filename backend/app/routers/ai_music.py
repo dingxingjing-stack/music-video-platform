@@ -69,8 +69,8 @@ DOWNLOAD_FILES = {
 # Provider 选择与注册见 app/services/provider_registry.py（唯一 production = modal_ace_step）。
 
 
-# 最大歌曲时长硬限制（秒）—— 后端硬限制，不可绕过
-MAX_SONG_DURATION_SECONDS = 270
+# 最大歌曲时长硬限制（秒）—— 后端硬限制，不可绕过（支持 300s 分段）
+MAX_SONG_DURATION_SECONDS = 300
 
 # 参考音频默认截取长度（秒）
 REFERENCE_SECONDS = 30
@@ -237,7 +237,7 @@ def _log_generation_cost(task_id: str, user_key: str, provider, result: str, tot
 
 
 async def _run_generation(task_id: str, request: GenerateRequest, user_key: str):
-    """后台执行完整生成链路：Agnes -> ACE-Step(Modal) -> HF(ACE-Step) -> 报错。"""
+    """后台执行完整生成链路：Agnes -> 150+150 continuation(>180) / 单段(<=180) -> R2"""
     try:
         task_store.update(task_id, state="processing", progress=10)
 
@@ -257,7 +257,54 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
         lyrics = request.lyrics or agnes_result.generated_lyrics or final_prompt
         duration = min(request.duration or 180, MAX_AUDIO_DURATION_SECONDS)
 
-        # ── Modal ACE-Step (GPU) ── 经 ProviderRegistry 选择；失败自动重试 MAX_AUTO_RETRIES 次
+        # ── 长生成分支：>180 则 150+150 continuation（真实 provider，不截断） ──
+        if duration > 180:
+            task_store.update(task_id, state="generating_long", progress=15, ai_provider=f"{ai_provider}+continuation")
+            from app.services.continuation_service import continuation_service
+            t0 = time.monotonic()
+            try:
+                long_result = await continuation_service.generate_long_music(
+                    prompt=final_prompt,
+                    style=request.style,
+                    duration=duration,
+                    lyrics=lyrics,
+                    task_id=task_id,
+                    user_key=user_key,
+                    mood=getattr(request, 'mood', None) if hasattr(request, 'mood') else None,
+                    vocal=getattr(request, 'vocal', None) if hasattr(request, 'vocal') else None,
+                )
+                total_ms = int((time.monotonic() - t0) * 1000)
+                if long_result and long_result.get("success"):
+                    manifest = long_result.get("manifest") or {}
+                    volume_files = long_result.get("volume_files") or {}
+                    # 若 continuation 已上传最终 manifest，直接标记完成
+                    if manifest and manifest.get("full_wav"):
+                        provider = get_provider_registry().select()
+                        _log_generation_cost(task_id, user_key, provider, "success_long", total_ms, 0)
+                        # 确保 audio_url 签名
+                        task_store.update(
+                            task_id, state="completed", progress=100,
+                            download=manifest, volume_files=volume_files,
+                            audio_url=_sign_for_playback(task_id, "full_mp3", manifest),
+                            ai_provider=long_result.get("provider", f"{ai_provider}+continuation"),
+                            stems_state="skipped",
+                        )
+                        return
+                    # 兜底：通过常规上传路径
+                    if volume_files:
+                        provider = get_provider_registry().select()
+                        _log_generation_cost(task_id, user_key, provider, "success_long", total_ms, 0)
+                        task_store.update(task_id, state="uploading", progress=85, volume_files=volume_files, ai_provider=f"{ai_provider}+continuation")
+                        await _upload_and_finalize(task_id, volume_files)
+                        return
+                raise RuntimeError(long_result.get("error") if long_result and long_result.get("error") else "长生成失败")
+            except Exception as e:
+                # 长生成失败需退款（按权重）
+                refund_generation(user_key, duration)
+                task_store.update(task_id, state="failed", error=f"长生成失败: {type(e).__name__}: {e}")
+                return
+
+        # ── 常规单段分支（≤180）──
         task_store.update(task_id, state="generating", progress=40)
         provider = get_provider_registry().select()
         volume_result: Optional[dict] = None
@@ -272,7 +319,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
                         "prompt": final_prompt,
                         "lyrics": lyrics,
                         "duration": duration,
-                        "reference_audio": None,  # 当前不支持 Audio2Audio，保留接口兼容
+                        "reference_audio": None,
                         "enable_audio2audio": False,
                         "reference_strength": 0.7,
                     },
@@ -295,10 +342,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             await _upload_and_finalize(task_id, volume_result)
             return
 
-        # GPU 尝试失败：先记录成本观测，再走 HF 兜底
         _log_generation_cost(task_id, user_key, provider, "failed", total_duration_ms, retries_used)
-
-        # ── HF ACE-Step 兜底（真实音频，无 mock）──
         task_store.update(task_id, state="generating", progress=55)
         hf_audio = await _try_hf_ace_step_fallback(final_prompt, lyrics, duration)
         if hf_audio:
@@ -312,23 +356,23 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             task_id, state="failed",
             error="音乐生成失败：ACE-Step(Modal) 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
         )
-        refund_generation(user_key)
+        refund_generation(user_key, duration)
     except QueueFullError as e:
-        _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms, retries_used)
+        _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
         task_store.update(task_id, state="failed", error=str(e))
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
     except HTTPException:
         task_store.update(task_id, state="failed", error="请求参数错误")
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
     except Exception as e:  # noqa: BLE001
         import traceback
         print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
-        refund_generation(user_key)
+        refund_generation(user_key, getattr(request, 'duration', None))
     finally:
         task_store.release_lock_for_task(task_id)
 
@@ -443,7 +487,7 @@ async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: st
         )
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
         task_store.release_lock_for_task(task_id)
 
 
@@ -469,7 +513,7 @@ async def generate_music(
         )
 
     # 原子预留额度（GPU 启动前扣减）—— 不可通过重复 POST / 改 localStorage 绕过
-    reserved = reserve_generation(user_key)
+    reserved = reserve_generation(user_key, req.duration)
     if not reserved["success"]:
         # GPU 预算硬停线：达到 FAL_BUDGET_DAILY 后在 GPU 启动前返回 429（与 retry-stems 一致，兼容旧 MODAL_BUDGET_DAILY）
         if "预算" in reserved["error"]:
@@ -482,7 +526,7 @@ async def generate_music(
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
         task_store.delete(task_id)
-        refund_generation(user_key)
+        refund_generation(user_key, req.duration)
         return GenerateResponse(
             success=False,
             error="您有一个生成任务正在进行中，请完成后再试",

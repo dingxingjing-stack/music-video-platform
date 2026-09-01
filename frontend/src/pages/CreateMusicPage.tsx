@@ -106,7 +106,11 @@ export function CreateMusicPage() {
                   <option value="60">{t('createMusic.durations.60s')}</option>
                   <option value="90">{t('createMusic.durations.90s')}</option>
                   <option value="120">{t('createMusic.durations.120s')}</option>
+                  <option value="180">{t('createMusic.durations.180s')}</option>
+                  <option value="240">{t('createMusic.durations.240s')}</option>
+                  <option value="300">{t('createMusic.durations.300s')}</option>
                 </select>
+                {duration === '300' && <p className="mt-1 text-[11px] text-[#8a8a8a]">{t('createMusic.extendedHint')}</p>}
               </div>
             </div>
             <button onClick={handleGenerate} disabled={loading || !description.trim()} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">

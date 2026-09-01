@@ -53,9 +53,9 @@ def _resolve_endpoint_id() -> str:
 
 def _resolve_timeout() -> float:
     try:
-        return float(os.getenv("RUNPOD_TIMEOUT", "300"))
+        return float(os.getenv("RUNPOD_TIMEOUT", "600"))
     except Exception:
-        return 300.0
+        return 600.0
 
 
 def _resolve_poll_interval() -> float:
@@ -140,8 +140,8 @@ async def generate_via_runpod(
         lyric_snippet = lyrics.strip()[:800]
         final_prompt = f"{final_prompt}. Lyrics: {lyric_snippet}" if final_prompt else lyric_snippet
 
-    # duration 限制
-    seconds_total = max(10, min(int(duration) if duration else 30, 180))
+    # duration 限制（支持 300s，单段最长 300，超过由上层分段）
+    seconds_total = max(10, min(int(duration) if duration else 30, 300))
 
     # RunPod Serverless async endpoint: POST /v2/{endpoint_id}/run
     submit_url = f"{RUNPOD_BASE}/{endpoint_id}/run"

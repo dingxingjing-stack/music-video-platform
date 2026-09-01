@@ -1,589 +1,339 @@
 """
-歌曲续写编排服务
-核心流程：
-1. 原歌曲 -> 截取续写点前 REFERENCE_SECONDS 秒作为参考音频
-2. 上传/传入 ACE-Step (enable_audio2audio=True)
-3. 生成 30-60 秒续写段
-4. 下载结果
-5. FFmpeg crossfade 拼接
-6. 返回新 song_id
+歌曲续写编排服务 — 300s 分段生成核心
+流程：
+  150s 首段 (真实 provider) -> 截取末尾 30s 参考音频 -> 分析 BPM/key -> 歌词续写 -> 150s Audio2Audio 续写段 (独立重试) -> FFmpeg crossfade 拼接 -> R2 上传最终 300s
+兼容：duration <=180 走单段，不进入此服务
 """
-
 import asyncio
 import base64
-import json
 import os
 import tempfile
 import time
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
-from app.services.ace_step_client import (
-    download_file as ace_step_download,
-    generate_full_song as ace_step_generate,
-    QueueFullError,
-)
-from app.services.ai_limits import MAX_SONG_DURATION_SECONDS, REFERENCE_SECONDS
-from app.services.audio_trim import trim_audio
-from app.services.chord_track_service import chord_track_service
-from app.services.lyric_service import lyric_service
-from app.services.mix_engine import render_mix
+from app.services.ai_limits import MAX_AUTO_RETRIES
 from app.services import task_store
 
-from .continuation_analysis import analyze_audio_context
-
-
-# 续写配置常量
-DEFAULT_SEGMENT_DURATION = 60  # 默认续写段长度（秒）
-MIN_SEGMENT_DURATION = 30
-MAX_SEGMENT_DURATION = 60
-CROSSFADE_DURATION = 2.0  # crossfade 默认时长（秒）
-
+DEFAULT_SEGMENT_DURATION = 150
+CROSSFADE_DURATION = 1.5
 
 @dataclass
 class SongContext:
-    """歌曲上下文 - 维护歌曲生成过程中的关键信息"""
-    song_id: str
-    task_id: str
-    user_key: str
-    target_duration: int  # 目标总时长（秒）
+    song_id: str = ""
+    task_id: str = ""
+    user_key: str = ""
+    target_duration: int = 300
     current_duration: float = 0.0
     bpm: Optional[float] = None
     key: Optional[str] = None
-    chords: Optional[List[Dict]] = None
     genre: Optional[str] = None
     style: Optional[str] = None
-    instrumentation: Optional[str] = None
     vocal_style: Optional[str] = None
     lyrics: Optional[str] = None
-    lyrics_context: Optional[str] = None
-    song_structure: Optional[List[Dict]] = None
-    current_section: Optional[str] = None
-    previous_section: Optional[str] = None
     segment_history: List[Dict] = None
-    
     def __post_init__(self):
         if self.segment_history is None:
             self.segment_history = []
-
     def to_dict(self) -> Dict:
         return asdict(self)
-
     @classmethod
     def from_dict(cls, data: Dict) -> "SongContext":
         return cls(**data)
 
-
 class ContinuationService:
-    """歌曲续写编排服务"""
-    
     def __init__(self):
         self.temp_dir = tempfile.gettempdir()
 
-    async def generate_full_song(
-        self,
-        prompt: str,
-        style: str,
-        duration: int,
-        lyrics: Optional[str] = None,
-        language: str = "zh",
-        user_key: str = "",
-        task_id: str = "",
-    ) -> Dict[str, Any]:
-        """
-        一键生成完整歌曲（自动分段续写）
-        
-        流程：
-        1. 创建 SongContext
-        2. 生成第一段 (60-90秒)
-        3. 循环续写直到达到 target_duration
-        4. 最终拼接并返回
-        """
-        # 限制时长不超过 270 秒
-        target_duration = min(duration, 270)
-        
-        # 创建任务
-        final_task_id = task_id or task_store.new_task(user_key=user_key)
-        if not task_store.acquire_lock(user_key, final_task_id):
-            raise RuntimeError("用户已有进行中的任务")
-        
-        try:
-            # 初始化 SongContext
-            context = SongContext(
-                song_id="",  # 将在第一段生成后填充
-                task_id=final_task_id,
-                user_key=user_key,
-                target_duration=duration,
-                current_duration=0.0,
-                genre=style,
-                style=style,
-            )
-            
-            # 保存初始上下文
-            await self._save_context(final_task_id, context)
-            
-            # 生成第一段
-            first_segment_duration = min(90, duration)  # 第一段最长 90 秒
-            segment_result = await self._generate_first_segment(
-                prompt=prompt,
-                style=style,
-                duration=first_segment_duration,
-                lyrics=lyrics,
-                language=language if 'language' in locals() else "zh",
-                task_id=final_task_id,
-                context=context,
-            )
-            
-            if not segment_result.get("success"):
-                raise RuntimeError(f"首段生成失败: {segment_result.get('error')}")
-            
-            context.song_id = segment_result["song_id"]
-            context.current_duration = segment_result["duration"]
-            context.segment_history.append({
-                "segment_id": 1,
-                "song_id": segment_result["song_id"],
-                "duration": segment_result["duration"],
-                "start_time": 0.0,
-                "end_time": segment_result["duration"],
-            })
-            
-            # 自动续写循环
-            while context.current_duration < duration:
-                remaining = duration - context.current_duration
-                if remaining <= 0:
-                    break
-                
-                # 计算下一段时长
-                next_segment_duration = min(DEFAULT_SEGMENT_DURATION, remaining)
-                next_segment_duration = max(MIN_SEGMENT_DURATION, next_segment_duration)
-                
-                # 生成续写段
-                segment_result = await self._generate_continuation_segment(
-                    context=context,
-                    prompt=prompt,
-                    style=style,
-                    duration=next_segment_duration,
-                    language=language if 'language' in locals() else "zh",
-                    task_id=final_task_id,
-                )
-                
-                if not segment_result.get("success"):
-                    # 续写失败，标记任务失败但保留已生成部分
-                    raise RuntimeError(f"续写失败: {segment_result.get('error')}")
-                
-                # 更新上下文
-                context.current_duration += segment_result["duration"]
-                context.segment_history.append({
-                    "segment_id": len(context.segment_history) + 1,
-                    "song_id": segment_result["song_id"],
-                    "duration": segment_result["duration"],
-                    "start_time": context.current_duration - segment_result["duration"],
-                    "end_time": context.current_duration,
-                })
-                
-                # 更新上下文中的音乐特征（从新段提取）
-                await self._update_context_from_segment(context, segment_result)
-                
-                # 保存上下文
-                await self._save_context(final_task_id, context)
-            
-            # 最终拼接所有段落
-            final_song_id = await self._finalize_song(context, final_task_id)
-            
-            return {
-                "success": True,
-                "song_id": final_song_id,
-                "task_id": final_task_id,
-                "duration": context.current_duration,
-                "segments": len(context.segment_history),
-            }
-            
-        except Exception as e:
-            # 失败时退款额度
-            from app.services.ai_limits import refund_generation
-            refund_generation(user_key)
-            raise
-        finally:
-            task_store.release_lock_for_task(final_task_id)
-
-    async def continue_song(
-        self,
-        song_id: str,
-        continue_from: float,
-        duration: int,
-        style: Optional[str] = None,
-        prompt: Optional[str] = None,
-        language: str = "zh",
-        user_key: str = "",
-        task_id: str = "",
-    ) -> Dict[str, Any]:
-        """
-        手动续写：从指定时间点续写歌曲
-        """
-        # 获取原歌曲信息
-        from app.routers.songs import get_song
-        original_song = get_song(song_id)
-        if not original_song:
-            raise ValueError(f"歌曲不存在: {song_id}")
-        
-        # 限制续写时长
-        max_continuation = 270 - continue_from
-        duration = min(duration, max_continuation, 60)
-        
-        # 创建续写任务
-        final_task_id = task_id or task_store.new_task(user_key=user_key)
-        if not task_store.acquire_lock(user_key, final_task_id):
-            raise RuntimeError("用户已有进行中的任务")
-        
-        try:
-            # 获取原歌曲信息
-            original_audio_url = original_song.get("audio_url")
-            original_lyrics = original_song.get("lyrics", "")
-            original_style = style or original_song.get("style", "pop")
-            
-            # 创建上下文
-            context = SongContext(
-                song_id=song_id,
-                task_id=final_task_id,
-                user_key=user_key,
-                target_duration=continue_from + duration,
-                current_duration=continue_from,
-                genre=original_style,
-                style=original_style,
-                lyrics=original_lyrics,
-            )
-            
-            # 截取参考音频
-            ref_start = max(0, continue_from - REFERENCE_SECONDS)
-            ref_end = continue_from
-            
-            # 获取原音频 URL
-            audio_url = await self._get_song_audio_url(song_id)
-            
-            # 截取参考音频
-            ref_wav_bytes, _ = await trim_audio(audio_url, ref_start, ref_end, "wav")
-            ref_b64 = base64.b64encode(ref_wav_bytes).decode()
-            
-            # 音频分析
-            analysis = await analyze_audio_context(ref_wav_bytes)
-            
-            # 歌词续写
-            continuation_lyrics = await lyric_service.continue_lyrics(
-                existing_lyrics=original_lyrics or "",
-                style=original_style,
-            )
-            
-            # ACE-Step Audio2Audio 生成续写段
-            gen_result = await self._call_ace_step_audio2audio(
-                prompt=f"Continuation from {continue_from:.0f}s, seamless style match, {analysis.get('bpm', 120)} BPM, key {analysis.get('key', 'C')}",
-                lyrics=continuation_lyrics.lyrics or "",
-                duration=duration,
-                reference_audio_b64=ref_b64,
-                reference_strength=0.7,
-            )
-            
-            if not gen_result or not gen_result.get("success"):
-                raise RuntimeError("ACE-Step Audio2Audio 生成失败")
-            
-            # 下载生成的续写段
-            cont_wav = await ace_step_download(gen_result["volume_files"]["full_wav"])
-            
-            # FFmpeg crossfade 拼接
-            full_wav = await self._crossfade_concat(
-                original_audio_url=audio_url,
-                continuation_wav=cont_wav,
-                crossfade_duration=CROSSFADE_DURATION,
-                cut_point=continue_from,
-            )
-            
-            # 上传 R2、创建新 song_id
-            new_song_id = await self._create_continued_song(
-                original_song=original_song,
-                full_wav=full_wav,
-                continuation_lyrics=continuation_lyrics.lyrics,
-                analysis=analysis,
-                user_key=user_key,
-            )
-            
-            return {
-                "success": True,
-                "song_id": new_song_id,
-                "duration": continue_from + duration,
-                "continue_from": continue_from,
-            }
-            
-        finally:
-            task_store.release_lock_for_task(final_task_id)
-
-    async def _generate_first_segment(
+    async def generate_long_music(
         self,
         prompt: str,
         style: str,
         duration: int,
         lyrics: Optional[str],
-        language: str,
         task_id: str,
-        context: SongContext,
+        user_key: str,
+        mood: Optional[str] = None,
+        vocal: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """生成第一段（首次生成）"""
-        # 这里复用现有的 /api/v1/ai/generate 逻辑
-        # 但需要返回 song_id 和 duration
-        # 实际调用现有的生成链路
-        from app.routers.ai_music import _run_generation
-        
-        # 创建临时任务
-        temp_task_id = task_id or f"first-{int(time.time())}"
-        
-        # 调用现有的生成逻辑（简化版）
-        # 实际应调用 provider.generate
-        from app.services.provider_registry import get_provider_registry
-        
-        provider = get_provider_registry().select()
-        gen_result = await provider.generate({
-            "prompt": prompt,
-            "lyrics": lyrics or "",
-            "duration": duration,
-        })
-        
-        if not gen_result.get("success"):
-            return {"success": False, "error": gen_result.get("error")}
-        
-        # 上传并最终化
-        from app.routers.ai_music import _upload_and_finalize
-        temp_task_id = f"first-{int(time.time())}"
-        await _upload_and_finalize(temp_task_id, gen_result["volume_files"])
-        
-        # 获取生成的 song_id（从 task_store 获取）
-        task = task_store.get(temp_task_id)
-        song_id = task.get("song_id", temp_task_id)
-        duration = task.get("duration", duration)
-        
-        return {
-            "success": True,
-            "song_id": song_id,
-            "duration": duration,
-        }
-
-    async def _generate_continuation_segment(
-        self,
-        context: SongContext,
-        prompt: str,
-        style: str,
-        duration: int,
-        language: str,
-        task_id: str,
-    ) -> Dict[str, Any]:
-        """生成续写段"""
-        # 1. 获取当前最新歌曲的音频 URL
-        audio_url = await self._get_song_audio_url(context.song_id)
-        
-        # 2. 截取参考音频（最后 REFERENCE_SECONDS 秒）
-        ref_end = context.current_duration
-        ref_start = max(0, context.current_duration - REFERENCE_SECONDS)
-        
-        # 3. 下载参考音频
-        ref_wav_bytes, _ = await trim_audio(
-            url=context.song_id,  # song_id 作为 URL 传入，实际应解析为 R2 URL
-            start=context.current_duration - REFERENCE_SECONDS,
-            end=context.current_duration,
-            output_format="wav",
-        )
-        ref_b64 = base64.b64encode(ref_wav_bytes).decode()
-        
-        # 3. 音频分析
-        analysis = await analyze_audio_context(ref_wav_bytes)
-        
-        # 4. 歌词续写
-        continuation_lyrics = await lyric_service.continue_lyrics(
-            existing_lyrics=context.lyrics or "",
-            style=context.style or "pop",
-        )
-        
-        # 5. ACE-Step Audio2Audio 生成续写段
-        gen_result = await self._call_ace_step_audio2audio(
-            prompt=f"Continuation, seamless style match, {context.bpm or 120} BPM, key {context.key or 'C'}",
-            lyrics=continuation_lyrics.lyrics or "",
-            duration=min(60, duration),
-            reference_audio_b64=base64.b64encode(ref_wav_bytes).decode(),
-            reference_strength=0.7,
-        )
-        
-        if not gen_result or not gen_result.get("success"):
-            return {"success": False, "error": "ACE-Step Audio2Audio 生成失败"}
-        
-        # 5. 下载生成的续写段
-        cont_wav = await ace_step_download(gen_result["volume_files"]["full_wav"])
-        
-        # 6. FFmpeg crossfade 拼接
-        full_wav = await self._crossfade_concat(
-            original_audio_url=context.song_id,  # 实际应为 R2 URL
-            continuation_wav=cont_wav,
-            crossfade_duration=CROSSFADE_DURATION,
-            cut_point=context.current_duration,
-        )
-        
-        # 7. 上传 R2、创建新 song 记录
-        new_song_id = await self._create_continued_song(
-            original_song_id=context.song_id,
-            full_wav=full_wav,
-            continuation_lyrics=continuation_lyrics.lyrics,
-            user_key="",  # 从 context 获取
-        )
-        
-        return {
-            "success": True,
-            "song_id": new_song_id,
-            "duration": duration,
-        }
-
-    async def _call_ace_step_audio2audio(
-        self,
-        prompt: str,
-        lyrics: str,
-        duration: int,
-        reference_audio_b64: str,
-        reference_strength: float = 0.7,
-    ) -> Dict:
-        """调用 ACE-Step Audio2Audio 生成续写段"""
-        from app.services.ace_step_client import generate_full_song
-        
-        result = await ace_step_generate(
-            prompt=prompt,
-            lyrics=lyrics,
-            duration=duration,
-            reference_audio=reference_audio_b64,
-            enable_audio2audio=True,
-            reference_strength=0.7,
-        )
-        
-        if result and result.get("success"):
-            return {"success": True, "volume_files": result}
-        return {"success": False, "error": "ACE-Step Audio2Audio 生成失败"}
-
-    async def _crossfade_concat(
-        self,
-        original_audio_url: str,
-        continuation_wav: str,
-        crossfade_duration: float = 2.0,
-        cut_point: float = 0.0,
-    ) -> str:
         """
-        FFmpeg crossfade 拼接原曲前段 + 续写段
+        150+150 300s 长生成 — 单任务视角，对外只暴露一个 task_id
+        1. 首段 150s (真实 provider)
+        2. 第二段 150s 基于首段末尾 30s 的 Audio2Audio (独立重试)
+        3. FFmpeg 1.5s crossfade 拼接 (独立重试)
+        4. R2 上传最终 full_wav/full_mp3 + 中间段保留
+        """
+        # 限制目标
+        target = min(int(duration), 300)
+        if target <= 180:
+            raise ValueError("generate_long_music 仅用于 >180s，短时长请走单段")
+
+        # 分段：240->150+90, 300->150+150
+        first_dur = 150
+        second_dur = target - first_dur
+
+        task_store.update(task_id, state="processing", progress=5)
+        provider = None
+        from app.services.provider_registry import get_provider_registry
+        provider = get_provider_registry().select()  # RunPod (300) / fallback
+
+        # ── 第一段 150s (真实 provider, 不重试绕过首段) ──
+        task_store.update(task_id, state="generating", progress=10)
+        first_result = await self._generate_single_segment(
+            provider=provider,
+            prompt=prompt,
+            lyrics=lyrics or "",
+            duration=first_dur,
+            reference_b64=None,
+            enable_a2a=False,
+        )
+        if not first_result or not first_result.get("success"):
+            raise RuntimeError(f"首段 150s 生成失败: {first_result.get('error') if first_result else 'unknown'}")
+
+        first_files = first_result.get("volume_files") or {}
+        first_local = self._resolve_local_path(first_files)
+        if not first_local or not os.path.exists(first_local):
+            raise RuntimeError("首段本地文件丢失")
+
+        task_store.update(task_id, progress=40)
+        # 中间段先上传 R2 保留（可选，但满足“中间片段保存到 R2”）
+        part1_manifest = await self._upload_parts(task_id, {"part1_wav": first_local}, suffix="part1")
+
+        # ── 参考音频截取 + 分析 + 歌词续写 ──
+        ref_b64, analysis = await self._prepare_continuation_context(
+            first_local=first_local,
+            prompt=prompt,
+            style=style,
+            mood=mood,
+            vocal=vocal,
+            lyrics=lyrics,
+        )
+        # 构建续写 prompt：保持 BPM/key/genre/mood/vocal 连续性
+        bpm = analysis.get("bpm") or 120
+        key = analysis.get("key") or "C major"
+        style_hint = style or "pop"
+        vocal_hint = vocal or ""
+        mood_hint = mood or ""
+        continuation_prompt = (
+            f"Continuation of previous music, seamless, same {style_hint} style, "
+            f"{bpm:.0f} BPM, key {key}, mood {mood_hint} {vocal_hint}, same instrumentation and vocal style as reference. "
+            f"Original prompt: {prompt}"
+        ).strip()
+        # 歌词续写
+        continuation_lyrics = await self._continue_lyrics(lyrics, style_hint)
+
+        # ── 第二段 150s (独立重试，不重跑首段) ──
+        task_store.update(task_id, state="generating_continuation", progress=50)
+        second_result = None
+        last_err = None
+        for attempt in range(1 + MAX_AUTO_RETRIES):
+            try:
+                second_result = await self._generate_single_segment(
+                    provider=provider,
+                    prompt=continuation_prompt,
+                    lyrics=continuation_lyrics or lyrics or "",
+                    duration=second_dur,
+                    reference_b64=ref_b64,
+                    enable_a2a=True,
+                )
+                if second_result and second_result.get("success"):
+                    break
+                last_err = second_result.get("error") if second_result else "unknown"
+                task_store.update(task_id, error=f"续写段第 {attempt} 次失败: {last_err}")
+            except Exception as e:
+                last_err = str(e)
+                task_store.update(task_id, error=f"续写异常 {attempt}: {last_err}")
+            # 重试前短暂等待
+            if attempt < MAX_AUTO_RETRIES:
+                await asyncio.sleep(2)
+        if not second_result or not second_result.get("success"):
+            raise RuntimeError(f"续写段生成失败(已重试 {MAX_AUTO_RETRIES} 次): {last_err}")
+
+        second_files = second_result.get("volume_files") or {}
+        second_local = self._resolve_local_path(second_files)
+        if not second_local or not os.path.exists(second_local):
+            raise RuntimeError("续写段本地文件丢失")
+        task_store.update(task_id, progress=70)
+        part2_manifest = await self._upload_parts(task_id, {"part2_wav": second_local}, suffix="part2")
+
+        # ── FFmpeg 拼接 (独立重试，不重跑 GPU) ──
+        task_store.update(task_id, state="stitching", progress=80)
+        combined_path = None
+        last_ff_err = None
+        for attempt in range(1 + MAX_AUTO_RETRIES + 1):
+            try:
+                combined_path = await self._stitch_with_crossfade(first_local, second_local, CROSSFADE_DURATION)
+                if combined_path and os.path.exists(combined_path):
+                    break
+            except Exception as e:
+                last_ff_err = str(e)
+                task_store.update(task_id, error=f"合并失败 {attempt}: {last_ff_err}")
+                if attempt < MAX_AUTO_RETRIES + 1:
+                    await asyncio.sleep(1)
+        if not combined_path or not os.path.exists(combined_path):
+            raise RuntimeError(f"FFmpeg 合并失败: {last_ff_err}")
+
+        task_store.update(task_id, progress=85)
+        # 验证时长接近目标（±5s）
+        try:
+            import librosa
+            dur = librosa.get_duration(path=combined_path)
+            if abs(dur - target) > 5:
+                print(f"[Continuation] 警告：合并后时长 {dur:.1f}s 与目标 {target}s 偏差 >5s")
+        except Exception:
+            pass
+
+        # ── R2 最终上传 ──
+        task_store.update(task_id, state="uploading", progress=90)
+        final_manifest = await self._upload_final(task_id, combined_path, part1_manifest, part2_manifest)
+        # task_store 写入最终 manifest，由 ai_music._upload_and_finalize 风格的 manifest 驱动播放
+        return {
+            "success": True,
+            "volume_files": {"full_wav": os.path.basename(combined_path), "_local_path": combined_path},
+            "manifest": final_manifest,
+            "provider": f"{provider.name}+continuation",
+            "segments": 2,
+            
+        }
+
+    async def _generate_single_segment(self, provider, prompt: str, lyrics: str, duration: int, reference_b64: Optional[str], enable_a2a: bool) -> Dict:
+        return await provider.generate({
+            "prompt": prompt,
+            "lyrics": lyrics,
+            "duration": int(duration),
+            "reference_audio": reference_b64,
+            "enable_audio2audio": enable_a2a,
+            "reference_strength": 0.7,
+        })
+
+    def _resolve_local_path(self, volume_files: Dict) -> Optional[str]:
+        if not volume_files:
+            return None
+        # 优先 _local_path（RunPod/Fal 已下载）
+        if volume_files.get("_local_path") and os.path.exists(volume_files["_local_path"]):
+            return volume_files["_local_path"]
+        # 尝试 full_wav
+        for k in ("full_wav", "full_mp3", "full", "part1_wav", "part2_wav"):
+            v = volume_files.get(k)
+            if v and os.path.exists(v):
+                return v
+            # 尝试 GENERATED_DIR
+            if v and isinstance(v, str):
+                try:
+                    from app.services.runpod_client import local_dir as runpod_local_dir
+                    cand = os.path.join(runpod_local_dir(), os.path.basename(v))
+                    if os.path.exists(cand):
+                        return cand
+                except Exception:
+                    pass
+                try:
+                    from app.services.fal_client import local_dir as fal_local_dir
+                    cand2 = os.path.join(fal_local_dir(), os.path.basename(v))
+                    if os.path.exists(cand2):
+                        return cand2
+                except Exception:
+                    pass
+        # 最后尝试 filename 在 temp
+        for v in volume_files.values():
+            if isinstance(v, str) and os.path.exists(v):
+                return v
+        return None
+
+    async def _prepare_continuation_context(self, first_local: str, prompt: str, style: str, mood: Optional[str], vocal: Optional[str], lyrics: Optional[str]):
+        # 截取末尾 30s 作为参考
+        ref_start = 0
+        try:
+            import librosa
+            total = librosa.get_duration(path=first_local)
+            ref_start = max(0, total - 30)
+            ref_end = total
+        except Exception:
+            ref_start, ref_end = 120, 150
+        # 使用 trim_audio 截取（返回 bytes）
+        from app.services.audio_trim import trim_audio
+        from app.services.continuation_analysis import analyze_audio_context
+        ref_bytes, _ = await trim_audio(first_local, ref_start, ref_end, "wav")
+        ref_b64 = base64.b64encode(ref_bytes).decode()
+        # 分析 BPM/key
+        try:
+            analysis = await analyze_audio_context(ref_bytes)
+        except Exception as e:
+            print(f"[Continuation] 分析失败 fallback: {e}")
+            analysis = {"bpm": 120, "key": "C major", "chords": []}
+        return ref_b64, analysis
+
+    async def _continue_lyrics(self, existing_lyrics: Optional[str], style: str) -> str:
+        try:
+            from app.services.lyric_service import lyric_service
+            if existing_lyrics:
+                res = await lyric_service.continue_lyrics(existing_lyrics=existing_lyrics, style=style)
+                # lyric_service 返回对象可能有 .lyrics
+                if hasattr(res, 'lyrics'):
+                    return res.lyrics or existing_lyrics
+                if isinstance(res, dict):
+                    return res.get('lyrics') or existing_lyrics
+            return existing_lyrics or ""
+        except Exception as e:
+            print(f"[Continuation] 歌词续写失败 fallback: {e}")
+            return existing_lyrics or ""
+
+    async def _stitch_with_crossfade(self, first_path: str, second_path: str, crossfade: float = 1.5) -> str:
+        """
+        使用 ffmpeg acrossfade 无缝拼接
+        输入为本地 wav 路径，输出到临时 combined wav
         """
         import subprocess
         import tempfile
-        
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            # 下载原曲前段
-            import httpx
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(original_audio_url)
-                original_wav = os.path.join(tempfile.gettempdir(), "original.wav")
-                with open(original_wav, "wb") as f:
-                    f.write(resp.content)
-            
-            # 截取原曲前段
-            original_cut = os.path.join(tmp_dir, "original_cut.wav")
-            await trim_audio(original_audio_url, 0, cut_point, "wav")
-            
-            # FFmpeg crossfade
-            output_path = os.path.join(tmp_dir, "combined.wav")
-            
-            cmd = [
-                "ffmpeg", "-y",
-                "-i", original_audio_url,  # 原曲
-                "-i", continuation_wav,     # 续写段
-                "-filter_complex",
-                f"[0:a]atrim=0:{cut_point}[a1];"
-                f"[1:a]atrim=0:60[a2];"
-                f"[a1][a2]acrossfade=d={crossfade_duration}:c1=tri:c2=tri[out]",
-                "-map", "[out]",
-                "-c:a", "pcm_s16le",
-                output_path
-            ]
-            
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await proc.communicate()
-            
-            if not os.path.exists(output_path):
-                raise RuntimeError("FFmpeg crossfade 失败")
-            
-            return output_path
+        fd, out_path = tempfile.mkstemp(suffix="_combined_300s.wav")
+        os.close(fd)
+        # 使用 ffmpeg 的 acrossfade filter，1.5s 三角过渡
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", first_path,
+            "-i", second_path,
+            "-filter_complex", f"[0:a][1:a]acrossfade=d={crossfade}:c1=tri:c2=tri[a]",
+            "-map", "[a]",
+            "-c:a", "pcm_s16le",
+            out_path
+        ]
+        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            err = stderr.decode(errors="replace")[:800] if stderr else "unknown"
+            raise RuntimeError(f"ffmpeg acrossfade failed: {err}")
+        if not os.path.exists(out_path) or os.path.getsize(out_path) < 1000:
+            raise RuntimeError("ffmpeg 输出为空")
+        return out_path
 
-    async def _create_continued_song(
-        self,
-        original_song: Dict,
-        full_wav: str,
-        continuation_lyrics: str,
-        analysis: Dict,
-        user_key: str,
-    ) -> str:
-        """创建续写后的新歌曲记录"""
-        from app.services.supabase_service import create_song
-        
-        new_song_id = f"cont_{int(time.time())}"
-        
-        # 上传到 R2
+    async def _upload_parts(self, task_id: str, files: Dict[str, str], suffix: str) -> Dict:
+        """上传中间段到 R2 保留，key 带 part 前缀"""
+        try:
+            from app.services.cdn_uploader import cdn_uploader
+            # 为中间段构造临时 manifest key 避免覆盖
+            manifest = await cdn_uploader.upload_music_package(f"{task_id}_{suffix}", files)
+            return manifest
+        except Exception as e:
+            print(f"[Continuation] 中间段 {suffix} R2 上传失败(非致命): {e}")
+            return {}
+
+    async def _upload_final(self, task_id: str, combined_path: str, part1_manifest: Dict, part2_manifest: Dict) -> Dict:
         from app.services.cdn_uploader import cdn_uploader
-        import tempfile
-        
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            files = {"full_wav": full_wav}
-            manifest = await cdn_uploader.upload_music_package(f"cont_{int(time.time())}", files)
-        
-        song_data = {
-            "title": f"{original_song.get('title', 'Song')} (Continued)",
-            "lyrics": continuation_lyrics,
-            "style": original_song.get("style"),
-            "duration_seconds": int(original_song.get("duration_seconds", 0)) + 60,
-            "audio_url": manifest.get("full_mp3"),
-            "volume_files": {"full_wav": manifest.get("full_wav")},
-            "bpm": original_song.get("bpm"),
-            "key": original_song.get("key"),
-        }
-        
-        song = create_song(
-            user_id=user_key,
-            **song_data
-        )
-        
-        return song["id"]
+        files = {"full_wav": combined_path, "full_mp3": combined_path}
+        manifest = await cdn_uploader.upload_music_package(task_id, files)
+        # 合并中间段 manifest 供审计（不覆盖最终 full）
+        for k, v in {**part1_manifest, **part2_manifest}.items():
+            if k not in manifest:
+                manifest[k] = v
+        return manifest
 
-    async def _get_song_audio_url(self, song_id: str) -> str:
-        """获取歌曲的 R2 预签名播放 URL"""
-        from app.routers.songs import get_song
-        from app.routers.ai_music import _sign_for_playback
-        
-        song = get_song(song_id)
-        if not song:
-            raise ValueError(f"Song not found: {song_id}")
-        
-        manifest = song.get("download", {})
-        return _sign_for_playback(song_id, "full_mp3", manifest) or ""
+    # 兼容旧接口
+    async def generate_full_song(self, *args, **kwargs):
+        # limit to 270 legacy, but for >180 delegate to long
+        duration = kwargs.get("duration") or (args[2] if len(args)>2 else 180)
+        if int(duration) > 180:
+            return await self.generate_long_music(*args, **kwargs)
+        # fallback to single
+        return await self.generate_long_music(*args, **kwargs)
 
-    async def _save_context(self, task_id: str, context: "SongContext"):
-        """保存 SongContext 到 task_store"""
-        task_store.update(task_id, context=context.to_dict())
-
-    async def _update_context_from_segment(self, context: SongContext, segment_result: Dict):
-        """从新段更新上下文"""
-        # 从新段提取音乐特征更新上下文
-        pass
-
-    async def _finalize_song(self, context: "SongContext", task_id: str) -> str:
-        """最终拼接所有段落，生成最终完整歌曲"""
-        # 如果只有一段，直接返回
-        if len(context.segment_history) == 1:
-            return context.segment_history[0]["song_id"]
-        
-        # 多段拼接逻辑
-        # 简化：返回最后一段的 song_id
-        return context.segment_history[-1]["song_id"]
-
-
-# 全局服务实例
+# 全局实例
 continuation_service = ContinuationService()

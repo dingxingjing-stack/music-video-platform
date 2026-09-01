@@ -21,10 +21,10 @@ from typing import Any, Optional
 DAILY_GENERATION_LIMIT = int(os.getenv("DAILY_GENERATION_LIMIT", "1"))
 MONTHLY_GENERATION_LIMIT = int(os.getenv("MONTHLY_GENERATION_LIMIT", "15"))
 GLOBAL_DAILY_GENERATION_LIMIT = int(os.getenv("GLOBAL_DAILY_GENERATION_LIMIT", "30"))
-MAX_AUDIO_DURATION_SECONDS = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "180"))
+MAX_AUDIO_DURATION_SECONDS = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "300"))
 MAX_CONCURRENT_JOBS_PER_USER = int(os.getenv("MAX_CONCURRENT_JOBS_PER_USER", "1"))
 MAX_AUTO_RETRIES = int(os.getenv("MAX_AUTO_RETRIES", "1"))
-MAX_TASK_RUNTIME_SECONDS = int(os.getenv("MAX_TASK_RUNTIME_SECONDS", "600"))
+MAX_TASK_RUNTIME_SECONDS = int(os.getenv("MAX_TASK_RUNTIME_SECONDS", "900"))
 DOWNLOAD_RATE_LIMIT = int(os.getenv("DOWNLOAD_RATE_LIMIT", "10"))
 DOWNLOAD_RATE_WINDOW_SECONDS = int(os.getenv("DOWNLOAD_RATE_WINDOW_SECONDS", "3600"))
 MODAL_BUDGET_DAILY = os.getenv("FAL_BUDGET_DAILY") or os.getenv("GPU_BUDGET_DAILY") or os.getenv("MODAL_BUDGET_DAILY", "")
@@ -127,10 +127,19 @@ def _init_db_pg(conn=None):
     # 由 database.Base.create_all 已处理，此函数保留兼容旧调用
     pass
 
-def reserve_generation(user_id: str) -> dict[str, Any]:
+def get_duration_weight(duration: int | None) -> int:
+    """时长权重：≤120s 1 credit，>120s 2 credits（180/240/300 均 2）"""
+    try:
+        d = int(duration) if duration is not None else 0
+    except Exception:
+        d = 0
+    return 2 if d > 120 else 1
+
+def reserve_generation(user_id: str, duration: int | None = None) -> dict[str, Any]:
     if not user_id:
         return {"success": False, "error": "缺少用户标识（X-User-ID）"}
     today, mkey = _today(), _month_key()
+    weight = get_duration_weight(duration)
     budget_lim = budget_daily_limit()
     cap = GLOBAL_DAILY_GENERATION_LIMIT
     if budget_lim is not None and budget_lim < cap:
@@ -155,10 +164,10 @@ def reserve_generation(user_id: str) -> dict[str, Any]:
                 r_monthly = row[2] if len(row) > 2 else 0
                 daily = r_daily if r_date == today else 0
                 monthly = r_monthly if r_month == mkey else 0
-            if daily >= DAILY_GENERATION_LIMIT:
+            if daily + weight > DAILY_GENERATION_LIMIT:
                 sess.rollback()
-                return {"success": False, "error": f"今日生成额度已用完（{daily}/{DAILY_GENERATION_LIMIT}），请明天再试"}
-            if monthly >= MONTHLY_GENERATION_LIMIT:
+                return {"success": False, "error": f"今日生成额度已用完（{daily}/{DAILY_GENERATION_LIMIT}），300秒作品消耗 2 额度，请明天再试"}
+            if monthly + weight > MONTHLY_GENERATION_LIMIT:
                 sess.rollback()
                 return {"success": False, "error": f"本月生成额度已用完（{monthly}/{MONTHLY_GENERATION_LIMIT}）"}
             # 原子全局计数：条件自增
@@ -173,19 +182,19 @@ def reserve_generation(user_id: str) -> dict[str, Any]:
                 return {"success": False, "error": "今日全平台生成已达上限，请明天再试"}
             row2 = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
             gcount = int(row2[0]) if row2 else 1
-            # 原子 upsert 用户计数
+            # 原子 upsert 用户计数（按时长权重）
             sess.execute(text("""
                 INSERT INTO generation_usage (user_id, date, daily_count, month_key, monthly_count)
                 VALUES (:u, :d, :dc, :mk, :mc)
                 ON CONFLICT(user_id) DO UPDATE SET
                   date=excluded.date,
-                  daily_count=CASE WHEN generation_usage.date=excluded.date THEN generation_usage.daily_count+1 ELSE 1 END,
+                  daily_count=CASE WHEN generation_usage.date=excluded.date THEN generation_usage.daily_count+:w ELSE :w2 END,
                   month_key=excluded.month_key,
-                  monthly_count=CASE WHEN generation_usage.month_key=excluded.month_key THEN generation_usage.monthly_count+1 ELSE 1 END,
+                  monthly_count=CASE WHEN generation_usage.month_key=excluded.month_key THEN generation_usage.monthly_count+:w ELSE :w2 END,
                   updated_at=CURRENT_TIMESTAMP
-            """), {"u": user_id, "d": today, "dc": daily+1, "mk": mkey, "mc": monthly+1})
+            """), {"u": user_id, "d": today, "dc": daily+weight, "mk": mkey, "mc": monthly+weight, "w": weight, "w2": weight})
             sess.commit()
-            return {"success": True, "daily_used": daily+1, "daily_limit": DAILY_GENERATION_LIMIT, "monthly_used": monthly+1, "monthly_limit": MONTHLY_GENERATION_LIMIT, "global_used": gcount, "global_limit": GLOBAL_DAILY_GENERATION_LIMIT, "budget_daily_limit": budget_lim, "budget_daily_used": gcount}
+            return {"success": True, "daily_used": daily+weight, "daily_limit": DAILY_GENERATION_LIMIT, "monthly_used": monthly+weight, "monthly_limit": MONTHLY_GENERATION_LIMIT, "global_used": gcount, "global_limit": GLOBAL_DAILY_GENERATION_LIMIT, "budget_daily_limit": budget_lim, "budget_daily_used": gcount, "weight": weight}
         except Exception as e:
             try:
                 sess.rollback()
@@ -196,15 +205,16 @@ def reserve_generation(user_id: str) -> dict[str, Any]:
         finally:
             sess.close()
 
-def refund_generation(user_id: str) -> None:
+def refund_generation(user_id: str, duration: int | None = None) -> None:
     if not user_id:
         return
+    weight = get_duration_weight(duration) if duration is not None else 1
     today, mkey = _today(), _month_key()
     with _DB_LOCK:
         sess = _get_session()
         try:
             from sqlalchemy import text
-            sess.execute(text("UPDATE generation_usage SET daily_count = CASE WHEN daily_count>0 THEN daily_count-1 ELSE 0 END, monthly_count = CASE WHEN monthly_count>0 THEN monthly_count-1 ELSE 0 END, updated_at=CURRENT_TIMESTAMP WHERE user_id=:u AND date=:d AND month_key=:mk"), {"u": user_id, "d": today, "mk": mkey})
+            sess.execute(text("UPDATE generation_usage SET daily_count = CASE WHEN daily_count>=:w THEN daily_count-:w ELSE 0 END, monthly_count = CASE WHEN monthly_count>=:w THEN monthly_count-:w ELSE 0 END, updated_at=CURRENT_TIMESTAMP WHERE user_id=:u AND date=:d AND month_key=:mk"), {"u": user_id, "d": today, "mk": mkey, "w": weight})
             sess.commit()
         except Exception:
             try:

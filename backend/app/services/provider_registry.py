@@ -98,12 +98,13 @@ class FalStableAudioProvider(BaseProvider):
     """Fal.ai Stable Audio — 第一阶段正式商用 production Provider。
 
     替代 Modal ACE-Step，基于队列 API（queue.fal.run），不依赖 Modal Volume。
+    注意：fal-ai/stable-audio 单次建议 ≤95s，超过由 fal_client 截断；长任务由上层 150+150 分段。
     """
 
     name = "fal_stable_audio"
     provider_type = "fal_stable_audio"
     capabilities = ["text_to_music", "lyrics_to_music", "audio2audio"]
-    max_duration = 180
+    max_duration = 300
     gpu = "fal-stable-audio"
     production = True
 
@@ -151,12 +152,13 @@ class RunPodProvider(BaseProvider):
     """RunPod Serverless — 第一生产 Provider（Step 6 接入）。
 
     基于 RunPod Serverless API（https://api.runpod.ai/v2），不依赖 Modal Volume。
+    单段最长 300s（HeartMuLa/ACE-Step 均支持），长任务由上层 150+150 分段实现。
     """
 
     name = "runpod"
     provider_type = "runpod"
     capabilities = ["text_to_music", "lyrics_to_music", "audio2audio"]
-    max_duration = 180
+    max_duration = 300
     gpu = "runpod"
     production = True
 
