@@ -28,7 +28,7 @@
     "reset": "重置"
   },
   "paths": {
-    "pathA": "路径 A — Suno 风格",
+    "pathA": "AI 快速创作",
     "pathADesc": "提示词 → MusicGen → 完整音频",
     "pathB": "路径 B — 混合模式",
     "pathBDesc": "MusicGen 伴奏 + TTS 人声 → 合成轨道",
@@ -68,8 +68,8 @@
     "downloadSnippet": "下载片段",
     "downloadFull": "下载完整",
     "detectBeats": "检测节拍",
-    "renderVideo": "渲染视频频频",
-    "mvReady": "MV 已就绪",
+    "renderVideo": "导出音频",
+    "mvReady": "已就绪",
     "waveformVisualization": "波形可视化",
     "backgroundColor": "背景颜色",
     "resolution": "分辨率",
@@ -108,7 +108,7 @@
     "remixFailed": "Remix 失败",
     "mixFailed": "混音失败",
     "trimFailed": "裁剪失败",
-    "mvFailed": "MV 生成失败",
+    "mvFailed": "生成失败",
     "networkError": "网络错误",
     "serverError": "服务器错误",
     "unsupportedFormat": "不支持的格式。请使用 WAV、MP3、FLAC、OGG、M4A 或 AAC。",
@@ -126,7 +126,7 @@
     "originalCompose": "原创编曲",
     "community": "社区排行榜",
     "myWorks": "我的作品",
-    "mvGenerate": "MV 生成",
+    "mvGenerate": "声音克隆",
     "liveCollab": "实时协作",
     "hfModels": "HF 高级模型",
     "subtitles": "字幕识别",
@@ -141,13 +141,19 @@
     "openMenu": "打开菜单",
     "expand": "展开",
     "collapse": "收起",
-    "aiTeam": "AI 员工团队"
+    "aiTeam": "AI 员工团队",
+    "home": "首页",
+    "createMusic": "创作音乐",
+    "voiceClone": "声音克隆",
+    "audioTools": "音频工具",
+    "myCreations": "我的作品",
+    "settings": "设置"
   },
   "landing": {
     "heroBadge": "公测进行中 · 完全免费",
     "heroTitle1": "AI 一站式",
-    "heroTitle2": "音乐 / MV 创作平台",
-    "heroSub": "从灵感、作曲到编曲与成片，让 AI 帮你完成整个创作流程。",
+    "heroTitle2": "AI 音乐工作室",
+    "heroSub": "从灵感、作曲到编曲与成片，让 AI 驱动你的创作流程。",
     "ctaStart": "🎵 立即开始创作",
     "ctaExplore": "浏览作品社区",
     "featuresTitle": "五大核心功能",
@@ -164,7 +170,7 @@
     "feedbackSubmit": "提交反馈",
     "feedbackToastOk": "感谢反馈！",
     "feedbackToastFail": "提交失败",
-    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
   },
   "pathA": {
     "tagline": "提示词 → Agnes AI → 全曲生成（免费）",
@@ -188,5 +194,100 @@
       "creditsRefund": "积分退款",
       "aup": "可接受使用"
     }
+  },
+  "home": {
+    "badge": "AI 音乐工作室 · 现代创作平台",
+    "title1": "AI 音乐工作室",
+    "title2": "AI 音乐工作室",
+    "subtitle": "从灵感到成片，专业级 AI 驱动的创作、声音与音频工作室。",
+    "ctaPrimary": "开始创作",
+    "ctaSecondary": "浏览社区",
+    "featuresTitle": "创作你的声音",
+    "featuresSubtitle": "四个核心模块，覆盖完整音乐旅程",
+    "cards": {
+      "createMusic": {
+        "title": "创作音乐",
+        "desc": "用文字描述、歌词与风格生成完整歌曲。"
+      },
+      "voiceClone": {
+        "title": "声音克隆",
+        "desc": "创建并管理专属声音模型，用于授权声音生成。"
+      },
+      "audioTools": {
+        "title": "音频工具",
+        "desc": "分离、母带、转码与音频处理一体化。"
+      },
+      "myCreations": {
+        "title": "我的作品",
+        "desc": "集中管理所有生成与编辑的音乐作品。"
+      }
+    }
+  },
+  "createMusic": {
+    "title": "创作音乐",
+    "subtitle": "用 AI 生成完整歌曲 — 描述、歌词与风格驱动",
+    "songDescription": "歌曲描述",
+    "songDescriptionPlaceholder": "描述你想要的音乐，例如：温暖治愈的钢琴流行，夜色与希望主题...",
+    "lyrics": "歌词",
+    "lyricsPlaceholder": "输入歌词或留空让 AI 自动生成...",
+    "genre": "风格",
+    "mood": "情绪",
+    "vocal": "人声",
+    "duration": "时长",
+    "genrePlaceholder": "选择或输入风格",
+    "moodPlaceholder": "选择情绪",
+    "vocalPlaceholder": "选择人声",
+    "generate": "生成音乐",
+    "generating": "生成中...",
+    "play": "播放",
+    "download": "下载",
+    "save": "保存",
+    "delete": "删除",
+    "createAgain": "再次创作",
+    "history": "生成历史",
+    "emptyHistory": "暂无历史，生成后将显示在此",
+    "tips": "提示：越具体的描述，生成越贴合预期"
+  },
+  "voiceClone": {
+    "title": "声音克隆",
+    "subtitle": "创建并管理你的专属声音模型 — 仅用于你拥有或已获授权的声音",
+    "uploadSample": "上传声音样本",
+    "voiceName": "声音名称",
+    "voiceNamePlaceholder": "例如：我的声音 v1",
+    "voiceDescription": "声音描述",
+    "voiceDescriptionPlaceholder": "描述该声音的特点、用途...",
+    "createVoice": "创建声音",
+    "myVoices": "我的声音",
+    "preview": "试听",
+    "delete": "删除",
+    "consent": "仅克隆你拥有或已获授权的声音。",
+    "pending": "待接入",
+    "pendingDesc": "后端声音克隆 API 尚未就绪，当前为 UI 预览；已就绪的存储与播放能力可正常使用。",
+    "empty": "暂无声音模型，上传样本以创建",
+    "uploadHint": "支持 WAV/MP3，10秒-2分钟，清晰人声",
+    "success": "创建成功",
+    "failed": "创建失败"
+  },
+  "audioTools": {
+    "title": "音频工具",
+    "subtitle": "一站式音频处理 — 分离、母带、转码",
+    "separation": "音频分离",
+    "mastering": "母带处理",
+    "lyricTool": "歌词工具",
+    "conversion": "格式转换",
+    "separationDesc": "基于 Demucs 的人声/鼓/贝斯/其他四轨分离",
+    "masteringDesc": "智能母带与响度优化，适配流媒体标准",
+    "lyricDesc": "AI 歌词生成与辅助创作",
+    "conversionDesc": "WAV / MP3 / FLAC 等格式互转",
+    "open": "打开",
+    "comingSoon": "敬请期待"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "管理偏好与账户",
+    "language": "语言",
+    "theme": "主题",
+    "account": "账户",
+    "about": "关于"
   }
 }

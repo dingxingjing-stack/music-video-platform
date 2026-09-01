@@ -25,14 +25,15 @@ export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   basic_copyright:    { key: 'basic_copyright',    name: '基础版权检测',  level: 'open',  description: '基础音频指纹比对',         icon: '🔒' },
 
   // ===== 灰度锁定（仅资深测试用户）=====
-  mv_generate:        { key: 'mv_generate',        name: 'MV 生成',       level: 'gray',  description: 'AI 音乐视频自动生成',     icon: '🎬' },
+  voice_clone:        { key: 'voice_clone',        name: '声音克隆',      level: 'open',  description: '创建与管理专属声音模型',   icon: '🎙️' },
   ws_collab:          { key: 'ws_collab',          name: '实时协作编辑',  level: 'gray',  description: 'WebSocket 多人协作',     icon: '🤝' },
   hf_models:          { key: 'hf_models',          name: 'HF 第三方模型', level: 'gray',  description: 'HuggingFace 高级模型',   icon: '🧠' },
   subtitle:           { key: 'subtitle',           name: '字幕识别',      level: 'gray',  description: '自动语音识别字幕',         icon: '📝' },
   oneclick_publish:   { key: 'oneclick_publish',   name: '一键多平台发布',level: 'gray',  description: '多平台同步发布',           icon: '📢' },
 
   // ===== 完全关闭（隐藏入口）=====
-  voice_clone:        { key: 'voice_clone',        name: '声音克隆',      level: 'closed',description: 'V1.1 之后开放',           icon: '🗣️' },
+  // mv_generate 已移除，改为声音克隆；保留兼容键但关闭
+  mv_generate:        { key: 'mv_generate',        name: 'MV 生成（已下线）', level: 'closed',description: '已下线，改为声音克隆', icon: '🎬' },
   asset_store:        { key: 'asset_store',        name: '素材商城',      level: 'closed',description: '公测暂不开放',           icon: '🛒' },
   paid_subscription:  { key: 'paid_subscription',  name: '付费订阅',      level: 'closed',description: '公测暂不开放',           icon: '💳' },
   messaging:          { key: 'messaging',          name: '私信聊天',      level: 'closed',description: '公测暂不开放',           icon: '💬' },

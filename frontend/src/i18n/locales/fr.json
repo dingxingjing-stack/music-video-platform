@@ -28,7 +28,7 @@
     "reset": "Réinitialiser"
   },
   "paths": {
-    "pathA": "Chemin A — Style Suno",
+    "pathA": "Creation Rapide IA",
     "pathADesc": "Prompt → MusicGen → Audio complet",
     "pathB": "Chemin B — Hybride",
     "pathBDesc": "MusicGen accompagnement + TTS voix → Piste combinée",
@@ -68,8 +68,8 @@
     "downloadSnippet": "Télécharger extrait",
     "downloadFull": "Télécharger complet",
     "detectBeats": "Détecter les temps",
-    "renderVideo": "Rendu Vidéo",
-    "mvReady": "MV Prête",
+    "renderVideo": "Exporter audio",
+    "mvReady": "Prêt",
     "waveformVisualization": "Visualisation forme d'onde",
     "backgroundColor": "Couleur fond",
     "resolution": "Résolution",
@@ -108,7 +108,7 @@
     "remixFailed": "Échec du remix",
     "mixFailed": "Échec du mixage",
     "trimFailed": "Échec du rognage",
-    "mvFailed": "Échec génération MV",
+    "mvFailed": "Échec de génération",
     "networkError": "Erreur réseau",
     "serverError": "Erreur serveur",
     "unsupportedFormat": "Format non supporté",
@@ -126,7 +126,7 @@
     "originalCompose": "Arrangement original",
     "community": "Communauté",
     "myWorks": "Mes作品",
-    "mvGenerate": "Génération de MV",
+    "mvGenerate": "Clonage Vocal",
     "liveCollab": "Collaboration en temps réel",
     "hfModels": "Modèles avancés HF",
     "subtitles": "Reconnaissance des sous-titres",
@@ -141,13 +141,19 @@
     "openMenu": "Ouvrir le menu",
     "expand": "Développer",
     "collapse": "Réduire",
-    "aiTeam": "Équipe IA"
+    "aiTeam": "Équipe IA",
+    "home": "Accueil",
+    "createMusic": "Créer",
+    "voiceClone": "Clonage Vocal",
+    "audioTools": "Outils Audio",
+    "myCreations": "Mes Créations",
+    "settings": "Paramètres"
   },
   "landing": {
     "heroBadge": "Bêta publique · Entièrement gratuit",
     "heroTitle1": "IA tout-en-un",
-    "heroTitle2": "Plateforme de création musicale / MV",
-    "heroSub": "De l’inspiration à la composition, l’arrangement et la production finale, l’IA accompagne tout votre processus créatif.",
+    "heroTitle2": "Studio Musical IA",
+    "heroSub": "De l inspiration a la production — votre studio IA.",
     "ctaStart": "🎵 Commencer à créer",
     "ctaExplore": "Explorer la communauté",
     "featuresTitle": "Cinq fonctionnalités clés",
@@ -164,7 +170,7 @@
     "feedbackSubmit": "Envoyer un avis",
     "feedbackToastOk": "Merci pour votre retour !",
     "feedbackToastFail": "Échec de l’envoi",
-    "footerCopyright": "© 2026 Music Video Platform. Tous droits réservés."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Génération de chansons complètes (gratuite)",
@@ -188,5 +194,100 @@
       "creditsRefund": "Crédits et remboursements",
       "aup": "Politique d’utilisation acceptable"
     }
+  },
+  "home": {
+    "badge": "AI Music Studio · Modern Creation Platform",
+    "title1": "AI Music Studio",
+    "title2": "AI Music Studio",
+    "subtitle": "From idea to final mix — a professional AI-powered studio for music, voice and audio.",
+    "ctaPrimary": "Start Creating",
+    "ctaSecondary": "Explore Community",
+    "featuresTitle": "Create Your Sound",
+    "featuresSubtitle": "Four core modules covering the full music journey",
+    "cards": {
+      "createMusic": {
+        "title": "Create Music",
+        "desc": "Generate complete tracks from description, lyrics and style."
+      },
+      "voiceClone": {
+        "title": "Voice Clone",
+        "desc": "Create and manage your own voice models for licensed generation."
+      },
+      "audioTools": {
+        "title": "Audio Tools",
+        "desc": "Separation, mastering, conversion and more — all in one place."
+      },
+      "myCreations": {
+        "title": "My Creations",
+        "desc": "Manage all your generated and edited works in one hub."
+      }
+    }
+  },
+  "createMusic": {
+    "title": "Create Music",
+    "subtitle": "Generate complete tracks",
+    "songDescription": "Song Description",
+    "songDescriptionPlaceholder": "Describe the music...",
+    "lyrics": "Lyrics",
+    "lyricsPlaceholder": "Enter lyrics...",
+    "genre": "Genre",
+    "mood": "Mood",
+    "vocal": "Vocal",
+    "duration": "Duration",
+    "genrePlaceholder": "Select genre",
+    "moodPlaceholder": "Select mood",
+    "vocalPlaceholder": "Select vocal",
+    "generate": "Generate Music",
+    "generating": "Generating...",
+    "play": "Play",
+    "download": "Download",
+    "save": "Save",
+    "delete": "Delete",
+    "createAgain": "Create Again",
+    "history": "History",
+    "emptyHistory": "No history yet",
+    "tips": "Tip: be specific."
+  },
+  "voiceClone": {
+    "title": "Voice Clone",
+    "subtitle": "Create and manage your own voice models — only for voices you own or have permission to use",
+    "uploadSample": "Upload Voice Sample",
+    "voiceName": "Voice Name",
+    "voiceNamePlaceholder": "e.g. My Voice v1",
+    "voiceDescription": "Voice Description",
+    "voiceDescriptionPlaceholder": "Describe the character and use of this voice...",
+    "createVoice": "Create Voice",
+    "myVoices": "My Voices",
+    "preview": "Preview",
+    "delete": "Delete",
+    "consent": "Only clone voices you own or have permission to use.",
+    "pending": "Pending Integration",
+    "pendingDesc": "Voice clone backend is not yet fully available — UI is ready; storage and playback use existing capabilities.",
+    "empty": "No voice models yet — upload a sample to create",
+    "uploadHint": "WAV/MP3, 10s–2min, clean vocal",
+    "success": "Created successfully",
+    "failed": "Creation failed"
+  },
+  "audioTools": {
+    "title": "Audio Tools",
+    "subtitle": "All-in-one audio processing — separation, mastering, conversion",
+    "separation": "Audio Separation",
+    "mastering": "Audio Mastering",
+    "lyricTool": "Lyric Tools",
+    "conversion": "Format Conversion",
+    "separationDesc": "Demucs-based 4-stem separation: vocals/drums/bass/other",
+    "masteringDesc": "Intelligent mastering and loudness optimization",
+    "lyricDesc": "AI lyric generation and writing assistance",
+    "conversionDesc": "Convert between WAV / MP3 / FLAC and more",
+    "open": "Open",
+    "comingSoon": "Coming Soon"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage preferences and account",
+    "language": "Language",
+    "theme": "Theme",
+    "account": "Account",
+    "about": "About"
   }
 }

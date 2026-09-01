@@ -7,184 +7,156 @@ import { useAuth } from './context/AuthContext';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { Under13BlockedModal } from './components/Under13BlockedModal';
 import { getUserAge } from './hooks/useUserAge';
+import { useTranslation } from './i18n/useTranslation';
 
-// 公测导航 — 普通创作大厅（全开放）
-const NAV_OPEN = [
-  { to: '/', label: '工作台', icon: '🏠', group: 'open' },
-  { to: '/path-a', label: 'AI 作曲', icon: '🎵', group: 'open' },
-  { to: '/path-b', label: '混合模式', icon: '🎛️', group: 'open' },
-  { to: '/path-d', label: '原创编曲', icon: '✍️', group: 'open' },
-  { to: '/community', label: '社区排行榜', icon: '🏆', group: 'open' },
-  { to: '/my-works', label: '我的作品', icon: '💿', group: 'open' },
+// 主导航 — 新产品结构：Home / Create Music / Voice Clone / Audio Tools / My Creations / Settings
+const NAV_MAIN = [
+  { to: '/', labelKey: 'nav.home', fallback: 'Home', icon: '⌂', end: true },
+  { to: '/create', labelKey: 'nav.createMusic', fallback: 'Create Music', icon: '♪' },
+  { to: '/voice-clone', labelKey: 'nav.voiceClone', fallback: 'Voice Clone', icon: '◐' },
+  { to: '/audio-tools', labelKey: 'nav.audioTools', fallback: 'Audio Tools', icon: '⬢' },
+  { to: '/my-works', labelKey: 'nav.myCreations', fallback: 'My Creations', icon: '♡' },
+  { to: '/settings', labelKey: 'nav.settings', fallback: 'Settings', icon: '⚙' },
 ];
 
-// 灰度测试专区（仅资深测试用户可见）
+// 灰度专区（已移除 MV，保留协作等）
 const NAV_GRAY = [
-  { to: '/path-a?feature=mv', label: 'MV 生成', icon: '🎬', feature: 'mv_generate' },
-  { to: '/path-d?feature=collab', label: '实时协作', icon: '🤝', feature: 'ws_collab' },
-  { to: '/path-a?feature=hf', label: 'HF 高级模型', icon: '🧠', feature: 'hf_models' },
-  { to: '/path-a?feature=subtitle', label: '字幕识别', icon: '📝', feature: 'subtitle' },
-  { to: '/path-a?feature=publish', label: '一键发布', icon: '📢', feature: 'oneclick_publish' },
-];
-
-const STATUS_DOT: Record<string, string> = {
-  online: 'bg-[#34d399]',
-  idle: 'bg-[#777777]',
-  busy: 'bg-[#ff6a10] animate-pulse',
-};
-
-const AI_TEAM = [
-  { name: '总经理', icon: '👔', color: '#ff6a10', desc: '统筹协调', status: 'online' },
-  { name: '市场调研员', icon: '📊', color: '#38bdf8', desc: '数据分析', status: 'idle' },
-  { name: '财务经理', icon: '💰', color: '#34d399', desc: '预算规划', status: 'idle' },
-  { name: '推广专员', icon: '📢', color: '#f472b6', desc: '营销策略', status: 'idle' },
-  { name: '运维工程师', icon: '🔧', color: '#a78bfa', desc: '系统监控', status: 'idle' },
-  { name: '设计研发', icon: '🎨', color: '#fb923c', desc: 'UI/UX 开发', status: 'busy' },
-  { name: '出纳会计', icon: '🧾', color: '#facc15', desc: '收支管理', status: 'idle' },
+  { to: '/path-d?feature=collab', labelKey: 'nav.liveCollab', fallback: 'Live Collaboration', icon: '◈', feature: 'ws_collab' },
+  { to: '/path-a?feature=hf', labelKey: 'nav.hfModels', fallback: 'HF Models', icon: '⬡', feature: 'hf_models' },
+  { to: '/path-a?feature=subtitle', labelKey: 'nav.subtitles', fallback: 'Subtitle', icon: '≡', feature: 'subtitle' },
 ];
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [blocked, setBlocked] = useState(false);
   useEffect(() => {
     async function checkAge() {
       const age = await getUserAge();
-      if (age !== null && age < 13) {
-        setBlocked(true);
-      }
+      if (age !== null && age < 13) setBlocked(true);
     }
     checkAge();
   }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  if (blocked) {
-    return <Under13BlockedModal />;
-  }
+  if (blocked) return <Under13BlockedModal />;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { status } = useUserGrayStatus('beta_user');
   const { muted, toggle } = useSound();
   const { isLoggedIn, user, setShowLogin, logout } = useAuth();
 
-  // 合并导航：普通用户只看 NAV_OPEN，灰度用户加 NAV_GRAY
-  const allNav = status.isGray ? [...NAV_OPEN, ...NAV_GRAY] : NAV_OPEN;
+  const tr = (k: string, fallback: string) => {
+    const v = t(k);
+    return v === k ? fallback : v;
+  };
 
   return (
-    <div className="flex h-screen bg-[#121212] text-[#e0e0e0]">
-      {/* 公测规则弹窗 */}
+    <div className="flex h-screen bg-[#0a0a0a] text-[#e0e0e0] selection:bg-[#ff6a10]/30">
       <BetaConsentModal />
 
-      {/* 汉堡菜单 (移动) */}
-      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-3 left-3 z-50 p-2 bg-[#1e1e1e]/90 backdrop-blur-sm rounded-lg border border-[#2a2a2a] text-white" aria-label="打开菜单">
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+      {/* 移动端汉堡 */}
+      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-3 left-3 z-50 p-2.5 bg-[#141414]/90 backdrop-blur rounded-xl border border-[#262626] text-white shadow-lg" aria-label="Open menu">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
-      {/* 移动遮罩 */}
-      {mobileMenuOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileMenuOpen(false)} />}
+      {mobileMenuOpen && <div className="lg:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setMobileMenuOpen(false)} />}
 
       {/* 侧边栏 */}
-      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-auto flex flex-col border-r border-[#2a2a2a] bg-[#0e0e0e]/95 backdrop-blur-xl transition-all duration-300`}>
+      <aside className={`${sidebarCollapsed ? 'w-[68px]' : 'w-[264px]'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-auto flex flex-col border-r border-[#1f1f1f] bg-[#0f0f0f]/95 backdrop-blur-xl transition-all duration-300`}>
         {/* Logo */}
-        <div className="h-14 flex items-center px-3 gap-2 border-b border-[#2a2a2a]">
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="text-[#777777] hover:text-white transition-colors text-lg" title={sidebarCollapsed ? '展开' : '收起'}>{sidebarCollapsed ? '▸' : '◂'}</button>
+        <div className="h-[56px] flex items-center px-3 gap-2 border-b border-[#1f1f1f] shrink-0">
+          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#888888] hover:text-white flex items-center justify-center transition" title={sidebarCollapsed ? 'Expand' : 'Collapse'}>
+            <span className="text-[11px] font-bold tracking-widest">{sidebarCollapsed ? '››' : '‹‹'}</span>
+          </button>
           {!sidebarCollapsed && (
-            <span className="font-bold text-base gradient-text cursor-pointer truncate" onClick={() => navigate('/')}>Zyvexo</span>
+            <span className="font-black text-[17px] tracking-tight cursor-pointer" onClick={() => navigate('/')}>
+              <span className="bg-gradient-to-r from-[#ff6a10] to-[#ee0979] bg-clip-text text-transparent">Zyvexo</span>
+              <span className="ml-1.5 text-[10px] font-medium tracking-[0.14em] text-[#555555] align-middle">STUDIO</span>
+            </span>
           )}
-          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden ml-auto text-[#777777] hover:text-white">✕</button>
+          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden ml-auto w-8 h-8 flex items-center justify-center text-[#666666] hover:text-white">✕</button>
         </div>
 
-        {/* 公测标识 Badge */}
         {!sidebarCollapsed && (
-          <div className="px-3 py-2 border-b border-[#2a2a2a]">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gradient-to-r from-[#ff6a10]/10 to-[#ee0979]/10 border border-[#ff6a10]/20 text-[10px] font-medium text-[#ff6a10]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ff6a10] animate-pulse" />
-              公测测试版 v2.0
+          <div className="px-3 py-3 border-b border-[#1f1f1f]">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1a1a1a] border border-[#262626] text-[10px] font-medium tracking-widest text-[#888888]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              AI MUSIC STUDIO
             </div>
           </div>
         )}
 
-        {/* 导航 */}
+        {/* 主导航 */}
         <nav className="flex-1 py-3 overflow-y-auto">
-          {!sidebarCollapsed && <div className="px-4 mb-2 text-[10px] uppercase tracking-widest text-[#555555]">🎵 创作大厅</div>}
-          {allNav.slice(0, NAV_OPEN.length).map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.to === '/'} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
-              {({ isActive }) => (
-                <div className={`mx-2 px-3 py-2.5 rounded-lg text-sm flex items-center gap-3 cursor-pointer transition-all duration-200 ease-out ${isActive ? 'bg-gradient-to-r from-[#ff6a10]/20 to-[#ee0979]/10 text-white shadow-sm' : 'text-[#888888] hover:text-white hover:bg-white/5'}`}>
-                  <span className="text-base flex-shrink-0">{n.icon}</span>
-                  {!sidebarCollapsed && <span className="truncate">{n.label}</span>}
-                </div>
-              )}
-            </NavLink>
-          ))}
+          {!sidebarCollapsed && <div className="px-4 mb-2 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">Navigate</div>}
+          <div className="space-y-0.5 px-2">
+            {NAV_MAIN.map((n) => (
+              <NavLink key={n.to} to={n.to} end={n.end} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
+                {({ isActive }) => (
+                  <div className={`px-3 py-2.5 rounded-xl text-sm flex items-center gap-3 cursor-pointer transition-all ${isActive ? 'bg-white text-[#0a0a0a] font-medium shadow' : 'text-[#8a8a8a] hover:text-white hover:bg-[#1a1a1a]'}`}>
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] shrink-0 ${isActive ? 'bg-[#0a0a0a] text-white' : 'bg-[#1a1a1a] border border-[#262626]'}`}>{n.icon}</span>
+                    {!sidebarCollapsed && <span className="truncate">{tr(n.labelKey, n.fallback)}</span>}
+                  </div>
+                )}
+              </NavLink>
+            ))}
+          </div>
 
-          {/* 灰度测试专区（仅灰度用户可见） */}
-          {status.isGray && (
+          {status.isGray && NAV_GRAY.length > 0 && (
             <>
-              {!sidebarCollapsed && <div className="px-3 mb-2 mt-4 text-[10px] uppercase tracking-widest text-[#ff6a10]">🔓 灰度专区</div>}
-              {NAV_GRAY.map((n) => (
-                <NavLink key={n.to} to={n.to} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
-                  {({ isActive }) => (
-                    <div className={`mx-1.5 px-3 py-2 rounded-lg text-sm flex items-center gap-3 cursor-pointer transition-all ${isActive ? 'bg-[#ff6a10]/10 text-[#ff6a10]' : 'text-[#888888] hover:text-[#ff6a10] hover:bg-[#ff6a10]/5'}`}>
-                      <span className="text-base flex-shrink-0">{n.icon}</span>
-                      {!sidebarCollapsed && <span className="truncate">{n.label}</span>}
-                    </div>
-                  )}
-                </NavLink>
-              ))}
+              {!sidebarCollapsed && <div className="px-4 mb-2 mt-6 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">Experimental</div>}
+              <div className="space-y-0.5 px-2">
+                {NAV_GRAY.map((n) => (
+                  <NavLink key={n.to} to={n.to} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
+                    {({ isActive }) => (
+                      <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-3 cursor-pointer transition-all ${isActive ? 'bg-[#ff6a10]/10 text-[#ff6a10]' : 'text-[#6a6a6a] hover:text-[#ff6a10] hover:bg-[#1a1a1a]'}`}>
+                        <span className="text-base shrink-0">{n.icon}</span>
+                        {!sidebarCollapsed && <span className="truncate text-xs">{tr(n.labelKey, n.fallback)}</span>}
+                      </div>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
             </>
           )}
         </nav>
 
-        {/* 用户状态 & 登录 */}
+        {/* 底部用户区 */}
         {!sidebarCollapsed && (
-          <div className="px-3 py-2 border-t border-[#2a2a2a] space-y-2">
+          <div className="px-3 py-3 border-t border-[#1f1f1f] space-y-2.5">
             {isLoggedIn ? (
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
-                <span className={`w-2 h-2 rounded-full bg-[#34d399]`} />
-                <span className="text-[11px] text-[#888888] truncate">{user?.username || user?.email}</span>
-                <button onClick={logout} className="ml-auto text-[10px] text-zinc-600 hover:text-red-400 transition">退出</button>
+              <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#141414] border border-[#262626]">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-xs text-[#b0b0b0] truncate">{user?.username || user?.email}</span>
+                <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">Logout</button>
               </div>
             ) : (
-              <button 
-                onClick={() => setShowLogin(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
-              >
-                <span>🔑</span>
-                <span>登录解锁全部功能</span>
+              <button onClick={() => setShowLogin(true)} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-white text-[#0a0a0a] text-sm font-semibold rounded-xl hover:bg-[#ededed] transition">
+                <span>Log in</span>
               </button>
             )}
-            
-            {/* 语言切换 */}
-            <div className="pt-2">
-              <LanguageSwitcher />
-            </div>
-          </div>
-        )}
-
-        {/* 音效开关 */}
-        {!sidebarCollapsed && (
-          <div className="px-3 pt-2 pb-1">
-            <button onClick={toggle} className="flex items-center gap-2 text-[11px] text-[#888888] hover:text-white transition w-full">
-              <span className="text-sm">{muted ? '🔇' : '🔊'}</span>
-              <span>音效{muted ? '已关' : '已开'}</span>
+            <LanguageSwitcher />
+            <button onClick={toggle} className="flex items-center gap-2 text-[11px] text-[#6a6a6a] hover:text-white transition w-full">
+              <span>{muted ? '◑' : '◐'}</span>
+              <span>{muted ? tr('nav.soundOff','Sound off') : tr('nav.soundOn','Sound on')}</span>
             </button>
           </div>
         )}
-
       </aside>
 
-      {/* 主内容区 */}
-      <main className="flex-1 overflow-auto pt-14 lg:pt-0 pb-20 lg:pb-0">
+      {/* 主内容 */}
+      <main className="flex-1 overflow-auto pt-14 lg:pt-0">
         <Outlet />
       </main>
 
-      {/* 移动底部导航 — 隐藏付费入口，仅显示创作大厅 */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0e0e0e]/95 backdrop-blur-xl border-t border-[#2a2a2a] z-30">
-        <div className="flex items-center justify-around py-2">
-          {NAV_OPEN.slice(0, 5).map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.to === '/'} onClick={() => setMobileMenuOpen(false)}>
+      {/* 移动底部导航 - 仅显示主导航前5项 */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f0f]/95 backdrop-blur-xl border-t border-[#1f1f1f] z-30">
+        <div className="flex items-center justify-around py-1.5">
+          {NAV_MAIN.slice(0, 5).map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end}>
               {({ isActive }) => (
-                <div className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${isActive ? 'text-white' : 'text-[#777777]'}`}>
-                  <span className="text-xl">{n.icon}</span>
-                  <span className="text-[10px] truncate max-w-[60px]">{n.label.split(' ')[0]}</span>
+                <div className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl transition ${isActive ? 'text-white bg-white/10' : 'text-[#6a6a6a]'}`}>
+                  <span className="text-[14px] leading-none">{n.icon}</span>
+                  <span className="text-[9px] font-medium tracking-wide max-w-[52px] truncate">{tr(n.labelKey, n.fallback).split(' ')[0]}</span>
                 </div>
               )}
             </NavLink>
@@ -192,37 +164,5 @@ export function AppLayout() {
         </div>
       </nav>
     </div>
-  );
-}
-
-// AI Team Section 组件（简化）
-function AITeamSection({ collapsed }: { collapsed: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <>
-      <button onClick={() => setExpanded(!expanded)} className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs transition-colors ${collapsed ? 'justify-center' : ''}`}>
-        <span className="text-base">🤖</span>
-        {!collapsed && (<><span className="truncate font-medium">AI 员工团队</span><span className="ml-auto text-[#555555]">{expanded ? '▾' : '▸'}</span></>)}
-      </button>
-      {!collapsed && expanded && (
-        <div className="pb-3 px-2 space-y-1">
-          {AI_TEAM.map((member) => (
-            <div key={member.name} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[#1a1a1a] hover:bg-[#222222] cursor-pointer transition-colors group">
-              <span className="text-lg">{member.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-[#e0e0e0] truncate">{member.name}</span>
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[member.status]}`} />
-                </div>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-[#555555]">{member.desc}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
   );
 }

@@ -3,24 +3,10 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BetaConsentModal } from '../components/BetaConsentModal';
 import { api } from '../config/api';
-
-const FEATURES = [
-  { icon: '🎵', title: 'AI 作曲', desc: '一句话生成完整歌曲，支持多种风格、BPM 调控', path: '/generate', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
-  { icon: '✍️', title: 'AI 歌词创作', desc: 'AI 续写歌词，支持流行、摇滚、民谣、嘻哈等风格', path: '/generate', color: 'from-[#38bdf8]/20 to-[#6366f1]/5' },
-  { icon: '🎛️', title: 'DAW 编辑器', desc: '多轨时间轴、录音、钢琴卷帘、混音台', path: '/studio', color: 'from-[#34d399]/20 to-[#06b6d4]/5' },
-  { icon: '🎹', title: '编曲工具', desc: '和弦检测、节拍分析、MIDI 音符编辑', path: '/path-d', color: 'from-[#a78bfa]/20 to-[#8b5cf6]/5' },
-  { icon: '🏆', title: '社区互动', desc: '浏览全球创作者作品，点赞、收藏与排行', path: '/community', color: 'from-[#fb923c]/20 to-[#f59e0b]/5' },
-];
-
-const CASES = [
-  { title: '夜色霓虹', author: '@beta_user_01', genre: 'Synthwave', plays: 234, cover: '🌃' },
-  { title: '夏日清风', author: '@beta_user_02', genre: 'Indie Pop', plays: 189, cover: '☀️' },
-  { title: '代码诗人', author: '@beta_user_03', genre: 'Lo-fi', plays: 312, cover: '💻' },
-  { title: '深海回声', author: '@beta_user_04', genre: 'Ambient', plays: 156, cover: '🌊' },
-];
+import { useTranslation } from '../i18n/useTranslation';
 
 const fadeIn = (delay = 0) => ({
-  initial: { opacity: 0, y: 30 },
+  initial: { opacity: 0, y: 20 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: '-50px' },
   transition: { duration: 0.5, delay },
@@ -28,30 +14,41 @@ const fadeIn = (delay = 0) => ({
 
 export function Landing() {
   const navigate = useNavigate();
-  const [showBugModal, setShowBugModal] = useState(false);
+  const { t } = useTranslation();
+  const tr = (k: string, fb: string) => (t(k) === k ? fb : t(k));
   const [feedbacks, setFeedbacks] = useState<{ name: string; text: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackName, setFeedbackName] = useState('');
   const [toast, setToast] = useState<{ id: string; message: string; type: 'success' | 'error' } | null>(null);
 
+  const FEATURES = [
+    { icon: '♪', title: tr('home.cards.createMusic.title', 'Create Music'), desc: tr('home.cards.createMusic.desc', 'Generate complete tracks from description, lyrics and style.'), path: '/create', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
+    { icon: '◐', title: tr('home.cards.voiceClone.title', 'Voice Clone'), desc: tr('home.cards.voiceClone.desc', 'Create and manage your own voice models for licensed generation.'), path: '/voice-clone', color: 'from-[#38bdf8]/20 to-[#6366f1]/5' },
+    { icon: '⬢', title: tr('home.cards.audioTools.title', 'Audio Tools'), desc: tr('home.cards.audioTools.desc', 'Separation, mastering, conversion and more — all in one place.'), path: '/audio-tools', color: 'from-[#34d399]/20 to-[#06b6d4]/5' },
+    { icon: '♡', title: tr('home.cards.myCreations.title', 'My Creations'), desc: tr('home.cards.myCreations.desc', 'Manage all your generated and edited works in one hub.'), path: '/my-works', color: 'from-[#a78bfa]/20 to-[#fb923c]/5' },
+  ];
+
+  const CASES = [
+    { title: 'Night Neon', author: '@beta_01', genre: 'Synthwave', plays: 234, cover: '◈' },
+    { title: 'Summer Breeze', author: '@beta_02', genre: 'Indie Pop', plays: 189, cover: '○' },
+    { title: 'Code Poet', author: '@beta_03', genre: 'Lo-fi', plays: 312, cover: '⬡' },
+    { title: 'Deep Echo', author: '@beta_04', genre: 'Ambient', plays: 156, cover: '⬢' },
+  ];
+
   useEffect(() => {
     const fetchFeedback = async () => {
       try {
         const res = await fetch(api.url('/api/v1/feedback'));
-        if (!res.ok) throw new Error('Failed to fetch');
+        if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         setFeedbacks(data.map((f: any) => ({ name: f.name, text: f.text })));
-      } catch (err) {
-        console.error('Failed to fetch feedback:', err);
-        // Fallback to hardcoded
+      } catch {
         setFeedbacks([
-          { name: '音乐爱好者', text: '公测体验非常好，AI 生成速度很快！期待 MV 功能解锁。' },
-          { name: '独立音乐人', text: 'DAW 编辑器功能丰富，比想象中专业。希望能增加更多效果器。' }
+          { name: tr('landing.anonymousUser', 'Anonymous'), text: 'Great public beta — fast generation and clean studio feel.' },
+          { name: tr('landing.anonymousUser', 'Anonymous'), text: 'Voice Clone UI is clear and the audio tools are well integrated.' },
         ]);
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
     fetchFeedback();
   }, []);
@@ -68,200 +65,127 @@ export function Landing() {
       const res = await fetch(api.url('/api/v1/feedback'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: feedbackName.trim() || '匿名用户',
-          text: feedbackText.trim(),
-        }),
+        body: JSON.stringify({ name: feedbackName.trim() || tr('landing.anonymousUser','Anonymous'), text: feedbackText.trim() }),
       });
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      // Optimistically update the list
-      setFeedbacks(prev => [
-        { name: feedbackName.trim() || '匿名用户', text: feedbackText.trim() },
-        ...prev
-      ]);
+      if (!res.ok) throw new Error('Network error');
+      setFeedbacks(prev => [{ name: feedbackName.trim() || tr('landing.anonymousUser','Anonymous'), text: feedbackText.trim() }, ...prev]);
       setFeedbackText('');
       setFeedbackName('');
-      showToast('感谢反馈！', 'success');
-    } catch (err) {
-      console.error('Failed to submit feedback:', err);
-      showToast('提交失败，请重试', 'error');
+      showToast(tr('landing.feedbackToastOk','Thank you for your feedback!'), 'success');
+    } catch {
+      showToast(tr('landing.feedbackToastFail','Submission failed'), 'error');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-[#e0e0e0] relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] relative overflow-x-hidden">
       <BetaConsentModal />
-      {/* 波形背景装饰 */}
-      <div className="fixed inset-0 pointer-events-none opacity-30">
-        <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-[#ff6a10]/10 to-transparent" />
-        <svg className="absolute bottom-0 left-0 w-full h-40" viewBox="0 0 1200 200" preserveAspectRatio="none">
-          {[0, 1, 2, 3].map((i) => (
-            <motion.path key={i} d={`M0,${100 + i * 20} Q300,${40 + i * 30} 600,${100 + i * 20} T1200,${100 + i * 20}`} fill="none" stroke={i % 2 ? '#ff6a10' : '#ee0979'} strokeWidth="1" opacity="0.15" animate={{ d: [`M0,${100 + i * 20} Q300,${40 + i * 30} 600,${100 + i * 20} T1200,${100 + i * 20}`, `M0,${100 + i * 20} Q300,${160 + i * 20} 600,${100 + i * 20} T1200,${100 + i * 20}`, `M0,${100 + i * 20} Q300,${40 + i * 30} 600,${100 + i * 20} T1200,${100 + i * 20}`] }} transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut' }} />
-          ))}
-        </svg>
+      <div className="fixed inset-0 pointer-events-none opacity-[0.04]">
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
       </div>
 
-      {/* ========== 首屏 ========== */}
-      <section className="relative min-h-[90vh] flex items-center justify-center px-4 py-20">
-        <motion.div className="text-center max-w-3xl z-10" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-          <div className="inline-block mb-6">
-            <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#ff6a10]/15 to-[#ee0979]/15 border border-[#ff6a10]/30 text-[#ff6a10] text-sm font-medium">
-              🚀 公测进行中 · 完全免费
-            </span>
+      {/* Hero */}
+      <section className="relative min-h-[86vh] flex items-center justify-center px-6 py-16">
+        <motion.div className="text-center max-w-3xl z-10" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-[11px] tracking-[0.14em] text-[#8a8a8a]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {tr('landing.heroBadge','Public beta · Completely free')}
           </div>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black mb-6 leading-tight">
-            <span className="gradient-text">AI 一站式</span>
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight mt-6 leading-none">
+            <span className="bg-gradient-to-r from-white to-[#8a8a8a] bg-clip-text text-transparent">{tr('landing.heroTitle1','All-in-one AI')}</span>
             <br />
-            <span className="text-white">音乐 / MV 创作平台</span>
+            <span className="bg-gradient-to-r from-white to-[#8a8a8a] bg-clip-text text-transparent">{tr('landing.heroTitle2','AI Music Studio')}</span>
           </h1>
-          <p className="text-base sm:text-lg text-[#888888] mb-8 max-w-xl mx-auto">
-            AI 作曲、歌词创作、DAW 编辑、编曲工具、社区互动——<br className="hidden sm:block" />公测期间免费开放
+          <p className="text-sm sm:text-base text-[#8a8a8a] mt-4 max-w-xl mx-auto leading-relaxed">
+            {tr('landing.heroSub','From inspiration and composition to final production — your AI-powered studio.')}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => navigate('/')} className="px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] hover:opacity-90 transition-opacity shadow-lg shadow-[#ff6a10]/20">
-              🎵 立即开始创作
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+            <button onClick={() => navigate('/')} className="px-8 py-3.5 rounded-xl font-semibold bg-white text-[#0a0a0a] hover:bg-[#ededed] transition">
+              {tr('landing.ctaStart','Start Creating')}
             </button>
-            <button onClick={() => navigate('/community')} className="px-8 py-3.5 rounded-xl font-medium border border-[#2a2a2a] text-[#e0e0e0] hover:bg-[#1e1e1e] transition-colors">
-              浏览作品社区
+            <button onClick={() => navigate('/community')} className="px-8 py-3.5 rounded-xl font-medium border border-[#1f1f1f] bg-[#141414] text-white hover:bg-[#1a1a1a] transition">
+              {tr('landing.ctaExplore','Explore the Community')}
             </button>
-          </div>
-          <div className="mt-12 flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-[#555555]">
-            <span>✓ 无需安装</span>
-            <span>✓ 181 个 API</span>
-            <span>✓ 云端渲染</span>
-            <span>✓ 全端响应式</span>
           </div>
         </motion.div>
       </section>
 
-      {/* ========== 核心功能 ========== */}
-      <section className="relative z-10 px-4 py-16 max-w-6xl mx-auto">
-        <motion.div {...fadeIn()} className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">五大核心功能</span></h2>
-          <p className="text-sm text-[#888888]">从灵感到成片，一站搞定</p>
+      {/* Features */}
+      <section className="relative z-10 px-6 py-14 max-w-[1120px] mx-auto">
+        <motion.div {...fadeIn()} className="text-center mb-10">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">{tr('home.featuresTitle','Create Your Sound')}</h2>
+          <p className="text-sm text-[#6a6a6a] mt-1">{tr('home.featuresSubtitle','Four core modules covering the full music journey')}</p>
         </motion.div>
-        {/* TODO: Feature 网格、案例、反馈列表、footer 由后续 Landing 重构补齐。
-            本块仅为 JSX 闭合占位，保证 vite build 通过，让核心 bug 修复可先上线。 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              {...fadeIn(i * 0.08)}
-              onClick={() => navigate(f.path)}
-              className={`rounded-2xl p-6 bg-gradient-to-br ${f.color} border border-[#2a2a2a] cursor-pointer hover:border-[#ff6a10]/40 hover:scale-[1.02] transition-all`}
-            >
-              <div className="text-3xl mb-3">{f.icon}</div>
-              <h3 className="text-lg font-semibold text-white mb-2">{f.title}</h3>
-              <p className="text-sm text-[#999999]">{f.desc}</p>
-              <div className="mt-3 text-xs text-[#ff6a10]">立即体验 →</div>
+            <motion.div key={f.title} {...fadeIn(i * 0.06)} onClick={() => navigate(f.path)} className={`rounded-[20px] p-6 bg-gradient-to-br ${f.color} border border-[#1f1f1f] cursor-pointer hover:border-white/10 hover:bg-[#141414] transition`}>
+              <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center text-lg">{f.icon}</div>
+              <h3 className="text-base font-semibold text-white mt-4">{f.title}</h3>
+              <p className="text-sm text-[#8a8a8a] mt-1 leading-relaxed">{f.desc}</p>
+              <div className="mt-3 text-xs font-medium text-white/60">Open →</div>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ========== 案例展示 ========== */}
-      <section className="relative z-10 px-4 py-16 max-w-6xl mx-auto">
-        <motion.div {...fadeIn()} className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">社区作品</span></h2>
-          <p className="text-sm text-[#888888]">来自公测用户的真实创作</p>
+      {/* Cases */}
+      <section className="relative z-10 px-6 py-12 max-w-[1120px] mx-auto">
+        <motion.div {...fadeIn()} className="text-center mb-8">
+          <h2 className="text-xl font-black text-white">{tr('landing.casesTitle','Community Works')}</h2>
+          <p className="text-sm text-[#6a6a6a]">{tr('landing.casesSub','Real creations from public beta users.')}</p>
         </motion.div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {CASES.map((c, i) => (
-            <motion.div key={c.title} {...fadeIn(i * 0.06)} className="rounded-2xl p-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#ff6a10]/30 transition">
-              <div className="text-4xl mb-3">{c.cover}</div>
-              <h3 className="text-base font-semibold text-white mb-1">{c.title}</h3>
-              <p className="text-xs text-[#888888] mb-2">{c.author} · {c.genre}</p>
-              <p className="text-xs text-[#555555]">▶ {c.plays} 次播放</p>
+            <motion.div key={c.title} {...fadeIn(i * 0.05)} className="rounded-2xl p-5 bg-[#141414] border border-[#1f1f1f]">
+              <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center">{c.cover}</div>
+              <h3 className="text-sm font-semibold text-white mt-3">{c.title}</h3>
+              <p className="text-xs text-[#6a6a6a] mt-1">{c.author} · {c.genre}</p>
+              <p className="text-xs text-[#4a4a4a] mt-1">▶ {c.plays} plays</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ========== 用户反馈 ========== */}
-      <section className="relative z-10 px-4 py-16 max-w-3xl mx-auto">
-        <motion.div {...fadeIn()} className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3"><span className="gradient-text">用户反馈</span></h2>
-          <p className="text-sm text-[#888888]">公测用户真实声音</p>
+      {/* Feedback */}
+      <section className="relative z-10 px-6 py-12 max-w-[720px] mx-auto">
+        <motion.div {...fadeIn()} className="text-center mb-8">
+          <h2 className="text-xl font-black text-white">{tr('landing.feedbackTitle','User Feedback')}</h2>
+          <p className="text-sm text-[#6a6a6a]">{tr('landing.feedbackSub','Real feedback from public beta users.')}</p>
         </motion.div>
-        {loading ? (
-          <div className="text-center text-sm text-[#555555] py-8">加载中...</div>
-        ) : (
+        {loading ? <div className="text-center text-sm text-[#555555] py-8">Loading...</div> : (
           <div className="space-y-3">
             {feedbacks.map((f, i) => (
-              <motion.div key={i} {...fadeIn(i * 0.05)} className="rounded-xl p-5 bg-[#1a1a1a] border border-[#2a2a2a]">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#ff6a10] to-[#ee0979] text-white text-xs font-bold flex items-center justify-center">
-                    {f.name.charAt(0).toUpperCase()}
-                  </div>
+              <motion.div key={i} {...fadeIn(i * 0.04)} className="rounded-xl p-4 bg-[#141414] border border-[#1f1f1f]">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-white text-[#0a0a0a] text-xs font-bold flex items-center justify-center">{f.name.charAt(0).toUpperCase()}</div>
                   <span className="text-sm font-medium text-white">{f.name}</span>
                 </div>
-                <p className="text-sm text-[#999999]">{f.text}</p>
+                <p className="text-sm text-[#8a8a8a]">{f.text}</p>
               </motion.div>
             ))}
           </div>
         )}
-
-        {/* 反馈输入区 */}
-        <motion.div {...fadeIn(0.1)} className="mt-8 rounded-2xl p-6 bg-[#1a1a1a] border border-[#2a2a2a]">
-          <h3 className="text-base font-semibold text-white mb-3">📝 留下你的反馈</h3>
-          <input
-            type="text"
-            value={feedbackName}
-            onChange={e => setFeedbackName(e.target.value)}
-            placeholder="昵称（可选）"
-            className="w-full mb-3 px-4 py-2.5 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-[#ff6a10]"
-          />
-          <textarea
-            value={feedbackText}
-            onChange={e => setFeedbackText(e.target.value)}
-            placeholder="说说你的使用感受..."
-            rows={3}
-            className="w-full mb-3 px-4 py-2.5 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-[#ff6a10] resize-none"
-          />
-          <button
-            onClick={submitFeedback}
-            disabled={!feedbackText.trim()}
-            className="px-6 py-2.5 rounded-lg font-medium text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            提交反馈
-          </button>
+        <motion.div {...fadeIn(0.1)} className="mt-6 rounded-2xl p-5 bg-[#141414] border border-[#1f1f1f]">
+          <h3 className="text-sm font-semibold text-white mb-3">Leave your feedback</h3>
+          <input type="text" value={feedbackName} onChange={e=> setFeedbackName(e.target.value)} placeholder="Nickname (optional)" className="w-full mb-3 px-3.5 py-2.5 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20" />
+          <textarea value={feedbackText} onChange={e=> setFeedbackText(e.target.value)} placeholder="Share your experience..." rows={3} className="w-full mb-3 px-3.5 py-2.5 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
+          <button onClick={submitFeedback} disabled={!feedbackText.trim()} className="px-5 py-2.5 rounded-xl bg-white text-[#0a0a0a] text-sm font-semibold disabled:opacity-40 hover:bg-[#ededed] transition">Submit Feedback</button>
         </motion.div>
       </section>
 
-      {/* ========== 页脚 ========== */}
-      <footer className="relative z-10 border-t border-[#2a2a2a] py-8 px-4 text-center">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4">
-            <a href="/legal/terms" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
-              服务条款
-            </a>
-            <a href="/legal/privacy" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
-              隐私政策
-            </a>
-            <a href="/legal/aimusic-copyright" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
-              AI 版权政策
-            </a>
-            <a href="/legal/voice-cloning" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
-              声音克隆政策
-            </a>
-            <a href="/legal/credits-refund" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
-              积分退款
-            </a>
-            <a href="/legal/aup" className="text-xs text-[#666666] hover:text-[#999999] no-underline hover:underline">
-              可接受使用
-            </a>
+      <footer className="relative z-10 border-t border-[#1f1f1f] py-8 px-6 text-center">
+        <div className="max-w-[1120px] mx-auto">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4 text-xs text-[#6a6a6a]">
+            <a href="/legal/terms" className="hover:text-white">Terms</a>
+            <a href="/legal/privacy" className="hover:text-white">Privacy</a>
+            <a href="/legal/aimusic-copyright" className="hover:text-white">AI Copyright</a>
+            <a href="/legal/voice-cloning" className="hover:text-white">Voice Clone Policy</a>
           </div>
-          <p className="text-xs text-[#555555]">© 2026 Zyvexo · AI 音乐 / MV 创作平台 · 公测期间免费体验</p>
+          <p className="text-xs text-[#4a4a4a]">© 2026 Zyvexo · AI Music Studio</p>
         </div>
       </footer>
 
-      {/* ========== Toast ========== */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl shadow-2xl text-sm font-medium ${toast.type === 'success' ? 'bg-[#1a3a1a] border border-[#34d399]/40 text-[#34d399]' : 'bg-[#3a1a1a] border border-[#cc3333]/40 text-[#fca5a5]'}`}>
-          {toast.message}
-        </div>
-      )}
+      {toast && <div className={`fixed bottom-6 right-6 z-[200] px-4 py-2.5 rounded-xl text-sm font-medium ${toast.type==='success'?'bg-emerald-500 text-white':'bg-red-500 text-white'}`}>{toast.message}</div>}
     </div>
   );
 }

@@ -28,7 +28,7 @@
     "reset": "초기화"
   },
   "paths": {
-    "pathA": "경로 A — Suno 스타일",
+    "pathA": "AI 빠른 생성",
     "pathADesc": "프롬프트 → MusicGen → 전체 오디오",
     "pathB": "경로 B — 하이브리드",
     "pathBDesc": "MusicGen 반주 + TTS 보컬 → 합성 트랙",
@@ -68,8 +68,8 @@
     "downloadSnippet": "스니펫 다운로드",
     "downloadFull": "전체 다운로드",
     "detectBeats": "비트 감지",
-    "renderVideo": "비디오 렌더링",
-    "mvReady": "MV 준비됨",
+    "renderVideo": "오디오 내보내기",
+    "mvReady": "준비 완료",
     "waveformVisualization": "파형 시각화",
     "backgroundColor": "배경 색상",
     "resolution": "해상도",
@@ -108,7 +108,7 @@
     "remixFailed": "리믹스 실패",
     "mixFailed": "믹스 실패",
     "trimFailed": "트리밍 실패",
-    "mvFailed": "MV 생성 실패",
+    "mvFailed": "생성 실패",
     "networkError": "네트워크 오류",
     "serverError": "서버 오류",
     "unsupportedFormat": "지원되지 않는 형식",
@@ -126,7 +126,7 @@
     "originalCompose": "오리지널 편곡",
     "community": "커뮤니티",
     "myWorks": "내 작품",
-    "mvGenerate": "MV 생성",
+    "mvGenerate": "보이스 클론",
     "liveCollab": "실시간 협업",
     "hfModels": "HF 고급 모델",
     "subtitles": "자막 인식",
@@ -141,13 +141,19 @@
     "openMenu": "메뉴 열기",
     "expand": "펼치기",
     "collapse": "접기",
-    "aiTeam": "AI 팀"
+    "aiTeam": "AI 팀",
+    "home": "홈",
+    "createMusic": "음악 만들기",
+    "voiceClone": "보이스 클론",
+    "audioTools": "오디오 도구",
+    "myCreations": "내 작품",
+    "settings": "설정"
   },
   "landing": {
     "heroBadge": "공개 베타 진행 중 · 완전 무료",
     "heroTitle1": "올인원 AI",
-    "heroTitle2": "음악 / MV 제작 플랫폼",
-    "heroSub": "아이디어부터 작곡, 편곡, 완성까지 AI가 전체 창작 과정을 지원합니다.",
+    "heroTitle2": "AI 뮤직 스튜디오",
+    "heroSub": "영감부터 제작까지 — AI가 함께하는 스튜디오.",
     "ctaStart": "🎵 지금 창작 시작",
     "ctaExplore": "커뮤니티 둘러보기",
     "featuresTitle": "5가지 핵심 기능",
@@ -164,7 +170,7 @@
     "feedbackSubmit": "피드백 제출",
     "feedbackToastOk": "피드백 감사합니다!",
     "feedbackToastFail": "제출에 실패했습니다",
-    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
   },
   "pathA": {
     "tagline": "프롬프트 → Agnes AI → 전체 곡 생성 (무료)",
@@ -188,5 +194,100 @@
       "creditsRefund": "크레딧 및 환불",
       "aup": "허용되는 사용 정책"
     }
+  },
+  "home": {
+    "badge": "AI Music Studio · Modern Creation Platform",
+    "title1": "AI Music Studio",
+    "title2": "AI Music Studio",
+    "subtitle": "From idea to final mix — a professional AI-powered studio for music, voice and audio.",
+    "ctaPrimary": "Start Creating",
+    "ctaSecondary": "Explore Community",
+    "featuresTitle": "Create Your Sound",
+    "featuresSubtitle": "Four core modules covering the full music journey",
+    "cards": {
+      "createMusic": {
+        "title": "Create Music",
+        "desc": "Generate complete tracks from description, lyrics and style."
+      },
+      "voiceClone": {
+        "title": "Voice Clone",
+        "desc": "Create and manage your own voice models for licensed generation."
+      },
+      "audioTools": {
+        "title": "Audio Tools",
+        "desc": "Separation, mastering, conversion and more — all in one place."
+      },
+      "myCreations": {
+        "title": "My Creations",
+        "desc": "Manage all your generated and edited works in one hub."
+      }
+    }
+  },
+  "createMusic": {
+    "title": "Create Music",
+    "subtitle": "Generate complete tracks",
+    "songDescription": "Song Description",
+    "songDescriptionPlaceholder": "Describe the music...",
+    "lyrics": "Lyrics",
+    "lyricsPlaceholder": "Enter lyrics...",
+    "genre": "Genre",
+    "mood": "Mood",
+    "vocal": "Vocal",
+    "duration": "Duration",
+    "genrePlaceholder": "Select genre",
+    "moodPlaceholder": "Select mood",
+    "vocalPlaceholder": "Select vocal",
+    "generate": "Generate Music",
+    "generating": "Generating...",
+    "play": "Play",
+    "download": "Download",
+    "save": "Save",
+    "delete": "Delete",
+    "createAgain": "Create Again",
+    "history": "History",
+    "emptyHistory": "No history yet",
+    "tips": "Tip: be specific."
+  },
+  "voiceClone": {
+    "title": "Voice Clone",
+    "subtitle": "Create and manage your own voice models — only for voices you own or have permission to use",
+    "uploadSample": "Upload Voice Sample",
+    "voiceName": "Voice Name",
+    "voiceNamePlaceholder": "e.g. My Voice v1",
+    "voiceDescription": "Voice Description",
+    "voiceDescriptionPlaceholder": "Describe the character and use of this voice...",
+    "createVoice": "Create Voice",
+    "myVoices": "My Voices",
+    "preview": "Preview",
+    "delete": "Delete",
+    "consent": "Only clone voices you own or have permission to use.",
+    "pending": "Pending Integration",
+    "pendingDesc": "Voice clone backend is not yet fully available — UI is ready; storage and playback use existing capabilities.",
+    "empty": "No voice models yet — upload a sample to create",
+    "uploadHint": "WAV/MP3, 10s–2min, clean vocal",
+    "success": "Created successfully",
+    "failed": "Creation failed"
+  },
+  "audioTools": {
+    "title": "Audio Tools",
+    "subtitle": "All-in-one audio processing — separation, mastering, conversion",
+    "separation": "Audio Separation",
+    "mastering": "Audio Mastering",
+    "lyricTool": "Lyric Tools",
+    "conversion": "Format Conversion",
+    "separationDesc": "Demucs-based 4-stem separation: vocals/drums/bass/other",
+    "masteringDesc": "Intelligent mastering and loudness optimization",
+    "lyricDesc": "AI lyric generation and writing assistance",
+    "conversionDesc": "Convert between WAV / MP3 / FLAC and more",
+    "open": "Open",
+    "comingSoon": "Coming Soon"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage preferences and account",
+    "language": "Language",
+    "theme": "Theme",
+    "account": "Account",
+    "about": "About"
   }
 }

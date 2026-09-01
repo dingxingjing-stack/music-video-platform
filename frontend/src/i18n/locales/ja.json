@@ -28,7 +28,7 @@
     "reset": "リセット"
   },
   "paths": {
-    "pathA": "パス A — Suno スタイル",
+    "pathA": "AIクイック作成",
     "pathADesc": "プロンプト → MusicGen → 完全なオーディオ",
     "pathB": "パス B — ハイブリッド",
     "pathBDesc": "MusicGen 伴奏 + TTS ボーカル → 合成トラック",
@@ -68,8 +68,8 @@
     "downloadSnippet": "スニペットダウンロード",
     "downloadFull": "完全版ダウンロード",
     "detectBeats": "ビート検出",
-    "renderVideo": "動画レンダリング",
-    "mvReady": "MV 完了",
+    "renderVideo": "音声を書き出す",
+    "mvReady": "準備完了",
     "waveformVisualization": "波形表示",
     "backgroundColor": "背景色",
     "resolution": "解像度",
@@ -108,7 +108,7 @@
     "remixFailed": "リミックス失敗",
     "mixFailed": "ミックス失敗",
     "trimFailed": "トリミング失敗",
-    "mvFailed": "MV生成失敗",
+    "mvFailed": "生成に失敗しました",
     "networkError": "ネットワークエラー",
     "serverError": "サーバーエラー",
     "unsupportedFormat": "非対応形式",
@@ -126,7 +126,7 @@
     "originalCompose": "オリジナル編曲",
     "community": "コミュニティ",
     "myWorks": "マイ作品",
-    "mvGenerate": "MV生成",
+    "mvGenerate": "ボイスクローン",
     "liveCollab": "リアルタイム共同編集",
     "hfModels": "HF高度モデル",
     "subtitles": "字幕認識",
@@ -141,13 +141,19 @@
     "openMenu": "メニューを開く",
     "expand": "展開",
     "collapse": "折りたたむ",
-    "aiTeam": "AIチーム"
+    "aiTeam": "AIチーム",
+    "home": "ホーム",
+    "createMusic": "音楽を作成",
+    "voiceClone": "ボイスクローン",
+    "audioTools": "オーディオツール",
+    "myCreations": "マイ作品",
+    "settings": "設定"
   },
   "landing": {
     "heroBadge": "パブリックベータ開催中 · 完全無料",
     "heroTitle1": "AIオールインワン",
-    "heroTitle2": "音楽 / MV 制作プラットフォーム",
-    "heroSub": "インスピレーションから作曲、編曲、完成まで、AIが創作プロセス全体をサポートします。",
+    "heroTitle2": "AIミュージックスタジオ",
+    "heroSub": "インスピレーションから制作まで — AIが支えるスタジオ。",
     "ctaStart": "🎵 今すぐ創作を始める",
     "ctaExplore": "作品コミュニティを見る",
     "featuresTitle": "5つの主要機能",
@@ -164,7 +170,7 @@
     "feedbackSubmit": "フィードバックを送信",
     "feedbackToastOk": "フィードバックありがとうございます！",
     "feedbackToastFail": "送信に失敗しました",
-    "footerCopyright": "© 2026 Music Video Platform. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
   },
   "pathA": {
     "tagline": "プロンプト → Agnes AI → フル楽曲生成（無料）",
@@ -188,5 +194,100 @@
       "creditsRefund": "クレジットと返金",
       "aup": "利用規定"
     }
+  },
+  "home": {
+    "badge": "AI Music Studio · Modern Creation Platform",
+    "title1": "AI Music Studio",
+    "title2": "AI Music Studio",
+    "subtitle": "From idea to final mix — a professional AI-powered studio for music, voice and audio.",
+    "ctaPrimary": "Start Creating",
+    "ctaSecondary": "Explore Community",
+    "featuresTitle": "Create Your Sound",
+    "featuresSubtitle": "Four core modules covering the full music journey",
+    "cards": {
+      "createMusic": {
+        "title": "Create Music",
+        "desc": "Generate complete tracks from description, lyrics and style."
+      },
+      "voiceClone": {
+        "title": "Voice Clone",
+        "desc": "Create and manage your own voice models for licensed generation."
+      },
+      "audioTools": {
+        "title": "Audio Tools",
+        "desc": "Separation, mastering, conversion and more — all in one place."
+      },
+      "myCreations": {
+        "title": "My Creations",
+        "desc": "Manage all your generated and edited works in one hub."
+      }
+    }
+  },
+  "createMusic": {
+    "title": "Create Music",
+    "subtitle": "Generate complete tracks",
+    "songDescription": "Song Description",
+    "songDescriptionPlaceholder": "Describe the music...",
+    "lyrics": "Lyrics",
+    "lyricsPlaceholder": "Enter lyrics...",
+    "genre": "Genre",
+    "mood": "Mood",
+    "vocal": "Vocal",
+    "duration": "Duration",
+    "genrePlaceholder": "Select genre",
+    "moodPlaceholder": "Select mood",
+    "vocalPlaceholder": "Select vocal",
+    "generate": "Generate Music",
+    "generating": "Generating...",
+    "play": "Play",
+    "download": "Download",
+    "save": "Save",
+    "delete": "Delete",
+    "createAgain": "Create Again",
+    "history": "History",
+    "emptyHistory": "No history yet",
+    "tips": "Tip: be specific."
+  },
+  "voiceClone": {
+    "title": "Voice Clone",
+    "subtitle": "Create and manage your own voice models — only for voices you own or have permission to use",
+    "uploadSample": "Upload Voice Sample",
+    "voiceName": "Voice Name",
+    "voiceNamePlaceholder": "e.g. My Voice v1",
+    "voiceDescription": "Voice Description",
+    "voiceDescriptionPlaceholder": "Describe the character and use of this voice...",
+    "createVoice": "Create Voice",
+    "myVoices": "My Voices",
+    "preview": "Preview",
+    "delete": "Delete",
+    "consent": "Only clone voices you own or have permission to use.",
+    "pending": "Pending Integration",
+    "pendingDesc": "Voice clone backend is not yet fully available — UI is ready; storage and playback use existing capabilities.",
+    "empty": "No voice models yet — upload a sample to create",
+    "uploadHint": "WAV/MP3, 10s–2min, clean vocal",
+    "success": "Created successfully",
+    "failed": "Creation failed"
+  },
+  "audioTools": {
+    "title": "Audio Tools",
+    "subtitle": "All-in-one audio processing — separation, mastering, conversion",
+    "separation": "Audio Separation",
+    "mastering": "Audio Mastering",
+    "lyricTool": "Lyric Tools",
+    "conversion": "Format Conversion",
+    "separationDesc": "Demucs-based 4-stem separation: vocals/drums/bass/other",
+    "masteringDesc": "Intelligent mastering and loudness optimization",
+    "lyricDesc": "AI lyric generation and writing assistance",
+    "conversionDesc": "Convert between WAV / MP3 / FLAC and more",
+    "open": "Open",
+    "comingSoon": "Coming Soon"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage preferences and account",
+    "language": "Language",
+    "theme": "Theme",
+    "account": "Account",
+    "about": "About"
   }
 }
