@@ -87,7 +87,7 @@ export function AppLayout() {
 
         {/* 主导航 */}
         <nav className="flex-1 py-3 overflow-y-auto">
-          {!sidebarCollapsed && <div className="px-4 mb-2 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">Navigate</div>}
+          {!sidebarCollapsed && <div className="px-4 mb-2 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">{t('nav.navigate')}</div>}
           <div className="space-y-0.5 px-2">
             {NAV_MAIN.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
@@ -103,7 +103,7 @@ export function AppLayout() {
 
           {status.isGray && NAV_GRAY.length > 0 && (
             <>
-              {!sidebarCollapsed && <div className="px-4 mb-2 mt-6 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">Experimental</div>}
+              {!sidebarCollapsed && <div className="px-4 mb-2 mt-6 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">{t('nav.experimental')}</div>}
               <div className="space-y-0.5 px-2">
                 {NAV_GRAY.map((n) => (
                   <NavLink key={n.to} to={n.to} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
@@ -127,11 +127,11 @@ export function AppLayout() {
               <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#141414] border border-[#262626]">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                 <span className="text-xs text-[#b0b0b0] truncate">{user?.username || user?.email}</span>
-                <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">Logout</button>
+                <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">{t('common.logout')}</button>
               </div>
             ) : (
               <button onClick={() => setShowLogin(true)} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-white text-[#0a0a0a] text-sm font-semibold rounded-xl hover:bg-[#ededed] transition">
-                <span>Log in</span>
+                <span>{t('common.login')}</span>
               </button>
             )}
             <LanguageSwitcher />

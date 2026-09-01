@@ -5,7 +5,6 @@ import { WaveformEditor } from '../components/Audio/WaveformEditor';
 
 export function CreateMusicPage() {
   const { t } = useTranslation();
-  const tr = (k:string, fb:string)=> t(k)===k?fb:t(k);
   const [description, setDescription] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [genre, setGenre] = useState('');
@@ -50,89 +49,104 @@ export function CreateMusicPage() {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="max-w-[1120px] mx-auto px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black tracking-tight">{tr('createMusic.title','Create Music')}</h1>
-          <p className="mt-1 text-sm text-[#8a8a8a]">{tr('createMusic.subtitle','Generate complete tracks — powered by description, lyrics and style')}</p>
+          <h1 className="text-2xl font-black tracking-tight">{t('createMusic.title')}</h1>
+          <p className="mt-1 text-sm text-[#8a8a8a]">{t('createMusic.subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-6">
-          {/* Form */}
           <div className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-6 space-y-4">
             <div>
-              <label className="text-xs font-medium text-[#b0b0b0]">{tr('createMusic.songDescription','Song Description')}</label>
-              <textarea value={description} onChange={e=> setDescription(e.target.value)} placeholder={tr('createMusic.songDescriptionPlaceholder','Describe the music you want...')} rows={3} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3.5 py-3 text-sm text-white placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
+              <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.songDescription')}</label>
+              <textarea value={description} onChange={e=> setDescription(e.target.value)} placeholder={t('createMusic.songDescriptionPlaceholder')} rows={3} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3.5 py-3 text-sm text-white placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#b0b0b0]">{tr('createMusic.lyrics','Lyrics')}</label>
-              <textarea value={lyrics} onChange={e=> setLyrics(e.target.value)} placeholder={tr('createMusic.lyricsPlaceholder','Enter lyrics or leave empty for AI generation...')} rows={4} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3.5 py-3 text-sm text-white placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
+              <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.lyrics')}</label>
+              <textarea value={lyrics} onChange={e=> setLyrics(e.target.value)} placeholder={t('createMusic.lyricsPlaceholder')} rows={4} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3.5 py-3 text-sm text-white placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-[#b0b0b0]">{tr('createMusic.genre','Genre')}</label>
+                <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.genre')}</label>
                 <select value={genre} onChange={e=> setGenre(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
-                  <option value="">{tr('createMusic.genrePlaceholder','Select or enter genre')}</option>
-                  <option value="pop">Pop</option><option value="rock">Rock</option><option value="electronic">Electronic</option><option value="hiphop">Hip Hop</option><option value="jazz">Jazz</option><option value="ambient">Ambient</option><option value="cinematic">Cinematic</option>
+                  <option value="">{t('createMusic.genrePlaceholder')}</option>
+                  <option value="pop">{t('createMusic.genres.pop')}</option>
+                  <option value="rock">{t('createMusic.genres.rock')}</option>
+                  <option value="electronic">{t('createMusic.genres.electronic')}</option>
+                  <option value="hiphop">{t('createMusic.genres.hiphop')}</option>
+                  <option value="jazz">{t('createMusic.genres.jazz')}</option>
+                  <option value="ambient">{t('createMusic.genres.ambient')}</option>
+                  <option value="cinematic">{t('createMusic.genres.cinematic')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#b0b0b0]">{tr('createMusic.mood','Mood')}</label>
+                <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.mood')}</label>
                 <select value={mood} onChange={e=> setMood(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
-                  <option value="">{tr('createMusic.moodPlaceholder','Select mood')}</option>
-                  <option value="uplifting">Uplifting</option><option value="melancholic">Melancholic</option><option value="energetic">Energetic</option><option value="calm">Calm</option><option value="dreamy">Dreamy</option>
+                  <option value="">{t('createMusic.moodPlaceholder')}</option>
+                  <option value="uplifting">{t('createMusic.moods.uplifting')}</option>
+                  <option value="melancholic">{t('createMusic.moods.melancholic')}</option>
+                  <option value="energetic">{t('createMusic.moods.energetic')}</option>
+                  <option value="calm">{t('createMusic.moods.calm')}</option>
+                  <option value="dreamy">{t('createMusic.moods.dreamy')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#b0b0b0]">{tr('createMusic.vocal','Vocal')}</label>
+                <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.vocal')}</label>
                 <select value={vocal} onChange={e=> setVocal(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
-                  <option value="">{tr('createMusic.vocalPlaceholder','Select vocal')}</option>
-                  <option value="female">Female</option><option value="male">Male</option><option value="choir">Choir</option><option value="instrumental">Instrumental</option>
+                  <option value="">{t('createMusic.vocalPlaceholder')}</option>
+                  <option value="female">{t('createMusic.vocals.female')}</option>
+                  <option value="male">{t('createMusic.vocals.male')}</option>
+                  <option value="choir">{t('createMusic.vocals.choir')}</option>
+                  <option value="instrumental">{t('createMusic.vocals.instrumental')}</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#b0b0b0]">{tr('createMusic.duration','Duration')}</label>
+                <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.duration')}</label>
                 <select value={duration} onChange={e=> setDuration(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
-                  <option value="15">15s</option><option value="30">30s</option><option value="60">60s</option><option value="90">90s</option><option value="120">120s</option>
+                  <option value="15">{t('createMusic.durations.15s')}</option>
+                  <option value="30">{t('createMusic.durations.30s')}</option>
+                  <option value="60">{t('createMusic.durations.60s')}</option>
+                  <option value="90">{t('createMusic.durations.90s')}</option>
+                  <option value="120">{t('createMusic.durations.120s')}</option>
                 </select>
               </div>
             </div>
             <button onClick={handleGenerate} disabled={loading || !description.trim()} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">
-              {loading ? <><span className="w-4 h-4 border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] rounded-full animate-spin" /> {tr('createMusic.generating','Generating...')}</> : tr('createMusic.generate','Generate Music')}
+              {loading ? <><span className="w-4 h-4 border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] rounded-full animate-spin" /> {t('createMusic.generating')}</> : t('createMusic.generate')}
             </button>
-            <p className="text-xs text-[#555555]">{tr('createMusic.tips','Tip: the more specific your description, the closer the result.')}</p>
+            <p className="text-xs text-[#555555]">{t('createMusic.tips')}</p>
             {rateLimited && (
               <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300 flex items-center justify-between">
-                <span>Rate limited — free tier limit reached.</span>
-                <button onClick={()=> setRateLimited(false)} className="text-white underline">Dismiss</button>
+                <span>{t('createMusic.rateLimited')}</span>
+                <button onClick={()=> setRateLimited(false)} className="text-white underline">{t('createMusic.dismiss')}</button>
               </div>
             )}
           </div>
 
-          {/* Result */}
           <div className="space-y-4">
             <div className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-6 min-h-[280px]">
               {!audioUrl ? (
                 <div className="h-[240px] flex flex-col items-center justify-center text-center">
                   <div className="w-12 h-12 rounded-full bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center text-lg">♪</div>
-                  <p className="mt-3 text-sm text-[#6a6a6a]">Your generation will appear here</p>
-                  <p className="text-xs text-[#4a4a4a] mt-1">Enter a description and click Generate</p>
+                  <p className="mt-3 text-sm text-[#6a6a6a]">{t('createMusic.resultPlaceholderTitle')}</p>
+                  <p className="text-xs text-[#4a4a4a] mt-1">{t('createMusic.resultPlaceholderDesc')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <WaveformEditor url={audioUrl} />
                   <audio controls src={audioUrl} className="w-full" />
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={()=> { const a=document.createElement('a'); a.href=audioUrl; a.download='zyvexo-track.wav'; a.click(); }} className="px-4 py-2 rounded-xl bg-white text-[#0a0a0a] text-sm font-medium hover:bg-[#ededed]">{tr('createMusic.download','Download')}</button>
-                    <button onClick={()=> { localStorage.setItem('zyvexo_last_save', audioUrl); alert('Saved to My Creations (local)'); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{tr('createMusic.save','Save')}</button>
-                    <button onClick={()=> setAudioUrl(null)} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-[#ff6b6b] text-sm hover:bg-[#1f1a1a]">{tr('createMusic.delete','Delete')}</button>
-                    <button onClick={()=> { setDescription(''); setLyrics(''); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{tr('createMusic.createAgain','Create Again')}</button>
+                    <button onClick={()=> { const a=document.createElement('a'); a.href=audioUrl; a.download='zyvexo-track.wav'; a.click(); }} className="px-4 py-2 rounded-xl bg-white text-[#0a0a0a] text-sm font-medium hover:bg-[#ededed]">{t('createMusic.download')}</button>
+                    <button onClick={()=> { localStorage.setItem('zyvexo_last_save', audioUrl); alert(t('createMusic.saved')); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{t('createMusic.save')}</button>
+                    <button onClick={()=> setAudioUrl(null)} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-[#ff6b6b] text-sm hover:bg-[#1f1a1a]">{t('createMusic.delete')}</button>
+                    <button onClick={()=> { setDescription(''); setLyrics(''); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{t('createMusic.createAgain')}</button>
                   </div>
                 </div>
               )}
             </div>
 
             <div className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-6">
-              <h3 className="text-sm font-semibold text-white">{tr('createMusic.history','History')}</h3>
+              <h3 className="text-sm font-semibold text-white">{t('createMusic.history')}</h3>
               {history.length===0 ? (
-                <p className="mt-3 text-xs text-[#6a6a6a]">{tr('createMusic.emptyHistory','No history yet — your generations will appear here')}</p>
+                <p className="mt-3 text-xs text-[#6a6a6a]">{t('createMusic.emptyHistory')}</p>
               ) : (
                 <div className="mt-3 space-y-2 max-h-[320px] overflow-auto pr-1">
                   {history.map(h=> (
@@ -142,7 +156,7 @@ export function CreateMusicPage() {
                         <div className="text-xs text-white truncate">{h.prompt || 'Untitled'}</div>
                         <div className="text-[11px] text-[#6a6a6a]">{h.time}</div>
                       </div>
-                      <button onClick={()=> handleDelete(h.id)} className="text-xs text-[#ff6b6b] hover:text-red-400 px-2">{tr('createMusic.delete','Delete')}</button>
+                      <button onClick={()=> handleDelete(h.id)} className="text-xs text-[#ff6b6b] hover:text-red-400 px-2">{t('createMusic.delete')}</button>
                     </div>
                   ))}
                 </div>

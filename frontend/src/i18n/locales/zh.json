@@ -1,31 +1,9 @@
 {
   "common": {
-    "appName": "Zyvexo",
     "loading": "加载中...",
-    "error": "错误",
-    "save": "保存",
-    "cancel": "取消",
-    "confirm": "确认",
-    "delete": "删除",
-    "rename": "重命名",
-    "download": "下载",
-    "upload": "上传",
-    "play": "播放",
-    "pause": "暂停",
-    "stop": "停止",
-    "record": "录制",
-    "settings": "设置",
-    "language": "语言",
-    "theme": "主题",
-    "darkMode": "深色模式",
-    "lightMode": "浅色模式",
-    "clearConfirm": "清空所有已保存轨道？",
-    "helloWorld": "Hello world",
-    "stemCount4": "4",
-    "trackNum": "轨道{n}",
-    "back": "返回",
-    "preview": "预览",
-    "reset": "重置"
+    "logout": "退出登录",
+    "login": "登录",
+    "dismiss": "关闭"
   },
   "paths": {
     "pathA": "AI 快速创作",
@@ -147,7 +125,9 @@
     "voiceClone": "声音克隆",
     "audioTools": "音频工具",
     "myCreations": "我的作品",
-    "settings": "设置"
+    "settings": "设置",
+    "navigate": "导航",
+    "experimental": "灰度实验"
   },
   "landing": {
     "heroBadge": "公测进行中 · 完全免费",
@@ -221,6 +201,15 @@
         "title": "我的作品",
         "desc": "集中管理所有生成与编辑的音乐作品。"
       }
+    },
+    "info": {
+      "workflowTitle": "专业工作流",
+      "workflowDesc": "提示词 → 生成 → 编辑 → 混音 → 导出，无需额外安装。",
+      "voiceTitle": "合规声音使用",
+      "voiceDesc": "声音克隆基于授权且可追溯。",
+      "worksTitle": "你的作品，你做主",
+      "worksDesc": "所有生成结果保存至我的作品，支持播放与导出。",
+      "open": "打开"
     }
   },
   "createMusic": {
@@ -246,7 +235,41 @@
     "createAgain": "再次创作",
     "history": "生成历史",
     "emptyHistory": "暂无历史，生成后将显示在此",
-    "tips": "提示：越具体的描述，生成越贴合预期"
+    "tips": "提示：越具体的描述，生成越贴合预期",
+    "resultPlaceholderTitle": "生成结果将显示在这里",
+    "resultPlaceholderDesc": "输入描述并点击生成",
+    "saved": "已保存至我的作品（本地）",
+    "genres": {
+      "pop": "流行",
+      "rock": "摇滚",
+      "electronic": "电子",
+      "hiphop": "嘻哈",
+      "jazz": "爵士",
+      "ambient": "氛围",
+      "cinematic": "影视"
+    },
+    "moods": {
+      "uplifting": "振奋",
+      "melancholic": "忧郁",
+      "energetic": "活力",
+      "calm": "平静",
+      "dreamy": "梦幻"
+    },
+    "vocals": {
+      "female": "女声",
+      "male": "男声",
+      "choir": "合唱",
+      "instrumental": "纯器乐"
+    },
+    "durations": {
+      "15s": "15秒",
+      "30s": "30秒",
+      "60s": "60秒",
+      "90s": "90秒",
+      "120s": "120秒"
+    },
+    "rateLimited": "请求过于频繁，已达免费额度上限",
+    "dismiss": "关闭"
   },
   "voiceClone": {
     "title": "声音克隆",
@@ -262,11 +285,14 @@
     "delete": "删除",
     "consent": "仅克隆你拥有或已获授权的声音。",
     "pending": "待接入",
-    "pendingDesc": "后端声音克隆 API 尚未就绪，当前为 UI 预览；已就绪的存储与播放能力可正常使用。",
+    "pendingDesc": "后端声音克隆 API 尚未完全就绪，当前为 UI 预览；已就绪的存储与播放能力可正常使用。",
     "empty": "暂无声音模型，上传样本以创建",
     "uploadHint": "支持 WAV/MP3，10秒-2分钟，清晰人声",
     "success": "创建成功",
-    "failed": "创建失败"
+    "failed": "创建失败",
+    "local": "本地",
+    "selected": "已选择",
+    "backendPending": "后端声音克隆 API 尚未完全部署，当前存储使用浏览器本地持久化及现有上传能力；服务端训练与授权合成将在就绪后接入。"
   },
   "audioTools": {
     "title": "音频工具",
@@ -280,7 +306,11 @@
     "lyricDesc": "AI 歌词生成与辅助创作",
     "conversionDesc": "WAV / MP3 / FLAC 等格式互转",
     "open": "打开",
-    "comingSoon": "敬请期待"
+    "comingSoon": "敬请期待",
+    "howItWorks": "工作原理",
+    "how1": "工具基于现有后端能力运行 — 无模拟结果。",
+    "how2": "分离使用 Demucs；母带使用响度/目标预设。",
+    "how3": "所有输出可保存至我的作品。"
   },
   "settings": {
     "title": "设置",
@@ -288,6 +318,25 @@
     "language": "语言",
     "theme": "主题",
     "account": "账户",
-    "about": "关于"
+    "about": "关于",
+    "accountDesc": "账户管理可在侧边栏用户区及登录弹窗中操作，更多设置将随后端功能上线。",
+    "aboutText": "Zyvexo · AI 音乐工作室 · 公测 v2.0"
+  },
+  "myCreations": {
+    "title": "我的作品",
+    "subtitle": "集中管理你的音乐作品",
+    "empty": "暂无作品",
+    "emptyDesc": "去创作音乐或使用音频工具生成你的第一个作品",
+    "play": "播放",
+    "download": "下载",
+    "delete": "删除",
+    "share": "分享",
+    "loadFailed": "加载作品列表失败",
+    "retry": "重试",
+    "confirmDelete": "确定要删除这首作品吗？此操作将删除数据库记录和存储的音频文件。",
+    "deleteFailed": "删除失败，请重试",
+    "deleteError": "删除过程中发生错误",
+    "deleting": "删除中...",
+    "taskPrefix": "任务"
   }
 }

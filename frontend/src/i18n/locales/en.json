@@ -1,31 +1,9 @@
 {
   "common": {
-    "appName": "Zyvexo",
     "loading": "Loading...",
-    "error": "Error",
-    "save": "Save",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "delete": "Delete",
-    "rename": "Rename",
-    "download": "Download",
-    "upload": "Upload",
-    "play": "Play",
-    "pause": "Pause",
-    "stop": "Stop",
-    "record": "Record",
-    "settings": "Settings",
-    "language": "Language",
-    "theme": "Theme",
-    "darkMode": "Dark Mode",
-    "lightMode": "Light Mode",
-    "clearConfirm": "Clear all saved tracks?",
-    "helloWorld": "Hello world",
-    "stemCount4": "4",
-    "trackNum": "Track {n}",
-    "back": "Back",
-    "preview": "Preview",
-    "reset": "Reset"
+    "logout": "Log out",
+    "login": "Log in",
+    "dismiss": "Dismiss"
   },
   "paths": {
     "pathA": "AI Quick Create",
@@ -147,7 +125,9 @@
     "voiceClone": "Voice Clone",
     "audioTools": "Audio Tools",
     "myCreations": "My Creations",
-    "settings": "Settings"
+    "settings": "Settings",
+    "navigate": "Navigate",
+    "experimental": "Experimental"
   },
   "landing": {
     "heroBadge": "Public beta · Completely free",
@@ -221,6 +201,15 @@
         "title": "My Creations",
         "desc": "Manage all your generated and edited works in one hub."
       }
+    },
+    "info": {
+      "workflowTitle": "Professional workflow",
+      "workflowDesc": "Prompt → generation → edit → mix → export. No extra installs.",
+      "voiceTitle": "Responsible voice use",
+      "voiceDesc": "Voice Clone is permission-based and traceable by design.",
+      "worksTitle": "Your works, your control",
+      "worksDesc": "All generations saved to My Creations with playback and export.",
+      "open": "Open"
     }
   },
   "createMusic": {
@@ -246,7 +235,41 @@
     "createAgain": "Create Again",
     "history": "History",
     "emptyHistory": "No history yet — your generations will appear here",
-    "tips": "Tip: the more specific your description, the closer the result."
+    "tips": "Tip: the more specific your description, the closer the result.",
+    "resultPlaceholderTitle": "Your generation will appear here",
+    "resultPlaceholderDesc": "Enter a description and click Generate",
+    "saved": "Saved to My Creations (local)",
+    "genres": {
+      "pop": "Pop",
+      "rock": "Rock",
+      "electronic": "Electronic",
+      "hiphop": "Hip Hop",
+      "jazz": "Jazz",
+      "ambient": "Ambient",
+      "cinematic": "Cinematic"
+    },
+    "moods": {
+      "uplifting": "Uplifting",
+      "melancholic": "Melancholic",
+      "energetic": "Energetic",
+      "calm": "Calm",
+      "dreamy": "Dreamy"
+    },
+    "vocals": {
+      "female": "Female",
+      "male": "Male",
+      "choir": "Choir",
+      "instrumental": "Instrumental"
+    },
+    "durations": {
+      "15s": "15s",
+      "30s": "30s",
+      "60s": "60s",
+      "90s": "90s",
+      "120s": "120s"
+    },
+    "rateLimited": "Too many requests. You have reached the free tier limit.",
+    "dismiss": "Dismiss"
   },
   "voiceClone": {
     "title": "Voice Clone",
@@ -266,7 +289,10 @@
     "empty": "No voice models yet — upload a sample to create",
     "uploadHint": "WAV/MP3, 10s–2min, clean vocal",
     "success": "Created successfully",
-    "failed": "Creation failed"
+    "failed": "Creation failed",
+    "local": "Local",
+    "selected": "Selected",
+    "backendPending": "Backend voice-clone API is not yet fully deployed. Current storage uses browser local persistence and existing upload capability; server-side training and licensed synthesis will be connected when available."
   },
   "audioTools": {
     "title": "Audio Tools",
@@ -280,7 +306,11 @@
     "lyricDesc": "AI lyric generation and writing assistance",
     "conversionDesc": "Convert between WAV / MP3 / FLAC and more",
     "open": "Open",
-    "comingSoon": "Coming Soon"
+    "comingSoon": "Coming Soon",
+    "howItWorks": "How it works",
+    "how1": "Tools run on existing backend capabilities — no mocked results.",
+    "how2": "Separation uses Demucs; mastering uses loudness/target presets.",
+    "how3": "All outputs can be saved to My Creations."
   },
   "settings": {
     "title": "Settings",
@@ -288,6 +318,25 @@
     "language": "Language",
     "theme": "Theme",
     "account": "Account",
-    "about": "About"
+    "about": "About",
+    "accountDesc": "Account management is available via the sidebar user section and login modal. More settings will appear here as backend features land.",
+    "aboutText": "Zyvexo · AI Music Studio · Public Beta v2.0"
+  },
+  "myCreations": {
+    "title": "My Creations",
+    "subtitle": "Manage your music works in one place",
+    "empty": "No creations yet",
+    "emptyDesc": "Go to Create Music or Audio Tools to generate your first work",
+    "play": "Play",
+    "download": "Download",
+    "delete": "Delete",
+    "share": "Share",
+    "loadFailed": "Failed to load works",
+    "retry": "Retry",
+    "confirmDelete": "Are you sure you want to delete this work? This will remove database records and stored audio.",
+    "deleteFailed": "Delete failed, please retry",
+    "deleteError": "Error during deletion",
+    "deleting": "Deleting...",
+    "taskPrefix": "Task"
   }
 }
