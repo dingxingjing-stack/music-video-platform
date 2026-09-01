@@ -8,18 +8,26 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from datetime import datetime
 import uuid
+import os
 
-# 尝试导入 SQLite 服务（优先）或 Supabase 服务
+# 生产/已配置 Supabase 时优先 Supabase，否则回退 SQLite（本地/测试）
+_SUPABASE_CFG = bool(os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")))
 try:
+    if _SUPABASE_CFG:
+        from app.services.supabase_service import (
+            get_user, create_song, get_user_songs, log_activity
+        )
+        DB_BACKEND = "supabase"
+    else:
+        from app.services.sqlite_service import (
+            get_user, create_song, get_user_songs, log_activity
+        )
+        DB_BACKEND = "sqlite"
+except ImportError:
     from app.services.sqlite_service import (
         get_user, create_song, get_user_songs, log_activity
     )
     DB_BACKEND = "sqlite"
-except ImportError:
-    from app.services.supabase_service import (
-        SupabaseService, get_user, create_song, get_user_songs, log_activity
-    )
-    DB_BACKEND = "supabase"
 
 router = APIRouter(prefix="/api/v1/songs", tags=["歌曲管理"])
 

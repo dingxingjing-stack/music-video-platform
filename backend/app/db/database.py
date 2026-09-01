@@ -25,7 +25,7 @@ from datetime import datetime
 # ── 环境判定 ────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./music_platform.db")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-IS_POSTGRES = DATABASE_URL.startswith("postgresql")
+IS_POSTGRES = DATABASE_URL.startswith(("postgresql", "postgres", "postgresql+"))
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 # 生产强制 PG
@@ -44,14 +44,17 @@ def _build_engine():
     pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "3600"))
 
     if IS_POSTGRES:
-        # Supabase 要求 SSL，URL 中应含 ?sslmode=require（由运维配置）
-        # SQLAlchemy 2.0 默认 psycopg2
+        # Supabase 强制 SSL（Supavisor/connection pooler）。URL 未显式 sslmode 时默认 require。
+        connect_args: dict = {}
+        if "sslmode=" not in url:
+            connect_args["sslmode"] = "require"
         return create_engine(
             url,
             pool_size=pool_size,
             max_overflow=max_overflow,
             pool_recycle=pool_recycle,
             pool_pre_ping=True,
+            connect_args=connect_args,
             echo=False,
         )
     # SQLite
