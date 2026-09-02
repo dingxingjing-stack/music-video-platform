@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../config/api";
 import { getUserId } from "./useAiMusicTask";
 
 // ----------------------------------------
@@ -9,9 +10,10 @@ export async function getUserAge(): Promise<number | null> {
   const userId = getUserId();
   if (!userId) return null;
   try {
-    const resp = await fetch('/api/v1/user/age', {
+    // 与全站一致走绝对后端地址（绕开 Worker 静态/代理层），CORS 由后端放行
+    const resp = await fetch(api.url('/api/v1/user/age'), {
       headers: { 'X-User-ID': userId },
-      credentials: 'same-origin',
+      credentials: 'include',
     });
     if (!resp.ok) return null;
     const data = await resp.json();
@@ -38,9 +40,9 @@ export const useUserAge = () => {
       setLoading(false);
       return;
     }
-    fetch('/api/v1/user/age', {
+    fetch(api.url('/api/v1/user/age'), {
       headers: { 'X-User-ID': userId },
-      credentials: 'same-origin',
+      credentials: 'include',
     })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
