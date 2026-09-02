@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
+import { getUserId } from "./useAiMusicTask";
 
 // ----------------------------------------
 // 1️⃣ API helper – 供外部直接调用
 // ----------------------------------------
 export async function getUserAge(): Promise<number | null> {
+  // 未登录时没有可信用户 ID，不伪造、不阻塞，直接返回 null
+  const userId = getUserId();
+  if (!userId) return null;
   try {
-    const resp = await fetch('/api/v1/user/age', { credentials: 'same-origin' });
+    const resp = await fetch('/api/v1/user/age', {
+      headers: { 'X-User-ID': userId },
+      credentials: 'same-origin',
+    });
     if (!resp.ok) return null;
     const data = await resp.json();
     return data.age ?? null;
@@ -25,7 +32,16 @@ export const useUserAge = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    fetch('/api/v1/user/age', { credentials: 'same-origin' })
+    const userId = getUserId();
+    // 未登录：无年龄、不阻塞页面
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    fetch('/api/v1/user/age', {
+      headers: { 'X-User-ID': userId },
+      credentials: 'same-origin',
+    })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();

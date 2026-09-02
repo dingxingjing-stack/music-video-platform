@@ -300,6 +300,12 @@ os.makedirs(GENERATED_DIR, exist_ok=True)
 app.add_middleware(PrivacyMiddleware)
 
 # ---------- CORS 跨域（生产仅允许 Pages/自定义域，* 禁止，localhost 仅开发） ----------
+# 生产前端真实部署域（Cloudflare Workers），必须显式允许，否则跨域 API 的 preflight 会被拒绝。
+_PRODUCTION_ORIGINS = [
+    "https://music-video-platform.pages.dev",
+    "https://music-video-platform.zezhending90.workers.dev",
+]
+
 def _cors_origins() -> list[str]:
     env = os.getenv("ENVIRONMENT", "development").lower()
     # 优先显式配置
@@ -307,16 +313,17 @@ def _cors_origins() -> list[str]:
     if raw:
         # 逗号分隔
         vals = [v.strip() for v in raw.split(",") if v.strip()]
-        # 生产禁止 * 与 localhost
         if env == "production":
             vals = [v for v in vals if v != "*" and "localhost" not in v and "127.0.0.1" not in v]
-            if not vals:
-                # 回退到 Pages 缺省
-                return ["https://music-video-platform.pages.dev"]
+        # 无论显式配置如何，生产必须始终包含已知生产前端域，避免误配导致跨域失败
+        if env == "production":
+            for origin in _PRODUCTION_ORIGINS:
+                if origin not in vals:
+                    vals.append(origin)
         return vals
     if env == "production":
-        return ["https://music-video-platform.pages.dev"]
-    return ["https://music-video-platform.pages.dev", "http://localhost:3000"]
+        return list(_PRODUCTION_ORIGINS)
+    return ["https://music-video-platform.pages.dev", "https://music-video-platform.zezhending90.workers.dev", "http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
