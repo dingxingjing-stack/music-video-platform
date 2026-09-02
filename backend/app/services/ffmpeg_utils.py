@@ -25,12 +25,12 @@ def find_ffmpeg() -> str:
 def ffmpeg_run(cmd: list[str]) -> None:
     """Execute ffmpeg command with error handling."""
     try:
-        subprocess.run(cmd, check=True, capture_output=True, timeout=120)
+        subprocess.run(cmd, check=True, capture_output=True, timeout=300)
     except subprocess.CalledProcessError as exc:
         logger.error("ffmpeg failed: %s", exc.stderr.decode(errors="replace")[:300])
         raise RuntimeError(f"ffmpeg encoding failed: {exc}")
     except subprocess.TimeoutExpired:
-        raise RuntimeError("ffmpeg encoding timed out (120s)")
+        raise RuntimeError("ffmpeg encoding timed out (300s)")
 
 
 def resolve_audio_path(url: str, results_dir: str) -> str:

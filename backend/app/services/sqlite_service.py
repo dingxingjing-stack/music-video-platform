@@ -383,5 +383,6 @@ def log_activity(user_id: str, action: str, resource_type: Optional[str] = None,
 
 # ========== 初始化 ==========
 
-# 自动初始化数据库
-init_db()
+# 生产禁止 SQLite：仅本地/测试自动初始化（避免生产创建孤立 sqlite 文件）
+if os.getenv("ENVIRONMENT", "development").lower() != "production":
+    init_db()

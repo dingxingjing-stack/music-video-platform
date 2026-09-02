@@ -11,8 +11,9 @@
 
 import { useState, useCallback } from 'react';
 import { getUserId } from './useAiMusicTask';
+import { api } from '../config/api';
 
-const API = 'https://ai-music-backend-8e85.onrender.com/api/v1';
+const API = api.base;
 
 interface UseAudioGenOptions {
   onSuccess?: (url: string) => void;

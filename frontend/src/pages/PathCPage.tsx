@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { RateLimitBanner } from '../hooks/useAudioGeneration';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../config/api';
 
 interface VoiceSample { id: string; name: string; audio_url: string; duration: number; created_at: string; is_private?: boolean; }
 
@@ -16,7 +17,7 @@ interface CloneResult { success: boolean; audio_url: string | null; duration: nu
 
 interface QuotaInfo { used: number; limit: number; can_clone: boolean; }
 
-const API = 'https://ai-music-backend-8e85.onrender.com/api/v1';
+const API = api.base;
 
 const CONSENT_TEXT = [
   '本次上传的音频为本人自有嗓音，已完整取得该声音的使用授权，绝不盗用、克隆公众人物、亲友、陌生人等第三方声音；',
@@ -26,7 +27,8 @@ const CONSENT_TEXT = [
 ];
 
 export function PathCPage() {
-  const [activeTab, setActiveTab] = useState<'library' | 'upload' | 'clone'>('library');
+  // 声音克隆功能当前对普通用户隐藏
+  return <div className="p-6 text-center text-zinc-500">🔇 声音克隆功能当前对普通用户隐藏</div>;
   const [publicVoices, setPublicVoices] = useState<VoiceSample[]>([]);
   const [privateVoices, setPrivateVoices] = useState<VoiceSample[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');

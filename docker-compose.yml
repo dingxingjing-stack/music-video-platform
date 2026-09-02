@@ -11,7 +11,8 @@ services:
       - MUREKA_API_KEY=${MUREKA_API_KEY:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
-      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./data/app.db}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads

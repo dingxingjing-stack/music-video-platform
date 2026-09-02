@@ -155,3 +155,45 @@ def create_feedback(name: str, text: str) -> Dict:
     except APIError as e:
         print(f"Error creating feedback: {e}")
         raise
+
+
+# ── auth.py / songs.py 所需的接口（安全包装，避免 Supabase 分支 ImportError）──
+
+def get_user_songs(user_id: str, limit: int = 50, offset: int = 0) -> List[Dict]:
+    """获取用户歌曲（songs.py 期望的接口名，映射到 get_songs_by_user）。"""
+    return get_songs_by_user(user_id, limit, offset)
+
+def log_activity(user_id: str, action: str, resource_type: str = "",
+                 resource_id: str = "", metadata: Optional[Dict] = None) -> Any:
+    """记录活动日志（Supabase activity_logs；表/列缺失时安全降级，不抛错）。"""
+    try:
+        row: Dict[str, Any] = {"user_id": user_id, "action": action}
+        if resource_type:
+            row["resource_type"] = resource_type
+        if resource_id:
+            row["resource_id"] = resource_id
+        if metadata:
+            row["metadata"] = metadata
+        supabase.table("activity_logs").insert(row).execute()
+        return True
+    except Exception:
+        return None
+
+def _adjust_user_credits(user_id: str, delta: int) -> Any:
+    """读取并调整 users.credits；表/列缺失时安全返回 None，不抛错。"""
+    try:
+        resp = supabase.table("users").select("credits").eq("id", user_id).execute()
+        if not resp.data:
+            return None
+        cur = int(resp.data[0].get("credits") or 0)
+        new = max(0, cur + delta)
+        supabase.table("users").update({"credits": new}).eq("id", user_id).execute()
+        return new
+    except Exception:
+        return None
+
+def increment_user_credits(user_id: str, amount: int = 1) -> Any:
+    return _adjust_user_credits(user_id, amount)
+
+def decrement_user_credits(user_id: str, amount: int = 1) -> Any:
+    return _adjust_user_credits(user_id, -amount)

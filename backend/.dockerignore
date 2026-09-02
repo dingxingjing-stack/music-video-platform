@@ -1,7 +1,19 @@
-# HeartMuLa HF Spaces - Docker Ignore
-# 排除不需要构建进镜像的文件
+﻿# Environment & secrets
+.env
+.env.*
+!.env.example
+*.local.json
+secrets.*
+*.key
+*.pem
 
-# 模型权重（运行时从 HF Hub 下载，不打包进镜像）
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Model weights (downloaded at runtime from HF Hub, not baked into image)
 *.safetensors
 *.bin
 *.pt
@@ -10,14 +22,19 @@ model.safetensors.index.json
 config.json
 tokenizer.json
 gen_config.json
-
-# 模型缓存目录
 /models/
 /checkpoints/
 /pretrained/
 *.cache/
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.coverage
 
 # Git
 .git/
@@ -30,59 +47,57 @@ __pycache__/
 *.swp
 *.swo
 
-# 环境变量和密钥
-.env
-.env.*
-*.local.json
-secrets.*
-*.key
-*.pem
+# Build outputs
+dist/
+build/
+*.egg-info/
 
-# 日志和输出
+# Logs
 *.log
+logs/
 *.out
-*.txt
-!requirements*.txt
-!README*
 
-# 测试文件
-test_*.py
-*_test.py
-tests/
-__pycache__/
-.pytest_cache/
-.coverage
-
-# 前端构建产物（不需要）
-frontend-web/static_dist/
-frontend/dist/
-frontend/node_modules/
-
-# 大文件
+# Test media / audio files
+test_*.wav
+test_*.mp3
+test_*.mp4
 *.wav
 *.mp3
 *.mp4
 *.avi
 *.mov
+continuation_result.wav
+original_song_*.mp3
+original_song_*.wav
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Deploy bundle
+deploy_bundle/
+
+# Frontend build artifacts (not needed in image)
+frontend-web/static_dist/
+frontend/dist/
+frontend/node_modules/
+
+# Large archives
 *.zip
 *.tar.gz
 
-# 部署相关（其他平台配置）
-modal_*.py
-deploy_*.py
-render.yaml
-docker-compose.yml
-Dockerfile
-Dockerfile.*
-kaggle_*
-*.ipynb
-
-# 文档
+# Docs & misc
 docs/
 *.md
 !README.md
 
-# 临时文件
+# Temp files
 tmp/
 temp/
 *.tmp

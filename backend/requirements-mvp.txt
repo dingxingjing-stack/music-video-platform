@@ -1,0 +1,13 @@
+# MVP Kaggle 专用依赖（在 Kaggle Notebook 中单独安装）
+# 用法: pip install -r backend/requirements-mvp.txt
+# 不影响 backend/requirements.txt 生产依赖
+
+transformers>=4.44.0
+accelerate>=0.26.0
+# audiocraft 不安装（MusicGen 走 transformers 路径，已在 Kaggle T4 验证）
+# encodec==0.1.1 仅当需要时启用
+soundfile
+torchaudio
+huggingface_hub
+# CosyVoice2 本阶段 BLOCKED，不安装
+# cosyvoice>=0.1.0

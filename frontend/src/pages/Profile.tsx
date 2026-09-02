@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { SocialSystem } from '../components/SocialSystem';
 import { User, Music, Heart, Star, Play } from 'lucide-react';
+import { api } from '../config/api';
 
 interface UserProfile {
   user_id: string;
@@ -29,7 +30,7 @@ interface Work {
   created_at?: string;
 }
 
-const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/social';
+const API_BASE = api.url('/api/v1/social');
 
 const getCurrentUserId = (): string => {
   let userId = localStorage.getItem('user_id');

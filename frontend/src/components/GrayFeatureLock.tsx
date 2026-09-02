@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FEATURE_CONFIG } from '../config/features';
 import { useUserGrayStatus } from '../hooks/useUserGrayStatus';
+import { api } from '../config/api';
 
 interface GrayFeatureLockProps {
   featureKey: string;
@@ -20,7 +21,7 @@ export function GrayFeatureLock({ featureKey, userId, onApply }: GrayFeatureLock
 
   const handleSubmit = async () => {
     try {
-      await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/beta/apply-gray', {
+      await fetch(api.url('/api/v1/beta/apply-gray'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-ID': userId || 'beta_user' },
         body: JSON.stringify({ feature_key: featureKey, reason, contact }),

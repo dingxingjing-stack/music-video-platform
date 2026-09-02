@@ -4,6 +4,7 @@
 
 import { useState, useCallback } from 'react';
 import type { Track } from '../../types/trackStudio';
+import { api } from '../../config/api';
 
 interface StemTrack {
   name: string;
@@ -85,7 +86,7 @@ export function AudioExporter({ tracks, onClose }: Props) {
       // 使用第一个轨道的音频作为示例
       const audioUrl = tracks[0].clips?.[0]?.url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 
-      const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/export/stems', {
+      const response = await fetch(api.url('/api/v1/export/stems'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_url: audioUrl }),

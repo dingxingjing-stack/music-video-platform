@@ -8,39 +8,70 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
+      # Core
+      - key: ENVIRONMENT
+        value: production
+      # Database
+      - key: DATABASE_URL
+        sync: false
+      # LLM / AI
       - key: AGNES_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      # 临时方案：仅启用 agnes（免费主力）。gemini/nvidia 默认关闭，
-      # 修复兼容后设 LLM_ENABLE_GEMINI=1 / LLM_ENABLE_NVIDIA=1 重新开启。
-      - key: PROVIDER_ORDER
-        value: "agnes,nvidia,gemini"
-      - key: NVIDIA_MODEL
-        value: "nvidia/llama-3.3-nemotron-super-49b-v1"
-      - key: GEMINI_MODEL
-        value: "gemini-2.5-flash"
-      - key: MUREKA_API_KEY
-        sync: false
       - key: HF_TOKEN
         sync: false
-      - key: TTS_FORCE_MOCK
-        value: "true"
-      - key: MUSIC_FORCE_MOCK
-        value: "true"
-      - key: VIDEO_FORCE_MOCK
-        value: "true"
-      - key: SENTRY_DSN
+      # Fal.ai (primary production music generation)
+      - key: FAL_KEY
         sync: false
-      - key: R2_BUCKET_NAME
+      - key: FAL_API_KEY
         sync: false
+      - key: FAL_MODEL
+        value: "fal-ai/stable-audio"
+      - key: FAL_TIMEOUT
+        value: "300"
+      - key: FAL_POLL_INTERVAL
+        value: "2"
+      - key: FAL_BUDGET_DAILY
+        value: "30"
+      # TTS / Workflow modes
+      - key: TTS_BACKEND_MODE
+        value: "mock"
+      - key: WORKFLOW_MODE
+        value: "real"
+      # Supabase
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: MODAL_TOKEN_ID
+      # R2 / CDN
+      - key: CDN_BUCKET
         sync: false
-      - key: MODAL_TOKEN_SECRET
+      - key: CDN_BASE_URL
         sync: false
+      - key: CLOUDFLARE_R2_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_R2_ACCESS_KEY
+        sync: false
+      - key: CLOUDFLARE_R2_SECRET_KEY
+        sync: false
+      # Supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Sentry
+      - key: SENTRY_DSN
+        sync: false
+      # LLM Providers
+      - key: AGNES_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Budgets
+      - key: FAL_BUDGET_DAILY
+        value: "30"

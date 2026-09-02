@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { SocialSystem } from '../components/SocialSystem';
 import { Play, Music, Heart, Star } from 'lucide-react';
+import { api } from '../config/api';
 
 interface FeedItem {
   work_id: string;
@@ -25,7 +26,7 @@ interface FeedResponse {
   total: number;
 }
 
-const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/social';
+const API_BASE = api.url('/api/v1/social');
 
 // 获取当前用户 ID
 const getCurrentUserId = (): string => {

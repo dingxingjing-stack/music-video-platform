@@ -1,0 +1,24 @@
+# RunPod HeartMuLa Worker - isolated deps (do not pollute backend)
+# Aligned with heartmula_deploy/requirements.txt, plus runpod
+# torch/torchaudio are preinstalled in base image (cuda12.8), do not reinstall
+
+runpod==1.7.0
+huggingface-hub==0.34.4
+transformers==4.57.0
+tokenizers==0.22.1
+tqdm==4.67.1
+einops==0.8.1
+accelerate==1.12.0
+bitsandbytes==0.49.0
+vector-quantize-pytorch==1.27.15
+torchtune==0.4.0
+torchao==0.9.0
+torchvision
+traitlets==5.7.1
+traittypes==0.2.3
+modelscope==1.33.0
+soundfile
+safetensors==0.4.3
+numpy==2.0.2
+torchaudio
+packaging

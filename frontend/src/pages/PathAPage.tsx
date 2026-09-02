@@ -37,7 +37,7 @@ export function PathAPage() {
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => navigate('/')} className="text-sm text-[var(--text-secondary)] hover:text-white transition">&larr; {t('common.back') || '返回'}</button>
-        <h1 className="text-2xl font-display font-bold gradient-text">路径 A — Suno 风格</h1>
+        <h1 className="text-2xl font-display font-bold gradient-text">路径 A — AI 快速创作</h1>
       </div>
       <p className="text-sm text-[var(--text-muted)]">提示词 → Agnes AI → 全曲生成（免费）</p>
 
@@ -68,7 +68,6 @@ export function PathAPage() {
       {audioUrl && <WaveformEditor url={audioUrl} />}
       <AILyricsCompletion value={lyrics} onChange={setLyrics} />
       <MixConsole history={[]} />
-      {audioUrl && <StemExporter audioUrl={audioUrl} />}
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
         <h2 className="font-display font-semibold mb-3">📋 版本历史</h2>

@@ -1,0 +1,1 @@
+{"message":"httperror 404: tag '2.10.0-py3.10-cuda12.8-devel-ubuntu22.04' not found","errinfo":{"namespace":"runpod","repository":"pytorch","tag":"2.10.0-py3.10-cuda12.8-devel-ubuntu22.04"}}

@@ -1,5 +1,5 @@
 /**
- * CommunityFeed — 社区/发现页面（类似 Suno feed）
+ * CommunityFeed — 社区/发现页面（类似 AI feed）
  */
 
 import { useState, useEffect, useCallback } from 'react';

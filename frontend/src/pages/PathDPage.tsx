@@ -4,8 +4,7 @@ import { MidiTrack } from '../types/trackStudio';
 import { MidiEditor } from '../components/MidiEditor/MidiEditor';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAudioGeneration, RateLimitBanner } from '../hooks/useAudioGeneration';
-
-const API = 'https://ai-music-backend-8e85.onrender.com/api/v1';
+import { api } from '../config/api';
 
 function generateTrackId(): string {
   return `track-${Date.now()}`;
@@ -68,7 +67,7 @@ export function PathDPage() {
   const handlePublish = useCallback(async () => {
     setIsPublishing(true);
     try {
-      await fetch(`${API}/community/hot`, { method: 'GET' });
+      await fetch(api.url('/community/hot'), { method: 'GET' });
       alert('✅ 作品已发布到社区！');
     } catch {
       alert('❌ 发布失败（社区API暂未开放）');

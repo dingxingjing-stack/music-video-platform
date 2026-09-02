@@ -391,7 +391,7 @@ export const TRACK_COLORS = [
 export const PATHS: PathDefinition[] = [
   {
     id: 'a',
-    label: 'Path A — Suno Style',
+    label: 'Path A — AI Quick Create',
     desc: 'Prompt → MusicGen → Full Audio',
     icon: '🎵',
     prompt: 'upbeat electronic dance music with synth lead',

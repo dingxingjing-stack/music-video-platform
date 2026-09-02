@@ -12,6 +12,7 @@
  */
 
 import { useRef, useReducer, useEffect, useCallback } from 'react';
+import { api } from '../config/api';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -34,10 +35,6 @@ type Action =
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const WS_BASE =
-  import.meta.env.DEV && window.location.protocol === 'http:'
-    ? `ws://${window.location.host}`
-    : 'ws://localhost:8000';
 const MAX_RETRIES = 5;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
@@ -99,7 +96,7 @@ export function useWebSocketProgress(taskId: string | null) {
       wsRef.current = null;
     }
 
-    const ws = new WebSocket(`${WS_BASE}/ws/progress/${currentTaskId}`);
+    const ws = new WebSocket(api.wsUrl(`/ws/progress/${currentTaskId}`));
     wsRef.current = ws;
 
     // UI feedback for reconnecting

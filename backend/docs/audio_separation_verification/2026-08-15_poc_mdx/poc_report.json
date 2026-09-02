@@ -1,0 +1,80 @@
+{
+  "first_run": {
+    "elapsed_s": 58.5,
+    "contract": {
+      "success": true,
+      "stems": [
+        "C:\\Users\\dingx\\music-video-platform\\backend\\data\\poc_out\\poc_3m30s_(Instrumental)_UVR_MDXNET_9482.wav",
+        "C:\\Users\\dingx\\music-video-platform\\backend\\data\\poc_out\\poc_3m30s_(Vocals)_UVR_MDXNET_9482.wav"
+      ],
+      "duration": 210.0,
+      "message": "MDX 分离成功（UVR_MDXNET_9482.onnx），2 轨真实输出，耗时 54.8s"
+    },
+    "real_stems": [
+      "instrumental",
+      "vocals"
+    ],
+    "missing_stems": [
+      "drums",
+      "bass"
+    ],
+    "stem_output_bytes": 74088156,
+    "peak_rss_mb": 1660.1,
+    "rss_delta_mb": 1218.3,
+    "gpu_vram_mb": "N/A (本机无 GPU)"
+  },
+  "cache_reuse": {
+    "second_elapsed_s": 55.4,
+    "new_cache_files": 0,
+    "cache_dir_mb": 29.8
+  },
+  "concurrency": {
+    "threads": 4,
+    "total_elapsed_s": 218.1,
+    "success_count": 4,
+    "errors": []
+  },
+  "edge_cases": {
+    "missing_file": {
+      "success": false,
+      "stems": [],
+      "duration": 0.0,
+      "message": "文件不存在：C:\\Users\\dingx\\music-video-platform\\backend\\data\\nope_missing.wav"
+    },
+    "empty_file": {
+      "success": false,
+      "stems": [],
+      "duration": 0.0,
+      "message": "文件为空：C:\\Users\\dingx\\music-video-platform\\backend\\data\\poc_empty.wav"
+    },
+    "corrupt_file": {
+      "success": false,
+      "stems": [],
+      "duration": 0.0,
+      "message": "分离失败：'Volume' object has no attribute 'add_local_file'"
+    },
+    "16k_mono": {
+      "success": true,
+      "n_stems": 2,
+      "duration": 2.0
+    }
+  },
+  "timeout": {
+    "result": {
+      "success": false,
+      "stems": [],
+      "duration": 210.0,
+      "message": "分离失败：'Volume' object has no attribute 'add_local_file'"
+    }
+  },
+  "spleeter_probe": {
+    "success": false,
+    "message": "分离失败：'Volume' object has no attribute 'add_local_file'"
+  },
+  "env": {
+    "audio_separator_version": "0.44.5",
+    "gpu": "N/A (本机无 GPU，CPU only)",
+    "python": "3.12.10",
+    "test_audio_seconds": 210.0
+  }
+}

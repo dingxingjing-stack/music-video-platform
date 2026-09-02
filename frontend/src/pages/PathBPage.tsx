@@ -42,7 +42,6 @@ export function PathBPage() {
       {audioUrl && <WaveformEditor url={audioUrl} />}
       <AILyricsCompletion value={lyrics} onChange={setLyrics} />
       <MixConsole history={[]} />
-      {audioUrl && <StemExporter audioUrl={audioUrl} />}
 
       {showComingSoon && <ComingSoonModal onClose={() => setShowComingSoon(false)} />}
     </div>

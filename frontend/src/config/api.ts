@@ -1,11 +1,13 @@
-// API 统一配置 — 生产环境用 Render 后端，本地开发用 localhost
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  'https://ai-music-backend-8e85.onrender.com';
+// API 统一配置 — 生产环境通过 VITE_API_BASE_URL 注入，无 fallback
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const WS_BASE = import.meta.env.VITE_WS_BASE;
 
-const WS_BASE =
-  import.meta.env.VITE_WS_BASE ||
-  'wss://ai-music-backend-8e85.onrender.com';
+if (!API_BASE) {
+  throw new Error('[api] VITE_API_BASE_URL is not set. Configure it in .env.production or Cloudflare Pages environment variables.');
+}
+if (!WS_BASE) {
+  throw new Error('[api] VITE_WS_BASE is not set. Configure it in .env.production or Cloudflare Pages environment variables.');
+}
 
 export const api = {
   base: API_BASE,

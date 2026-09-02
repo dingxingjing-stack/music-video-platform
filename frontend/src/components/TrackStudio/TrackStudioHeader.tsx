@@ -2,7 +2,7 @@
  * TrackStudioHeader — Enterprise-grade top bar with status, session info, and locale switcher.
  */
 
-import { useTranslation } from '../../i18n';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { PersistedSession } from '../../types/trackStudio';
 
 interface Props {

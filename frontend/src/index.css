@@ -62,20 +62,51 @@ body {
 /* === UI 全局动效 === */
 
 .btn-base {
-  @apply rounded-btn transition-all duration-200 ease-out;
+  @apply inline-flex items-center justify-center gap-2 rounded-btn font-medium transition-all duration-200 ease-out select-none disabled:opacity-45 disabled:cursor-not-allowed;
 }
-.btn-base:hover {
-  @apply -translate-y-0.5 shadow-card-hover;
+.btn-base:active:not(:disabled) {
+  @apply translate-y-0 shadow-none scale-[0.98];
 }
-.btn-base:active {
-  @apply translate-y-0 shadow-none scale-[0.97];
+
+/* === 统一按钮 === */
+.btn-primary {
+  @apply btn-base text-white bg-gradient-to-r from-[#ff6a10] to-[#ee0979] px-5 h-10 text-sm;
 }
+.btn-primary:hover:not(:disabled) {
+  @apply -translate-y-0.5 opacity-90 shadow-[0_4px_20px_rgba(255,106,16,0.35)];
+}
+.btn-primary:focus-visible {
+  @apply outline-none ring-2 ring-[#ff6a10]/50 ring-offset-2 ring-offset-[#121212];
+}
+
+.btn-secondary {
+  @apply btn-base text-[#e0e0e0] bg-bg-elevated border border-border-default px-5 h-10 text-sm;
+}
+.btn-secondary:hover:not(:disabled) {
+  @apply -translate-y-0.5 bg-[#242424] border-[#3a3a3a] shadow-card-hover;
+}
+.btn-secondary:focus-visible {
+  @apply outline-none ring-2 ring-[#555555] ring-offset-2 ring-offset-[#121212];
+}
+
 .card-glass {
   @apply bg-[rgba(30,30,30,0.72)] backdrop-blur-[16px] rounded-card border border-border-default shadow-glass;
 }
 .card-solid {
   @apply bg-bg-elevated rounded-card border border-border-default shadow-card;
 }
+
+/* === 页面容器 === */
+.page-shell {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6;
+}
+.page-heading {
+  @apply text-2xl font-display font-bold text-white;
+}
+.page-sub {
+  @apply text-sm text-[#888888];
+}
+
 .progress-track {
   @apply h-1 bg-border-default rounded-full overflow-hidden cursor-pointer;
 }

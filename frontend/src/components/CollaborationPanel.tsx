@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { api } from '../config/api';
 
 interface Member {
   user_id: string;
@@ -48,7 +49,7 @@ export default function CollaborationPanel({
   const [cursorPos, setCursorPos] = useState<number>(0);
   const wsRef = useRef<WebSocket | null>(null);
 
-  const API_BASE = 'https://ai-music-backend-8e85.onrender.com/api/v1/collab';
+  const API_BASE = api.url('/api/v1/collab');
 
   // 创建协作会话
   const createSession = async () => {
@@ -105,7 +106,7 @@ export default function CollaborationPanel({
 
   // 连接 WebSocket
   const connectWebSocket = (sid: string) => {
-    const ws = new WebSocket(`wss://ai-music-backend-8e85.onrender.com/ws/collab/${sid}`);
+    const ws = new WebSocket(api.wsUrl(`/ws/collab/${sid}`));
     
     ws.onopen = () => {
       console.log('WebSocket 已连接');

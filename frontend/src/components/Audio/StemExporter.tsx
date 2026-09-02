@@ -51,7 +51,7 @@ export function StemExporter({ audioUrl, trackName }: Props) {
       <h2 className="font-display font-semibold">📦 分轨导出 (Stems)</h2>
       <p className="text-xs text-[var(--text-muted)]">
         将音频拆分为人声、鼓、贝斯、旋律等独立音轨，打包为 ZIP 下载。
-        <span className="text-[var(--accent-pink)] ml-1">Suno 不支持此功能。</span>
+        <span className="text-[var(--accent-pink)] ml-1">该分轨在当前导出配置下不可用。</span>
       </p>
 
       {/* Progress Bar */}

@@ -1,0 +1,174 @@
+Modal Support Diagnostic - 2026-08-22T10:31:31.453323
+======================================================================
+
+1. modal app history avireon-ai-music-platform
+┌─────────┬────────────────────────────┬────────┬────────────────────┬────────┐
+│ Version │ Time deployed              │ Client │ Deployed by        │ Commit │
+├─────────┼────────────────────────────┼────────┼────────────────────┼────────┤
+│ v8      │ 2026-08-21 20:00           │ 1.5.4  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v7      │ 2026-08-21 18:11           │ 1.5.4  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v6      │ 2026-08-21 18:05           │ 1.5.4  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v5      │ 2026-08-21 18:02           │ 1.5.4  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v4      │ 2026-08-01 14:09           │ 1.5.3  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v3      │ 2026-08-01 13:43           │ 1.5.3  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v2      │ 2026-08-01 13:11           │ 1.5.3  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+│ v1      │ 2026-08-01 10:50           │ 1.5.3  │ dingxingjing-stack │        │
+│         │ 东部南美洲标准时间         │        │                    │        │
+└─────────┴────────────────────────────┴────────┴────────────────────┴────────┘
+
+
+2. modal app list
+                                            Apps                               
+┌───────────────────────────┬───────────────┬──────────┬───────┬──────────────┬
+│ App ID                    │ Description   │ State    │ Tasks │ Created at   │
+├───────────────────────────┼───────────────┼──────────┼───────┼──────────────┼
+│ ap-8NPSaM4H7XwJifEHCDo75B │ avireon-ai-m… │ deployed │ 0     │ 2026-08-01   │
+│                           │               │          │       │ 10:49        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-5Y8MywTxEwp2mT25xGJc3t │ avireon-ai-m… │ deployed │ 0     │ 2026-08-02   │
+│                           │               │          │       │ 16:49        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-jFcBDmTaDyA9dUfxSchy2G │ avireon-musi… │ deployed │ 0     │ 2026-08-04   │
+│                           │               │          │       │ 13:51        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-VXMSVksvWu5qnLGsGydb9S │ avireon-musi… │ deployed │ 0     │ 2026-08-04   │
+│                           │               │          │       │ 16:28        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-QVGvW6TeXXF1OHbxt8Mou2 │ avireon-musi… │ deployed │ 0     │ 2026-08-13   │
+│                           │               │          │       │ 13:44        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-gIP0fb4J6TZAXGIv1PWVt5 │ lyrics-llm-q… │ deployed │ 0     │ 2026-08-16   │
+│                           │               │          │       │ 16:02        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-a3vUaGou5BPYZ60ove08FE │ ace-step-mus… │ deployed │ 0     │ 2026-08-19   │
+│                           │               │          │       │ 12:55        │
+│                           │               │          │       │ 东部南美洲 … │
+│ ap-bjHJGqMX3b3OzZk2OuoQQG │ avireon-musi… │ deployed │ 0     │ 2026-08-20   │
+│                           │               │          │       │ 07:37        │
+│                           │               │          │       │ 东部南美洲 … │
+└───────────────────────────┴───────────────┴──────────┴───────┴──────────────┴
+
+
+3. workspace settings list
+┌───────────────────────┬─────────┐
+│ Setting               │ Value   │
+├───────────────────────┼─────────┤
+│ default-environment   │ main    │
+│ image-builder-version │ 2025.06 │
+└───────────────────────┴─────────┘
+
+
+4. workspace members list
+┌─────────────┬─────────────┬───────┬─────────────┬─────────────┬─────────────┐
+│ Name        │ Email       │ Role  │ User ID     │ Joined      │ Last active │
+├─────────────┼─────────────┼───────┼─────────────┼─────────────┼─────────────┤
+│ dingxingji… │ zezhending… │ owner │ us-WcrvwvS… │ 2026-07-22  │ 2026-08-22  │
+│             │             │       │             │ 15:37       │ 10:31       │
+│             │             │       │             │ 东部南美洲… │ 东部南美洲… │
+└─────────────┴─────────────┴───────┴─────────────┴─────────────┴─────────────┘
+
+
+5. billing summary
+                              
+  Metered Cost:        56.78  
+    Deployed Apps:     48.58  
+    Volumes:            4.24  
+    Ephemeral Apps:     3.95  
+  Credits:            -30.00  
+  Free Storage:        -4.24  
+  Billed Cost:        $22.54  
+                              
+
+
+6. environment billing summary
+Displaying billing summary for environment: main
+                             
+  Metered Cost:       56.77  
+    Deployed Apps:    48.58  
+    Volumes:           4.24  
+    Ephemeral Apps:    3.95  
+                             
+
+
+7. git HEAD and log
+6dd6ffd
+
+6dd6ffd test: fix mix engine audio path import
+
+master
+
+
+8. modal curl /health (main production URL)
+modal-http: workspace ac-kGL9Yk1X8XOh9FXRgXnL20 is disabled
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0           00:01              0
+  0      0   0      0   0      0      0      0           00:02              0
+  0      0   0      0   0      0      0      0           00:03              0
+  0      0   0      0   0      0      0      0           00:04              0
+  0      0   0      0   0      0      0      0           00:05              0
+100     60 100     60   0      0     10      0   00:06   00:05   00:01     11
+100     60 100     60   0      0     10      0   00:06   00:05   00:01     11
+100     60 100     60   0      0     10      0   00:06   00:05   00:01     11
+
+
+9. modal curl /health (short URL)
+modal-http: workspace ac-kGL9Yk1X8XOh9FXRgXnL20 is disabled
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+
+  0      0   0      0   0      0      0      0                              0
+  0      0   0      0   0      0      0      0           00:01              0
+  0      0   0      0   0      0      0      0           00:02              0
+  0      0   0      0   0      0      0      0           00:03              0
+  0      0   0      0   0      0      0      0           00:04              0
+  0      0   0      0   0      0      0      0           00:05              0
+100     60 100     60   0      0     10      0   00:06   00:05   00:01     11
+100     60 100     60   0      0     10      0   00:06   00:05   00:01     11
+100     60 100     60   0      0     10      0   00:06   00:05   00:01     11
+
+
+10. modal config show (redacted)
+{
+  "async_warnings": true,
+  "build_validation": "error",
+  "cuda_checkpoint_path": "/__modal/.bin/cuda-checkpoint",
+  "default_cloud": null,
+  "dev_suffix": "",
+  "disable_api_proxy": false,
+  "environment": null,
+  "force_build": false,
+  "function_runtime": null,
+  "function_runtime_debug": false,
+  "heartbeat_interval": 15,
+  "ignore_cache": false,
+  "image_builder_version": null,
+  "image_id": null,
+  "log_format": "STRING",
+  "log_pattern": null,
+  "loglevel": "WARNING",
+  "logs_timeout": 10,
+  "max_throttle_wait": null,
+  "override_headers": null,
+  "payload_format": "pickle",
+  "restore_state_path": "/__modal/restore-state.json",
+  "runtime_perf_record": false,
+  "serve_timeout": null,
+  "server_url": "https://api.modal.com,https://api.modal2.com",
+  "snapshot_debug": false,
+  "strict_parameters": false,
+  "sync_entrypoint": null,
+  "task_id": null,
+  "token_id": "ak-kCBwLMNjQWhMbCo2zZv2rL",
+  "traceback": false,
+  "worker_id": null
+}

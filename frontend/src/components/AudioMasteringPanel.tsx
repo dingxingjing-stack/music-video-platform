@@ -10,7 +10,8 @@
  * - 分析数据显示 (LUFS, Peak)
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { api } from '../config/api';
 
 interface MasteringPreset {
   name: string;
@@ -34,12 +35,12 @@ export function AudioMasteringPanel() {
   const masteredAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // 加载预设
-  useState(() => {
-    fetch('https://ai-music-backend-8e85.onrender.com/api/v1/audio/master/presets')
+  useEffect(() => {
+    fetch(api.url('/api/v1/audio/master/presets'))
       .then(res => res.json())
       .then(data => setPresets(data.presets))
       .catch(console.error);
-  });
+  }, []);
 
   // 应用预设
   const applyPreset = (presetName: string) => {
@@ -66,7 +67,7 @@ export function AudioMasteringPanel() {
     formData.append('stereo_width', customStereoWidth.toString());
 
     try {
-      const response = await fetch('https://ai-music-backend-8e85.onrender.com/api/v1/audio/master', {
+      const response = await fetch(api.url('/api/v1/audio/master'), {
         method: 'POST',
         body: formData,
       });

@@ -29,29 +29,41 @@ class SongContinuationResponse(BaseModel):
     audio_url: Optional[str] = None
     lyrics: Optional[str] = None
 
-# 模拟的续写逻辑 (实际应调用 Mureka AI)
+# 真实续写逻辑 — 转发至 continuation_service（单段 Audio2Audio 续写）
 @router.post("/continue", response_model=SongContinuationResponse)
 async def continue_song(request: SongContinuationRequest):
     """
-    从歌曲的任意时间点继续创作
-    
-    功能:
-    1. 分析原歌曲的风格/BPM/和弦
-    2. 从指定时间点无缝衔接
-    3. 生成新的旋律/和声/编曲
-    4. 保持风格一致性
+    从歌曲的任意时间点继续创作（真实实现，非 Mock）
+    转发到 continuation_service.continue_song，复用 BPM/key/歌词续写/FFmpeg 能力
     """
-    # TODO: 调用真实 AI 续写 API
-    # 这里先返回 Mock 数据
-    return SongContinuationResponse(
-        song_id=request.song_id,
-        continued_song_id=f"{request.song_id}_cont",
-        title="续写版本",
-        duration=request.duration,
-        status="completed",
-        audio_url="/audio/continued_demo.mp3",
-        lyrics="[自动生成的续写歌词...]"
-    )
+    from app.services.continuation_service import continuation_service
+    from fastapi import Request
+    # 限制单段续写不超过 60s（长任务走 /api/v1/ai/generate 的 150+150 路径）
+    duration = min(int(request.duration), 60)
+    try:
+        result = await continuation_service.continue_song(
+            song_id=request.song_id,
+            continue_from=float(request.continue_from),
+            duration=duration,
+            style=request.style,
+            prompt=request.prompt,
+            user_key="",  # 若需归属校验可从 header 取，当前保持兼容
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail=result.get("error") or "续写失败")
+        return SongContinuationResponse(
+            song_id=request.song_id,
+            continued_song_id=result.get("song_id") or result.get("new_song_id") or f"{request.song_id}_cont",
+            title="续写版本",
+            duration=result.get("duration") or duration,
+            status="completed",
+            audio_url=result.get("audio_url") or None,
+            lyrics=result.get("lyrics") or None,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"续写失败: {type(e).__name__}: {e}")
 
 class SongStructureRequest(BaseModel):
     song_id: str

@@ -69,8 +69,28 @@ DOWNLOAD_FILES = {
 # Provider 选择与注册见 app/services/provider_registry.py（唯一 production = modal_ace_step）。
 
 
-async def _try_hf_ace_step_fallback(prompt: str, lyrics: str, duration: int) -> Optional[str]:
-    """HF ACE-Step Space 兜底（Gradio 5 API）：仅接受真实音频 URL，禁止 mock/假音频（SoundHelix）。"""
+# 最大歌曲时长硬限制（秒）—— 后端硬限制，不可绕过（支持 300s 分段）
+MAX_SONG_DURATION_SECONDS = 300
+
+# 参考音频默认截取长度（秒）
+REFERENCE_SECONDS = 30
+
+
+async def _try_hf_ace_step_fallback(
+    prompt: str,
+    lyrics: str,
+    duration: int,
+    reference_audio_b64: Optional[str] = None,
+    enable_audio2audio: bool = False,
+    reference_strength: float = 0.7,
+) -> Optional[str]:
+    """HF ACE-Step Space 兜底（Gradio 5 API）：仅接受真实音频 URL，禁止 mock/假音频（SoundHelix）。
+    
+    新增支持 Audio2Audio 参数：
+    - enable_audio2audio: 是否启用 Audio2Audio
+    - reference_audio_b64: base64 编码的参考音频
+    - reference_strength: 参考音频强度 (0.0-1.0)
+    """
     if not HF_FALLBACK_ENABLED:
         return None
 
@@ -85,6 +105,7 @@ async def _try_hf_ace_step_fallback(prompt: str, lyrics: str, duration: int) -> 
     headers = {"Authorization": f"Bearer {hf_token}", "Content-Type": "application/json"}
 
     # 22 个 positional parameters（顺序必须与当前 LIVE API 一致）
+    # 参数 19/20/21 现在支持 Audio2Audio
     data = [
         float(duration),          # 1  Audio Duration
         prompt,                   # 2  Tags
@@ -104,9 +125,9 @@ async def _try_hf_ace_step_fallback(prompt: str, lyrics: str, duration: int) -> 
         None,                     # 16 OSS Steps
         0.0,                      # 17 Guidance Scale Text
         0.0,                      # 18 Guidance Scale Lyric
-        False,                    # 19 Enable Audio2Audio
-        0.5,                      # 20 Refer audio strength
-        None,                     # 21 Reference Audio (Audio2Audio)
+        enable_audio2audio,       # 19 Enable Audio2Audio
+        0.7,                      # 20 Refer audio strength
+        reference_audio_b64,      # 21 Reference Audio (Audio2Audio)
         "none",                   # 22 Lora Name or Path
     ]
 
@@ -216,7 +237,7 @@ def _log_generation_cost(task_id: str, user_key: str, provider, result: str, tot
 
 
 async def _run_generation(task_id: str, request: GenerateRequest, user_key: str):
-    """后台执行完整生成链路：Agnes -> ACE-Step(Modal) -> HF(ACE-Step) -> 报错。"""
+    """后台执行完整生成链路：Agnes -> 150+150 continuation(>180) / 单段(<=180) -> R2"""
     try:
         task_store.update(task_id, state="processing", progress=10)
 
@@ -236,7 +257,54 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
         lyrics = request.lyrics or agnes_result.generated_lyrics or final_prompt
         duration = min(request.duration or 180, MAX_AUDIO_DURATION_SECONDS)
 
-        # ── Modal ACE-Step (GPU) ── 经 ProviderRegistry 选择；失败自动重试 MAX_AUTO_RETRIES 次
+        # ── 长生成分支：>180 则 150+150 continuation（真实 provider，不截断） ──
+        if duration > 180:
+            task_store.update(task_id, state="generating_long", progress=15, ai_provider=f"{ai_provider}+continuation")
+            from app.services.continuation_service import continuation_service
+            t0 = time.monotonic()
+            try:
+                long_result = await continuation_service.generate_long_music(
+                    prompt=final_prompt,
+                    style=request.style,
+                    duration=duration,
+                    lyrics=lyrics,
+                    task_id=task_id,
+                    user_key=user_key,
+                    mood=getattr(request, 'mood', None) if hasattr(request, 'mood') else None,
+                    vocal=getattr(request, 'vocal', None) if hasattr(request, 'vocal') else None,
+                )
+                total_ms = int((time.monotonic() - t0) * 1000)
+                if long_result and long_result.get("success"):
+                    manifest = long_result.get("manifest") or {}
+                    volume_files = long_result.get("volume_files") or {}
+                    # 若 continuation 已上传最终 manifest，直接标记完成
+                    if manifest and manifest.get("full_wav"):
+                        provider = get_provider_registry().select()
+                        _log_generation_cost(task_id, user_key, provider, "success_long", total_ms, 0)
+                        # 确保 audio_url 签名
+                        task_store.update(
+                            task_id, state="completed", progress=100,
+                            download=manifest, volume_files=volume_files,
+                            audio_url=_sign_for_playback(task_id, "full_mp3", manifest),
+                            ai_provider=long_result.get("provider", f"{ai_provider}+continuation"),
+                            stems_state="skipped",
+                        )
+                        return
+                    # 兜底：通过常规上传路径
+                    if volume_files:
+                        provider = get_provider_registry().select()
+                        _log_generation_cost(task_id, user_key, provider, "success_long", total_ms, 0)
+                        task_store.update(task_id, state="uploading", progress=85, volume_files=volume_files, ai_provider=f"{ai_provider}+continuation")
+                        await _upload_and_finalize(task_id, volume_files)
+                        return
+                raise RuntimeError(long_result.get("error") if long_result and long_result.get("error") else "长生成失败")
+            except Exception as e:
+                # 长生成失败需退款（按权重）
+                refund_generation(user_key, duration)
+                task_store.update(task_id, state="failed", error=f"长生成失败: {type(e).__name__}: {e}")
+                return
+
+        # ── 常规单段分支（≤180）──
         task_store.update(task_id, state="generating", progress=40)
         provider = get_provider_registry().select()
         volume_result: Optional[dict] = None
@@ -247,7 +315,14 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             t0 = time.monotonic()
             try:
                 gen_result = await provider.generate(
-                    {"prompt": final_prompt, "lyrics": lyrics, "duration": duration},
+                    {
+                        "prompt": final_prompt,
+                        "lyrics": lyrics,
+                        "duration": duration,
+                        "reference_audio": None,
+                        "enable_audio2audio": False,
+                        "reference_strength": 0.7,
+                    },
                 )
                 total_duration_ms += int((time.monotonic() - t0) * 1000)
             except QueueFullError:
@@ -267,10 +342,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             await _upload_and_finalize(task_id, volume_result)
             return
 
-        # GPU 尝试失败：先记录成本观测，再走 HF 兜底
         _log_generation_cost(task_id, user_key, provider, "failed", total_duration_ms, retries_used)
-
-        # ── HF ACE-Step 兜底（真实音频，无 mock）──
         task_store.update(task_id, state="generating", progress=55)
         hf_audio = await _try_hf_ace_step_fallback(final_prompt, lyrics, duration)
         if hf_audio:
@@ -284,52 +356,79 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             task_id, state="failed",
             error="音乐生成失败：ACE-Step(Modal) 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
         )
-        refund_generation(user_key)
+        refund_generation(user_key, duration)
     except QueueFullError as e:
-        _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms, retries_used)
+        _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
         task_store.update(task_id, state="failed", error=str(e))
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
     except HTTPException:
         task_store.update(task_id, state="failed", error="请求参数错误")
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
     except Exception as e:  # noqa: BLE001
         import traceback
         print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
-        refund_generation(user_key)
+        refund_generation(user_key, getattr(request, 'duration', None))
     finally:
         task_store.release_lock_for_task(task_id)
 
 
 async def _upload_and_finalize(task_id: str, volume_result: dict):
-    """把共享卷中的完整歌 + 分轨取回、上传 R2 私有，写回任务元数据。"""
+    """把生成产物取回本地、上传 R2 私有，写回任务元数据。
+
+    兼容两种来源：
+    - Modal 共享卷（volume_result 含末尾文件名，需 ace_step_download）
+    - Fal（volume_result 含 _local_path 已在 GENERATED_DIR，download 直接命中本地）
+    """
     import tempfile
 
     tmp_dir = tempfile.mkdtemp(prefix="acestep_")
     files_local: dict = {}
 
-    # full_wav 必需；full_mp3 可选（Modal 端可能转换失败）
-    full_wav_name = volume_result.get("full_wav")
-    if not full_wav_name:
-        raise RuntimeError("ACE-Step 未返回完整歌曲文件")
-    path = await ace_step_download(full_wav_name, tmp_dir)
-    if not path:
-        raise RuntimeError(f"下载 {full_wav_name} 失败")
-    files_local["full_wav"] = path
+    # 优先使用 fal 已下载的本地路径（_local_path）
+    if volume_result.get("_local_path") and os.path.exists(volume_result["_local_path"]):
+        lp = volume_result["_local_path"]
+        # 统一映射为 full_wav / full_mp3
+        files_local["full_wav"] = lp
+        files_local["full_mp3"] = lp
+        # 若额外携带 _local_path 对应的 stems，也一并处理（当前 fal 无分轨）
+    else:
+        # full_wav 必需；full_mp3 可选（Modal 端可能转换失败）
+        full_wav_name = volume_result.get("full_wav")
+        if not full_wav_name:
+            raise RuntimeError("ACE-Step/Fal 未返回完整歌曲文件")
+        path = await ace_step_download(full_wav_name, tmp_dir)
+        if not path:
+            # fal 场景：尝试直接把文件名当本地路径（GENERATED_DIR 命中）
+            alt = os.path.join(tmp_dir, os.path.basename(full_wav_name))
+            # 也尝试 GENERATED_DIR
+            from app.services.fal_client import local_dir as fal_local_dir
+            alt2 = os.path.join(fal_local_dir(), os.path.basename(full_wav_name))
+            if os.path.exists(alt2):
+                path = alt2
+            elif os.path.exists(alt):
+                path = alt
+            else:
+                raise RuntimeError(f"下载 {full_wav_name} 失败")
+        files_local["full_wav"] = path
 
-    mp3_name = volume_result.get("full_mp3")
-    if mp3_name:
-        p = await ace_step_download(mp3_name, tmp_dir)
-        if p:
-            files_local["full_mp3"] = p
+        mp3_name = volume_result.get("full_mp3")
+        if mp3_name and mp3_name != volume_result.get("full_wav"):
+            p = await ace_step_download(mp3_name, tmp_dir)
+            if p:
+                files_local["full_mp3"] = p
 
     for logical in ("vocals", "drums", "bass", "other"):
         name = volume_result.get(logical)
         if not name:
+            continue
+        # 若是 fal 场景的本地路径，已在上一步处理；此处仅处理额外 stems
+        if os.path.exists(name):
+            files_local[logical] = name
             continue
         p = await ace_step_download(name, tmp_dir)
         if p:
@@ -388,7 +487,7 @@ async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: st
         )
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key)
+        refund_generation(user_key, request.duration)
         task_store.release_lock_for_task(task_id)
 
 
@@ -414,9 +513,9 @@ async def generate_music(
         )
 
     # 原子预留额度（GPU 启动前扣减）—— 不可通过重复 POST / 改 localStorage 绕过
-    reserved = reserve_generation(user_key)
+    reserved = reserve_generation(user_key, req.duration)
     if not reserved["success"]:
-        # GPU 预算硬停线：达到 MODAL_BUDGET_DAILY 后在 GPU 启动前返回 429（与 retry-stems 一致）
+        # GPU 预算硬停线：达到 FAL_BUDGET_DAILY 后在 GPU 启动前返回 429（与 retry-stems 一致，兼容旧 MODAL_BUDGET_DAILY）
         if "预算" in reserved["error"]:
             return JSONResponse(
                 status_code=429,
@@ -427,7 +526,7 @@ async def generate_music(
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
         task_store.delete(task_id)
-        refund_generation(user_key)
+        refund_generation(user_key, req.duration)
         return GenerateResponse(
             success=False,
             error="您有一个生成任务正在进行中，请完成后再试",
@@ -568,15 +667,15 @@ async def retry_stems(
     if task_store.is_user_busy(user_key):
         raise HTTPException(status_code=429, detail="您有任务正在进行中，请稍后再试")
 
-    # 重试次数上限（不重复扣生成额度）
-    if task.get("stem_retries", 0) >= MAX_AUTO_RETRIES:
+    # 重试次数上限（不重复扣生成额度）— 兼容 PG 返回 None
+    if (task.get("stem_retries") or 0) >= MAX_AUTO_RETRIES:
         raise HTTPException(
             status_code=429,
             detail=f"分轨重试次数已达上限（{MAX_AUTO_RETRIES} 次），请稍后再试",
         )
 
     # 借用同一任务槽位（不重复扣额度，分轨免费）
-    task_store.update(task_id, stem_retries=task.get("stem_retries", 0) + 1)
+    task_store.update(task_id, stem_retries=(task.get("stem_retries") or 0) + 1)
     asyncio.create_task(_run_retry_stems(task_id, user_key, full_wav))
     return {"success": True, "task_id": task_id}
 
@@ -622,6 +721,295 @@ async def _run_retry_stems(task_id: str, user_key: str, full_wav: str):
 async def get_limits(x_user_id: str = Header(None, alias="X-User-ID")):
     """查询用户额度与全局成本保护状态。"""
     return await generation_usage_status(x_user_id)
+
+
+@router.get("/tasks")
+async def list_user_tasks_endpoint(x_user_id: str = Header(None, alias="X-User-ID")):
+    """查询当前用户的所有生成任务。
+
+    仅返回当前归属用户的任务，使用 X-User-ID 进行归属校验。
+    返回任务基本信息：id, state, progress, audio_url, stems_state, created_at, updated_at。
+    """
+    from app.services.task_store import list_user_tasks
+
+    user_key = x_user_id
+    if not user_key:
+        return {"tasks": [], "count": 0}
+
+    tasks = list_user_tasks(user_key)
+    return {"tasks": tasks, "count": len(tasks)}
+
+
+@router.get("/task/{task_id}/delete")
+async def delete_user_task(
+    task_id: str,
+    x_user_id: str = Header(None, alias="X-User-ID"),
+):
+    """删除用户的生成任务。
+
+    1. 验证任务归属：仅当前用户可删除自己的任务
+    2. 清理 R2 对象（完整音频 + 4 个分轨）
+    3. 清理 SQLite 任务记录和锁
+    4. 删除失败时返回明确错误，不报告成功
+    """
+    import json
+    import boto3
+    from botocore.config import Config
+    from fastapi import HTTPException
+
+    # Step 1: 获取任务信息以验证归属
+    from app.services.task_store import get_task as task_store_get
+
+    task = task_store_get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    # 验证用户归属：task.user_key 必须与 X-User-ID 匹配
+    user_key = task.get("user_key")
+    if not user_key or user_key != x_user_id:
+        raise HTTPException(status_code=403, detail="无权删除他人的任务")
+
+    # Step 2: 尝试删除 R2 对象（经 r2_config 统一）
+    from app.services.r2_config import get_r2_account_id, get_r2_access_key, get_r2_secret_key, get_r2_bucket
+    r2_account_id = get_r2_account_id()
+    r2_access_key = get_r2_access_key()
+    r2_secret_key = get_r2_secret_key()
+    r2_bucket = get_r2_bucket()
+
+    r2_deleted = True
+    r2_errors = []
+
+    if r2_account_id and r2_access_key and r2_secret_key and r2_bucket:
+        try:
+            s3_client = boto3.client(
+                's3',
+                endpoint_url="https://{}.r2.cloudflarestorage.com".format(r2_account_id),
+                aws_access_key_id=r2_access_key,
+                aws_secret_access_key=r2_secret_key,
+                config=Config(signature_version='s3v4'),
+                region_name='auto',
+            )
+
+            # 要删除的 R2 对象键
+            keys_to_delete = []
+            # full_mp3
+            if task.get("download"):
+                try:
+                    download = json.loads(task.get("download", "{}"))
+                    if "full_mp3" in download:
+                        keys_to_delete.append("music/{}/full_mp3.mp3".format(task_id))
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            # full_wav
+            full_wav = task.get("volume_files", {})
+            if full_wav and "full_wav" in full_wav:
+                keys_to_delete.append("music/{}/{}".format(task_id, full_wav["full_wav"]))
+            # 4 个分轨
+            for stem in ["vocals", "drums", "bass", "other"]:
+                stem_name = task.get("volume_files", {}).get(stem)
+                if stem_name:
+                    keys_to_delete.append("music/{}/{}".format(task_id, stem_name))
+
+            # 执行删除
+            for key in keys_to_delete:
+                try:
+                    s3_client.delete_object(Bucket=r2_bucket, Key=key)
+                except Exception as e:
+                    r2_errors.append("{}: {}".format(key, str(e)))
+                    r2_deleted = False
+        except Exception as e:
+            r2_deleted = False
+            r2_errors.append(str(e))
+    else:
+        r2_deleted = False
+        r2_errors.append("R2 配置不完整")
+
+    # Step 3: 只有 R2 删除全部成功才删除 SQLite 记录
+    if r2_deleted:
+        try:
+            from app.services.task_store import delete as task_store_delete
+            task_store_delete(task_id)
+            return {"success": True, "detail": "任务删除成功"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="删除数据库记录失败: {}".format(str(e)))
+    else:
+        # R2 删除失败，不删除数据库记录，返回错误
+        error_detail = "任务删除失败: R2 对象删除"
+        if r2_errors:
+            error_detail += ": " + "; ".join(r2_errors[:3])
+        raise HTTPException(status_code=500, detail=error_detail)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 临时 RunPod Smoke Test Endpoint
+# 用途：验证 Render → RunPod Endpoint → Worker → handler → CUDA 连通性
+# 保护：需 Header X-RunPod-Smoke-Token 与环境变量 RUNPOD_SMOKE_TEST_TOKEN 一致
+# 环境变量依赖：RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID, RUNPOD_SMOKE_TEST_TOKEN
+# 不影响生产生成链路，不记成本，不占额度
+# ──────────────────────────────────────────────────────────────────────────────
+class RunPodSmokeTestResponse(BaseModel):
+    success: bool
+    runpod_api_status: int
+    job_id: Optional[str] = None
+    final_status: Optional[str] = None
+    worker_started: bool = False
+    handler_success: Optional[bool] = None
+    cuda_available: Optional[bool] = None
+    gpu_info: Optional[dict] = None
+    error: Optional[str] = None
+    message: str = "RunPod smoke test completed"
+
+
+def _verify_smoke_token(x_token: Optional[str]) -> bool:
+    expected = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
+    if not expected:
+        return False
+    return x_token == expected
+
+
+@router.post("/runpod-smoke-test", response_model=RunPodSmokeTestResponse)
+async def runpod_smoke_test(
+    x_runpod_smoke_token: str = Header(None, alias="X-RunPod-Smoke-Token"),
+):
+    """RunPod Serverless 连通性 Smoke Test（临时端点，仅内部验证用）。
+
+    固定测试载荷：
+      {"input": {"prompt": "smoke test", "duration": 10, "test_mode": "smoke"}}
+
+    返回 RunPod API 调用链路关键指标，不返回任何密钥。
+    """
+    # 鉴权：X-RunPod-Smoke-Token → RUNPOD_SMOKE_TEST_TOKEN
+    expected_token = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
+    if not expected_token:
+        raise HTTPException(status_code=503, detail="RUNPOD_SMOKE_TEST_TOKEN not configured")
+    if not x_runpod_smoke_token or x_runpod_smoke_token != expected_token:
+        raise HTTPException(status_code=401, detail="Invalid X-RunPod-Smoke-Token")
+
+    api_key = os.getenv("RUNPOD_API_KEY")
+    endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")
+
+    if not api_key:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=0,
+            error="RUNPOD_API_KEY not configured in environment",
+        )
+    if not endpoint_id:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=0,
+            error="RUNPOD_ENDPOINT_ID not configured in environment",
+        )
+
+    runpod_base = "https://api.runpod.ai/v2"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {"input": {"prompt": "smoke test", "duration": 10, "test_mode": "smoke"}}
+
+    # 1. Submit job
+    submit_url = f"{runpod_base}/{endpoint_id}/run"
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(submit_url, headers=headers, json=payload)
+    except Exception as e:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=0,
+            error=f"Submit request failed: {e}",
+        )
+
+    runpod_api_status = resp.status_code
+    if resp.status_code not in (200, 201, 202):
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=runpod_api_status,
+            error=f"RunPod submit failed: {resp.text[:500]}",
+        )
+
+    try:
+        data = resp.json()
+    except Exception:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=runpod_api_status,
+            error="RunPod submit response not JSON",
+        )
+
+    job_id = data.get("id") or data.get("request_id")
+    if not job_id:
+        return RunPodSmokeTestResponse(
+            success=False,
+            runpod_api_status=runpod_api_status,
+            error="No job_id in RunPod response",
+        )
+
+    # 2. Poll status
+    status_url = f"{runpod_base}/{endpoint_id}/status/{job_id}"
+    worker_started = False
+    final_status = "UNKNOWN"
+    handler_success = None
+    cuda_available = None
+    gpu_info = None
+    error_detail = None
+
+    max_polls = 60  # ~5 minutes max
+    poll_interval = 5
+
+    for _ in range(max_polls):
+        await asyncio.sleep(poll_interval)
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                s_resp = await client.get(status_url, headers=headers)
+        except Exception:
+            continue
+
+        if s_resp.status_code != 200:
+            continue
+
+        try:
+            s_data = s_resp.json()
+        except Exception:
+            continue
+
+        status = s_data.get("status", "").upper()
+        if s_data.get("worker_id"):
+            worker_started = True
+
+        if status in ("IN_QUEUE", "IN_PROGRESS"):
+            worker_started = True
+            continue
+
+        if status in ("COMPLETED", "SUCCEEDED"):
+            final_status = "COMPLETED"
+            output = s_data.get("output")
+            if output and isinstance(output, dict):
+                handler_success = output.get("success") is True
+                if handler_success:
+                    gpu_info = output.get("output", {}).get("gpu_info", {})
+                    cuda_available = gpu_info.get("cuda_available")
+            break
+
+        if status in ("FAILED", "ERROR"):
+            final_status = "FAILED"
+            error_detail = s_data.get("output") or s_data.get("error") or str(s_data)[:500]
+            worker_started = True
+            break
+
+    else:
+        final_status = "TIMEOUT"
+
+    success = (final_status == "COMPLETED" and handler_success is True)
+    return RunPodSmokeTestResponse(
+        success=success,
+        runpod_api_status=runpod_api_status,
+        job_id=job_id,
+        final_status=final_status,
+        worker_started=worker_started,
+        handler_success=handler_success,
+        cuda_available=cuda_available,
+        gpu_info=gpu_info,
+        error=str(error_detail)[:500] if error_detail else None,
+        message="RunPod smoke test completed",
+    )
 
 
 @router.get("/styles")

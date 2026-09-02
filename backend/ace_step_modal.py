@@ -29,6 +29,7 @@ web 容器通过 modal.Function.from_name("avireon-music-platform-acestep", ...)
 
 import os
 import threading
+from typing import Optional
 
 import modal
 
@@ -79,8 +80,22 @@ def _clamp_duration(duration: int | None) -> int:
     return max(10, min(int(duration), 600))
 
 
-def _build_generation_params(prompt: str, lyrics: str, duration: int, seed: int = -1):
-    """构造官方 GenerationParams（不含歌词时自动切为纯器乐）。"""
+def _build_generation_params(
+    prompt: str,
+    lyrics: str,
+    duration: int,
+    seed: int = -1,
+    reference_audio: Optional[str] = None,
+    enable_audio2audio: bool = False,
+    reference_strength: float = 0.7,
+):
+    """构造官方 GenerationParams（不含歌词时自动切为纯器乐）。
+
+    新增 Audio2Audio 支持：
+    - reference_audio: base64 编码的参考音频或本地路径
+    - enable_audio2audio: 是否启用 Audio2Audio 模式
+    - reference_strength: 参考音频强度 (0.0-1.0)
+    """
     from acestep.inference import GenerationParams
 
     return GenerationParams(
@@ -90,6 +105,9 @@ def _build_generation_params(prompt: str, lyrics: str, duration: int, seed: int 
         duration=float(duration),
         seed=int(seed),
         thinking=True,
+        reference_audio=reference_audio,
+        enable_audio2audio=enable_audio2audio,
+        reference_strength=reference_strength,
     )
 
 
@@ -160,7 +178,14 @@ def preload_models() -> dict:
     volumes={"/models": _MODEL_VOLUME, "/root/data": _DATA_VOLUME},
 )
 @modal.concurrent(max_inputs=1)
-def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
+def generate_full_song(
+    prompt: str,
+    lyrics: str,
+    duration: int = 180,
+    reference_audio: Optional[str] = None,
+    enable_audio2audio: bool = False,
+    reference_strength: float = 0.7,
+) -> dict:
     """官方 ACE-Step pipeline 生成完整歌曲 + Spleeter 四轨分离 + MP3 转换。
 
     返回文件名映射（全部位于共享 Volume /root/data/generated/）：
@@ -175,6 +200,11 @@ def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
     分轨失败时仅返回 full_wav/full_mp3（stems 缺失），由业务层标记
     completed_with_stems_failed，并可用 separate_audio 重试。
     四轨分离由独立 Spleeter App（spleeter_modal.py）执行。
+
+    新增 Audio2Audio 支持：
+    - reference_audio: base64 编码的参考音频或本地路径
+    - enable_audio2audio: 是否启用 Audio2Audio 模式
+    - reference_strength: 参考音频强度 (0.0-1.0)
     """
     import shutil
 
@@ -187,7 +217,14 @@ def generate_full_song(prompt: str, lyrics: str, duration: int = 180) -> dict:
     dit_handler, llm_handler = _get_handlers()
     from acestep.inference import generate_music
 
-    params = _build_generation_params(prompt, lyrics, duration)
+    params = _build_generation_params(
+        prompt,
+        lyrics,
+        duration,
+        reference_audio=reference_audio,
+        enable_audio2audio=enable_audio2audio,
+        reference_strength=reference_strength,
+    )
     config = _build_generation_config()
     result = generate_music(dit_handler, llm_handler, params, config, save_dir=out_dir)
 

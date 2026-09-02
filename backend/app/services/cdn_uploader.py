@@ -27,19 +27,21 @@ class CDNProvider(Enum):
 
 
 class CDNUploader:
-    """CDN 上传器"""
-    
+    """CDN 上传器 — Step 3 统一走 r2_config 单一真相源"""
+
     def __init__(self):
+        # 统一 R2 读取（兼容旧 R2_BUCKET_NAME）
+        from app.services.r2_config import get_cdn_base_url, get_r2_bucket, get_r2_account_id, get_r2_access_key, get_r2_secret_key
         self.provider = self._detect_provider()
-        self.base_url = (os.getenv("CDN_BASE_URL", "") or "").rstrip("/")
-        self.bucket = os.getenv("CDN_BUCKET", "")
+        self.base_url = get_cdn_base_url()
+        self.bucket = get_r2_bucket()
 
-        # R2 配置
-        self.r2_account_id = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID")
-        self.r2_access_key = os.getenv("CLOUDFLARE_R2_ACCESS_KEY")
-        self.r2_secret_key = os.getenv("CLOUDFLARE_R2_SECRET_KEY")
+        # R2 配置（经 r2_config 归一）
+        self.r2_account_id = get_r2_account_id() or None
+        self.r2_access_key = get_r2_access_key() or None
+        self.r2_secret_key = get_r2_secret_key() or None
 
-        # S3 配置
+        # S3 配置（保留，仅非 R2 环境）
         self.s3_access_key = os.getenv("AWS_ACCESS_KEY")
         self.s3_secret_key = os.getenv("AWS_SECRET_KEY")
         self.s3_region = os.getenv("AWS_REGION", "us-east-1")
@@ -65,13 +67,17 @@ class CDNUploader:
         return f"/{key}"
     
     def _detect_provider(self) -> CDNProvider:
-        """自动检测 CDN 提供商"""
-        if os.getenv("CLOUDFLARE_R2_ACCOUNT_ID"):
-            return CDNProvider.R2
-        elif os.getenv("AWS_ACCESS_KEY"):
+        """自动检测 CDN 提供商（经 r2_config 统一）"""
+        try:
+            from app.services.r2_config import is_r2_configured
+            if is_r2_configured():
+                return CDNProvider.R2
+        except Exception:
+            if os.getenv("CLOUDFLARE_R2_ACCOUNT_ID"):
+                return CDNProvider.R2
+        if os.getenv("AWS_ACCESS_KEY"):
             return CDNProvider.S3
-        else:
-            return CDNProvider.LOCAL
+        return CDNProvider.LOCAL
     
     async def upload_audio(self, file_path: str, content_type: str = "audio/wav") -> str:
         """
@@ -270,12 +276,22 @@ class CDNUploader:
     
     def _upload_local(self, file_path: str, key: str) -> str:
         """
-        本地存储回退
+        本地存储回退（仅开发环境）
         
-        将文件复制到 public/static 目录
+        将文件复制到 data/static 目录
         """
-        # 目标路径
-        target_dir = "C:/Users/dingx/music-video-platform/backend/public/static"
+        # 生产环境不允许本地存储回退
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env == "production":
+            raise RuntimeError(
+                "Production environment cannot use local storage fallback. "
+                "Please configure R2 (CLOUDFLARE_R2_ACCOUNT_ID, CLOUDFLARE_R2_ACCESS_KEY, "
+                "CLOUDFLARE_R2_SECRET_KEY, CDN_BUCKET) or S3 credentials."
+            )
+        
+        # 目标路径 - 使用相对路径，兼容 Windows/Linux/Mac
+        base_dir = os.getenv("LOCAL_STORAGE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"))
+        target_dir = os.path.join(base_dir, "static")
         os.makedirs(target_dir, exist_ok=True)
         
         # 复制文件
@@ -283,7 +299,7 @@ class CDNUploader:
         target_path = os.path.join(target_dir, key.replace("/", "_"))
         shutil.copy2(file_path, target_path)
         
-        # 生成本地 URL
+        # 生成本地 URL (仅开发环境使用)
         local_url = f"http://localhost:8000/static/{os.path.basename(target_path)}"
         print(f"[本地上传] ✅ {key} -> {local_url}")
         return local_url

@@ -35,7 +35,11 @@ def _check_spleeter_available() -> bool:
     """
     懒加载检查独立 Spleeter App 是否可调用（线程安全，仅首次调用时检查）
     首次调用时导入 modal SDK，后续直接返回缓存结果
+    Step 4: ENVIRONMENT=production 时直接禁用 Modal Spleeter（已下线），走 Mock/本地路径
     """
+    # 生产禁止 Modal（Step 4）
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        return False
     global _SPLEETER_AVAILABLE
     if _SPLEETER_AVAILABLE is not None:
         return _SPLEETER_AVAILABLE

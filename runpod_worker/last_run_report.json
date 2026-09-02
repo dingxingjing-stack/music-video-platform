@@ -1,0 +1,23 @@
+{
+  "RunPod HTTP status": 200,
+  "job_id": "cb5e1211-2c60-40a6-82c2-3aee4a76e6d7-u1",
+  "final status": "COMPLETED",
+  "worker_started": true,
+  "handler_success": true,
+  "success": true,
+  "generation_time": null,
+  "gpu_name": null,
+  "CUDA version": null,
+  "torch version": null,
+  "output_file": false,
+  "file_size": 0,
+  "error": null,
+  "model_download_time": null,
+  "model_load_time": null,
+  "inference_time": null,
+  "total_time": 41.94,
+  "raw_output_keys": [
+    "output",
+    "success"
+  ]
+}
