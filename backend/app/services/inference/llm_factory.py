@@ -80,7 +80,7 @@ class LLMFatalError(LLMProviderError):
 class LLMFactory:
     """Unified LLM client with retry, fallback and concurrency control."""
 
-def __init__(self):
+    def __init__(self):
         self._clients: Dict[str, httpx.AsyncClient] = {}
         self._initialized = False
         self.sem = asyncio.Semaphore(4)
@@ -124,7 +124,7 @@ def __init__(self):
         self._initialized = True
 
 
-async def call(
+    async def call(
         self,
         messages: List[Dict[str, str]],
         provider: str = "auto",
