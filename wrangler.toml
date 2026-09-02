@@ -11,6 +11,6 @@ binding = "BUCKET"
 bucket_name = "music-audio-storage"
 
 [vars]
-API_BASE_URL = "https://ai-music-backend-8e85.onrender.com"
+API_BASE_URL = "https://ai-music-backend-db6h.onrender.com"
 RATE_LIMIT = "100"
 CORS_ORIGIN = "https://music-video-platform.pages.dev"
