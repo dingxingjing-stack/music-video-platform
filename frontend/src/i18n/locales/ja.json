@@ -1161,5 +1161,29 @@
     "seatsLeft": "残り {n} 席",
     "missChance": "この機会を逃すと次は ¥299/年です",
     "lockMembership": "創始メンバー資格を確定"
+  },
+  "pathd": {
+    "publishSuccess": "作品をコミュニティに公開しました!",
+    "publishFailed": "公開に失敗（コミュニティ API 未開放）",
+    "midiTitle": "MIDI エディター",
+    "noteCount": "{n} 音符",
+    "title": "パス D — オリジナル制作",
+    "subtitle": "ゼロから：MIDI 編集 + 音声生成 → 完成作品",
+    "midiDesc": "ピアノロールで MIDI メロディを作成、GM 標準 128 音色に対応",
+    "trackName": "トラック名",
+    "currentInstrument": "現在の楽器",
+    "noteCountLabel": "音符数",
+    "channelLabel": "チャンネル",
+    "openEditor": "MIDI エディターを開く",
+    "audioGen": "音声生成",
+    "audioDesc": "MIDI を音声に書き出し、プレビュー後にコミュニティへ公開",
+    "generating": "生成中",
+    "generateAudio": "音声を生成",
+    "playing": "再生中...",
+    "preview": "プレビュー",
+    "exportMp3": "MP3 を書き出し",
+    "publishing": "公開中...",
+    "publish": "コミュニティに公開",
+    "hint": "まず MIDI エディターで音符を追加し、音声を生成してください"
   }
 }

@@ -68,9 +68,9 @@ export function PathDPage() {
     setIsPublishing(true);
     try {
       await fetch(api.url('/community/hot'), { method: 'GET' });
-      alert('✅ 作品已发布到社区！');
+      alert(t('pathd.publishSuccess'));
     } catch {
-      alert('❌ 发布失败（社区API暂未开放）');
+      alert(t('pathd.publishFailed'));
     } finally {
       setIsPublishing(false);
     }
@@ -86,9 +86,9 @@ export function PathDPage() {
           >
             ← 返回
           </button>
-          <h1 className="text-xl font-bold text-[#e0e0e0]">🎹 MIDI 编辑器</h1>
+          <h1 className="text-xl font-bold text-[#e0e0e0]">🎹 {t('pathd.midiTitle')}</h1>
           <span className="text-xs text-[#777777] ml-2">
-            {midiTrack.notes.length} 个音符
+            {t('pathd.noteCount', { n: midiTrack.notes.length })}
           </span>
         </div>
         <MidiEditor track={midiTrack} onTrackChange={handleTrackChange} />
@@ -100,20 +100,20 @@ export function PathDPage() {
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => navigate('/')} className="text-sm text-[#777777] hover:text-white transition">← {t('common.back') || '返回'}</button>
-        <h1 className="text-2xl font-bold gradient-text">路径 D — 原创创作</h1>
+        <h1 className="text-2xl font-bold gradient-text">{t('pathd.title')}</h1>
       </div>
-      <p className="text-sm text-[#777777]">从零开始：MIDI 编辑 + 音频生成 → 完整作品</p>
+      <p className="text-sm text-[#777777]">{t('pathd.subtitle')}</p>
 
       {/* Original Creation Form */}
       <section className="rounded-xl border border-[#2a2a2a] bg-[#1e1e1e] p-5 space-y-4">
-        <h2 className="font-semibold text-[#e0e0e0]">🎹 MIDI 编辑器</h2>
+        <h2 className="font-semibold text-[#e0e0e0]">🎹 {t('pathd.midiTitle')}</h2>
         <p className="text-xs text-[#777777]">
-          使用钢琴卷帘创作 MIDI 旋律，支持 GM 标准 128 种乐器
+          {t('pathd.midiDesc')}
         </p>
         
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-xs text-[#777777]">轨道名称</label>
+            <label className="text-xs text-[#777777]">{t('pathd.trackName')}</label>
             <input
               type="text"
               value={midiTrack.name}
@@ -123,7 +123,7 @@ export function PathDPage() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs text-[#777777]">当前乐器</label>
+            <label className="text-xs text-[#777777]">{t('pathd.currentInstrument')}</label>
             <div className="text-sm text-[#e0e0e0] py-2">
               {midiTrack.instrument === 0 ? 'Acoustic Grand Piano' : `Program ${midiTrack.instrument}`}
             </div>
@@ -131,23 +131,23 @@ export function PathDPage() {
         </div>
 
         <div className="flex items-center gap-4 text-sm text-[#777777]">
-          <span>📝 音符数：<strong className="text-[#e0e0e0]">{midiTrack.notes.length}</strong></span>
-          <span>🎵 通道：<strong className="text-[#e0e0e0]">{midiTrack.channel + 1}</strong></span>
+          <span>📝 {t('pathd.noteCountLabel')}: <strong className="text-[#e0e0e0]">{midiTrack.notes.length}</strong></span>
+          <span>🎵 {t('pathd.channelLabel')}: <strong className="text-[#e0e0e0]">{midiTrack.channel + 1}</strong></span>
         </div>
 
         <button
           onClick={handleStartMidiEditor}
           className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg font-medium transition"
         >
-          🎹 打开 MIDI 编辑器
+          🎹 {t('pathd.openEditor')}
         </button>
       </section>
 
       {/* 音频生成 */}
       <section className="card-solid p-5 space-y-4">
-        <h2 className="font-semibold text-[#e0e0e0]">🎵 音频生成</h2>
+        <h2 className="font-semibold text-[#e0e0e0]">🎵 {t('pathd.audioGen')}</h2>
         <p className="text-xs text-[#777777]">
-          将 MIDI 导出为音频，在线预览后发布到社区
+          {t('pathd.audioDesc')}
         </p>
 
         <div className="flex flex-wrap gap-3">
@@ -157,8 +157,8 @@ export function PathDPage() {
             className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (
-              <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> 生成中...</>
-            ) : '🎛️ 生成音频'}
+              <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> {t('pathd.generating')}...</>
+            ) : t('pathd.generateAudio')}
           </button>
 
           {audioUrl && (
@@ -167,7 +167,7 @@ export function PathDPage() {
                 onClick={handlePlayPreview}
                 className="btn-base px-5 py-2.5 bg-[#2a2a2a] hover:bg-[#333333] text-white rounded-lg font-medium flex items-center gap-2"
               >
-                {isPlaying ? '⏸️ 播放中...' : '▶️ 预览'}
+                {isPlaying ? t('pathd.playing') : t('pathd.preview')}
               </button>
               <button
                 onClick={() => {
@@ -178,21 +178,21 @@ export function PathDPage() {
                 }}
                 className="btn-base px-5 py-2.5 bg-[#2a2a2a] hover:bg-[#333333] text-white rounded-lg font-medium"
               >
-                ⬇️ 导出 MP3
+                ⬇️ {t('pathd.exportMp3')}
               </button>
               <button
                 onClick={handlePublish}
                 disabled={isPublishing}
                 className="btn-base px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg font-medium disabled:opacity-40 flex items-center gap-2"
               >
-                {isPublishing ? '⏳ 发布中...' : '📢 发布到社区'}
+                {isPublishing ? t('pathd.publishing') : t('pathd.publish')}
               </button>
             </>
           )}
         </div>
 
         {!audioUrl && midiTrack.notes.length === 0 && (
-          <p className="text-xs text-[#555555]">💡 先在 MIDI 编辑器中添加音符，然后生成音频</p>
+          <p className="text-xs text-[#555555]">💡 {t('pathd.hint')}</p>
         )}
       </section>
       {rateLimited && <RateLimitBanner onDismiss={() => setRateLimited(false)} />}

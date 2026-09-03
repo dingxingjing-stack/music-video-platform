@@ -1161,5 +1161,29 @@
     "seatsLeft": "Only {n} seats left",
     "missChance": "Miss this chance and it will be ¥299/year next time",
     "lockMembership": "Lock In Founding Membership"
+  },
+  "pathd": {
+    "publishSuccess": "Work published to the community!",
+    "publishFailed": "Publish failed (community API not open yet)",
+    "midiTitle": "MIDI Editor",
+    "noteCount": "{n} notes",
+    "title": "Path D — Original Creation",
+    "subtitle": "From scratch: MIDI editing + audio generation → complete work",
+    "midiDesc": "Compose MIDI melodies with the piano roll, supporting 128 GM-standard instruments",
+    "trackName": "Track Name",
+    "currentInstrument": "Current Instrument",
+    "noteCountLabel": "Notes",
+    "channelLabel": "Channel",
+    "openEditor": "Open MIDI Editor",
+    "audioGen": "Audio Generation",
+    "audioDesc": "Export MIDI to audio, preview online, then publish to the community",
+    "generating": "Generating",
+    "generateAudio": "Generate Audio",
+    "playing": "Playing...",
+    "preview": "Preview",
+    "exportMp3": "Export MP3",
+    "publishing": "Publishing...",
+    "publish": "Publish to Community",
+    "hint": "Add notes in the MIDI editor first, then generate audio"
   }
 }

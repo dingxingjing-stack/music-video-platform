@@ -1161,5 +1161,29 @@
     "seatsLeft": "Restam apenas {n} vagas",
     "missChance": "Perca esta chance e será ¥299/ano",
     "lockMembership": "Bloquear associação fundadora"
+  },
+  "pathd": {
+    "publishSuccess": "Obra publicada na comunidade!",
+    "publishFailed": "Falha na publicação (API da comunidade não aberta)",
+    "midiTitle": "Editor MIDI",
+    "noteCount": "{n} notas",
+    "title": "Caminho D — Criação Original",
+    "subtitle": "Do zero: edição MIDI + geração de áudio → obra completa",
+    "midiDesc": "Componha melodias MIDI com o piano roll, 128 instrumentos padrão GM",
+    "trackName": "Nome da faixa",
+    "currentInstrument": "Instrumento atual",
+    "noteCountLabel": "Notas",
+    "channelLabel": "Canal",
+    "openEditor": "Abrir editor MIDI",
+    "audioGen": "Geração de áudio",
+    "audioDesc": "Exporte MIDI para áudio, visualize online e publique na comunidade",
+    "generating": "Gerando",
+    "generateAudio": "Gerar áudio",
+    "playing": "Reproduzindo...",
+    "preview": "Pré-visualização",
+    "exportMp3": "Exportar MP3",
+    "publishing": "Publicando...",
+    "publish": "Publicar na comunidade",
+    "hint": "Adicione notas no editor MIDI primeiro, depois gere o áudio"
   }
 }

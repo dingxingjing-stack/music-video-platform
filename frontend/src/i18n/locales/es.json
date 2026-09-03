@@ -1161,5 +1161,29 @@
     "seatsLeft": "Solo quedan {n} plazas",
     "missChance": "Pierde esta oportunidad y será ¥299/año",
     "lockMembership": "Bloquear membresía fundadora"
+  },
+  "pathd": {
+    "publishSuccess": "¡Obra publicada en la comunidad!",
+    "publishFailed": "Error al publicar (la API de la comunidad no está abierta)",
+    "midiTitle": "Editor MIDI",
+    "noteCount": "{n} notas",
+    "title": "Ruta D — Creación Original",
+    "subtitle": "Desde cero: edición MIDI + generación de audio → obra completa",
+    "midiDesc": "Compón melodías MIDI con el piano roll, soporte para 128 instrumentos estándar GM",
+    "trackName": "Nombre de pista",
+    "currentInstrument": "Instrumento actual",
+    "noteCountLabel": "Notas",
+    "channelLabel": "Canal",
+    "openEditor": "Abrir editor MIDI",
+    "audioGen": "Generación de audio",
+    "audioDesc": "Exporta MIDI a audio, previsualiza en línea y publica en la comunidad",
+    "generating": "Generando",
+    "generateAudio": "Generar audio",
+    "playing": "Reproduciendo...",
+    "preview": "Vista previa",
+    "exportMp3": "Exportar MP3",
+    "publishing": "Publicando...",
+    "publish": "Publicar en la comunidad",
+    "hint": "Añade notas en el editor MIDI primero, luego genera el audio"
   }
 }

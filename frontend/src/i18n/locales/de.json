@@ -1161,5 +1161,29 @@
     "seatsLeft": "Nur noch {n} Plätze",
     "missChance": "Verpassen Sie diese Chance und es kostet ¥299/Jahr",
     "lockMembership": "Gründungsmitgliedschaft sichern"
+  },
+  "pathd": {
+    "publishSuccess": "Werk in der Community veröffentlicht!",
+    "publishFailed": "Veröffentlichung fehlgeschlagen (Community-API nicht offen)",
+    "midiTitle": "MIDI-Editor",
+    "noteCount": "{n} Noten",
+    "title": "Pfad D — Originale Erstellung",
+    "subtitle": "Von Grund auf: MIDI-Bearbeitung + Audiogenerierung → fertiges Werk",
+    "midiDesc": "Komponieren Sie MIDI-Melodien mit der Klavierrolle, 128 GM-Standardinstrumente",
+    "trackName": "Titelname",
+    "currentInstrument": "Aktuelles Instrument",
+    "noteCountLabel": "Noten",
+    "channelLabel": "Kanal",
+    "openEditor": "MIDI-Editor öffnen",
+    "audioGen": "Audiogenerierung",
+    "audioDesc": "Exportieren Sie MIDI als Audio, zeigen Sie es online und veröffentlichen Sie es in der Community",
+    "generating": "Generiere",
+    "generateAudio": "Audio erzeugen",
+    "playing": "Wiedergabe...",
+    "preview": "Vorschau",
+    "exportMp3": "MP3 exportieren",
+    "publishing": "Veröffentliche...",
+    "publish": "In Community veröffentlichen",
+    "hint": "Fügen Sie zuerst Noten im MIDI-Editor hinzu und erzeugen Sie dann Audio"
   }
 }

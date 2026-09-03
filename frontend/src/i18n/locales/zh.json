@@ -1161,5 +1161,29 @@
     "seatsLeft": "还剩 {n} 个席位",
     "missChance": "错过这次机会，下次就要 ¥299/年了",
     "lockMembership": "立即锁定创始会员资格"
+  },
+  "pathd": {
+    "publishSuccess": "作品已发布到社区!",
+    "publishFailed": "发布失败（社区API暂未开放）",
+    "midiTitle": "MIDI 编辑器",
+    "noteCount": "{n} 个音符",
+    "title": "路径 D — 原创创作",
+    "subtitle": "从零开始：MIDI 编辑 + 音频生成 → 完整作品",
+    "midiDesc": "使用钢琴卷帘创作 MIDI 旋律，支持 GM 标准 128 种乐器",
+    "trackName": "轨道名称",
+    "currentInstrument": "当前乐器",
+    "noteCountLabel": "音符数",
+    "channelLabel": "通道",
+    "openEditor": "打开 MIDI 编辑器",
+    "audioGen": "音频生成",
+    "audioDesc": "将 MIDI 导出为音频，在线预览后发布到社区",
+    "generating": "生成中",
+    "generateAudio": "生成音频",
+    "playing": "播放中...",
+    "preview": "预览",
+    "exportMp3": "导出 MP3",
+    "publishing": "发布中...",
+    "publish": "发布到社区",
+    "hint": "先在 MIDI 编辑器中添加音符，然后生成音频"
   }
 }

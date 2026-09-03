@@ -1161,5 +1161,29 @@
     "seatsLeft": "남은 자리 {n}석",
     "missChance": "이 기회를 놓치면 다음엔 ¥299/년입니다",
     "lockMembership": "창립 멤버 자격 확정"
+  },
+  "pathd": {
+    "publishSuccess": "커뮤니티에 게시되었습니다!",
+    "publishFailed": "게시 실패 (커뮤니티 API 미개방)",
+    "midiTitle": "MIDI 편집기",
+    "noteCount": "{n}개 음표",
+    "title": "경로 D — 오리지널 창작",
+    "subtitle": "처음부터: MIDI 편집 + 오디오 생성 → 완성 작품",
+    "midiDesc": "피아노 롤로 MIDI 멜로디를 작곡, GM 표준 128개 악기 지원",
+    "trackName": "트랙 이름",
+    "currentInstrument": "현재 악기",
+    "noteCountLabel": "음표 수",
+    "channelLabel": "채널",
+    "openEditor": "MIDI 편집기 열기",
+    "audioGen": "오디오 생성",
+    "audioDesc": "MIDI를 오디오로 내보내고 온라인 미리보기 후 커뮤니티에 게시",
+    "generating": "생성 중",
+    "generateAudio": "오디오 생성",
+    "playing": "재생 중...",
+    "preview": "미리보기",
+    "exportMp3": "MP3 내보내기",
+    "publishing": "게시 중...",
+    "publish": "커뮤니티에 게시",
+    "hint": "먼저 MIDI 편집기에서 음표를 추가한 후 오디오를 생성하세요"
   }
 }
