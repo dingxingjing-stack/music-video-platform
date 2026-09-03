@@ -1053,5 +1053,21 @@
     "noteWhole": "Semibreve",
     "quantizeStrength": "Força de quantização",
     "applyQuantize": "Aplicar quantização"
+  },
+  "chp": {
+    "title": "Faixa de Acordes",
+    "subtitle": "Arranjo de harmonia automático + geração de progressões",
+    "close": "Fechar",
+    "libraryTab": "Biblioteca de acordes",
+    "progressionTab": "Progressões",
+    "harmonyTab": "Harmonia",
+    "chordQuality": "Qualidade do acorde",
+    "all": "Todos",
+    "selectProgression": "Selecionar progressão",
+    "generating": "Gerando...",
+    "generate": "Gerar progressão",
+    "generated": "Progressão gerada (tom {key}, {tempo} BPM)",
+    "playDev": "Arranjo de harmonia em desenvolvimento...",
+    "supported": "Suporta estilos em bloco, arpejado e sustentado"
   }
 }

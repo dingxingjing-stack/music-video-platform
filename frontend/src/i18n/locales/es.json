@@ -1053,5 +1053,21 @@
     "noteWhole": "Redonda",
     "quantizeStrength": "Fuerza de cuantización",
     "applyQuantize": "Aplicar cuantización"
+  },
+  "chp": {
+    "title": "Pista de Acordes",
+    "subtitle": "Arreglo de armonía automático + generación de progresiones",
+    "close": "Cerrar",
+    "libraryTab": "Biblioteca de acordes",
+    "progressionTab": "Progresiones",
+    "harmonyTab": "Armonía",
+    "chordQuality": "Calidad del acorde",
+    "all": "Todos",
+    "selectProgression": "Seleccionar progresión",
+    "generating": "Generando...",
+    "generate": "Generar progresión",
+    "generated": "Progresión generada (tono {key}, {tempo} BPM)",
+    "playDev": "El arreglo de armonía está en desarrollo...",
+    "supported": "Admite estilos bloqueado, quebrado y sostenido"
   }
 }

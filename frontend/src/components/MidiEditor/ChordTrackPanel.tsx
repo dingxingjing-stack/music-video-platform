@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../../config/api';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface ChordDefinition {
   name: string;
@@ -56,6 +57,7 @@ interface Props {
 }
 
 export function ChordTrackPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'library' | 'progression' | 'harmony'>('library');
   const [chords, setChords] = useState<ChordDefinition[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<string>('all');
@@ -108,20 +110,20 @@ export function ChordTrackPanel({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">🎸 和弦轨道</h2>
-            <p className="text-sm text-zinc-400 mt-1">自动和声编排 + 和弦进行生成</p>
+            <h2 className="text-2xl font-bold text-white">🎸 {t('chp.title')}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{t('chp.subtitle')}</p>
           </div>
           <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-            关闭
+            {t('chp.close')}
           </button>
         </div>
 
         {/* Tab 导航 */}
         <div className="flex gap-2 mb-6 border-b border-zinc-800">
           {[
-            { id: 'library', label: '🎹 和弦库' },
-            { id: 'progression', label: '🎼 和弦进行' },
-            { id: 'harmony', label: '🎵 和声编排' },
+            { id: 'library', label: 'chp.libraryTab' },
+            { id: 'progression', label: 'chp.progressionTab' },
+            { id: 'harmony', label: 'chp.harmonyTab' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -132,7 +134,7 @@ export function ChordTrackPanel({ onClose }: Props) {
                   : 'bg-transparent text-zinc-400 hover:text-white'
               }`}
             >
-              {tab.label}
+              {t(tab.label)}
             </button>
           ))}
         </div>
@@ -142,7 +144,7 @@ export function ChordTrackPanel({ onClose }: Props) {
           <div>
             {/* 筛选器 */}
             <div className="mb-4">
-              <label className="text-xs text-zinc-400 mb-1 block">和弦品质</label>
+              <label className="text-xs text-zinc-400 mb-1 block">{t('chp.chordQuality')}</label>
               <div className="flex gap-2 flex-wrap">
                 {['all', 'major', 'minor', '7th', 'dim', 'aug'].map(q => (
                   <button
@@ -154,7 +156,7 @@ export function ChordTrackPanel({ onClose }: Props) {
                         : 'bg-zinc-800 text-zinc-400 hover:text-white'
                     }`}
                   >
-                    {q === 'all' ? '全部' : QUALITY_LABELS[q] || q}
+                    {q === 'all' ? t('chp.all') : QUALITY_LABELS[q] || q}
                   </button>
                 ))}
               </div>
@@ -196,7 +198,7 @@ export function ChordTrackPanel({ onClose }: Props) {
           <div>
             {/* 进行类型选择 */}
             <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
-              <h3 className="text-sm font-medium text-white mb-3">选择和弦进行</h3>
+              <h3 className="text-sm font-medium text-white mb-3">{t('chp.selectProgression')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {Object.entries(PROGRESSIONS).map(([key, label]) => (
                   <button
@@ -217,14 +219,14 @@ export function ChordTrackPanel({ onClose }: Props) {
               disabled={isLoading}
               className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition disabled:opacity-50"
             >
-              {isLoading ? '生成中...' : '🎼 生成和弦进行'}
+              {isLoading ? t('chp.generating') : t('chp.generate')}
             </button>
 
             {/* 结果显示 */}
             {progression && (
               <div className="mt-6">
                 <h3 className="text-lg font-bold text-white mb-3">
-                  生成的和弦进行 ({progression.key}调，{progression.tempo} BPM)
+                  {t('chp.generated', { key: progression.key, tempo: progression.tempo })}
                 </h3>
                 <div className="grid grid-cols-4 gap-3">
                   {progression.chords.map((chord, i) => (
@@ -249,8 +251,8 @@ export function ChordTrackPanel({ onClose }: Props) {
         {activeTab === 'harmony' && (
           <div className="text-center py-12 text-zinc-500">
             <div className="text-4xl mb-4">🎵</div>
-            <p>和声编排功能开发中...</p>
-            <p className="text-xs mt-2">支持柱式/分解/长音三种和声风格</p>
+            <p>{t('chp.playDev')}</p>
+            <p className="text-xs mt-2">{t('chp.supported')}</p>
           </div>
         )}
       </div>

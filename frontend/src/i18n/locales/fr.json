@@ -1053,5 +1053,21 @@
     "noteWhole": "Ronde",
     "quantizeStrength": "Force de quantification",
     "applyQuantize": "Appliquer la quantification"
+  },
+  "chp": {
+    "title": "Piste d Accords",
+    "subtitle": "Arrangement d harmonie auto + génération de progressions",
+    "close": "Fermer",
+    "libraryTab": "Bibliothèque d accords",
+    "progressionTab": "Progressions",
+    "harmonyTab": "Harmonie",
+    "chordQuality": "Qualité de l accord",
+    "all": "Tout",
+    "selectProgression": "Choisir une progression",
+    "generating": "Génération...",
+    "generate": "Générer la progression",
+    "generated": "Progression générée (tonalité {key}, {tempo} BPM)",
+    "playDev": "Arrangement d harmonie en développement...",
+    "supported": "Prend en charge les styles bloc, arpégé et tenu"
   }
 }

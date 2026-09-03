@@ -1053,5 +1053,21 @@
     "noteWhole": "온음표",
     "quantizeStrength": "양자화 강도",
     "applyQuantize": "양자화 적용"
+  },
+  "chp": {
+    "title": "코드 트랙",
+    "subtitle": "자동 화성 편성 + 코드 진행 생성",
+    "close": "닫기",
+    "libraryTab": "코드 라이브러리",
+    "progressionTab": "코드 진행",
+    "harmonyTab": "화성 편성",
+    "chordQuality": "코드 품질",
+    "all": "전체",
+    "selectProgression": "코드 진행 선택",
+    "generating": "생성 중...",
+    "generate": "코드 진행 생성",
+    "generated": "생성된 코드 진행 ({key}조, {tempo} BPM)",
+    "playDev": "화성 편성 기능 개발 중...",
+    "supported": "화성/분산/지속 3가지 스타일 지원"
   }
 }

@@ -1053,5 +1053,21 @@
     "noteWhole": "Ganze",
     "quantizeStrength": "Quantisierungsstärke",
     "applyQuantize": "Quantisierung anwenden"
+  },
+  "chp": {
+    "title": "Akkord-Spur",
+    "subtitle": "Automatische Harmonie-Arrangements + Akkordprogressionen",
+    "close": "Schließen",
+    "libraryTab": "Akkordbibliothek",
+    "progressionTab": "Progressionen",
+    "harmonyTab": "Harmonie",
+    "chordQuality": "Akkordqualität",
+    "all": "Alle",
+    "selectProgression": "Progression wählen",
+    "generating": "Generiere...",
+    "generate": "Progression erzeugen",
+    "generated": "Erzeugte Progression ({key}, {tempo} BPM)",
+    "playDev": "Harmonie-Arrangement in Entwicklung...",
+    "supported": "Unterstützt block-, arpeggierte und gehaltene Stile"
   }
 }

@@ -1053,5 +1053,21 @@
     "noteWhole": "Whole note",
     "quantizeStrength": "Quantize Strength",
     "applyQuantize": "Apply Quantize"
+  },
+  "chp": {
+    "title": "Chord Track",
+    "subtitle": "Auto harmony arrangement + chord progression generation",
+    "close": "Close",
+    "libraryTab": "Chord Library",
+    "progressionTab": "Progressions",
+    "harmonyTab": "Harmony",
+    "chordQuality": "Chord Quality",
+    "all": "All",
+    "selectProgression": "Select a Progression",
+    "generating": "Generating...",
+    "generate": "Generate Progression",
+    "generated": "Generated progression ({key} key, {tempo} BPM)",
+    "playDev": "Harmony arrangement is under development...",
+    "supported": "Supports block, broken, and sustained harmony styles"
   }
 }

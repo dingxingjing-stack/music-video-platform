@@ -1053,5 +1053,21 @@
     "noteWhole": "全音符",
     "quantizeStrength": "量化强度",
     "applyQuantize": "应用量化"
+  },
+  "chp": {
+    "title": "和弦轨道",
+    "subtitle": "自动和声编排 + 和弦进行生成",
+    "close": "关闭",
+    "libraryTab": "和弦库",
+    "progressionTab": "和弦进行",
+    "harmonyTab": "和声编排",
+    "chordQuality": "和弦品质",
+    "all": "全部",
+    "selectProgression": "选择和弦进行",
+    "generating": "生成中...",
+    "generate": "生成和弦进行",
+    "generated": "生成的和弦进行 ({key}调，{tempo} BPM)",
+    "playDev": "和声编排功能开发中...",
+    "supported": "支持柱式/分解/长音三种和声风格"
   }
 }

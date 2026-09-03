@@ -1053,5 +1053,21 @@
     "noteWhole": "全音符",
     "quantizeStrength": "量子化の強さ",
     "applyQuantize": "量子化を適用"
+  },
+  "chp": {
+    "title": "コードトラック",
+    "subtitle": "自動ハーモニー編成 + コード進行生成",
+    "close": "閉じる",
+    "libraryTab": "コードライブラリ",
+    "progressionTab": "コード進行",
+    "harmonyTab": "ハーモニー",
+    "chordQuality": "コード品質",
+    "all": "すべて",
+    "selectProgression": "コード進行を選択",
+    "generating": "生成中...",
+    "generate": "コード進行を生成",
+    "generated": "生成したコード進行（{key} 調、{tempo} BPM）",
+    "playDev": "ハーモニー編成は開発中...",
+    "supported": "柱状/分散/持続の 3 スタイルに対応"
   }
 }
