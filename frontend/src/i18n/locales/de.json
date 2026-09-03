@@ -1260,5 +1260,8 @@
     "drums": "Schlagzeug",
     "bass": "Bass",
     "other": "Andere"
+  },
+  "pathc": {
+    "hidden": "Die Stimmklon-Funktion ist derzeit für reguläre Benutzer ausgeblendet"
   }
 }

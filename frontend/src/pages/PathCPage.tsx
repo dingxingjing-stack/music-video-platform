@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { RateLimitBanner } from '../hooks/useAudioGeneration';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface VoiceSample { id: string; name: string; audio_url: string; duration: number; created_at: string; is_private?: boolean; }
 
@@ -27,8 +28,9 @@ const CONSENT_TEXT = [
 ];
 
 export function PathCPage() {
+  const { t } = useTranslation();
   // 声音克隆功能当前对普通用户隐藏
-  return <div className="p-6 text-center text-zinc-500">🔇 声音克隆功能当前对普通用户隐藏</div>;
+  return <div className="p-6 text-center text-zinc-500">🔇 {t('pathc.hidden')}</div>;
   const [publicVoices, setPublicVoices] = useState<VoiceSample[]>([]);
   const [privateVoices, setPrivateVoices] = useState<VoiceSample[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('');

@@ -1260,5 +1260,8 @@
     "drums": "Batería",
     "bass": "Bajo",
     "other": "Otros"
+  },
+  "pathc": {
+    "hidden": "La clonación de voz está actualmente oculta para usuarios regulares"
   }
 }

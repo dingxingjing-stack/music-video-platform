@@ -1260,5 +1260,8 @@
     "drums": "Drums",
     "bass": "Bass",
     "other": "Other"
+  },
+  "pathc": {
+    "hidden": "Voice cloning is currently hidden for regular users"
   }
 }
