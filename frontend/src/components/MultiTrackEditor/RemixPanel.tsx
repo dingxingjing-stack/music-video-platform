@@ -11,6 +11,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../../config/api';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface RemixStyle {
   id: string;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function RemixPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [styles, setStyles] = useState<RemixStyle[]>([]);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [intensity, setIntensity] = useState('moderate');
@@ -77,11 +79,11 @@ export function RemixPanel({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">🎛️ AI Remix 引擎</h2>
-            <p className="text-sm text-zinc-400 mt-1">风格转换 · 节奏重组 · 自动 DJ Mix</p>
+            <h2 className="text-2xl font-bold text-white">🎛️ {t('remix.title')}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{t('remix.subtitle')}</p>
           </div>
           <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-            关闭
+            {t('remix.close')}
           </button>
         </div>
 
@@ -90,7 +92,7 @@ export function RemixPanel({ onClose }: Props) {
           <div>
             {/* 风格选择 */}
             <div className="mb-6">
-              <h3 className="text-lg font-bold text-white mb-3">🎨 选择目标风格</h3>
+              <h3 className="text-lg font-bold text-white mb-3">{t('remix.selectTarget')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {styles.map(style => (
                   <button
@@ -114,12 +116,12 @@ export function RemixPanel({ onClose }: Props) {
 
             {/* 强度控制 */}
             <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
-              <h4 className="text-sm font-medium text-white mb-3">⚡ Remix 强度</h4>
+              <h4 className="text-sm font-medium text-white mb-3">{t('remix.strength')}</h4>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'subtle', name: '轻微', desc: '细节调整' },
-                  { id: 'moderate', name: '中等', desc: '明显变化' },
-                  { id: 'extreme', name: '极端', desc: '彻底改造' },
+                  { id: 'subtle', name: 'remix.strengthSubtle', desc: 'remix.strengthSubtleDesc' },
+                  { id: 'moderate', name: 'remix.strengthModerate', desc: 'remix.strengthModerateDesc' },
+                  { id: 'extreme', name: 'remix.strengthExtreme', desc: 'remix.strengthExtremeDesc' },
                 ].map(opt => (
                   <button
                     key={opt.id}
@@ -131,9 +133,9 @@ export function RemixPanel({ onClose }: Props) {
                     }`}
                   >
                     <div className={`font-bold ${intensity === opt.id ? 'text-purple-400' : 'text-white'}`}>
-                      {opt.name}
+                      {t(opt.name)}
                     </div>
-                    <div className="text-xs text-zinc-400">{opt.desc}</div>
+                    <div className="text-xs text-zinc-400">{t(opt.desc)}</div>
                   </button>
                 ))}
               </div>
@@ -141,12 +143,12 @@ export function RemixPanel({ onClose }: Props) {
 
             {/* 高级选项 */}
             <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
-              <h4 className="text-sm font-medium text-white mb-3">🔧 高级选项</h4>
+              <h4 className="text-sm font-medium text-white mb-3">{t('remix.advanced')}</h4>
               
               {/* 节奏倍率 */}
               <div className="mb-4">
                 <label className="text-xs text-zinc-400 mb-2 block">
-                  节奏倍率：<span className="text-white font-medium">{tempoMultiplier.toFixed(2)}x</span>
+                  {t('remix.tempoMultiplier', { value: tempoMultiplier.toFixed(2) })}
                 </label>
                 <input
                   type="range"
@@ -158,9 +160,9 @@ export function RemixPanel({ onClose }: Props) {
                   className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-zinc-500 mt-1">
-                  <span>0.5x (减半)</span>
-                  <span>1.0x (原速)</span>
-                  <span>2.0x (加倍)</span>
+                  <span>{t('remix.tempo0_5')}</span>
+                  <span>{t('remix.tempo1_0')}</span>
+                  <span>{t('remix.tempo2_0')}</span>
                 </div>
               </div>
 
@@ -174,8 +176,8 @@ export function RemixPanel({ onClose }: Props) {
                     className="w-5 h-5 rounded accent-purple-500"
                   />
                   <div>
-                    <div className="text-white text-sm font-medium">添加 Drop</div>
-                    <div className="text-xs text-zinc-400">高潮段落爆发</div>
+                    <div className="text-white text-sm font-medium">{t('remix.addDrop')}</div>
+                    <div className="text-xs text-zinc-400">{t('remix.addDropDesc')}</div>
                   </div>
                 </label>
 
@@ -187,8 +189,8 @@ export function RemixPanel({ onClose }: Props) {
                     className="w-5 h-5 rounded accent-purple-500"
                   />
                   <div>
-                    <div className="text-white text-sm font-medium">添加 Buildup</div>
-                    <div className="text-xs text-zinc-400">渐进 buildup</div>
+                    <div className="text-white text-sm font-medium">{t('remix.addBuildup')}</div>
+                    <div className="text-xs text-zinc-400">{t('remix.addBuildupDesc')}</div>
                   </div>
                 </label>
               </div>
@@ -200,7 +202,7 @@ export function RemixPanel({ onClose }: Props) {
               disabled={!selectedStyle || isProcessing}
               className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-bold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? '🎵 Remix 处理中...' : '✨ 开始 Remix'}
+              {isProcessing ? t('remix.processing') : t('remix.start')}
             </button>
           </div>
         ) : (
@@ -210,26 +212,26 @@ export function RemixPanel({ onClose }: Props) {
               <div className="flex items-center gap-3 mb-3">
                 <div className="text-3xl">✅</div>
                 <div>
-                  <div className="text-green-400 font-bold text-lg">Remix 完成!</div>
-                  <div className="text-sm text-zinc-400">已生成新版本</div>
+                  <div className="text-green-400 font-bold text-lg">{t('remix.done')}</div>
+                  <div className="text-sm text-zinc-400">{t('remix.newVersion')}</div>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-zinc-400">原风格:</span>
+                  <span className="text-zinc-400">{t('remix.originalStyle')}:</span>
                   <span className="text-white ml-2">{remixResult.original_style}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400">新风格:</span>
+                  <span className="text-zinc-400">{t('remix.newStyle')}:</span>
                   <span className="text-white ml-2 text-purple-400 font-bold">{remixResult.remixed_style}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400">原 BPM:</span>
+                  <span className="text-zinc-400">{t('remix.originalBpm')}:</span>
                   <span className="text-white ml-2">{remixResult.original_bpm}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400">新 BPM:</span>
+                  <span className="text-zinc-400">{t('remix.newBpm')}:</span>
                   <span className="text-white ml-2">{remixResult.remixed_bpm}</span>
                 </div>
               </div>
@@ -237,7 +239,7 @@ export function RemixPanel({ onClose }: Props) {
 
             {/* 应用的变化 */}
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-white mb-3">📝 应用的变化</h4>
+              <h4 className="text-sm font-medium text-white mb-3">{t('remix.appliedChanges')}</h4>
               <ul className="space-y-2">
                 {remixResult.changes_applied.map((change: string, i: number) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
@@ -254,10 +256,10 @@ export function RemixPanel({ onClose }: Props) {
                 onClick={() => setRemixResult(null)}
                 className="px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-medium transition"
               >
-                🔄 重新 Remix
+                🔄 {t('remix.again')}
               </button>
               <button className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition">
-                📥 导出 Remix
+                📥 {t('remix.export')}
               </button>
             </div>
           </div>
