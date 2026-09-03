@@ -943,5 +943,14 @@
     "easing": "Easing",
     "direction": "Richtung",
     "apply": "Anwenden"
+  },
+  "mxc": {
+    "title": "Mischpult",
+    "subtitle": "Professionelles Mischpult - {n} Tracks",
+    "close": "Schließen",
+    "muteLegend": "M = Stumm",
+    "soloLegend": "S = Solo",
+    "panLegend": "Pan = Panorama",
+    "auxSends": "Aux-Sends: A/B/C/D"
   }
 }

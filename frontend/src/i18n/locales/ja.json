@@ -943,5 +943,14 @@
     "easing": "イージング",
     "direction": "方向",
     "apply": "適用"
+  },
+  "mxc": {
+    "title": "ミックスコンソール",
+    "subtitle": "プロフェッショナルミックス台 - {n} トラック",
+    "close": "閉じる",
+    "muteLegend": "M = ミュート",
+    "soloLegend": "S = ソロ",
+    "panLegend": "Pan = パン",
+    "auxSends": "Aux 送り：A/B/C/D"
   }
 }

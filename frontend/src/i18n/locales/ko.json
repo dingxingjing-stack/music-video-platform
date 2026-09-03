@@ -943,5 +943,14 @@
     "easing": "이징",
     "direction": "방향",
     "apply": "적용"
+  },
+  "mxc": {
+    "title": "믹스 콘솔",
+    "subtitle": "전문 믹스 콘솔 - {n} 트랙",
+    "close": "닫기",
+    "muteLegend": "M = 뮤트",
+    "soloLegend": "S = 솔로",
+    "panLegend": "Pan = 팬",
+    "auxSends": "Aux 전송: A/B/C/D"
   }
 }

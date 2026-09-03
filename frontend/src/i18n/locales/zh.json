@@ -943,5 +943,14 @@
     "easing": "缓动",
     "direction": "方向",
     "apply": "应用"
+  },
+  "mxc": {
+    "title": "混音台",
+    "subtitle": "专业混音台 - {n} 轨道",
+    "close": "关闭",
+    "muteLegend": "M = 静音",
+    "soloLegend": "S = 独奏",
+    "panLegend": "Pan = 声像",
+    "auxSends": "Aux 发送：A/B/C/D"
   }
 }

@@ -11,6 +11,7 @@
 
 import React, { useState } from 'react';
 import { Track } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface ChannelStripProps {
   track: Track;
@@ -180,17 +181,18 @@ export const MixConsole: React.FC<MixConsoleProps> = ({
   onMasterVolumeChange = () => {},
   onClose,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-8">
       <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-2xl p-6 max-w-full overflow-auto shadow-2xl border border-zinc-800">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">MixConsole</h2>
-            <p className="text-sm text-zinc-400 mt-1">专业混音台 - {tracks.length} 轨道</p>
+            <h2 className="text-2xl font-bold text-white">{t('mxc.title')}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{t('mxc.subtitle', { n: tracks.length })}</p>
           </div>
           {onClose && (
             <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-              关闭
+              {t('mxc.close')}
             </button>
           )}
         </div>
@@ -215,11 +217,11 @@ export const MixConsole: React.FC<MixConsoleProps> = ({
 
         <div className="mt-4 flex justify-between items-center text-xs text-zinc-500">
           <div>
-            <span className="mr-4">M = 静音</span>
-            <span className="mr-4">S = 独奏</span>
-            <span className="mr-4">Pan = 声像</span>
+            <span className="mr-4">{t('mxc.muteLegend')}</span>
+            <span className="mr-4">{t('mxc.soloLegend')}</span>
+            <span className="mr-4">{t('mxc.panLegend')}</span>
           </div>
-          <div>Aux 发送：A/B/C/D</div>
+          <div>{t('mxc.auxSends')}</div>
         </div>
       </div>
     </div>

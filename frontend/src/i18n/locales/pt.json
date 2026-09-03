@@ -943,5 +943,14 @@
     "easing": "Easing",
     "direction": "Direção",
     "apply": "Aplicar"
+  },
+  "mxc": {
+    "title": "Console de Mixagem",
+    "subtitle": "Console de mixagem profissional - {n} faixas",
+    "close": "Fechar",
+    "muteLegend": "M = Silenciar",
+    "soloLegend": "S = Solo",
+    "panLegend": "Pan = Panorâmica",
+    "auxSends": "Envios aux: A/B/C/D"
   }
 }
