@@ -1,5 +1,5 @@
 /**
- * VST 插件市场组件 (P4-2)
+ * {t('vstm.title')}组件 (P4-2)
  * 
  * 功能:
  * - 插件浏览与搜索
@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Input, Select, Tag, Button, Rate, Space, Tabs, message } from 'antd';
 import { SearchOutlined, DownloadOutlined, StarOutlined } from '@ant-design/icons';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -159,6 +160,7 @@ const SAMPLE_PLUGINS: VSTPlugin[] = [
 ];
 
 const VSTPluginMarket: React.FC = () => {
+  const { t } = useTranslation();
   const [plugins, setPlugins] = useState<VSTPlugin[]>(SAMPLE_PLUGINS);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'synth' | 'effect'>('all');
@@ -195,7 +197,7 @@ const VSTPluginMarket: React.FC = () => {
   // 安装插件
   const handleInstall = async (plugin: VSTPlugin) => {
     try {
-      message.loading(`正在安装 ${plugin.name}...`);
+      message.loading(t('vstm.installing', { name: plugin.name }));
       
       // TODO: 调用后端 API 下载并安装插件
       // await fetch('/api/v1/plugins/install', {
@@ -206,7 +208,7 @@ const VSTPluginMarket: React.FC = () => {
       // 模拟安装
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      message.success(`✅ ${plugin.name} 安装成功!`);
+      message.success(t('vstm.installSuccess', { name: plugin.name }));
       
       // 更新插件状态
       setPlugins(prev => prev.map(p => 
@@ -215,7 +217,7 @@ const VSTPluginMarket: React.FC = () => {
           : p
       ));
     } catch (error) {
-      message.error(`❌ 安装失败：${error}`);
+      message.error(t('vstm.installFailed', { error }));
     }
   };
 
@@ -231,16 +233,16 @@ const VSTPluginMarket: React.FC = () => {
     <div style={{ padding: '20px' }}>
       {/* 头部 */}
       <div style={{ marginBottom: 24 }}>
-        <h1>🎹 VST 插件市场</h1>
+        <h1>🎹 {t('vstm.title')}</h1>
         <p style={{ color: '#666' }}>
-          已收录 {plugins.length} 个插件，其中 {plugins.filter(p => p.price === 0).length} 个免费
+          {t('vstm.subtitle', { total: plugins.length, free: plugins.filter(p => p.price === 0).length })}
         </p>
       </div>
 
       {/* 搜索和过滤 */}
       <div style={{ marginBottom: 24, display: 'flex', gap: 12 }}>
         <Input
-          placeholder="搜索插件..."
+          placeholder={t('vstm.searchPlaceholder')}
           prefix={<SearchOutlined />}
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
@@ -253,9 +255,9 @@ const VSTPluginMarket: React.FC = () => {
           onChange={value => setSelectedType(value)}
           style={{ width: 150 }}
         >
-          <Option value="all">全部类型</Option>
-          <Option value="synth">合成器</Option>
-          <Option value="effect">效果器</Option>
+          <Option value="all">{t('vstm.allType')}</Option>
+          <Option value="synth">{t('vstm.synthType')}</Option>
+          <Option value="effect">{t('vstm.effectType')}</Option>
         </Select>
 
         <Select
@@ -263,7 +265,7 @@ const VSTPluginMarket: React.FC = () => {
           onChange={value => setSelectedCategory(value)}
           style={{ width: 150 }}
         >
-          <Option value="all">全部分类</Option>
+          <Option value="all">{t('vstm.allCategory')}</Option>
           {categories.map(cat => (
             <Option key={cat} value={cat}>{cat}</Option>
           ))}
@@ -274,29 +276,29 @@ const VSTPluginMarket: React.FC = () => {
           onChange={value => setSortMode(value)}
           style={{ width: 120 }}
         >
-          <Option value="popular">最热</Option>
-          <Option value="rating">评分</Option>
-          <Option value="newest">最新</Option>
+          <Option value="popular">{t('vstm.popular')}</Option>
+          <Option value="rating">{t('vstm.rating')}</Option>
+          <Option value="newest">{t('vstm.newest')}</Option>
         </Select>
       </div>
 
       {/* 分类标签页 */}
       <Tabs defaultActiveKey="all">
-        <TabPane tab="全部" key="all">
+        <TabPane tab={t('vstm.tabAll')} key="all">
           <PluginGrid 
             plugins={sortedPlugins} 
             onInstall={handleInstall}
             renderStars={renderStars}
           />
         </TabPane>
-        <TabPane tab="合成器" key="synth">
+        <TabPane tab={t('vstm.tabSynth')} key="synth">
           <PluginGrid 
             plugins={sortedPlugins.filter(p => p.type === 'synth')} 
             onInstall={handleInstall}
             renderStars={renderStars}
           />
         </TabPane>
-        <TabPane tab="效果器" key="effect">
+        <TabPane tab={t('vstm.tabEffect')} key="effect">
           <PluginGrid 
             plugins={sortedPlugins.filter(p => p.type === 'effect')} 
             onInstall={handleInstall}
@@ -307,12 +309,12 @@ const VSTPluginMarket: React.FC = () => {
 
       {/* 底部统计 */}
       <div style={{ marginTop: 24, padding: '16px', background: '#f5f5f5', borderRadius: 8 }}>
-        <h3>📊 插件统计</h3>
+        <h3>📊 {t('vstm.statsTitle')}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          <StatCard title="总插件数" value={plugins.length} />
-          <StatCard title="免费插件" value={plugins.filter(p => p.price === 0).length} />
-          <StatCard title="合成器" value={plugins.filter(p => p.type === 'synth').length} />
-          <StatCard title="效果器" value={plugins.filter(p => p.type === 'effect').length} />
+          <StatCard title={t('vstm.statTotal')} value={plugins.length} />
+          <StatCard title={t('vstm.statFree')} value={plugins.filter(p => p.price === 0).length} />
+          <StatCard title={t('vstm.statSynth')} value={plugins.filter(p => p.type === 'synth').length} />
+          <StatCard title={t('vstm.statEffect')} value={plugins.filter(p => p.type === 'effect').length} />
         </div>
       </div>
     </div>
@@ -328,7 +330,7 @@ const PluginGrid: React.FC<{
   if (plugins.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-        <p>未找到匹配的插件</p>
+        <p>{t('vstm.noResult')}</p>
       </div>
     );
   }
@@ -381,7 +383,7 @@ const PluginCard: React.FC<{
           onClick={() => onInstall(plugin)}
           disabled={plugin.price > 0} // TODO: 付费插件需要购买流程
         >
-          {plugin.price === 0 ? '免费安装' : `¥${plugin.price}`}
+          {plugin.price === 0 ? t('vstm.installFree') : t('vstm.installPrice', { n: plugin.price })}
         </Button>,
       ]}
     >

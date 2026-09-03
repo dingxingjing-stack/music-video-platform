@@ -1263,5 +1263,31 @@
   },
   "pathc": {
     "hidden": "A clonagem de voz está atualmente oculta para usuários comuns"
+  },
+  "vstm": {
+    "installing": "Instalando {name}...",
+    "installSuccess": "✅ {name} instalado!",
+    "installFailed": "❌ Falha na instalação: {error}",
+    "title": "Mercado de Plugins VST",
+    "subtitle": "{total} plugins, {free} gratuitos",
+    "searchPlaceholder": "Buscar plugins...",
+    "allType": "Todos os tipos",
+    "synthType": "Sintetizador",
+    "effectType": "Efeito",
+    "allCategory": "Todas as categorias",
+    "popular": "Popular",
+    "rating": "Avaliação",
+    "newest": "Novo",
+    "tabAll": "Todos",
+    "tabSynth": "Sintetizadores",
+    "tabEffect": "Efeitos",
+    "statsTitle": "Estatísticas",
+    "statTotal": "Total de plugins",
+    "statFree": "Plugins gratuitos",
+    "statSynth": "Sintetizadores",
+    "statEffect": "Efeitos",
+    "noResult": "Nenhum plugin encontrado",
+    "installFree": "Instalar grátis",
+    "installPrice": "¥{n}"
   }
 }

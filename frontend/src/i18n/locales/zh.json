@@ -1263,5 +1263,31 @@
   },
   "pathc": {
     "hidden": "声音克隆功能当前对普通用户隐藏"
+  },
+  "vstm": {
+    "installing": "正在安装 {name}...",
+    "installSuccess": "✅ {name} 安装成功!",
+    "installFailed": "❌ 安装失败：{error}",
+    "title": "VST 插件市场",
+    "subtitle": "已收录 {total} 个插件，其中 {free} 个免费",
+    "searchPlaceholder": "搜索插件...",
+    "allType": "全部类型",
+    "synthType": "合成器",
+    "effectType": "效果器",
+    "allCategory": "全部分类",
+    "popular": "最热",
+    "rating": "评分",
+    "newest": "最新",
+    "tabAll": "全部",
+    "tabSynth": "合成器",
+    "tabEffect": "效果器",
+    "statsTitle": "插件统计",
+    "statTotal": "总插件数",
+    "statFree": "免费插件",
+    "statSynth": "合成器",
+    "statEffect": "效果器",
+    "noResult": "未找到匹配的插件",
+    "installFree": "免费安装",
+    "installPrice": "¥{n}"
   }
 }

@@ -1263,5 +1263,31 @@
   },
   "pathc": {
     "hidden": "音声クローン機能は現在一般ユーザーには非表示です"
+  },
+  "vstm": {
+    "installing": "{name} をインストール中...",
+    "installSuccess": "✅ {name} をインストールしました!",
+    "installFailed": "❌ インストールに失敗：{error}",
+    "title": "VST プラグインマーケット",
+    "subtitle": "プラグイン {total} 個、うち {free} 個無料",
+    "searchPlaceholder": "プラグインを検索...",
+    "allType": "すべてのタイプ",
+    "synthType": "シンセサイザー",
+    "effectType": "エフェクト",
+    "allCategory": "すべてのカテゴリー",
+    "popular": "人気",
+    "rating": "評価",
+    "newest": "新着",
+    "tabAll": "すべて",
+    "tabSynth": "シンセ",
+    "tabEffect": "エフェクト",
+    "statsTitle": "プラグイン統計",
+    "statTotal": "合計プラグイン",
+    "statFree": "無料プラグイン",
+    "statSynth": "シンセ",
+    "statEffect": "エフェクト",
+    "noResult": "一致するプラグインがありません",
+    "installFree": "無料インストール",
+    "installPrice": "¥{n}"
   }
 }

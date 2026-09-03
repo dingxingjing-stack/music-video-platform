@@ -1263,5 +1263,31 @@
   },
   "pathc": {
     "hidden": "음성 클론 기능은 현재 일반 사용자에게 숨겨져 있습니다"
+  },
+  "vstm": {
+    "installing": "{name} 설치 중...",
+    "installSuccess": "✅ {name} 설치 성공!",
+    "installFailed": "❌ 설치 실패: {error}",
+    "title": "VST 플러그인 마켓",
+    "subtitle": "플러그인 {total}개, 무료 {free}개",
+    "searchPlaceholder": "플러그인 검색...",
+    "allType": "전체 유형",
+    "synthType": "신디사이저",
+    "effectType": "이펙트",
+    "allCategory": "전체 분류",
+    "popular": "인기",
+    "rating": "평점",
+    "newest": "최신",
+    "tabAll": "전체",
+    "tabSynth": "신스",
+    "tabEffect": "이펙트",
+    "statsTitle": "플러그인 통계",
+    "statTotal": "총 플러그인",
+    "statFree": "무료 플러그인",
+    "statSynth": "신스",
+    "statEffect": "이펙트",
+    "noResult": "일치하는 플러그인이 없습니다",
+    "installFree": "무료 설치",
+    "installPrice": "¥{n}"
   }
 }

@@ -1263,5 +1263,31 @@
   },
   "pathc": {
     "hidden": "Функция клонирования голоса сейчас скрыта для обычных пользователей"
+  },
+  "vstm": {
+    "installing": "Установка {name}...",
+    "installSuccess": "✅ {name} установлен!",
+    "installFailed": "❌ Ошибка установки: {error}",
+    "title": "Маркет плагинов VST",
+    "subtitle": "Плагинов: {total}, бесплатных: {free}",
+    "searchPlaceholder": "Поиск плагинов...",
+    "allType": "Все типы",
+    "synthType": "Синтезатор",
+    "effectType": "Эффект",
+    "allCategory": "Все категории",
+    "popular": "Популярные",
+    "rating": "Рейтинг",
+    "newest": "Новые",
+    "tabAll": "Все",
+    "tabSynth": "Синтезаторы",
+    "tabEffect": "Эффекты",
+    "statsTitle": "Статистика",
+    "statTotal": "Всего плагинов",
+    "statFree": "Бесплатные",
+    "statSynth": "Синтезаторы",
+    "statEffect": "Эффекты",
+    "noResult": "Плагины не найдены",
+    "installFree": "Установить бесплатно",
+    "installPrice": "¥{n}"
   }
 }

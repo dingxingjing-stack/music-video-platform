@@ -1263,5 +1263,31 @@
   },
   "pathc": {
     "hidden": "Die Stimmklon-Funktion ist derzeit für reguläre Benutzer ausgeblendet"
+  },
+  "vstm": {
+    "installing": "Installiere {name}...",
+    "installSuccess": "✅ {name} installiert!",
+    "installFailed": "❌ Installation fehlgeschlagen: {error}",
+    "title": "VST-Plugin-Markt",
+    "subtitle": "{total} Plugins, {free} kostenlos",
+    "searchPlaceholder": "Plugins suchen...",
+    "allType": "Alle Typen",
+    "synthType": "Synthesizer",
+    "effectType": "Effekt",
+    "allCategory": "Alle Kategorien",
+    "popular": "Beliebt",
+    "rating": "Bewertung",
+    "newest": "Neu",
+    "tabAll": "Alle",
+    "tabSynth": "Synths",
+    "tabEffect": "Effekte",
+    "statsTitle": "Plugin-Statistik",
+    "statTotal": "Gesamt Plugins",
+    "statFree": "Kostenlose Plugins",
+    "statSynth": "Synths",
+    "statEffect": "Effekte",
+    "noResult": "Keine passenden Plugins",
+    "installFree": "Kostenlos installieren",
+    "installPrice": "¥{n}"
   }
 }
