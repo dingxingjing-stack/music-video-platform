@@ -952,5 +952,23 @@
     "soloLegend": "S = 独奏",
     "panLegend": "Pan = 声像",
     "auxSends": "Aux 发送：A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "多次录制取最佳片段",
+    "close": "关闭",
+    "title": "创建 Comping 会话",
+    "desc": "录制多次后选择最佳片段拼接",
+    "takesLabel": "录音次数",
+    "numTakes": "{n} 次录音",
+    "createLoading": "创建中...",
+    "createSession": "创建 Comping 会话",
+    "takesInfo": "{n} 次录音 · {duration}秒",
+    "compileLoading": "编译中...",
+    "compile": "✨ 编译最佳片段",
+    "selected": "已选择",
+    "notSelected": "未选择",
+    "timeline": "时间线",
+    "composeSuccess": "编译成功!",
+    "composed": "已拼接 {n} 个最佳片段"
   }
 }

@@ -952,5 +952,23 @@
     "soloLegend": "S = Solo",
     "panLegend": "Pan = Pan",
     "auxSends": "Aux sends: A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "Record multiple takes, pick the best",
+    "close": "Close",
+    "title": "Create Comping Session",
+    "desc": "Record multiple takes then pick the best segments to compile",
+    "takesLabel": "Number of Takes",
+    "numTakes": "{n} takes",
+    "createLoading": "Creating...",
+    "createSession": "Create Comping Session",
+    "takesInfo": "{n} takes · {duration}s",
+    "compileLoading": "Compiling...",
+    "compile": "✨ Compile Best Takes",
+    "selected": "Selected",
+    "notSelected": "Not selected",
+    "timeline": "Timeline",
+    "composeSuccess": "Compile successful!",
+    "composed": "Compiled {n} best segments"
   }
 }

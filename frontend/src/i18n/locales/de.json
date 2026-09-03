@@ -952,5 +952,23 @@
     "soloLegend": "S = Solo",
     "panLegend": "Pan = Panorama",
     "auxSends": "Aux-Sends: A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "Mehrere Takes aufnehmen, die besten wählen",
+    "close": "Schließen",
+    "title": "Comping-Sitzung erstellen",
+    "desc": "Nehmen Sie mehrfach auf und wählen Sie die besten Segmente",
+    "takesLabel": "Anzahl Takes",
+    "numTakes": "{n} Takes",
+    "createLoading": "Erstelle...",
+    "createSession": "Comping-Sitzung erstellen",
+    "takesInfo": "{n} Takes · {duration}s",
+    "compileLoading": "Kompriliere...",
+    "compile": "✨ Beste Takes kompilieren",
+    "selected": "Ausgewählt",
+    "notSelected": "Nicht ausgewählt",
+    "timeline": "Zeitachse",
+    "composeSuccess": "Kompilierung erfolgreich!",
+    "composed": "{n} beste Segmente kompiliert"
   }
 }

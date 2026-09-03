@@ -952,5 +952,23 @@
     "soloLegend": "S = ソロ",
     "panLegend": "Pan = パン",
     "auxSends": "Aux 送り：A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "複数回録音して最良のテイクを選択",
+    "close": "閉じる",
+    "title": "Comping セッションを作成",
+    "desc": "複数回録音し、最良のテイクを選んで連結",
+    "takesLabel": "録音回数",
+    "numTakes": "{n} 回の録音",
+    "createLoading": "作成中...",
+    "createSession": "Comping セッションを作成",
+    "takesInfo": "{n} 回の録音 · {duration}秒",
+    "compileLoading": "編集...",
+    "compile": "✨ 最良テイクを編集",
+    "selected": "選択済み",
+    "notSelected": "未選択",
+    "timeline": "タイムライン",
+    "composeSuccess": "編集成功!",
+    "composed": "最良セグメント {n} 個を連結"
   }
 }

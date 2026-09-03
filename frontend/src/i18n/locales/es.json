@@ -952,5 +952,23 @@
     "soloLegend": "S = Solo",
     "panLegend": "Pan = Panorámica",
     "auxSends": "Envíos aux: A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "Graba varias tomas y elige las mejores",
+    "close": "Cerrar",
+    "title": "Crear sesión de comping",
+    "desc": "Graba varias veces y elige las mejores tomas para unirlas",
+    "takesLabel": "Número de tomas",
+    "numTakes": "{n} tomas",
+    "createLoading": "Creando...",
+    "createSession": "Crear sesión de comping",
+    "takesInfo": "{n} tomas · {duration}s",
+    "compileLoading": "Compilando...",
+    "compile": "✨ Compilar mejores tomas",
+    "selected": "Seleccionado",
+    "notSelected": "No seleccionado",
+    "timeline": "Línea de tiempo",
+    "composeSuccess": "¡Compilación exitosa!",
+    "composed": "{n} mejores segmentos compilados"
   }
 }

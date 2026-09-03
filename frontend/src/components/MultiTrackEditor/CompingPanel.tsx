@@ -1,5 +1,5 @@
 /**
- * CompingPanel — 多次录制取最佳片段面板
+ * CompingPanel — {t('comping.subtitle')}面板
  * 
  * 功能:
  * - 显示多次录音轨道 (Takes)
@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface TakeSegment {
   id: string;
@@ -42,11 +43,12 @@ interface Props {
 }
 
 export function CompingPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [session, setSession] = useState<CompingSession | null>(null);
   const [numTakes, setNumTakes] = useState(3);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 创建 Comping 会话 (Mock)
+  // {t('comping.title')} (Mock)
   const handleCreateSession = useCallback(async () => {
     setIsLoading(true);
     
@@ -116,10 +118,10 @@ export function CompingPanel({ onClose }: Props) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white">🎙️ Comping</h2>
-            <p className="text-sm text-zinc-400 mt-1">多次录制取最佳片段</p>
+            <p className="text-sm text-zinc-400 mt-1">{t('comping.subtitle')}</p>
           </div>
           <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-            关闭
+            {t('comping.close')}
           </button>
         </div>
 
@@ -127,11 +129,11 @@ export function CompingPanel({ onClose }: Props) {
           /* 创建会话界面 */
           <div className="text-center py-12">
             <div className="text-5xl mb-4">🎙️</div>
-            <h3 className="text-xl font-bold text-white mb-2">创建 Comping 会话</h3>
-            <p className="text-zinc-400 mb-6">录制多次后选择最佳片段拼接</p>
+            <h3 className="text-xl font-bold text-white mb-2">{t('comping.title')}</h3>
+            <p className="text-zinc-400 mb-6">{t('comping.desc')}</p>
             
             <div className="max-w-md mx-auto mb-6">
-              <label className="text-xs text-zinc-400 mb-2 block">录音次数</label>
+              <label className="text-xs text-zinc-400 mb-2 block">{t('comping.takesLabel')}</label>
               <input
                 type="range"
                 min="2"
@@ -140,7 +142,7 @@ export function CompingPanel({ onClose }: Props) {
                 onChange={(e) => setNumTakes(Number(e.target.value))}
                 className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
               />
-              <div className="text-center text-purple-400 font-bold mt-2">{numTakes} 次录音</div>
+              <div className="text-center text-purple-400 font-bold mt-2">{t('comping.numTakes', { n: numTakes })}</div>
             </div>
             
             <button
@@ -148,7 +150,7 @@ export function CompingPanel({ onClose }: Props) {
               disabled={isLoading}
               className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition disabled:opacity-50"
             >
-              {isLoading ? '创建中...' : '创建 Comping 会话'}
+              {isLoading ? t('comping.createLoading') : t('comping.createSession')}
             </button>
           </div>
         ) : (
@@ -160,7 +162,7 @@ export function CompingPanel({ onClose }: Props) {
                 <div>
                   <h3 className="text-lg font-bold text-white">{session.track_name}</h3>
                   <p className="text-sm text-zinc-400">
-                    {session.takes.length} 次录音 · {session.total_duration.toFixed(1)}秒
+                    {t('comping.takesInfo', { n: session.takes.length, duration: session.total_duration.toFixed(1) })}
                   </p>
                 </div>
                 <button
@@ -168,7 +170,7 @@ export function CompingPanel({ onClose }: Props) {
                   disabled={isLoading || !session.takes.some(t => t.is_selected)}
                   className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition disabled:opacity-50"
                 >
-                  {isLoading ? '编译中...' : '✨ 编译最佳片段'}
+                  {isLoading ? t('comping.compileLoading') : t('comping.compile')}
                 </button>
               </div>
             </div>
@@ -223,7 +225,7 @@ export function CompingPanel({ onClose }: Props) {
                           ? 'bg-purple-500 text-white'
                           : 'bg-zinc-700 text-zinc-400'
                       }`}>
-                        {take.is_selected ? '✓ 选中' : '未选中'}
+                        {take.is_selected ? t('comping.selected') : t('comping.notSelected')}
                       </div>
                     </div>
                   </div>
@@ -233,7 +235,7 @@ export function CompingPanel({ onClose }: Props) {
 
             {/* 时间线可视化 */}
             <div className="p-4 bg-zinc-800/30 rounded-xl">
-              <h4 className="text-sm font-medium text-zinc-400 mb-3">📊 时间线</h4>
+              <h4 className="text-sm font-medium text-zinc-400 mb-3">{t('comping.timeline')}</h4>
               <div className="relative h-24 bg-zinc-900 rounded-lg overflow-hidden">
                 {/* 选中片段的高亮区域 */}
                 {session.takes.filter(t => t.is_selected).map((take, idx) => (
@@ -264,9 +266,9 @@ export function CompingPanel({ onClose }: Props) {
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">✅</div>
                   <div>
-                    <div className="text-green-400 font-bold">编译成功！</div>
+                    <div className="text-green-400 font-bold">{t('comping.composeSuccess')}</div>
                     <div className="text-xs text-zinc-400">
-                      已拼接 {session.takes.filter(t => t.is_selected).length} 个最佳片段
+                      {t('comping.composed', { n: session.takes.filter(t => t.is_selected).length })}
                     </div>
                   </div>
                 </div>

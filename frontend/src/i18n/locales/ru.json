@@ -952,5 +952,23 @@
     "soloLegend": "S = Соло",
     "panLegend": "Pan = Панорама",
     "auxSends": "Aux-отправки: A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "Запись нескольких дублей, выбор лучших",
+    "close": "Закрыть",
+    "title": "Создать сессию компинга",
+    "desc": "Запишите несколько раз и выберите лучшие фрагменты",
+    "takesLabel": "Кол-во дублей",
+    "numTakes": "Дублей: {n}",
+    "createLoading": "Создание...",
+    "createSession": "Создать сессию компинга",
+    "takesInfo": "Дублей: {n} · {duration}с",
+    "compileLoading": "Сборка...",
+    "compile": "✨ Собрать лучшие дубли",
+    "selected": "Выбрано",
+    "notSelected": "Не выбрано",
+    "timeline": "Таймлайн",
+    "composeSuccess": "Сборка успешна!",
+    "composed": "Собрано лучших фрагментов: {n}"
   }
 }

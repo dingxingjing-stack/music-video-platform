@@ -952,5 +952,23 @@
     "soloLegend": "S = 솔로",
     "panLegend": "Pan = 팬",
     "auxSends": "Aux 전송: A/B/C/D"
+  },
+  "comping": {
+    "subtitle": "여러 번 녹음 후 최고의 테이크 선택",
+    "close": "닫기",
+    "title": "컴핑 세션 만들기",
+    "desc": "여러 번 녹음 후 최고의 구간을 선택해 이어붙이기",
+    "takesLabel": "녹음 횟수",
+    "numTakes": "녹음 {n}회",
+    "createLoading": "만드는 중...",
+    "createSession": "컴핑 세션 만들기",
+    "takesInfo": "녹음 {n}회 · {duration}초",
+    "compileLoading": "편집 중...",
+    "compile": "✨ 최고 테이크 편집",
+    "selected": "선택됨",
+    "notSelected": "선택 안 됨",
+    "timeline": "타임라인",
+    "composeSuccess": "편집 성공!",
+    "composed": "최고 구간 {n}개 연결됨"
   }
 }
