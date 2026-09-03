@@ -934,5 +934,14 @@
     "durLong": "Longo (>20s)",
     "resAny": "Qualquer resolução",
     "fpsAny": "Qualquer FPS"
+  },
+  "transition": {
+    "title": "Biblioteca de Transições",
+    "duration": "Duração da transição",
+    "clickApply": "Clique para aplicar",
+    "stats": "Categoria: {category} | {n} transições",
+    "easing": "Easing",
+    "direction": "Direção",
+    "apply": "Aplicar"
   }
 }

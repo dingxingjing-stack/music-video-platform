@@ -934,5 +934,14 @@
     "durLong": "长 (>20s)",
     "resAny": "任意分辨率",
     "fpsAny": "任意帧率"
+  },
+  "transition": {
+    "title": "转场效果库",
+    "duration": "转场时长",
+    "clickApply": "点击应用",
+    "stats": "当前分类：{category} | {n} 种转场",
+    "easing": "缓动",
+    "direction": "方向",
+    "apply": "应用"
   }
 }

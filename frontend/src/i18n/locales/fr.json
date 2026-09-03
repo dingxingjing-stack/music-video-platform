@@ -934,5 +934,14 @@
     "durLong": "Long (>20s)",
     "resAny": "Toute résolution",
     "fpsAny": "Toute cadence"
+  },
+  "transition": {
+    "title": "Bibliothèque de Transitions",
+    "duration": "Durée de transition",
+    "clickApply": "Cliquez pour appliquer",
+    "stats": "Catégorie : {category} | {n} transitions",
+    "easing": "Easing",
+    "direction": "Direction",
+    "apply": "Appliquer"
   }
 }

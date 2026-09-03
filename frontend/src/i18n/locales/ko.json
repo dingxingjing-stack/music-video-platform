@@ -934,5 +934,14 @@
     "durLong": "김 (>20초)",
     "resAny": "전체 해상도",
     "fpsAny": "전체 프레임 레이트"
+  },
+  "transition": {
+    "title": "전환 효과 라이브러리",
+    "duration": "전환 시간",
+    "clickApply": "클릭하여 적용",
+    "stats": "분류: {category} | {n}가지 전환",
+    "easing": "이징",
+    "direction": "방향",
+    "apply": "적용"
   }
 }

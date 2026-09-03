@@ -934,5 +934,14 @@
     "durLong": "Long (>20s)",
     "resAny": "Any resolution",
     "fpsAny": "Any frame rate"
+  },
+  "transition": {
+    "title": "Transition Library",
+    "duration": "Transition Duration",
+    "clickApply": "Click to apply",
+    "stats": "Category: {category} | {n} transitions",
+    "easing": "Easing",
+    "direction": "Direction",
+    "apply": "Apply"
   }
 }

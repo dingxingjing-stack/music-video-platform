@@ -934,5 +934,14 @@
     "durLong": "Lang (>20s)",
     "resAny": "Beliebige Auflösung",
     "fpsAny": "Beliebige Bildrate"
+  },
+  "transition": {
+    "title": "Übergangsbibliothek",
+    "duration": "Übergangsdauer",
+    "clickApply": "Klicken zum Anwenden",
+    "stats": "Kategorie: {category} | {n} Übergänge",
+    "easing": "Easing",
+    "direction": "Richtung",
+    "apply": "Anwenden"
   }
 }

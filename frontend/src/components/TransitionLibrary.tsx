@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { TRANSITIONS, TRANSITION_CATEGORIES, Transition, getTransitionsByCategory } from '../data/transitions';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   onTransitionSelect: (transition: Transition, clipId?: string) => void;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>('基础');
   const [transitionDuration, setTransitionDuration] = useState(1.0);
   const [hoveredTransition, setHoveredTransition] = useState<Transition | null>(null);
@@ -26,7 +28,7 @@ export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 h-full flex flex-col">
-      <h3 className="text-white font-semibold mb-3">🎞️ 转场效果库</h3>
+      <h3 className="text-white font-semibold mb-3">🎞️ {t('transition.title')}</h3>
       
       {/* 分类筛选 */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -48,7 +50,7 @@ export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
       {/* 时长调节 */}
       <div className="mb-4 p-3 bg-gray-800 rounded">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-gray-300 text-xs">转场时长</label>
+          <label className="text-gray-300 text-xs">{t('transition.duration')}</label>
           <span className="text-orange-400 text-xs font-mono">{transitionDuration.toFixed(1)}s</span>
         </div>
         <input
@@ -95,7 +97,7 @@ export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
                 </span>
                 {hoveredTransition?.id === transition.id && (
                   <span className="text-xs text-orange-400">
-                    点击应用 →
+                    {t('transition.clickApply')} →
                   </span>
                 )}
               </div>
@@ -106,7 +108,7 @@ export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
       
       {/* 统计信息 */}
       <div className="mt-3 text-xs text-gray-500 border-t border-gray-700 pt-2">
-        当前分类：{selectedCategory} | {transitions.length} 种转场
+        {t('transition.stats', { category: selectedCategory, n: transitions.length })}
       </div>
       
       {/* 使用说明 */}
@@ -118,10 +120,10 @@ export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
               <h4 className="text-white font-medium text-sm">{hoveredTransition.name}</h4>
               <p className="text-gray-400 text-xs mt-1">{hoveredTransition.description}</p>
               <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                <span>时长：{transitionDuration}s</span>
-                <span>缓动：{hoveredTransition.params.easing || 'linear'}</span>
+                <span>{t('transition.duration')}：{transitionDuration}s</span>
+                <span>{t('transition.easing')}：{hoveredTransition.params.easing || 'linear'}</span>
                 {hoveredTransition.params.direction && (
-                  <span>方向：{hoveredTransition.params.direction}</span>
+                  <span>{t('transition.direction')}：{hoveredTransition.params.direction}</span>
                 )}
               </div>
             </div>
@@ -129,7 +131,7 @@ export function TransitionLibrary({ onTransitionSelect, duration }: Props) {
               onClick={() => handleSelect(hoveredTransition)}
               className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs rounded"
             >
-              应用
+              {t('transition.apply')}
             </button>
           </div>
         </div>

@@ -934,5 +934,14 @@
     "durLong": "長い (>20s)",
     "resAny": "任意の解像度",
     "fpsAny": "任意のフレームレート"
+  },
+  "transition": {
+    "title": "トランジションライブラリ",
+    "duration": "トランジション時間",
+    "clickApply": "クリックで適用",
+    "stats": "カテゴリー：{category} | {n} 種",
+    "easing": "イージング",
+    "direction": "方向",
+    "apply": "適用"
   }
 }
