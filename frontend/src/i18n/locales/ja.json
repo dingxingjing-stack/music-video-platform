@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 ランダムプロンプト",
     "promptHint": "まずプロンプトを入力するか、🔺 ランダムプロンプトをクリックしてください",
     "versionHistory": "📋 バージョン履歴",
-    "historyEmpty": "履歴はまだありません…"
+    "historyEmpty": "履歴はまだありません…",
+    "close": "閉じる",
+    "cancel": "キャンセル",
+    "confirm": "確認"
   },
   "errors": {
     "promptRequired": "プロンプトが必要です",
@@ -441,5 +444,40 @@
     "unknownError": "不明なエラー",
     "untitledProject": "無題のプロジェクト",
     "zoom": "ズーム"
+  },
+  "auth": {
+    "pleaseLogin": "ログインしてください",
+    "featureNeedsLogin": "「{feature}」機能の利用にはログインが必要です",
+    "loginToUseAll": "すべての制作機能を利用するにはログインしてください",
+    "loginNow": "今すぐログイン",
+    "loginTitle": "Zyvexo にログイン",
+    "loginSubtitle": "ログインするとすべての制作機能を解放",
+    "emailPlaceholder": "メールアドレス",
+    "passwordPlaceholder": "パスワード（任意）",
+    "betaHint": "ベータ期間中は任意入力でログインできます",
+    "loginRegister": "ログイン / 登録",
+    "continueBrowsing": "閲覧を続ける"
+  },
+  "community": {
+    "chartHot": "人気チャート",
+    "chartNew": "新曲チャート",
+    "chartTrending": "トレンド",
+    "title": "コミュニティチャート",
+    "subtitle": "話題の AI 音楽を発見",
+    "back": "戻る",
+    "searchPlaceholder": "曲やアーティストを検索...",
+    "allGenres": "すべてのジャンル",
+    "search": "検索",
+    "loadFailed": "読み込みに失敗",
+    "reload": "再読み込み",
+    "empty": "まだ作品がありません",
+    "emptyDesc": "最初の AI 曲を作成して公開しましょう",
+    "startCreate": "作成を始める",
+    "songCount": "全 {n} 曲",
+    "plays": "再生",
+    "noResults": "該当する曲が見つかりません",
+    "loadError": "読み込みに失敗",
+    "searchFailed": "検索に失敗",
+    "loadRetryError": "読み込みに失敗しました。更新して再試行してください"
   }
 }

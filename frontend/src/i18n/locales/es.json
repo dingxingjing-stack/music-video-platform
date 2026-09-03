@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 Prompt aleatorio",
     "promptHint": "Introduce primero un prompt o pulsa 🔺 Prompt aleatorio",
     "versionHistory": "📋 Historial de versiones",
-    "historyEmpty": "Aún no hay historial..."
+    "historyEmpty": "Aún no hay historial...",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
   },
   "errors": {
     "promptRequired": "Se requiere prompt",
@@ -441,5 +444,40 @@
     "unknownError": "Error desconocido",
     "untitledProject": "Proyecto sin título",
     "zoom": "Zoom"
+  },
+  "auth": {
+    "pleaseLogin": "Inicia sesión",
+    "featureNeedsLogin": "Usar la función \"{feature}\" requiere una cuenta",
+    "loginToUseAll": "Inicia sesión para usar todas las funciones de creación",
+    "loginNow": "Iniciar sesión ahora",
+    "loginTitle": "Iniciar sesión en Zyvexo",
+    "loginSubtitle": "Inicia sesión para desbloquear todas las funciones",
+    "emailPlaceholder": "Correo electrónico",
+    "passwordPlaceholder": "Contraseña (cualquiera)",
+    "betaHint": "Durante la beta, ingresa cualquier cosa para acceder",
+    "loginRegister": "Iniciar sesión / Registrarse",
+    "continueBrowsing": "Seguir explorando"
+  },
+  "community": {
+    "chartHot": "Ranking Popular",
+    "chartNew": "Nuevas Canciones",
+    "chartTrending": "Tendencias",
+    "title": "Ranking de la Comunidad",
+    "subtitle": "Descubre música IA popular",
+    "back": "Volver",
+    "searchPlaceholder": "Buscar canciones o artistas...",
+    "allGenres": "Todos los géneros",
+    "search": "Buscar",
+    "loadFailed": "Error al cargar",
+    "reload": "Recargar",
+    "empty": "Aún no hay obras",
+    "emptyDesc": "Crea y publica tu primera canción IA",
+    "startCreate": "Empezar a crear",
+    "songCount": "{n} canciones",
+    "plays": "reproducciones",
+    "noResults": "No se encontraron canciones",
+    "loadError": "Error al cargar",
+    "searchFailed": "Error de búsqueda",
+    "loadRetryError": "Error al cargar, actualiza e inténtalo de nuevo"
   }
 }

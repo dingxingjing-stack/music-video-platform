@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 Случайный промпт",
     "promptHint": "Сначала введите промпт или нажмите 🔺 Случайный промпт",
     "versionHistory": "📋 История версий",
-    "historyEmpty": "Истории пока нет..."
+    "historyEmpty": "Истории пока нет...",
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить"
   },
   "errors": {
     "promptRequired": "Требуется промпт",
@@ -441,5 +444,40 @@
     "unknownError": "Неизвестная ошибка",
     "untitledProject": "Проект без названия",
     "zoom": "Масштаб"
+  },
+  "auth": {
+    "pleaseLogin": "Пожалуйста, войдите",
+    "featureNeedsLogin": "Для использования функции «{feature}» требуется аккаунт",
+    "loginToUseAll": "Войдите, чтобы использовать все функции создания",
+    "loginNow": "Войти сейчас",
+    "loginTitle": "Вход в Zyvexo",
+    "loginSubtitle": "Войдите, чтобы разблокировать все функции",
+    "emailPlaceholder": "Эл. почта",
+    "passwordPlaceholder": "Пароль (любой)",
+    "betaHint": "В бета-версии можно ввести что угодно для входа",
+    "loginRegister": "Войти / Регистрация",
+    "continueBrowsing": "Продолжить просмотр"
+  },
+  "community": {
+    "chartHot": "Популярный чарт",
+    "chartNew": "Новые песни",
+    "chartTrending": "Тренды",
+    "title": "Чарт сообщества",
+    "subtitle": "Откройте популярную ИИ-музыку",
+    "back": "Назад",
+    "searchPlaceholder": "Поиск песен или исполнителей...",
+    "allGenres": "Все жанры",
+    "search": "Поиск",
+    "loadFailed": "Ошибка загрузки",
+    "reload": "Перезагрузить",
+    "empty": "Работ пока нет",
+    "emptyDesc": "Создайте и опубликуйте свою первую ИИ-песню",
+    "startCreate": "Начать создание",
+    "songCount": "{n} песен",
+    "plays": "прослушивания",
+    "noResults": "Песни не найдены",
+    "loadError": "Ошибка загрузки",
+    "searchFailed": "Ошибка поиска",
+    "loadRetryError": "Ошибка загрузки, обновите и повторите"
   }
 }

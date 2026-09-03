@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 随机提示",
     "promptHint": "先输入提示词，或点击 🔺 随机提示",
     "versionHistory": "📋 版本历史",
-    "historyEmpty": "暂无历史记录..."
+    "historyEmpty": "暂无历史记录...",
+    "close": "关闭",
+    "cancel": "取消",
+    "confirm": "确认"
   },
   "errors": {
     "promptRequired": "需要提示词",
@@ -441,5 +444,40 @@
     "unknownError": "未知错误",
     "untitledProject": "未命名项目",
     "zoom": "缩放"
+  },
+  "auth": {
+    "pleaseLogin": "请先登录",
+    "featureNeedsLogin": "使用「{feature}」功能需要登录账号",
+    "loginToUseAll": "请登录后使用全部创作功能",
+    "loginNow": "立即登录",
+    "loginTitle": "登录 Zyvexo",
+    "loginSubtitle": "登录后解锁全部创作功能",
+    "emailPlaceholder": "邮箱地址",
+    "passwordPlaceholder": "密码（任意输入）",
+    "betaHint": "公测期间任意输入即可登录",
+    "loginRegister": "登录 / 注册",
+    "continueBrowsing": "继续浏览"
+  },
+  "community": {
+    "chartHot": "热门榜",
+    "chartNew": "新歌榜",
+    "chartTrending": "趋势榜",
+    "title": "社区排行榜",
+    "subtitle": "发现热门 AI 音乐作品",
+    "back": "返回",
+    "searchPlaceholder": "搜索歌曲或艺术家...",
+    "allGenres": "全部风格",
+    "search": "搜索",
+    "loadFailed": "加载失败了",
+    "reload": "重新加载",
+    "empty": "还没有作品",
+    "emptyDesc": "快去创作并发布你的第一首 AI 歌曲吧",
+    "startCreate": "开始创作",
+    "songCount": "共 {n} 首歌曲",
+    "plays": "播放",
+    "noResults": "没有找到相关歌曲",
+    "loadError": "加载失败",
+    "searchFailed": "搜索失败",
+    "loadRetryError": "加载失败，请刷新重试"
   }
 }

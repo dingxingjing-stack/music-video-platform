@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 랜덤 프롬프트",
     "promptHint": "먼저 프롬프트를 입력하거나 🔺 랜덤 프롬프트를 클릭하세요",
     "versionHistory": "📋 버전 기록",
-    "historyEmpty": "아직 기록이 없습니다..."
+    "historyEmpty": "아직 기록이 없습니다...",
+    "close": "닫기",
+    "cancel": "취소",
+    "confirm": "확인"
   },
   "errors": {
     "promptRequired": "프롬프트가 필요합니다",
@@ -441,5 +444,40 @@
     "unknownError": "알 수 없는 오류",
     "untitledProject": "제목 없는 프로젝트",
     "zoom": "확대/축소"
+  },
+  "auth": {
+    "pleaseLogin": "로그인이 필요합니다",
+    "featureNeedsLogin": "\"'{feature}'\" 기능을 사용하려면 로그인이 필요합니다",
+    "loginToUseAll": "모든 창작 기능을 사용하려면 로그인하세요",
+    "loginNow": "지금 로그인",
+    "loginTitle": "Zyvexo 로그인",
+    "loginSubtitle": "로그인하면 모든 창작 기능을 이용할 수 있습니다",
+    "emailPlaceholder": "이메일 주소",
+    "passwordPlaceholder": "비밀번호 (아무거나)",
+    "betaHint": "베타 기간에는 아무 값이나 입력해 로그인합니다",
+    "loginRegister": "로그인 / 가입",
+    "continueBrowsing": "계속 둘러보기"
+  },
+  "community": {
+    "chartHot": "인기 차트",
+    "chartNew": "신곡 차트",
+    "chartTrending": "트렌드",
+    "title": "커뮤니티 차트",
+    "subtitle": "인기 있는 AI 음악 발견",
+    "back": "뒤로",
+    "searchPlaceholder": "노래나 아티스트 검색...",
+    "allGenres": "전체 장르",
+    "search": "검색",
+    "loadFailed": "불러오기 실패",
+    "reload": "새로고침",
+    "empty": "아직 작품이 없습니다",
+    "emptyDesc": "첫 AI 노래를 만들고 게시해 보세요",
+    "startCreate": "만들기 시작",
+    "songCount": "총 {n}곡",
+    "plays": "재생",
+    "noResults": "해당하는 노래를 찾지 못했습니다",
+    "loadError": "불러오기 실패",
+    "searchFailed": "검색 실패",
+    "loadRetryError": "불러오지 못했습니다. 새로고침 후 다시 시도하세요"
   }
 }

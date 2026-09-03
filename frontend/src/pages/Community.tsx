@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SocialSystem } from '../components/SocialSystem';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 const API = api.url('/api/v1/community');
 
@@ -39,9 +40,9 @@ interface ChartData {
 type ChartType = 'hot' | 'new' | 'trending';
 
 const CHART_LABELS: Record<ChartType, string> = {
-  hot: '🔥 热门榜',
-  new: '🆕 新歌榜',
-  trending: '📈 趋势榜',
+  hot: '🔥 ',
+  new: '🆕 ',
+  trending: '📈 ',
 };
 
 const GENRES = ['pop', 'rock', 'jazz', 'electronic', 'hip-hop', 'classical', 'ambient', 'lo-fi', 'cinematic', 'r&b'];
@@ -63,6 +64,7 @@ function SkeletonRow() {
 
 export function Community() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [chartType, setChartType] = useState<ChartType>('hot');
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export function Community() {
       const result = await response.json();
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败');
+      setError(err instanceof Error ? err.message : t('community.loadError'));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export function Community() {
       const result = await response.json();
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '搜索失败');
+      setError(err instanceof Error ? err.message : t('community.searchFailed'));
     } finally {
       setLoading(false);
     }
@@ -128,6 +130,11 @@ export function Community() {
     } catch (err) { console.error(err); }
   };
 
+  const chartLabel = (type: ChartType) => {
+    const key = type === 'hot' ? 'chartHot' : type === 'new' ? 'chartNew' : 'chartTrending';
+    return `${CHART_LABELS[type]}${t(`community.${key}`)}`;
+  };
+
   return (
     <div className="min-h-screen bg-[#121212] text-[#e0e0e0]">
       {/* Header */}
@@ -135,14 +142,14 @@ export function Community() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">🎵 社区排行榜</h1>
-              <p className="text-xs text-[#777777] mt-1">发现热门 AI 音乐作品</p>
+              <h1 className="text-2xl font-bold text-white">🎵 {t('community.title')}</h1>
+              <p className="text-xs text-[#777777] mt-1">{t('community.subtitle')}</p>
             </div>
             <button
               onClick={() => navigate('/')}
               className="px-4 py-2 bg-[#2a2a2a] hover:bg-[#333333] text-white rounded-lg text-sm transition"
             >
-              ← 返回
+              ← {t('community.back')}
             </button>
           </div>
 
@@ -153,7 +160,7 @@ export function Community() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="搜索歌曲或艺术家..."
+              placeholder={t('community.searchPlaceholder')}
               className="flex-1 bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg px-4 py-2 text-sm text-white placeholder-[#777777]"
             />
             <select
@@ -161,7 +168,7 @@ export function Community() {
               onChange={(e) => setSelectedGenre(e.target.value)}
               className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg px-4 py-2 text-sm text-white"
             >
-              <option value="all">全部风格</option>
+              <option value="all">{t('community.allGenres')}</option>
               {GENRES.map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
@@ -170,7 +177,7 @@ export function Community() {
               onClick={handleSearch}
               className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition"
             >
-              搜索
+              {t('community.search')}
             </button>
           </div>
 
@@ -186,7 +193,7 @@ export function Community() {
                     : 'bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333333]'
                 }`}
               >
-                {CHART_LABELS[type]}
+                {chartLabel(type)}
               </button>
             ))}
           </div>
@@ -202,32 +209,32 @@ export function Community() {
         ) : error ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">😵</div>
-            <p className="text-[#888888] mb-2">加载失败了</p>
+            <p className="text-[#888888] mb-2">{t('community.loadFailed')}</p>
             <p className="text-sm text-[#555555] mb-6">{error}</p>
             <button
               onClick={() => loadChart(chartType)}
               className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
             >
-              🔄 重新加载
+              🔄 {t('community.reload')}
             </button>
           </div>
         ) : data && data.tracks.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">🎶</div>
-            <p className="text-[#888888] mb-2">还没有作品</p>
-            <p className="text-sm text-[#555555] mb-6">快去创作并发布你的第一首 AI 歌曲吧</p>
+            <p className="text-[#888888] mb-2">{t('community.empty')}</p>
+            <p className="text-sm text-[#555555] mb-6">{t('community.emptyDesc')}</p>
             <button
               onClick={() => navigate('/path-a')}
               className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
             >
-              🎵 开始创作
+              🎵 {t('community.startCreate')}
             </button>
           </div>
         ) : data ? (
           <>
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">
-                {CHART_LABELS[chartType]} · {data.total} 首歌曲
+                {chartLabel(chartType)} · {t('community.songCount', { n: data.total })}
               </h2>
             </div>
 
@@ -271,7 +278,7 @@ export function Community() {
                   <div className="flex items-center gap-4 text-sm text-[#777777]">
                     <div className="text-center">
                       <div className="text-white font-medium">{track.plays.toLocaleString()}</div>
-                      <div className="text-xs">播放</div>
+                      <div className="text-xs">{t('community.plays')}</div>
                     </div>
                     {/* 社交按钮 */}
                     <div className="flex items-center gap-2">
@@ -288,14 +295,14 @@ export function Community() {
             {data.tracks.length === 0 && (
               <div className="text-center py-20">
                 <div className="text-4xl mb-4">🔍</div>
-                <p className="text-[#777777]">没有找到相关歌曲</p>
+                <p className="text-[#777777]">{t('community.noResults')}</p>
               </div>
             )}
           </>
         ) : (
           <div className="text-center py-20">
             <div className="text-4xl mb-4">😕</div>
-            <p className="text-[#777777]">加载失败，请刷新重试</p>
+            <p className="text-[#777777]">{t('community.loadRetryError')}</p>
           </div>
         )}
       </div>

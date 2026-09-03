@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 Prompt aleatório",
     "promptHint": "Insira primeiro um prompt ou clique em 🔺 Prompt aleatório",
     "versionHistory": "📋 Histórico de versões",
-    "historyEmpty": "Ainda não há histórico..."
+    "historyEmpty": "Ainda não há histórico...",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
   },
   "errors": {
     "promptRequired": "Prompt necessário",
@@ -441,5 +444,40 @@
     "unknownError": "Erro desconhecido",
     "untitledProject": "Projeto sem título",
     "zoom": "Zoom"
+  },
+  "auth": {
+    "pleaseLogin": "Por favor, faça login",
+    "featureNeedsLogin": "Usar o recurso \"{feature}\" requer uma conta",
+    "loginToUseAll": "Faça login para usar todos os recursos de criação",
+    "loginNow": "Entrar agora",
+    "loginTitle": "Entrar no Zyvexo",
+    "loginSubtitle": "Entre para desbloquear todos os recursos",
+    "emailPlaceholder": "Endereço de e-mail",
+    "passwordPlaceholder": "Senha (qualquer)",
+    "betaHint": "Durante o beta, digite qualquer coisa para entrar",
+    "loginRegister": "Entrar / Cadastrar",
+    "continueBrowsing": "Continuar navegando"
+  },
+  "community": {
+    "chartHot": "Ranking Popular",
+    "chartNew": "Novas Músicas",
+    "chartTrending": "Tendências",
+    "title": "Ranking da Comunidade",
+    "subtitle": "Descubra música IA popular",
+    "back": "Voltar",
+    "searchPlaceholder": "Buscar músicas ou artistas...",
+    "allGenres": "Todos os gêneros",
+    "search": "Buscar",
+    "loadFailed": "Falha ao carregar",
+    "reload": "Recarregar",
+    "empty": "Ainda não há obras",
+    "emptyDesc": "Crie e publique sua primeira música IA",
+    "startCreate": "Começar a criar",
+    "songCount": "{n} músicas",
+    "plays": "reproduções",
+    "noResults": "Nenhuma música encontrada",
+    "loadError": "Falha ao carregar",
+    "searchFailed": "Falha na busca",
+    "loadRetryError": "Falha ao carregar, atualize e tente novamente"
   }
 }

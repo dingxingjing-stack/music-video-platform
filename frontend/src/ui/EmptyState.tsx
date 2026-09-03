@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
+import { useTranslation } from '../i18n/useTranslation';
 
 export function EmptyState({
   icon,
@@ -49,10 +50,11 @@ export function Skeleton({ width = '100%', height = 16, className = '' }: { widt
   );
 }
 
-export function LoadingBlock({ label = '加载中…', rows = 3 }: { label?: string; rows?: number }) {
+export function LoadingBlock({ label, rows = 3 }: { label?: string; rows?: number }) {
+  const { t } = useTranslation();
   return (
     <div className="py-6 space-y-3" role="status">
-      <p className="text-[13px] text-[#6b7480]">{label}</p>
+      <p className="text-[13px] text-[#6b7480]">{label || t('common.loading')}</p>
       {Array.from({ length: rows }).map((_, i) => (
         <Skeleton key={i} height={i === rows - 1 ? 20 : 64} />
       ))}

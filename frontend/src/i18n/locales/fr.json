@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 Prompt aléatoire",
     "promptHint": "Saisissez d’abord un prompt ou cliquez sur 🔺 Prompt aléatoire",
     "versionHistory": "📋 Historique des versions",
-    "historyEmpty": "Aucun historique pour le moment..."
+    "historyEmpty": "Aucun historique pour le moment...",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
   },
   "errors": {
     "promptRequired": "Prompt requis",
@@ -441,5 +444,40 @@
     "unknownError": "Erreur inconnue",
     "untitledProject": "Projet sans titre",
     "zoom": "Zoom"
+  },
+  "auth": {
+    "pleaseLogin": "Veuillez vous connecter",
+    "featureNeedsLogin": "Utiliser la fonction \"{feature}\" nécessite un compte",
+    "loginToUseAll": "Connectez-vous pour utiliser toutes les fonctions de création",
+    "loginNow": "Se connecter",
+    "loginTitle": "Se connecter à Zyvexo",
+    "loginSubtitle": "Connectez-vous pour débloquer toutes les fonctions",
+    "emailPlaceholder": "Adresse e-mail",
+    "passwordPlaceholder": "Mot de passe (n importe quoi)",
+    "betaHint": "Pendant la bêta, saisissez n importe quoi pour vous connecter",
+    "loginRegister": "Se connecter / S inscrire",
+    "continueBrowsing": "Continuer la navigation"
+  },
+  "community": {
+    "chartHot": "Classement Populaire",
+    "chartNew": "Nouvelles Chansons",
+    "chartTrending": "Tendances",
+    "title": "Classement de la Communauté",
+    "subtitle": "Découvrez la musique IA populaire",
+    "back": "Retour",
+    "searchPlaceholder": "Rechercher des chansons ou artistes...",
+    "allGenres": "Tous les genres",
+    "search": "Rechercher",
+    "loadFailed": "Échec du chargement",
+    "reload": "Recharger",
+    "empty": "Aucune œuvre",
+    "emptyDesc": "Créez et publiez votre première chanson IA",
+    "startCreate": "Commencer à créer",
+    "songCount": "{n} chansons",
+    "plays": "lectures",
+    "noResults": "Aucune chanson trouvée",
+    "loadError": "Échec du chargement",
+    "searchFailed": "Échec de la recherche",
+    "loadRetryError": "Échec du chargement, actualisez et réessayez"
   }
 }

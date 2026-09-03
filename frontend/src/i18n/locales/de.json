@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 Zufälliger Prompt",
     "promptHint": "Geben Sie zuerst einen Prompt ein oder klicken Sie auf 🔺 Zufälliger Prompt",
     "versionHistory": "📋 Versionsverlauf",
-    "historyEmpty": "Noch kein Verlauf..."
+    "historyEmpty": "Noch kein Verlauf...",
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen"
   },
   "errors": {
     "promptRequired": "Prompt erforderlich",
@@ -441,5 +444,40 @@
     "unknownError": "Unbekannter Fehler",
     "untitledProject": "Unbenanntes Projekt",
     "zoom": "Zoom"
+  },
+  "auth": {
+    "pleaseLogin": "Bitte anmelden",
+    "featureNeedsLogin": "Die Nutzung der Funktion \"{feature}\" erfordert ein Konto",
+    "loginToUseAll": "Melden Sie sich an, um alle Erstellungsfunktionen zu nutzen",
+    "loginNow": "Jetzt anmelden",
+    "loginTitle": "Bei Zyvexo anmelden",
+    "loginSubtitle": "Melden Sie sich an, um alle Funktionen freizuschalten",
+    "emailPlaceholder": "E-Mail-Adresse",
+    "passwordPlaceholder": "Passwort (beliebig)",
+    "betaHint": "In der Beta können Sie sich mit einer beliebigen Eingabe anmelden",
+    "loginRegister": "Anmelden / Registrieren",
+    "continueBrowsing": "Weiter surfen"
+  },
+  "community": {
+    "chartHot": "Beliebte Charts",
+    "chartNew": "Neue Songs",
+    "chartTrending": "Trends",
+    "title": "Community-Charts",
+    "subtitle": "Entdecken Sie beliebte KI-Musik",
+    "back": "Zurück",
+    "searchPlaceholder": "Songs oder Künstler suchen...",
+    "allGenres": "Alle Genres",
+    "search": "Suchen",
+    "loadFailed": "Laden fehlgeschlagen",
+    "reload": "Neu laden",
+    "empty": "Noch keine Werke",
+    "emptyDesc": "Erstellen und veröffentlichen Sie Ihren ersten KI-Song",
+    "startCreate": "Erstellen starten",
+    "songCount": "{n} Songs",
+    "plays": "Wiedergaben",
+    "noResults": "Keine passenden Songs gefunden",
+    "loadError": "Laden fehlgeschlagen",
+    "searchFailed": "Suche fehlgeschlagen",
+    "loadRetryError": "Laden fehlgeschlagen, bitte aktualisieren und erneut versuchen"
   }
 }

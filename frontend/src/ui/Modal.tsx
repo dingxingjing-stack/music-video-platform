@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Button } from './Button';
+import { useTranslation } from '../i18n/useTranslation';
 
 export function Modal({
   open,
@@ -20,6 +21,7 @@ export function Modal({
   size?: 'sm' | 'md' | 'lg' | 'xl';
   closeOnBackdrop?: boolean;
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -61,7 +63,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t('ui.close')}
             className="ml-4 text-[#6b7480] hover:text-[#e8eaed] transition-colors p-1 rounded-[6px] hover:bg-[#1a1e24]"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -84,8 +86,8 @@ export function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmLabel = '确认',
-  cancelLabel = '取消',
+  confirmLabel,
+  cancelLabel,
   tone = 'danger',
 }: {
   open: boolean;
@@ -97,6 +99,7 @@ export function ConfirmModal({
   cancelLabel?: string;
   tone?: 'primary' | 'danger';
 }) {
+  const { t } = useTranslation();
   return (
     <Modal
       open={open}
@@ -105,8 +108,8 @@ export function ConfirmModal({
       size="sm"
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>{cancelLabel}</Button>
-          <Button variant={tone} onClick={onConfirm}>{confirmLabel}</Button>
+          <Button variant="ghost" onClick={onClose}>{cancelLabel || t('ui.cancel')}</Button>
+          <Button variant={tone} onClick={onConfirm}>{confirmLabel || t('ui.confirm')}</Button>
         </div>
       }
     >

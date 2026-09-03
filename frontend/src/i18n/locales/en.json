@@ -73,7 +73,10 @@
     "randomPrompt": "🔀 Random Prompt",
     "promptHint": "Enter a prompt first, or click 🔺 Random Prompt",
     "versionHistory": "📋 Version History",
-    "historyEmpty": "No history yet..."
+    "historyEmpty": "No history yet...",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "errors": {
     "promptRequired": "Prompt is required",
@@ -441,5 +444,40 @@
     "unknownError": "Unknown error",
     "untitledProject": "Untitled Project",
     "zoom": "Zoom"
+  },
+  "auth": {
+    "pleaseLogin": "Please log in",
+    "featureNeedsLogin": "Using the \"{feature}\" feature requires an account",
+    "loginToUseAll": "Please log in to use all creation features",
+    "loginNow": "Log in now",
+    "loginTitle": "Log in to Zyvexo",
+    "loginSubtitle": "Log in to unlock all creation features",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password (any input)",
+    "betaHint": "During beta, enter anything to log in",
+    "loginRegister": "Log in / Sign up",
+    "continueBrowsing": "Continue browsing"
+  },
+  "community": {
+    "chartHot": "Hot Chart",
+    "chartNew": "New Songs",
+    "chartTrending": "Trending",
+    "title": "Community Chart",
+    "subtitle": "Discover trending AI music",
+    "back": "Back",
+    "searchPlaceholder": "Search songs or artists...",
+    "allGenres": "All genres",
+    "search": "Search",
+    "loadFailed": "Failed to load",
+    "reload": "Reload",
+    "empty": "No works yet",
+    "emptyDesc": "Go create and publish your first AI song",
+    "startCreate": "Start Creating",
+    "songCount": "{n} songs",
+    "plays": "plays",
+    "noResults": "No matching songs found",
+    "loadError": "Failed to load",
+    "searchFailed": "Search failed",
+    "loadRetryError": "Failed to load, please refresh and retry"
   }
 }
