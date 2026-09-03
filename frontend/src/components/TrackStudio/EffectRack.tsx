@@ -3,6 +3,7 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { EffectChain, EQParams, CompressorParams, ReverbParams, DelayParams, GainParams, ChorusParams, FlangerParams, PhaserParams, DistortionParams, FilterParams, TremoloParams, BitcrusherParams } from '../../types/effects';
 
 interface Props {
@@ -57,6 +58,7 @@ function EQSection({
   onToggle: () => void;
   onChange: (params: EQParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof EQParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -64,20 +66,20 @@ function EQSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🎚️ 均衡器 (EQ)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.eq')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Knob label="低" value={params.low} min={-12} max={12} step={0.5} onChange={(v) => handleChange('low', v)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
-        <Knob label="中" value={params.mid} min={-12} max={12} step={0.5} onChange={(v) => handleChange('mid', v)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
-        <Knob label="高" value={params.high} min={-12} max={12} step={0.5} onChange={(v) => handleChange('high', v)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
+        <Knob label={t('effects.low')} value={params.low} min={-12} max={12} step={0.5} onChange={(v) => handleChange('low', v)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
+        <Knob label={t('effects.mid')} value={params.mid} min={-12} max={12} step={0.5} onChange={(v) => handleChange('mid', v)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
+        <Knob label={t('effects.high')} value={params.high} min={-12} max={12} step={0.5} onChange={(v) => handleChange('high', v)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
       </div>
     </div>
   );
@@ -95,6 +97,7 @@ function CompressorSection({
   onToggle: () => void;
   onChange: (params: CompressorParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof CompressorParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -102,21 +105,21 @@ function CompressorSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🔊 压缩器</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.compressor')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        <Knob label="阈值" value={params.threshold} min={-60} max={0} step={1} onChange={(v) => handleChange('threshold', v)} format={(v) => `${v} dB`} />
-        <Knob label="比例" value={params.ratio} min={1} max={20} step={0.5} onChange={(v) => handleChange('ratio', v)} format={(v) => `${v}:1`} />
-        <Knob label="启动" value={params.attack} min={0.001} max={1} step={0.001} onChange={(v) => handleChange('attack', v)} format={(v) => `${v.toFixed(3)}s`} />
-        <Knob label="释放" value={params.release} min={0.01} max={2} step={0.01} onChange={(v) => handleChange('release', v)} format={(v) => `${v.toFixed(2)}s`} />
+        <Knob label={t('effects.threshold')} value={params.threshold} min={-60} max={0} step={1} onChange={(v) => handleChange('threshold', v)} format={(v) => `${v} dB`} />
+        <Knob label={t('effects.ratio')} value={params.ratio} min={1} max={20} step={0.5} onChange={(v) => handleChange('ratio', v)} format={(v) => `${v}:1`} />
+        <Knob label={t('effects.attack')} value={params.attack} min={0.001} max={1} step={0.001} onChange={(v) => handleChange('attack', v)} format={(v) => `${v.toFixed(3)}s`} />
+        <Knob label={t('effects.release')} value={params.release} min={0.01} max={2} step={0.01} onChange={(v) => handleChange('release', v)} format={(v) => `${v.toFixed(2)}s`} />
       </div>
     </div>
   );
@@ -134,6 +137,7 @@ function ReverbSection({
   onToggle: () => void;
   onChange: (params: ReverbParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof ReverbParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -141,20 +145,20 @@ function ReverbSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🌊 混响</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.reverb')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="衰减" value={params.decay} min={0.1} max={10} step={0.1} onChange={(v) => handleChange('decay', v)} format={(v) => `${v.toFixed(1)}s`} />
-        <Knob label="预延迟" value={params.preDelay} min={0} max={0.5} step={0.01} onChange={(v) => handleChange('preDelay', v)} format={(v) => `${(v * 1000).toFixed(0)}ms`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.decay')} value={params.decay} min={0.1} max={10} step={0.1} onChange={(v) => handleChange('decay', v)} format={(v) => `${v.toFixed(1)}s`} />
+        <Knob label={t('effects.preDelay')} value={params.preDelay} min={0} max={0.5} step={0.01} onChange={(v) => handleChange('preDelay', v)} format={(v) => `${(v * 1000).toFixed(0)}ms`} />
       </div>
     </div>
   );
@@ -172,6 +176,7 @@ function DelaySection({
   onToggle: () => void;
   onChange: (params: DelayParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof DelayParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -179,20 +184,20 @@ function DelaySection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🔁 延迟</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.delay')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="时间" value={params.time} min={0} max={2} step={0.01} onChange={(v) => handleChange('time', v)} format={(v) => `${v.toFixed(2)}s`} />
-        <Knob label="反馈" value={params.feedback} min={0} max={0.99} step={0.01} onChange={(v) => handleChange('feedback', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.time')} value={params.time} min={0} max={2} step={0.01} onChange={(v) => handleChange('time', v)} format={(v) => `${v.toFixed(2)}s`} />
+        <Knob label={t('effects.feedback')} value={params.feedback} min={0} max={0.99} step={0.01} onChange={(v) => handleChange('feedback', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
       </div>
     </div>
   );
@@ -210,6 +215,7 @@ function GainSection({
   onToggle: () => void;
   onChange: (params: GainParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((value: number) => {
     onChange({ gain: value });
   }, [onChange]);
@@ -217,18 +223,18 @@ function GainSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">📈 增益</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.gain')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="flex items-center gap-3">
-        <Knob label="输出" value={params.gain} min={-60} max={20} step={0.5} onChange={handleChange} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
+        <Knob label={t('effects.output')} value={params.gain} min={-60} max={20} step={0.5} onChange={handleChange} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
       </div>
     </div>
   );
@@ -248,6 +254,7 @@ function ChorusSection({
   onToggle: () => void;
   onChange: (params: ChorusParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof ChorusParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -255,21 +262,21 @@ function ChorusSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🎼 合唱 (Chorus)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.chorus')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="速率" value={params.rate} min={0.1} max={10} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
-        <Knob label="深度" value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="延迟" value={params.delay} min={0.001} max={0.1} step={0.001} onChange={(v) => handleChange('delay', v)} format={(v) => `${(v * 1000).toFixed(0)}ms`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.rate')} value={params.rate} min={0.1} max={10} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
+        <Knob label={t('effects.depth')} value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.delay')} value={params.delay} min={0.001} max={0.1} step={0.001} onChange={(v) => handleChange('delay', v)} format={(v) => `${(v * 1000).toFixed(0)}ms`} />
       </div>
     </div>
   );
@@ -287,6 +294,7 @@ function FlangerSection({
   onToggle: () => void;
   onChange: (params: FlangerParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof FlangerParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -294,21 +302,21 @@ function FlangerSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🌀 镶边 (Flanger)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.flanger')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="速率" value={params.rate} min={0.1} max={5} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
-        <Knob label="深度" value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="反馈" value={params.feedback} min={-0.9} max={0.9} step={0.05} onChange={(v) => handleChange('feedback', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.rate')} value={params.rate} min={0.1} max={5} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
+        <Knob label={t('effects.depth')} value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.feedback')} value={params.feedback} min={-0.9} max={0.9} step={0.05} onChange={(v) => handleChange('feedback', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
       </div>
     </div>
   );
@@ -326,6 +334,7 @@ function PhaserSection({
   onToggle: () => void;
   onChange: (params: PhaserParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof PhaserParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -333,22 +342,22 @@ function PhaserSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🌊 移相 (Phaser)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.phaser')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-5 gap-2">
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="速率" value={params.rate} min={0.1} max={5} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
-        <Knob label="深度" value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="反馈" value={params.feedback} min={0} max={0.9} step={0.05} onChange={(v) => handleChange('feedback', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="级数" value={params.stages} min={2} max={8} step={2} onChange={(v) => handleChange('stages', v)} format={(v) => `${v}`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.rate')} value={params.rate} min={0.1} max={5} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
+        <Knob label={t('effects.depth')} value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.feedback')} value={params.feedback} min={0} max={0.9} step={0.05} onChange={(v) => handleChange('feedback', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.stages')} value={params.stages} min={2} max={8} step={2} onChange={(v) => handleChange('stages', v)} format={(v) => `${v}`} />
       </div>
     </div>
   );
@@ -366,6 +375,7 @@ function DistortionSection({
   onToggle: () => void;
   onChange: (params: DistortionParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof DistortionParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -373,20 +383,20 @@ function DistortionSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🔥 失真 (Distortion)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.distortion')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Knob label="驱动" value={params.drive} min={0} max={100} step={1} onChange={(v) => handleChange('drive', v)} format={(v) => `${v.toFixed(0)}%`} />
-        <Knob label="音色" value={params.tone} min={0} max={1} step={0.05} onChange={(v) => handleChange('tone', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.drive')} value={params.drive} min={0} max={100} step={1} onChange={(v) => handleChange('drive', v)} format={(v) => `${v.toFixed(0)}%`} />
+        <Knob label={t('effects.tone')} value={params.tone} min={0} max={1} step={0.05} onChange={(v) => handleChange('tone', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
       </div>
     </div>
   );
@@ -404,6 +414,7 @@ function FilterSection({
   onToggle: () => void;
   onChange: (params: FilterParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof FilterParams, value: number | string) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -411,14 +422,14 @@ function FilterSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🎚️ 滤波器 (Filter)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.filter')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="mb-3">
@@ -427,16 +438,16 @@ function FilterSection({
           onChange={(e) => handleChange('type', e.target.value)}
           className="w-full px-3 py-2 bg-[#2a2a2a] border border-[#3a3a3a] rounded text-xs text-[#e0e0e0] focus:outline-none focus:border-orange-500"
         >
-          <option value="lowpass">低通 (Lowpass)</option>
-          <option value="highpass">高通 (Highpass)</option>
-          <option value="bandpass">带通 (Bandpass)</option>
-          <option value="notch">陷波 (Notch)</option>
+          <option value="lowpass">{t('effects.lowpass')}</option>
+          <option value="highpass">{t('effects.highpass')}</option>
+          <option value="bandpass">{t('effects.bandpass')}</option>
+          <option value="notch">{t('effects.notch')}</option>
         </select>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        <Knob label="频率" value={params.frequency} min={20} max={20000} step={100} onChange={(v) => handleChange('frequency', v)} format={(v) => `${v.toFixed(0)}Hz`} />
-        <Knob label="Q 值" value={params.q} min={0.1} max={50} step={0.1} onChange={(v) => handleChange('q', v)} format={(v) => `${v.toFixed(1)}`} />
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.frequency')} value={params.frequency} min={20} max={20000} step={100} onChange={(v) => handleChange('frequency', v)} format={(v) => `${v.toFixed(0)}Hz`} />
+        <Knob label={t('effects.q')} value={params.q} min={0.1} max={50} step={0.1} onChange={(v) => handleChange('q', v)} format={(v) => `${v.toFixed(1)}`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
       </div>
     </div>
   );
@@ -454,6 +465,7 @@ function TremoloSection({
   onToggle: () => void;
   onChange: (params: TremoloParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof TremoloParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -461,20 +473,20 @@ function TremoloSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">💫 颤音 (Tremolo)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.tremolo')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Knob label="速率" value={params.rate} min={0.1} max={20} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
-        <Knob label="深度" value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.rate')} value={params.rate} min={0.1} max={20} step={0.1} onChange={(v) => handleChange('rate', v)} format={(v) => `${v.toFixed(1)}Hz`} />
+        <Knob label={t('effects.depth')} value={params.depth} min={0} max={1} step={0.05} onChange={(v) => handleChange('depth', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
       </div>
     </div>
   );
@@ -492,6 +504,7 @@ function BitcrusherSection({
   onToggle: () => void;
   onChange: (params: BitcrusherParams) => void;
 }) {
+  const { t } = useTranslation();
   const handleChange = useCallback((key: keyof BitcrusherParams, value: number) => {
     onChange({ ...params, [key]: value });
   }, [params, onChange]);
@@ -499,20 +512,20 @@ function BitcrusherSection({
   return (
     <div className={`rounded-lg border p-3 ${enabled ? 'border-orange-500/50 bg-[#1e1e1e]' : 'border-[#2a2a2a] bg-[#121212]'}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-[#e0e0e0]">🤖 位压缩 (Bitcrusher)</h3>
+        <h3 className="text-sm font-semibold text-[#e0e0e0]">{t('effects.bitcrusher')}</h3>
         <button
           onClick={onToggle}
           className={`px-2 py-0.5 text-xs rounded transition-colors ${
             enabled ? 'bg-orange-500 text-white' : 'bg-[#3a3a3a] text-[#777777]'
           }`}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? t('effects.on') : t('effects.off')}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Knob label="位深" value={params.bitDepth} min={1} max={24} step={1} onChange={(v) => handleChange('bitDepth', v)} format={(v) => `${v.toFixed(0)} bit`} />
-        <Knob label="采样率" value={params.sampleRate} min={1000} max={48000} step={1000} onChange={(v) => handleChange('sampleRate', v)} format={(v) => `${(v / 1000).toFixed(1)}k`} />
-        <Knob label="湿" value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <Knob label={t('effects.bitDepth')} value={params.bitDepth} min={1} max={24} step={1} onChange={(v) => handleChange('bitDepth', v)} format={(v) => `${v.toFixed(0)} bit`} />
+        <Knob label={t('effects.sampleRate')} value={params.sampleRate} min={1000} max={48000} step={1000} onChange={(v) => handleChange('sampleRate', v)} format={(v) => `${(v / 1000).toFixed(1)}k`} />
+        <Knob label={t('effects.wet')} value={params.wet} min={0} max={1} step={0.05} onChange={(v) => handleChange('wet', v)} format={(v) => `${(v * 100).toFixed(0)}%`} />
       </div>
     </div>
   );
