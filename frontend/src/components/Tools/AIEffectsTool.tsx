@@ -1,11 +1,12 @@
 /**
- * AI 特效工具 (P3-2)
+ * {t('aieffects.title')}工具 (P3-2)
  * 精简版：KISS + DRY
  */
 
 import React, { useState, useCallback } from 'react';
 import { Upload, Button, Space, Input, Select, Progress, message } from 'antd';
 import { UploadOutlined, PlayCircleOutlined, DownloadOutlined } from '@ant-design/icons';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -18,6 +19,7 @@ interface VideoGenResult {
 }
 
 export const AIEffectsTool: React.FC = () => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<'video' | 'inpaint' | 'bg-remove'>('video');
   const [uploading, setUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export const AIEffectsTool: React.FC = () => {
   // 生成视频
   const handleGenerate = useCallback(async () => {
     if (!imageUrl) {
-      message.error('请先上传图片');
+      message.error(t('aieffects.noImage'));
       return;
     }
 
@@ -54,15 +56,15 @@ export const AIEffectsTool: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setResult({ task_id: data.task_id, status: 'processing' });
-        message.success('任务已提交，正在生成...');
+        message.success(t('aieffects.submitted'));
         pollStatus(data.task_id);
       } else {
-        setResult({ task_id: '', status: 'failed', error: '提交失败' });
-        message.error('提交失败');
+        setResult({ task_id: '', status: 'failed', error: t('aieffects.submitFailed') });
+        message.error(t('aieffects.submitFailed'));
       }
     } catch {
-      setResult({ task_id: '', status: 'failed', error: '网络错误' });
-      message.error('网络错误，请重试');
+      setResult({ task_id: '', status: 'failed', error: t('aieffects.networkError') });
+      message.error(t('aieffects.networkRetry'));
     } finally {
       setUploading(false);
     }
@@ -81,10 +83,10 @@ export const AIEffectsTool: React.FC = () => {
 
           if (status === 'completed') {
             setResult({ task_id: taskId, status: 'completed', video_url: output_url });
-            message.success('生成成功！');
+            message.success(t('aieffects.success'));
           } else if (status === 'failed') {
             setResult({ task_id: taskId, status: 'failed', error: data.data.error });
-            message.error('生成失败');
+            message.error(t('aieffects.fail'));
           } else {
             setTimeout(poll, 3000);
           }
@@ -100,15 +102,15 @@ export const AIEffectsTool: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <h2>🎬 AI 特效</h2>
-      <p>使用 RunwayML AI 生成视频、扩图、背景移除</p>
+      <h2>🎬 {t('aieffects.title')}</h2>
+      <p>{t('aieffects.subtitle')}</p>
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* 模式选择 */}
         <Select value={mode} onChange={setMode} style={{ width: '100%' }} size="large">
-          <Option value="video">🎬 图生视频 (Motion Brush)</Option>
-          <Option value="inpaint">🖼️ AI 扩图/修复</Option>
-          <Option value="bg-remove">✂️ 背景移除</Option>
+          <Option value="video">{t('aieffects.modeVideo')}</Option>
+          <Option value="inpaint">{t('aieffects.modeInpaint')}</Option>
+          <Option value="bg-remove">{t('aieffects.modeBgRemove')}</Option>
         </Select>
 
         {/* 图片上传 */}
@@ -123,31 +125,31 @@ export const AIEffectsTool: React.FC = () => {
           showUploadList={false}
           disabled={uploading}
         >
-          <Button icon={<UploadOutlined />}>上传图片</Button>
+          <Button icon={<UploadOutlined />}>{t('aieffects.uploadImage')}</Button>
         </Upload>
 
-        {imageUrl && <div><h4>预览</h4><img src={imageUrl} alt="Preview" style={{ maxWidth: '400px', maxHeight: '300px' }} /></div>}
+        {imageUrl && <div><h4>{t('aieffects.preview')}</h4><img src={imageUrl} alt="Preview" style={{ maxWidth: '400px', maxHeight: '300px' }} /></div>}
 
         {/* 参数配置 */}
         {mode === 'video' && (
           <>
             <TextArea
-              placeholder="描述想要的运动效果 (可选)"
+              placeholder={t('aieffects.motionPrompt')}
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               rows={3}
               maxLength={500}
             />
             <div>
-              <label>运动强度：{motionScore}</label>
+              <label>{t('aieffects.motionStrength', { score: motionScore })}</label>
               <input type="range" min="1" max="10" value={motionScore} onChange={e => setMotionScore(Number(e.target.value))} style={{ width: '100%' }} />
             </div>
             <div>
-              <label>视频时长：{duration}秒</label>
+              <label>{t('aieffects.videoDuration', { duration })}</label>
               <Select value={duration} onChange={setDuration} style={{ width: '150px', marginLeft: '10px' }}>
-                <Option value={4}>4 秒</Option>
-                <Option value={8}>8 秒</Option>
-                <Option value={12}>12 秒</Option>
+                <Option value={4}>{t('aieffects.dur4')}</Option>
+                <Option value={8}>{t('aieffects.dur8')}</Option>
+                <Option value={12}>{t('aieffects.dur12')}</Option>
               </Select>
             </div>
           </>
@@ -155,14 +157,14 @@ export const AIEffectsTool: React.FC = () => {
 
         {/* 生成按钮 */}
         <Button type="primary" size="large" onClick={handleGenerate} loading={uploading} icon={<PlayCircleOutlined />} disabled={!imageUrl}>
-          {mode === 'video' ? '生成视频' : mode === 'inpaint' ? 'AI 扩图' : '移除背景'}
+          {mode === 'video' ? t('aieffects.genVideo') : mode === 'inpaint' ? t('aieffects.genInpaint') : t('aieffects.genBgRemove')}
         </Button>
 
         {/* 进度和结果 */}
-        {result?.status === 'processing' && <div><h4>生成中...</h4><Progress percent={progress} status="active" /></div>}
+        {result?.status === 'processing' && <div><h4>{t('aieffects.processing')}</h4><Progress percent={progress} status="active" /></div>}
         {result?.status === 'completed' && result.video_url && (
           <div>
-            <h4>生成成功!</h4>
+            <h4>{t('aieffects.successTitle')}</h4>
             <video src={result.video_url} controls style={{ maxWidth: '600px', maxHeight: '400px' }} />
             <div style={{ marginTop: '12px' }}>
               <Button icon={<DownloadOutlined />} onClick={() => {
@@ -170,20 +172,20 @@ export const AIEffectsTool: React.FC = () => {
                 a.href = result.video_url!;
                 a.download = 'ai-video.mp4';
                 a.click();
-              }}>下载视频</Button>
+              }}>{t('aieffects.downloadVideo')}</Button>
             </div>
           </div>
         )}
-        {result?.status === 'failed' && <div style={{ color: 'red' }}>❌ 生成失败：{result.error}</div>}
+        {result?.status === 'failed' && <div style={{ color: 'red' }}>❌ {t('aieffects.failed', { error: result.error })}</div>}
 
         {/* 使用说明 */}
         <div style={{ marginTop: '24px', padding: '16px', background: '#f5f5f5', borderRadius: '8px' }}>
-          <h4>💡 使用说明</h4>
+          <h4>💡 {t('aieffects.howTo')}</h4>
           <ul>
-            <li>图生视频：上传图片，描述运动效果，AI 生成 4-12 秒视频</li>
-            <li>AI 扩图：需要上传遮罩图片 (白色区域为修复区域)</li>
-            <li>背景移除：自动移除图片背景，输出透明 PNG</li>
-            <li>费用：RunwayML API, $0.35/秒 (图生视频), $0.05/张 (扩图)</li>
+            <li>{t('aieffects.how1')}</li>
+            <li>{t('aieffects.how2')}</li>
+            <li>{t('aieffects.how3')}</li>
+            <li>{t('aieffects.how4')}</li>
           </ul>
         </div>
       </Space>
