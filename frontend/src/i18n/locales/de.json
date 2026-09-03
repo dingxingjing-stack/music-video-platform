@@ -1105,5 +1105,18 @@
     "how2": "KI-Erweiterung: Maskenbild erforderlich (weiße Bereiche werden repariert)",
     "how3": "Hintergrundentfernung: entfernt den Hintergrund und gibt transparentes PNG aus",
     "how4": "Kosten: RunwayML API, $0.35/s (Video), $0.05/Bild (Erweiterung)"
+  },
+  "bgremove": {
+    "success": "Freistellen erfolgreich!",
+    "failed": "Freistellen fehlgeschlagen: {error}",
+    "networkRetry": "Netzwerkfehler, bitte erneut",
+    "title": "Intelligentes Freistellen",
+    "subtitle": "Hintergrund mit einem Klick entfernen, für Personen, Produkte und allgemeine Szenen",
+    "uploadImage": "Bild hochladen",
+    "original": "Original",
+    "result": "Freistellergebnis",
+    "download": "Ergebnis herunterladen",
+    "howTo": "So funktioniert es",
+    "desc": "Unterstützt PNG/JPG/WebP. Verwendet die Remove.bg API (präzise) oder die lokale rembg-Bibliothek (kostenlos)"
   }
 }

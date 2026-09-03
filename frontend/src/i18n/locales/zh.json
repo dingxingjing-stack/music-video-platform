@@ -1105,5 +1105,18 @@
     "how2": "AI 扩图：需要上传遮罩图片 (白色区域为修复区域)",
     "how3": "背景移除：自动移除图片背景，输出透明 PNG",
     "how4": "费用：RunwayML API, $0.35/秒 (图生视频), $0.05/张 (扩图)"
+  },
+  "bgremove": {
+    "success": "抠图成功!",
+    "failed": "抠图失败：{error}",
+    "networkRetry": "网络错误，请重试",
+    "title": "智能抠图",
+    "subtitle": "一键移除图片背景，支持人物/产品/通用场景",
+    "uploadImage": "上传图片",
+    "original": "原图",
+    "result": "抠图结果",
+    "download": "下载结果",
+    "howTo": "使用说明",
+    "desc": "支持 PNG/JPG/WebP。使用 Remove.bg API (精准) 或本地 rembg 库 (免费)"
   }
 }

@@ -1105,5 +1105,18 @@
     "how2": "AI 拡張：マスク画像が必要 (白い領域が修復対象)",
     "how3": "背景除去：背景を自動除去し透明 PNG を出力",
     "how4": "費用：RunwayML API、$0.35/秒 (動画)、$0.05/枚 (拡張)"
+  },
+  "bgremove": {
+    "success": "切り抜き成功!",
+    "failed": "切り抜きに失敗：{error}",
+    "networkRetry": "ネットワークエラー。再試行してください",
+    "title": "スマート切り抜き",
+    "subtitle": "画像の背景をワンクリックで除去、人物/商品/汎用シーン対応",
+    "uploadImage": "画像をアップロード",
+    "original": "元の画像",
+    "result": "切り抜き結果",
+    "download": "結果をダウンロード",
+    "howTo": "使い方",
+    "desc": "PNG/JPG/WebP 対応。Remove.bg API (高精度) またはローカル rembg ライブラリ (無料) を使用"
   }
 }

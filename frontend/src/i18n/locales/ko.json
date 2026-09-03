@@ -1105,5 +1105,18 @@
     "how2": "AI 확장: 마스크 이미지 필요 (흰 영역이 복구 대상)",
     "how3": "배경 제거: 배경을 자동 제거하고 투명 PNG 출력",
     "how4": "비용: RunwayML API, $0.35/초 (비디오), $0.05/장 (확장)"
+  },
+  "bgremove": {
+    "success": "컷아웃 성공!",
+    "failed": "컷아웃 실패: {error}",
+    "networkRetry": "네트워크 오류, 다시 시도하세요",
+    "title": "스마트 컷아웃",
+    "subtitle": "이미지 배경을 한 번에 제거, 인물/제품/일반 장면 지원",
+    "uploadImage": "이미지 업로드",
+    "original": "원본",
+    "result": "컷아웃 결과",
+    "download": "결과 다운로드",
+    "howTo": "사용 방법",
+    "desc": "PNG/JPG/WebP 지원. Remove.bg API (정밀) 또는 로컬 rembg 라이브러리 (무료) 사용"
   }
 }

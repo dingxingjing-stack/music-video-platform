@@ -1105,5 +1105,18 @@
     "how2": "Extensão IA: requer uma imagem de máscara (áreas brancas são reparadas)",
     "how3": "Remoção de fundo: remove automaticamente e gera PNG transparente",
     "how4": "Custo: API RunwayML, $0.35/s (vídeo), $0.05/imagem (extensão)"
+  },
+  "bgremove": {
+    "success": "Recorte bem-sucedido!",
+    "failed": "Falha no recorte: {error}",
+    "networkRetry": "Erro de rede, tente novamente",
+    "title": "Recorte Inteligente",
+    "subtitle": "Remova o fundo da imagem com um clique, para pessoas, produtos e cenas gerais",
+    "uploadImage": "Enviar imagem",
+    "original": "Original",
+    "result": "Resultado do recorte",
+    "download": "Baixar resultado",
+    "howTo": "Como funciona",
+    "desc": "Suporta PNG/JPG/WebP. Usa a API Remove.bg (precisa) ou a biblioteca rembg local (grátis)"
   }
 }

@@ -1105,5 +1105,18 @@
     "how2": "AI extend: upload a mask image (white areas are repaired)",
     "how3": "Background removal: automatically removes the background and outputs transparent PNG",
     "how4": "Cost: RunwayML API, $0.35/s (image-to-video), $0.05/image (extend)"
+  },
+  "bgremove": {
+    "success": "Cutout successful!",
+    "failed": "Cutout failed: {error}",
+    "networkRetry": "Network error, please retry",
+    "title": "Smart Cutout",
+    "subtitle": "Remove the image background in one click, for people, products, and general scenes",
+    "uploadImage": "Upload Image",
+    "original": "Original",
+    "result": "Cutout Result",
+    "download": "Download Result",
+    "howTo": "How it works",
+    "desc": "Supports PNG/JPG/WebP. Uses the Remove.bg API (precise) or the local rembg library (free)"
   }
 }

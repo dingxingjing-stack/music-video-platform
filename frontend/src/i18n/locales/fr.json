@@ -1105,5 +1105,18 @@
     "how2": "Extension IA : une image masque est requise (zones blanches réparées)",
     "how3": "Suppression de fond : suppression automatique et sortie PNG transparent",
     "how4": "Coût : RunwayML API, $0.35/s (vidéo), $0.05/image (extension)"
+  },
+  "bgremove": {
+    "success": "Détourage réussi !",
+    "failed": "Échec du détourage : {error}",
+    "networkRetry": "Erreur réseau, réessayez",
+    "title": "Détourage Intelligent",
+    "subtitle": "Supprimez le fond de l image en un clic, pour personnes, produits et scènes générales",
+    "uploadImage": "Téléverser une image",
+    "original": "Original",
+    "result": "Résultat du détourage",
+    "download": "Télécharger le résultat",
+    "howTo": "Comment ça marche",
+    "desc": "Prend en charge PNG/JPG/WebP. Utilise l API Remove.bg (précise) ou la bibliothèque rembg locale (gratuite)"
   }
 }
