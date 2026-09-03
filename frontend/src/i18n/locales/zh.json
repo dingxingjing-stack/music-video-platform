@@ -1243,5 +1243,22 @@
     "guide2": "质量要求：清晰、原创、实用",
     "guide3": "收益结算：每月 15 日打款",
     "guide4": "最低提现：¥50"
+  },
+  "aiStage": {
+    "idle": "就绪",
+    "pending": "排队中",
+    "processing": "准备中",
+    "generating": "生成中 (ACE-Step)",
+    "separating": "分轨中 (Demucs)",
+    "uploading": "上传中",
+    "completed": "完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "aiStem": {
+    "vocals": "人声",
+    "drums": "鼓组",
+    "bass": "贝斯",
+    "other": "其他"
   }
 }

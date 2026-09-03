@@ -1243,5 +1243,22 @@
     "guide2": "Qualität: klar, original, praktisch",
     "guide3": "Auszahlung: jeden 15. des Monats",
     "guide4": "Mindestabhebung: ¥50"
+  },
+  "aiStage": {
+    "idle": "Bereit",
+    "pending": "In Warteschlange",
+    "processing": "Vorbereitung",
+    "generating": "Generierung (ACE-Step)",
+    "separating": "Trennung (Demucs)",
+    "uploading": "Lade hoch",
+    "completed": "Fertig",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen"
+  },
+  "aiStem": {
+    "vocals": "Gesang",
+    "drums": "Schlagzeug",
+    "bass": "Bass",
+    "other": "Andere"
   }
 }

@@ -1243,5 +1243,22 @@
     "guide2": "品質：明確、オリジナル、実用",
     "guide3": "支払い：毎月 15 日",
     "guide4": "最低出金：¥50"
+  },
+  "aiStage": {
+    "idle": "待機中",
+    "pending": "待機中",
+    "processing": "準備中",
+    "generating": "生成中 (ACE-Step)",
+    "separating": "分離中 (Demucs)",
+    "uploading": "アップロード中",
+    "completed": "完了",
+    "failed": "失敗",
+    "cancelled": "キャンセル済み"
+  },
+  "aiStem": {
+    "vocals": "ボーカル",
+    "drums": "ドラム",
+    "bass": "ベース",
+    "other": "その他"
   }
 }

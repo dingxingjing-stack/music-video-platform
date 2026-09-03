@@ -1243,5 +1243,22 @@
     "guide2": "Quality: clear, original, practical",
     "guide3": "Payout: every 15th of the month",
     "guide4": "Minimum withdrawal: ¥50"
+  },
+  "aiStage": {
+    "idle": "Idle",
+    "pending": "Queued",
+    "processing": "Preparing",
+    "generating": "Generating (ACE-Step)",
+    "separating": "Separating (Demucs)",
+    "uploading": "Uploading",
+    "completed": "Done",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "aiStem": {
+    "vocals": "Vocals",
+    "drums": "Drums",
+    "bass": "Bass",
+    "other": "Other"
   }
 }

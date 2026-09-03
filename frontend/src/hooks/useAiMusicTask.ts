@@ -45,22 +45,22 @@ export interface AiMusicTask {
 }
 
 export const STAGE_LABEL: Record<AiStage, string> = {
-  idle: '就绪',
-  pending: '排队中',
-  processing: '准备中',
-  generating: '生成中 (ACE-Step)',
-  separating: '分轨中 (Demucs)',
-  uploading: '上传中',
-  completed: '完成',
-  failed: '失败',
-  cancelled: '已取消',
+  idle: 'aiStage.idle',
+  pending: 'aiStage.pending',
+  processing: 'aiStage.processing',
+  generating: 'aiStage.generating',
+  separating: 'aiStage.separating',
+  uploading: 'aiStage.uploading',
+  completed: 'aiStage.completed',
+  failed: 'aiStage.failed',
+  cancelled: 'aiStage.cancelled',
 };
 
 export const STEM_NAMES: { key: keyof AiStems; label: string; color: string }[] = [
-  { key: 'vocals', label: '人声', color: '#ef4444' },
-  { key: 'drums', label: '鼓组', color: '#3b82f6' },
-  { key: 'bass', label: '贝斯', color: '#22c55e' },
-  { key: 'other', label: '其他', color: '#a855f7' },
+  { key: 'vocals', label: 'aiStem.vocals', color: '#ef4444' },
+  { key: 'drums', label: 'aiStem.drums', color: '#3b82f6' },
+  { key: 'bass', label: 'aiStem.bass', color: '#22c55e' },
+  { key: 'other', label: 'aiStem.other', color: '#a855f7' },
 ];
 
 const EMPTY: AiMusicTask = {

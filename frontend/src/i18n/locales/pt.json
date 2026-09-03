@@ -1243,5 +1243,22 @@
     "guide2": "Qualidade: clara, original, prática",
     "guide3": "Pagamento: dia 15 de cada mês",
     "guide4": "Saque mínimo: ¥50"
+  },
+  "aiStage": {
+    "idle": "Ocioso",
+    "pending": "Na fila",
+    "processing": "Preparando",
+    "generating": "Gerando (ACE-Step)",
+    "separating": "Separando (Demucs)",
+    "uploading": "Enviando",
+    "completed": "Concluído",
+    "failed": "Falhou",
+    "cancelled": "Cancelado"
+  },
+  "aiStem": {
+    "vocals": "Vocais",
+    "drums": "Bateria",
+    "bass": "Baixo",
+    "other": "Outros"
   }
 }

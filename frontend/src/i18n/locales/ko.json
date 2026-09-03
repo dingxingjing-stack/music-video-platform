@@ -1243,5 +1243,22 @@
     "guide2": "품질: 명확, 독창, 실용",
     "guide3": "정산: 매월 15일",
     "guide4": "최소 출금: ¥50"
+  },
+  "aiStage": {
+    "idle": "대기",
+    "pending": "대기 중",
+    "processing": "준비 중",
+    "generating": "생성 중 (ACE-Step)",
+    "separating": "분리 중 (Demucs)",
+    "uploading": "업로드 중",
+    "completed": "완료",
+    "failed": "실패",
+    "cancelled": "취소됨"
+  },
+  "aiStem": {
+    "vocals": "보컬",
+    "drums": "드럼",
+    "bass": "베이스",
+    "other": "기타"
   }
 }

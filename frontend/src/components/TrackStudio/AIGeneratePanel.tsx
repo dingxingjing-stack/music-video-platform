@@ -241,7 +241,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                 return (
                   <div key={key} className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-2.5">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium" style={{ color }}>{label} ({key})</span>
+                      <span className="text-xs font-medium" style={{ color }}>{t(label)} ({key})</span>
                       <button onClick={() => handleDownload(key)} className="px-2 py-0.5 text-[11px] rounded bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333]">⬇ {t('aiGen.download')}</button>
                     </div>
                     <audio controls src={url} className="w-full h-9" />
@@ -261,7 +261,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
           {(inProgress || loading) && (
             <div>
               <div className="flex items-center justify-between text-xs text-[#777777] mb-1">
-                <span>{task.stage ? STAGE_LABEL[task.stage] : t('aiGen.submitting')}</span>
+                <span>{task.stage ? t(STAGE_LABEL[task.stage]) : t('aiGen.submitting')}</span>
                 <span>{task.progress}%</span>
               </div>
               <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
@@ -491,7 +491,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
             disabled={inProgress || loading || !prompt.trim()}
             className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
           >
-            {inProgress ? STAGE_LABEL[task.stage] + '...' : task.stage === 'completed' ? t('aiGen.generateAnother') : t('aiGen.generate')}
+            {inProgress ? t(STAGE_LABEL[task.stage]) + '...' : task.stage === 'completed' ? t('aiGen.generateAnother') : t('aiGen.generate')}
           </button>
         </div>
       </div>

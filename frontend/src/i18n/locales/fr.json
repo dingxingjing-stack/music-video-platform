@@ -1243,5 +1243,22 @@
     "guide2": "Qualité : claire, originale, pratique",
     "guide3": "Paiement : chaque 15 du mois",
     "guide4": "Retrait minimum : ¥50"
+  },
+  "aiStage": {
+    "idle": "Inactif",
+    "pending": "En file",
+    "processing": "Préparation",
+    "generating": "Génération (ACE-Step)",
+    "separating": "Séparation (Demucs)",
+    "uploading": "Téléversement",
+    "completed": "Terminé",
+    "failed": "Échec",
+    "cancelled": "Annulé"
+  },
+  "aiStem": {
+    "vocals": "Voix",
+    "drums": "Batterie",
+    "bass": "Basse",
+    "other": "Autres"
   }
 }
