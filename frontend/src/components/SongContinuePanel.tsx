@@ -2,7 +2,7 @@
  * SongContinuePanel — 歌曲续写 + 结构扩展面板
  *
  * P0-1 歌曲续写:
- * - 选择续写起点 (时间滑块)
+ * - 选择{t('songCont.continueFrom')} (时间滑块)
  * - 风格选项
  * - 时长选择
  * - POST /api/v1/music/continue
@@ -17,6 +17,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 // ---------------------------------------------------------------------------
 // 类型定义
@@ -68,14 +69,14 @@ const SECTION_TYPES: { type: SectionType; label: string; energy: 'low' | 'medium
 ];
 
 const CONTINUE_STYLES = [
-  { id: 'auto',     name: '自动匹配', desc: '保持原曲风格' },
-  { id: 'pop',      name: 'Pop',      desc: '流行' },
-  { id: 'rock',     name: 'Rock',     desc: '摇滚' },
-  { id: 'electronic', name: 'Electronic', desc: '电子' },
-  { id: 'jazz',     name: 'Jazz',     desc: '爵士' },
-  { id: 'classical', name: 'Classical', desc: '古典' },
-  { id: 'hiphop',   name: 'Hip-Hop', desc: '嘻哈' },
-  { id: 'ballad',   name: 'Ballad',  desc: '抒情' },
+  { id: 'auto',     name: 'songCont.autoName', desc: 'songCont.styleDesc.auto' },
+  { id: 'pop',      name: 'Pop',      desc: 'songCont.styleDesc.pop' },
+  { id: 'rock',     name: 'Rock',     desc: 'songCont.styleDesc.rock' },
+  { id: 'electronic', name: 'Electronic', desc: 'songCont.styleDesc.electronic' },
+  { id: 'jazz',     name: 'Jazz',     desc: 'songCont.styleDesc.jazz' },
+  { id: 'classical', name: 'Classical', desc: 'songCont.styleDesc.classical' },
+  { id: 'hiphop',   name: 'Hip-Hop', desc: 'songCont.styleDesc.hiphop' },
+  { id: 'ballad',   name: 'Ballad',  desc: 'songCont.styleDesc.ballad' },
 ];
 
 const DURATION_OPTIONS = [15, 30, 60, 90, 120, 180, 240];
@@ -91,6 +92,7 @@ interface Props {
 }
 
 export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
+  const { t } = useTranslation();
   // ----- P0-1: 歌曲续写状态 -----
   const [continueFrom, setContinueFrom] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState('auto');
@@ -146,7 +148,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
       const data: ContinueResult = await response.json();
       setContinueResult(data);
     } catch (err) {
-      setContinueError(err instanceof Error ? err.message : '未知错误');
+      setContinueError(err instanceof Error ? err.message : t('songCont.unknownError'));
     } finally {
       setIsContinuing(false);
     }
@@ -180,7 +182,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
       const data: ExtendResult = await response.json();
       setExtendResult(data);
     } catch (err) {
-      setExtendError(err instanceof Error ? err.message : '未知错误');
+      setExtendError(err instanceof Error ? err.message : t('songCont.unknownError'));
     } finally {
       setIsExtending(false);
     }
@@ -278,16 +280,16 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">🎵 歌曲续写 & 结构扩展</h2>
+            <h2 className="text-2xl font-bold text-white">🎵 {t('songCont.title')}</h2>
             <p className="text-sm text-gray-400 mt-1">
-              P0-1 续写创作 · P0-2 段落编排
+              {t('songCont.subtitle')}
             </p>
           </div>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition"
           >
-            关闭
+            {t('songCont.close')}
           </button>
         </div>
 
@@ -297,14 +299,14 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
         <div className="mb-8 p-5 bg-gray-800/50 rounded-xl border border-gray-700">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <span className="w-1 h-5 bg-orange-600 rounded-full inline-block"></span>
-            歌曲续写
+            {t('songCont.continue')}
           </h3>
 
-          {/* 续写起点 - 时间滑块 */}
+          {/* {t('songCont.continueFrom')} - 时间滑块 */}
           <div className="mb-5">
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-gray-300">
-                续写起点
+                {t('songCont.continueFrom')}
               </label>
               <span className="text-sm font-bold text-orange-500 bg-orange-500/10 px-3 py-1 rounded-lg">
                 {formatTime(continueFrom)}
@@ -320,15 +322,15 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
               className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-600"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0:00 (开头)</span>
-              <span>原曲时长: {formatTime(songDuration)}</span>
+              <span>{t('songCont.start')}</span>
+              <span>{t('songCont.originalDuration', { time: formatTime(songDuration) })}</span>
             </div>
           </div>
 
           {/* 风格选项 */}
           <div className="mb-5">
             <label className="text-sm font-medium text-gray-300 block mb-2">
-              风格
+              {t('songCont.style')}
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {CONTINUE_STYLES.map(style => (
@@ -342,9 +344,9 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
                   }`}
                 >
                   <div className={`text-sm font-bold ${selectedStyle === style.id ? 'text-orange-400' : 'text-white'}`}>
-                    {style.name}
+                    {t(style.name)}
                   </div>
-                  <div className="text-xs text-gray-400">{style.desc}</div>
+                  <div className="text-xs text-gray-400">{t(style.desc)}</div>
                 </button>
               ))}
             </div>
@@ -353,7 +355,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
           {/* 时长选择 */}
           <div className="mb-5">
             <label className="text-sm font-medium text-gray-300 block mb-2">
-              续写时长
+              {t('songCont.continueDuration')}
             </label>
             <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
               {DURATION_OPTIONS.map(d => (
@@ -385,25 +387,25 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
               <div className="flex items-center gap-3 mb-3">
                 <div className="text-2xl">✅</div>
                 <div>
-                  <div className="text-green-400 font-bold">续写完成!</div>
+                  <div className="text-green-400 font-bold">{t('songCont.continueComplete')}</div>
                   <div className="text-xs text-gray-400">
-                    新歌曲ID: {continueResult.continued_song_id}
+                    {t('songCont.newSongId', { id: continueResult.continued_song_id })}
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-400">标题:</span>
+                  <span className="text-gray-400">{t('songCont.titleLabel')}:</span>
                   <span className="text-white ml-2">{continueResult.title}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400">时长:</span>
+                  <span className="text-gray-400">{t('songCont.durationLabel')}:</span>
                   <span className="text-white ml-2">{formatTime(continueResult.duration)}</span>
                 </div>
               </div>
               {continueResult.lyrics && (
                 <div className="mt-3 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-300 whitespace-pre-wrap">
-                  <div className="text-xs text-gray-500 mb-1">生成歌词:</div>
+                  <div className="text-xs text-gray-500 mb-1">{t('songCont.generatedLyrics')}:</div>
                   {continueResult.lyrics}
                 </div>
               )}
@@ -425,7 +427,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
             disabled={isContinuing}
             className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isContinuing ? '🎵 续写中...' : '✨ 开始续写'}
+            {isContinuing ? t('songCont.continuing') : t('songCont.startContinue')}
           </button>
         </div>
 
@@ -435,18 +437,18 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
         <div className="p-5 bg-gray-800/50 rounded-xl border border-gray-700">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <span className="w-1 h-5 bg-orange-600 rounded-full inline-block"></span>
-            结构扩展
+            {t('songCont.structureExtend')}
           </h3>
 
           <p className="text-sm text-gray-400 mb-3">
-            拖拽段落进行排序，或使用下方按钮一键添加新段落。
+            {t('songCont.dragHint')}
           </p>
 
           {/* 段落列表 (拖拽排序) */}
           <div className="space-y-2 mb-4">
             {sections.length === 0 && (
               <div className="text-center text-gray-500 py-8 text-sm border-2 border-dashed border-gray-700 rounded-lg">
-                暂无段落，请添加新段落
+                {t('songCont.noSections')}
               </div>
             )}
             {sections.map((section, index) => {
@@ -480,7 +482,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
                   <div className="flex-1">
                     <div className="text-white font-bold text-sm">{section.label}</div>
                     <div className="text-xs text-gray-400">
-                      第 {index + 1} 段 · 能量: {section.energy}
+                      {t('songCont.sectionInfo', { n: index + 1, energy: section.energy })}
                     </div>
                   </div>
 
@@ -502,12 +504,12 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
                     </button>
                   </div>
 
-                  {/* 删除按钮 */}
+                  {/* {t('songCont.delete')}按钮 */}
                   <button
                     onClick={() => removeSection(section.id)}
                     className="px-3 py-1.5 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition"
                   >
-                    删除
+                    {t('songCont.delete')}
                   </button>
                 </div>
               );
@@ -516,7 +518,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
 
           {/* 一键添加段落 */}
           <div className="mb-4">
-            <div className="text-xs text-gray-400 mb-2 font-medium">一键添加段落:</div>
+            <div className="text-xs text-gray-400 mb-2 font-medium">{t('songCont.addSection')}:</div>
             <div className="flex flex-wrap gap-2">
               {SECTION_TYPES.map(s => (
                 <button
@@ -533,12 +535,12 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
 
           {/* 当前结构预览 */}
           <div className="mb-5 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
-            <div className="text-xs text-gray-500 mb-1">当前结构:</div>
+            <div className="text-xs text-gray-500 mb-1">{t('songCont.currentStructure')}:</div>
             <div className="text-sm text-orange-400 font-mono font-bold">
-              {sections.map(s => s.type).join(' → ') || '(空)'}
+              {sections.map(s => s.type).join(' → ') || t('songCont.empty')}
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              共 {sections.length} 个段落
+              {t('songCont.sectionCount', { n: sections.length })}
             </div>
           </div>
 
@@ -555,9 +557,9 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
               <div className="flex items-center gap-3 mb-3">
                 <div className="text-2xl">✅</div>
                 <div>
-                  <div className="text-green-400 font-bold">结构扩展完成!</div>
+                  <div className="text-green-400 font-bold">{t('songCont.extendComplete')}</div>
                   <div className="text-xs text-gray-400">
-                    新歌曲ID: {extendResult.new_song_id} · 总时长: {formatTime(extendResult.duration)}
+                    {t('songCont.extendNewSong', { id: extendResult.new_song_id, time: formatTime(extendResult.duration) })}
                   </div>
                 </div>
               </div>
@@ -584,7 +586,7 @@ export function SongContinuePanel({ songId, songDuration, onClose }: Props) {
             disabled={isExtending || sections.length === 0}
             className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isExtending ? '🏗️ 扩展中...' : '🏗️ 执行结构扩展'}
+            {isExtending ? t('songCont.extending') : t('songCont.executeExtend')}
           </button>
         </div>
       </div>
