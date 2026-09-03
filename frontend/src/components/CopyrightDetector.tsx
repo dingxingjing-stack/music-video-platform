@@ -9,6 +9,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Match {
   id: string;
@@ -34,13 +35,14 @@ const RISK_COLORS = {
 };
 
 const RISK_LABELS = {
-  safe: '安全',
-  low: '低风险',
-  medium: '中风险',
-  high: '高风险'
+  safe: 'copydet.riskSafe',
+  low: 'copydet.riskLow',
+  medium: 'copydet.riskMedium',
+  high: 'copydet.riskHigh'
 };
 
 export function CopyrightDetector({ userId, onClose }: { userId: string; onClose?: () => void }) {
+  const { t } = useTranslation();
   const [dragOver, setDragOver] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -63,11 +65,11 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
         const data = await response.json();
         setResult(data);
       } else {
-        alert('扫描失败：' + response.statusText);
+        alert(t('copydet.scanFailed', { msg: response.statusText }));
       }
     } catch (error) {
       console.error('扫描失败:', error);
-      alert('扫描失败，请重试');
+      alert(t('copydet.scanFailedRetry'));
     } finally {
       setUploading(false);
     }
@@ -82,7 +84,7 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
     if (file && file.type.startsWith('audio/')) {
       scanAudio(file);
     } else {
-      alert('请上传音频文件');
+      alert(t('copydet.uploadAudio'));
     }
   }, [scanAudio]);
 
@@ -99,8 +101,8 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-xl font-bold text-[#e0e0e0]">🛡️ 版权检测</h2>
-            <p className="text-xs text-[#777777]">音频指纹识别 • 风险等级评估</p>
+            <h2 className="text-xl font-bold text-[#e0e0e0]">🛡️ {t('copydet.title')}</h2>
+            <p className="text-xs text-[#777777]">{t('copydet.subtitle')}</p>
           </div>
           <button
             onClick={onClose || (() => {})}
@@ -124,13 +126,13 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
           {uploading ? (
             <div className="text-[#e0e0e0]">
               <div className="text-4xl mb-2">📤</div>
-              <div className="text-sm">正在上传并扫描...</div>
+              <div className="text-sm">{t('copydet.uploading')}</div>
             </div>
           ) : result ? (
             <div className="text-left">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="text-sm text-[#777777] mb-1">扫描文件</div>
+                  <div className="text-sm text-[#777777] mb-1">{t('copydet.scanFile')}</div>
                   <div className="text-[#e0e0e0] font-medium">{result.file_name}</div>
                 </div>
                 <div
@@ -140,26 +142,26 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
                     color: RISK_COLORS[result.risk_level]
                   }}
                 >
-                  {RISK_LABELS[result.risk_level]}
+                  {t(RISK_LABELS[result.risk_level])}
                 </div>
               </div>
 
               {/* 匹配结果 */}
               {result.matches.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="text-xs text-[#777777]">匹配作品 ({result.matches.length})</div>
+                  <div className="text-xs text-[#777777]">{t('copydet.matches', { n: result.matches.length })}</div>
                   {result.matches.map(match => (
                     <div
                       key={match.id}
                       className="p-3 bg-[#1a1a1a] rounded-lg border border-[#2a2a2a]"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-[#e0e0e0]">作品 #{match.original_id}</span>
+                        <span className="text-sm text-[#e0e0e0]">{t('copydet.workId', { id: match.original_id })}</span>
                         <span className="text-xs px-2 py-0.5 rounded" style={{
                           backgroundColor: RISK_COLORS[match.risk_level] + '20',
                           color: RISK_COLORS[match.risk_level]
                         }}>
-                          相似度 {Math.round(match.similarity * 100)}%
+                          {t('copydet.similarity', { value: Math.round(match.similarity * 100) })}
                         </span>
                       </div>
                       <div className="w-full bg-[#2a2a2a] rounded-full h-1.5">
@@ -177,7 +179,7 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
               ) : (
                 <div className="text-center py-4 text-[#22c55e]">
                   <div className="text-2xl mb-2">✅</div>
-                  <div className="text-sm">未发现匹配作品，音频安全</div>
+                  <div className="text-sm">{t('copydet.safe')}</div>
                 </div>
               )}
 
@@ -185,16 +187,16 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
                 onClick={() => setResult(null)}
                 className="mt-4 w-full py-2 bg-[#2a2a2a] hover:bg-[#333333] rounded-lg text-sm text-[#e0e0e0]"
               >
-                扫描其他文件
+                {t('copydet.scanAnother')}
               </button>
             </div>
           ) : (
             <div onClick={() => document.getElementById('file-input')?.click()}>
               <div className="text-4xl mb-3">🎵</div>
-              <div className="text-[#e0e0e0] font-medium mb-1">拖拽音频文件到此处</div>
-              <div className="text-xs text-[#777777] mb-3">或点击选择文件</div>
+              <div className="text-[#e0e0e0] font-medium mb-1">{t('copydet.dropAudio')}</div>
+              <div className="text-xs text-[#777777] mb-3">{t('copydet.orSelect')}</div>
               <div className="text-[10px] text-[#555555]">
-                支持 MP3, WAV, FLAC, AAC • 最大 50MB
+                {t('copydet.supported')}
               </div>
               <input
                 id="file-input"
@@ -209,7 +211,7 @@ export function CopyrightDetector({ userId, onClose }: { userId: string; onClose
 
         {/* 底部提示 */}
         <div className="p-4 border-t border-[#2a2a2a] text-center text-xs text-[#777777]">
-          基于音频指纹识别技术 • 检测相似度 ≥45% 的匹配作品
+          {t('copydet.footnote')}
         </div>
       </div>
     </div>

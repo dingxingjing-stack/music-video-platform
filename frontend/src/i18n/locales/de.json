@@ -1408,5 +1408,27 @@
     "animKaraoke": "Karaoke",
     "animScroll": "Scrollen",
     "color": "Farbe"
+  },
+  "copydet": {
+    "scanFailed": "Scan fehlgeschlagen: {msg}",
+    "scanFailedRetry": "Scan fehlgeschlagen, bitte erneut",
+    "uploadAudio": "Bitte laden Sie eine Audiodatei hoch",
+    "title": "Urheberrechtsprüfung",
+    "subtitle": "Audio-Fingerabdruck • Risikobewertung",
+    "uploading": "Hochladen und Scannen...",
+    "scanFile": "Datei scannen",
+    "matches": "Übereinstimmungen ({n})",
+    "workId": "Werk #{id}",
+    "similarity": "Ähnlichkeit {value}%",
+    "safe": "Keine Übereinstimmung, Audio sicher",
+    "scanAnother": "Andere Datei scannen",
+    "dropAudio": "Audiodatei hierher ziehen",
+    "orSelect": "oder klicken zum Auswählen",
+    "supported": "Unterstützt MP3, WAV, FLAC, AAC • Max 50MB",
+    "footnote": "Basierend auf Audio-Fingerabdruck • erkennt Übereinstimmungen ≥45%",
+    "riskSafe": "Sicher",
+    "riskLow": "Geringes Risiko",
+    "riskMedium": "Mittleres Risiko",
+    "riskHigh": "Hohes Risiko"
   }
 }

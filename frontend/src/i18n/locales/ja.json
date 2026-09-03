@@ -1408,5 +1408,27 @@
     "animKaraoke": "カラオケ",
     "animScroll": "スクロール",
     "color": "色"
+  },
+  "copydet": {
+    "scanFailed": "スキャンに失敗：{msg}",
+    "scanFailedRetry": "スキャンに失敗しました。再試行してください",
+    "uploadAudio": "オーディオファイルをアップロードしてください",
+    "title": "著作権チェック",
+    "subtitle": "音声フィンガープリント • リスク評価",
+    "uploading": "アップロードしてスキャン中...",
+    "scanFile": "ファイルをスキャン",
+    "matches": "マッチ作品 ({n})",
+    "workId": "作品 #{id}",
+    "similarity": "類似度 {value}%",
+    "safe": "マッチ作品なし、音声は安全",
+    "scanAnother": "他のファイルをスキャン",
+    "dropAudio": "オーディオファイルをここにドラッグ",
+    "orSelect": "またはクリックして選択",
+    "supported": "MP3, WAV, FLAC, AAC 対応 • 最大 50MB",
+    "footnote": "音声フィンガープリント技術 • 類似度 ≥45% を検出",
+    "riskSafe": "安全",
+    "riskLow": "低リスク",
+    "riskMedium": "中リスク",
+    "riskHigh": "高リスク"
   }
 }

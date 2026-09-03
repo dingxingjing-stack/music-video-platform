@@ -1408,5 +1408,27 @@
     "animKaraoke": "Karaoké",
     "animScroll": "Défilement",
     "color": "Couleur"
+  },
+  "copydet": {
+    "scanFailed": "Échec du scan : {msg}",
+    "scanFailedRetry": "Échec du scan, réessayez",
+    "uploadAudio": "Veuillez téléverser un fichier audio",
+    "title": "Vérification des droits",
+    "subtitle": "Empreinte audio • Évaluation du risque",
+    "uploading": "Téléversement et scan...",
+    "scanFile": "Scanner le fichier",
+    "matches": "Œuvres correspondantes ({n})",
+    "workId": "Œuvre #{id}",
+    "similarity": "Similarité {value}%",
+    "safe": "Aucune correspondance, audio sûr",
+    "scanAnother": "Scanner un autre fichier",
+    "dropAudio": "Glissez un fichier audio ici",
+    "orSelect": "ou cliquez pour sélectionner",
+    "supported": "Prend en charge MP3, WAV, FLAC, AAC • Max 50MB",
+    "footnote": "Basé sur l empreinte audio • détecte les correspondances ≥45%",
+    "riskSafe": "Sûr",
+    "riskLow": "Risque faible",
+    "riskMedium": "Risque moyen",
+    "riskHigh": "Risque élevé"
   }
 }

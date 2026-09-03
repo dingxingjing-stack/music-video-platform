@@ -1408,5 +1408,27 @@
     "animKaraoke": "노래방",
     "animScroll": "스크롤",
     "color": "색상"
+  },
+  "copydet": {
+    "scanFailed": "스캔 실패: {msg}",
+    "scanFailedRetry": "스캔 실패, 다시 시도하세요",
+    "uploadAudio": "오디오 파일을 업로드하세요",
+    "title": "저작권 검사",
+    "subtitle": "오디오 지문 인식 • 위험도 평가",
+    "uploading": "업로드 및 스캔 중...",
+    "scanFile": "파일 스캔",
+    "matches": "일치 작품 ({n})",
+    "workId": "작품 #{id}",
+    "similarity": "유사도 {value}%",
+    "safe": "일치 작품 없음, 오디오 안전",
+    "scanAnother": "다른 파일 스캔",
+    "dropAudio": "오디오 파일을 여기에 끌어다 놓기",
+    "orSelect": "또는 클릭하여 선택",
+    "supported": "MP3, WAV, FLAC, AAC 지원 • 최대 50MB",
+    "footnote": "오디오 지문 인식 기술 • 유사도 ≥45% 감지",
+    "riskSafe": "안전",
+    "riskLow": "낮은 위험",
+    "riskMedium": "중간 위험",
+    "riskHigh": "높은 위험"
   }
 }

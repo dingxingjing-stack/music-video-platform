@@ -1408,5 +1408,27 @@
     "animKaraoke": "Karaoke",
     "animScroll": "Desplazamiento",
     "color": "Color"
+  },
+  "copydet": {
+    "scanFailed": "Error de escaneo: {msg}",
+    "scanFailedRetry": "Error de escaneo, inténtalo de nuevo",
+    "uploadAudio": "Sube un archivo de audio",
+    "title": "Verificación de derechos",
+    "subtitle": "Huella de audio • Evaluación de riesgo",
+    "uploading": "Subiendo y escaneando...",
+    "scanFile": "Escanear archivo",
+    "matches": "Obras coincidentes ({n})",
+    "workId": "Obra #{id}",
+    "similarity": "Similitud {value}%",
+    "safe": "Sin coincidencias, audio seguro",
+    "scanAnother": "Escanear otro archivo",
+    "dropAudio": "Arrastra un archivo de audio aquí",
+    "orSelect": "o haz clic para seleccionar",
+    "supported": "Admite MP3, WAV, FLAC, AAC • Máx 50MB",
+    "footnote": "Basado en huella de audio • detecta coincidencias ≥45%",
+    "riskSafe": "Seguro",
+    "riskLow": "Riesgo bajo",
+    "riskMedium": "Riesgo medio",
+    "riskHigh": "Riesgo alto"
   }
 }

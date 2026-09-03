@@ -1408,5 +1408,27 @@
     "animKaraoke": "Karaoke",
     "animScroll": "Scroll",
     "color": "Color"
+  },
+  "copydet": {
+    "scanFailed": "Scan failed: {msg}",
+    "scanFailedRetry": "Scan failed, please retry",
+    "uploadAudio": "Please upload an audio file",
+    "title": "Copyright Check",
+    "subtitle": "Audio fingerprinting • Risk assessment",
+    "uploading": "Uploading and scanning...",
+    "scanFile": "Scan File",
+    "matches": "Matches ({n})",
+    "workId": "Work #{id}",
+    "similarity": "Similarity {value}%",
+    "safe": "No matches found, audio is safe",
+    "scanAnother": "Scan Another File",
+    "dropAudio": "Drag an audio file here",
+    "orSelect": "or click to select a file",
+    "supported": "Supports MP3, WAV, FLAC, AAC • Max 50MB",
+    "footnote": "Based on audio fingerprinting • detects matches with similarity ≥45%",
+    "riskSafe": "Safe",
+    "riskLow": "Low Risk",
+    "riskMedium": "Medium Risk",
+    "riskHigh": "High Risk"
   }
 }
