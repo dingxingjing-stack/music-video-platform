@@ -836,5 +836,32 @@
     "bottom": "底部",
     "none": "无",
     "close": "关闭"
+  },
+  "publish": {
+    "title": "一键发布",
+    "selectPlatforms": "选择平台",
+    "needAuth": "需要授权",
+    "videoInfo": "视频信息",
+    "titleLabel": "标题",
+    "titlePlaceholder": "输入吸引人的标题",
+    "description": "描述",
+    "descriptionPlaceholder": "描述你的视频内容...",
+    "tags": "标签",
+    "tagPlaceholder": "输入标签后按回车",
+    "add": "添加",
+    "privacy": "隐私设置",
+    "privacyPublic": "公开 - 任何人都可以看到",
+    "privacyUnlisted": "不公开 - 只有知道链接的人可以看到",
+    "privacyPrivate": "私密 - 只有你可以看到",
+    "progress": "发布进度",
+    "viewVideo": "查看视频",
+    "close": "关闭",
+    "cancel": "取消",
+    "publishing": "发布中...",
+    "publishTo": "发布到 {n} 个平台",
+    "selectAtLeastOne": "请至少选择一个平台",
+    "titleRequired": "请填写视频标题",
+    "failed": "发布失败：{msg}",
+    "failedRetry": "发布失败，请重试"
   }
 }

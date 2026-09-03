@@ -836,5 +836,32 @@
     "bottom": "Снизу",
     "none": "Нет",
     "close": "Закрыть"
+  },
+  "publish": {
+    "title": "Публикация в один клик",
+    "selectPlatforms": "Выбрать платформы",
+    "needAuth": "Требуется авторизация",
+    "videoInfo": "Информация о видео",
+    "titleLabel": "Название",
+    "titlePlaceholder": "Введите привлекательное название",
+    "description": "Описание",
+    "descriptionPlaceholder": "Опишите содержимое видео...",
+    "tags": "Теги",
+    "tagPlaceholder": "Введите тег и нажмите Enter",
+    "add": "Добавить",
+    "privacy": "Конфиденциальность",
+    "privacyPublic": "Открыто - все могут видеть",
+    "privacyUnlisted": "По ссылке - только знающие ссылку",
+    "privacyPrivate": "Закрыто - только вы",
+    "progress": "Прогресс публикации",
+    "viewVideo": "Смотреть видео",
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "publishing": "Публикация...",
+    "publishTo": "Опубликовать на {n} платформах",
+    "selectAtLeastOne": "Выберите хотя бы одну платформу",
+    "titleRequired": "Введите название видео",
+    "failed": "Ошибка публикации: {msg}",
+    "failedRetry": "Ошибка публикации, повторите"
   }
 }

@@ -836,5 +836,32 @@
     "bottom": "Bas",
     "none": "Aucun",
     "close": "Fermer"
+  },
+  "publish": {
+    "title": "Publication en un clic",
+    "selectPlatforms": "Choisir les plateformes",
+    "needAuth": "Autorisation requise",
+    "videoInfo": "Infos vidéo",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "Saisissez un titre accrocheur",
+    "description": "Description",
+    "descriptionPlaceholder": "Décrivez le contenu de la vidéo...",
+    "tags": "Étiquettes",
+    "tagPlaceholder": "Saisissez une étiquette puis Entrée",
+    "add": "Ajouter",
+    "privacy": "Confidentialité",
+    "privacyPublic": "Public - tout le monde peut voir",
+    "privacyUnlisted": "Non répertorié - seulement avec le lien",
+    "privacyPrivate": "Privé - vous seul",
+    "progress": "Progression",
+    "viewVideo": "Voir la vidéo",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "publishing": "Publication...",
+    "publishTo": "Publier sur {n} plateformes",
+    "selectAtLeastOne": "Sélectionnez au moins une plateforme",
+    "titleRequired": "Saisissez un titre de vidéo",
+    "failed": "Échec de publication : {msg}",
+    "failedRetry": "Échec de publication, réessayez"
   }
 }

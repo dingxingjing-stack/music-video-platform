@@ -836,5 +836,32 @@
     "bottom": "Unten",
     "none": "Keine",
     "close": "Schließen"
+  },
+  "publish": {
+    "title": "Veröffentlichung mit einem Klick",
+    "selectPlatforms": "Plattformen wählen",
+    "needAuth": "Autorisierung erforderlich",
+    "videoInfo": "Video-Info",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Einen einprägsamen Titel eingeben",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Beschreiben Sie den Videoinhalt...",
+    "tags": "Tags",
+    "tagPlaceholder": "Tag eingeben und Enter drücken",
+    "add": "Hinzufügen",
+    "privacy": "Sichtbarkeit",
+    "privacyPublic": "Öffentlich - jeder kann sehen",
+    "privacyUnlisted": "Nicht gelistet - nur mit Link",
+    "privacyPrivate": "Privat - nur Sie",
+    "progress": "Veröffentlichungsfortschritt",
+    "viewVideo": "Video ansehen",
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "publishing": "Veröffentliche...",
+    "publishTo": "Auf {n} Plattformen veröffentlichen",
+    "selectAtLeastOne": "Bitte mindestens eine Plattform wählen",
+    "titleRequired": "Bitte einen Videotitel eingeben",
+    "failed": "Veröffentlichung fehlgeschlagen: {msg}",
+    "failedRetry": "Veröffentlichung fehlgeschlagen, bitte erneut"
   }
 }

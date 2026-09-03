@@ -836,5 +836,32 @@
     "bottom": "Inferior",
     "none": "Ninguno",
     "close": "Cerrar"
+  },
+  "publish": {
+    "title": "Publicación con un clic",
+    "selectPlatforms": "Seleccionar plataformas",
+    "needAuth": "Requiere autorización",
+    "videoInfo": "Información del vídeo",
+    "titleLabel": "Título",
+    "titlePlaceholder": "Introduce un título llamativo",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Describe el contenido del vídeo...",
+    "tags": "Etiquetas",
+    "tagPlaceholder": "Introduce una etiqueta y pulsa Enter",
+    "add": "Añadir",
+    "privacy": "Privacidad",
+    "privacyPublic": "Público - todos pueden ver",
+    "privacyUnlisted": "No listado - solo con enlace",
+    "privacyPrivate": "Privado - solo tú",
+    "progress": "Progreso de publicación",
+    "viewVideo": "Ver vídeo",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "publishing": "Publicando...",
+    "publishTo": "Publicar en {n} plataformas",
+    "selectAtLeastOne": "Selecciona al menos una plataforma",
+    "titleRequired": "Introduce un título de vídeo",
+    "failed": "Error de publicación: {msg}",
+    "failedRetry": "Error de publicación, inténtalo de nuevo"
   }
 }

@@ -836,5 +836,32 @@
     "bottom": "Bottom",
     "none": "None",
     "close": "Close"
+  },
+  "publish": {
+    "title": "One-Click Publish",
+    "selectPlatforms": "Select Platforms",
+    "needAuth": "Authorization required",
+    "videoInfo": "Video Info",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Enter a catchy title",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe your video content...",
+    "tags": "Tags",
+    "tagPlaceholder": "Enter a tag and press Enter",
+    "add": "Add",
+    "privacy": "Privacy",
+    "privacyPublic": "Public - anyone can see",
+    "privacyUnlisted": "Unlisted - only those with the link",
+    "privacyPrivate": "Private - only you",
+    "progress": "Publish Progress",
+    "viewVideo": "View Video",
+    "close": "Close",
+    "cancel": "Cancel",
+    "publishing": "Publishing...",
+    "publishTo": "Publish to {n} platforms",
+    "selectAtLeastOne": "Please select at least one platform",
+    "titleRequired": "Please enter a video title",
+    "failed": "Publish failed: {msg}",
+    "failedRetry": "Publish failed, please retry"
   }
 }

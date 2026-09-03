@@ -836,5 +836,32 @@
     "bottom": "下部",
     "none": "なし",
     "close": "閉じる"
+  },
+  "publish": {
+    "title": "ワンクリック公開",
+    "selectPlatforms": "プラットフォームを選択",
+    "needAuth": "認証が必要",
+    "videoInfo": "動画情報",
+    "titleLabel": "タイトル",
+    "titlePlaceholder": "魅力的なタイトルを入力",
+    "description": "説明",
+    "descriptionPlaceholder": "動画の内容を説明...",
+    "tags": "タグ",
+    "tagPlaceholder": "タグを入力して Enter",
+    "add": "追加",
+    "privacy": "プライバシー",
+    "privacyPublic": "公開 - 誰でも見られる",
+    "privacyUnlisted": "限定公開 - リンクを知る人のみ",
+    "privacyPrivate": "非公開 - 自分だけ",
+    "progress": "公開進捗",
+    "viewVideo": "動画を見る",
+    "close": "閉じる",
+    "cancel": "キャンセル",
+    "publishing": "公開中...",
+    "publishTo": "{n} 個のプラットフォームに公開",
+    "selectAtLeastOne": "少なくとも 1 つのプラットフォームを選択してください",
+    "titleRequired": "動画タイトルを入力してください",
+    "failed": "公開に失敗：{msg}",
+    "failedRetry": "公開に失敗しました。再試行してください"
   }
 }

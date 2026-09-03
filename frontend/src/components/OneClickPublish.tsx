@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Platform {
   id: string;
@@ -37,6 +38,7 @@ const PLATFORMS: Platform[] = [
 ];
 
 export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClose?: () => void }) {
+  const { t } = useTranslation();
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [publishData, setPublishData] = useState<PublishData>({
     title: '',
@@ -57,7 +59,7 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
     );
   }, []);
 
-  // 添加标签
+  // {t('publish.add')}标签
   const addTag = useCallback(() => {
     if (tagInput.trim() && !publishData.tags.includes(tagInput.trim())) {
       setPublishData(prev => ({
@@ -94,12 +96,12 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
   // 执行发布
   const handlePublish = useCallback(async () => {
     if (selectedPlatforms.length === 0) {
-      alert('请至少选择一个平台');
+      alert(t('publish.selectAtLeastOne'));
       return;
     }
 
     if (!publishData.title.trim()) {
-      alert('请填写视频标题');
+      alert(t('publish.titleRequired'));
       return;
     }
 
@@ -138,12 +140,12 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
           }
         }, 2000);
       } else {
-        alert('发布失败：' + data.message);
+        alert(t('publish.failed', { msg: data.message }));
         setIsPublishing(false);
       }
     } catch (error) {
       console.error('发布错误:', error);
-      alert('发布失败，请重试');
+      alert(t('publish.failedRetry'));
       setIsPublishing(false);
     }
   }, [selectedPlatforms, publishData, videoUrl]);
@@ -151,12 +153,12 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
   return (
     <div className="bg-[#1a1a1a] rounded-lg p-6 max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-        <span>🚀</span> 一键发布
+        <span>🚀</span> {t('publish.title')}
       </h2>
 
       {/* 平台选择 */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-[#e0e0e0] mb-3">选择平台</h3>
+        <h3 className="text-lg font-semibold text-[#e0e0e0] mb-3">{t('publish.selectPlatforms')}</h3>
         <div className="grid grid-cols-2 gap-3">
           {PLATFORMS.map(platform => (
             <button
@@ -176,7 +178,7 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
                 <div className="text-left">
                   <div className="font-semibold text-white">{platform.name}</div>
                   {platform.oauth_required && (
-                    <div className="text-xs text-[#888] mt-1">需要授权</div>
+                    <div className="text-xs text-[#888] mt-1">{t('publish.needAuth')}</div>
                   )}
                 </div>
               </div>
@@ -185,35 +187,35 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
         </div>
       </div>
 
-      {/* 视频信息 */}
+      {/* {t('publish.videoInfo')} */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-[#e0e0e0] mb-3">视频信息</h3>
+        <h3 className="text-lg font-semibold text-[#e0e0e0] mb-3">{t('publish.videoInfo')}</h3>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-[#888] mb-1">标题 *</label>
+            <label className="block text-sm text-[#888] mb-1">{t('publish.titleLabel')} *</label>
             <input
               type="text"
               value={publishData.title}
               onChange={(e) => setPublishData(prev => ({ ...prev, title: e.target.value }))}
               className="w-full bg-[#252525] border border-[#3a3a3a] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
-              placeholder="输入吸引人的标题"
+              placeholder={t('publish.titlePlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm text-[#888] mb-1">描述</label>
+            <label className="block text-sm text-[#888] mb-1">{t('publish.description')}</label>
             <textarea
               value={publishData.description}
               onChange={(e) => setPublishData(prev => ({ ...prev, description: e.target.value }))}
               className="w-full bg-[#252525] border border-[#3a3a3a] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500 resize-none"
               rows={4}
-              placeholder="描述你的视频内容..."
+              placeholder={t('publish.descriptionPlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm text-[#888] mb-1">标签</label>
+            <label className="block text-sm text-[#888] mb-1">{t('publish.tags')}</label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -221,13 +223,13 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTag()}
                 className="flex-1 bg-[#252525] border border-[#3a3a3a] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
-                placeholder="输入标签后按回车"
+                placeholder={t('publish.tagPlaceholder')}
               />
               <button
                 onClick={addTag}
                 className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                添加
+                {t('publish.add')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -249,15 +251,15 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
           </div>
 
           <div>
-            <label className="block text-sm text-[#888] mb-1">隐私设置</label>
+            <label className="block text-sm text-[#888] mb-1">{t('publish.privacy')}</label>
             <select
               value={publishData.privacy}
               onChange={(e) => setPublishData(prev => ({ ...prev, privacy: e.target.value as any }))}
               className="w-full bg-[#252525] border border-[#3a3a3a] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
             >
-              <option value="public">公开 - 任何人都可以看到</option>
-              <option value="unlisted">不公开 - 只有知道链接的人可以看到</option>
-              <option value="private">私密 - 只有你可以看到</option>
+              <option value="public">{t('publish.privacyPublic')}</option>
+              <option value="unlisted">{t('publish.privacyUnlisted')}</option>
+              <option value="private">{t('publish.privacyPrivate')}</option>
             </select>
           </div>
         </div>
@@ -266,7 +268,7 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
       {/* 上传状态 */}
       {uploadStatus && (
         <div className="mb-6 p-4 bg-[#252525] rounded-lg">
-          <h3 className="text-lg font-semibold text-[#e0e0e0] mb-3">发布进度</h3>
+          <h3 className="text-lg font-semibold text-[#e0e0e0] mb-3">{t('publish.progress')}</h3>
           <div className="space-y-3">
             {Object.entries(uploadStatus.progress).map(([platform, progress]) => {
               const platformInfo = PLATFORMS.find(p => p.id === platform);
@@ -293,7 +295,7 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
                       {result.message}
                       {result.url && (
                         <a href={result.url} target="_blank" rel="noopener noreferrer" className="underline ml-2">
-                          查看视频
+                          {t('publish.viewVideo')}
                         </a>
                       )}
                     </div>
@@ -312,7 +314,7 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
             onClick={onClose}
             className="flex-1 bg-[#3a3a3a] hover:bg-[#4a4a4a] text-white py-3 rounded-lg transition-colors"
           >
-            关闭
+            {t('publish.close')}
           </button>
         ) : (
           <>
@@ -320,14 +322,14 @@ export function OneClickPublish({ videoUrl, onClose }: { videoUrl: string; onClo
               onClick={onClose}
               className="flex-1 bg-[#3a3a3a] hover:bg-[#4a4a4a] text-white py-3 rounded-lg transition-colors"
             >
-              取消
+              {t('publish.cancel')}
             </button>
             <button
               onClick={handlePublish}
               disabled={isPublishing || selectedPlatforms.length === 0}
               className="flex-1 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
-              {isPublishing ? '发布中...' : `发布到 ${selectedPlatforms.length} 个平台`}
+              {isPublishing ? t('publish.publishing') : t('publish.publishTo', { n: selectedPlatforms.length })}
             </button>
           </>
         )}
