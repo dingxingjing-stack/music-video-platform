@@ -1185,5 +1185,20 @@
     "publishing": "发布中...",
     "publish": "发布到社区",
     "hint": "先在 MIDI 编辑器中添加音符，然后生成音频"
+  },
+  "scoreedit": {
+    "toolSelect": "选择",
+    "toolPencil": "绘制",
+    "toolEraser": "擦除",
+    "toolTie": "连音线",
+    "duration": "时值",
+    "keyLabel": "{key}调",
+    "viewStaff": "五线谱",
+    "viewPiano": "钢琴卷帘",
+    "viewDual": "双视图",
+    "exportMusicXml": "导出 MusicXML",
+    "exportMidi": "导出 MIDI",
+    "staffView": "五线谱视图",
+    "pianoRoll": "钢琴卷帘"
   }
 }

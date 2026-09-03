@@ -1185,5 +1185,20 @@
     "publishing": "Veröffentliche...",
     "publish": "In Community veröffentlichen",
     "hint": "Fügen Sie zuerst Noten im MIDI-Editor hinzu und erzeugen Sie dann Audio"
+  },
+  "scoreedit": {
+    "toolSelect": "Auswählen",
+    "toolPencil": "Zeichnen",
+    "toolEraser": "Radieren",
+    "toolTie": "Haltebogen",
+    "duration": "Dauer",
+    "keyLabel": "{key}",
+    "viewStaff": "Notensystem",
+    "viewPiano": "Klavierrolle",
+    "viewDual": "Doppelansicht",
+    "exportMusicXml": "MusicXML exportieren",
+    "exportMidi": "MIDI exportieren",
+    "staffView": "Notensystem-Ansicht",
+    "pianoRoll": "Klavierrolle"
   }
 }

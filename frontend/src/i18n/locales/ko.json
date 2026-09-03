@@ -1185,5 +1185,20 @@
     "publishing": "게시 중...",
     "publish": "커뮤니티에 게시",
     "hint": "먼저 MIDI 편집기에서 음표를 추가한 후 오디오를 생성하세요"
+  },
+  "scoreedit": {
+    "toolSelect": "선택",
+    "toolPencil": "그리기",
+    "toolEraser": "지우기",
+    "toolTie": "이음줄",
+    "duration": "음가",
+    "keyLabel": "{key}",
+    "viewStaff": "오선보",
+    "viewPiano": "피아노롤",
+    "viewDual": "이중 보기",
+    "exportMusicXml": "MusicXML 내보내기",
+    "exportMidi": "MIDI 내보내기",
+    "staffView": "오선보 보기",
+    "pianoRoll": "피아노롤"
   }
 }

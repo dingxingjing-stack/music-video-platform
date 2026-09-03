@@ -1185,5 +1185,20 @@
     "publishing": "公開中...",
     "publish": "コミュニティに公開",
     "hint": "まず MIDI エディターで音符を追加し、音声を生成してください"
+  },
+  "scoreedit": {
+    "toolSelect": "選択",
+    "toolPencil": "描画",
+    "toolEraser": "消去",
+    "toolTie": "タイ",
+    "duration": "音価",
+    "keyLabel": "{key}",
+    "viewStaff": "五線譜",
+    "viewPiano": "ピアノロール",
+    "viewDual": "二画面",
+    "exportMusicXml": "MusicXML を書き出し",
+    "exportMidi": "MIDI を書き出し",
+    "staffView": "五線譜ビュー",
+    "pianoRoll": "ピアノロール"
   }
 }

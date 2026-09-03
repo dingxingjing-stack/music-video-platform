@@ -1185,5 +1185,20 @@
     "publishing": "Публикация...",
     "publish": "Опубликовать в сообществе",
     "hint": "Сначала добавьте ноты в MIDI-редакторе, затем сгенерируйте аудио"
+  },
+  "scoreedit": {
+    "toolSelect": "Выбрать",
+    "toolPencil": "Рисовать",
+    "toolEraser": "Стереть",
+    "toolTie": "Лига",
+    "duration": "Длительность",
+    "keyLabel": "{key}",
+    "viewStaff": "Нотный стан",
+    "viewPiano": "Пиано-ролл",
+    "viewDual": "Двойной вид",
+    "exportMusicXml": "Экспорт MusicXML",
+    "exportMidi": "Экспорт MIDI",
+    "staffView": "Нотный стан",
+    "pianoRoll": "Пиано-ролл"
   }
 }

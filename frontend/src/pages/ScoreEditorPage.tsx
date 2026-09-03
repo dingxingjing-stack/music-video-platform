@@ -13,18 +13,20 @@ import { useState } from 'react';
 import { ScoreStaff } from '../components/ScoreStaff';
 import { PianoRoll } from '../components/PianoRoll';
 import { Note, StaffConfig, TimeSignature, KeySignature, NoteDuration } from '../types/score';
+import { useTranslation } from '../i18n/useTranslation';
 
 // 工具栏按钮
 const TOOLS = [
-  { id: 'select', icon: '🖱️', label: '选择' },
-  { id: 'pencil', icon: '✏️', label: '绘制' },
-  { id: 'eraser', icon: '🧹', label: '擦除' },
-  { id: 'tie', icon: '🔗', label: '连音线' },
+  { id: 'select', icon: '🖱️', label: 'scoreedit.toolSelect' },
+  { id: 'pencil', icon: '✏️', label: 'scoreedit.toolPencil' },
+  { id: 'eraser', icon: '🧹', label: 'scoreedit.toolEraser' },
+  { id: 'tie', icon: '🔗', label: 'scoreedit.toolTie' },
 ] as const;
 
 const DURATIONS: NoteDuration[] = ['whole', 'half', 'quarter', 'eighth', 'sixteenth', 'thirty-second'];
 
 export function ScoreEditorPage() {
+  const { t } = useTranslation();
   // 编辑器状态
   const [activeTool, setActiveTool] = useState<'select' | 'pencil' | 'eraser' | 'tie'>('select');
   const [selectedDuration, setSelectedDuration] = useState<NoteDuration>('quarter');
@@ -94,7 +96,7 @@ export function ScoreEditorPage() {
                   ? 'bg-gradient-to-r from-[#ff6a10]/20 to-[#ee0979]/10 text-white'
                   : 'text-[#888888] hover:text-white hover:bg-white/5'
               }`}
-              title={tool.label}
+              title={t(tool.label)}
             >
               <span>{tool.icon}</span>
             </button>
@@ -103,7 +105,7 @@ export function ScoreEditorPage() {
 
         {/* 音符时值 */}
         <div className="flex items-center gap-2 border-r border-[#2a2a2a] pr-4">
-          <span className="text-xs text-[#888888]">时值:</span>
+          <span className="text-xs text-[#888888]">{t('scoreedit.duration')}:</span>
           {DURATIONS.map(dur => (
             <button
               key={dur}
@@ -127,7 +129,7 @@ export function ScoreEditorPage() {
             className="bg-[#121212] border border-[#2a2a2a] rounded px-2 py-1 text-sm"
           >
             {['C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Eb'].map(key => (
-              <option key={key} value={key}>{key}调</option>
+              <option key={key} value={key}>{t('scoreedit.keyLabel', { key })}</option>
             ))}
           </select>
 
@@ -160,7 +162,7 @@ export function ScoreEditorPage() {
               activeView === 'staff' ? 'bg-[#ff6a10] text-white' : 'text-[#888888] hover:bg-white/5'
             }`}
           >
-            五线谱
+            {t('scoreedit.viewStaff')}
           </button>
           <button
             onClick={() => setActiveView('piano')}
@@ -168,7 +170,7 @@ export function ScoreEditorPage() {
               activeView === 'piano' ? 'bg-[#ff6a10] text-white' : 'text-[#888888] hover:bg-white/5'
             }`}
           >
-            钢琴卷帘
+            {t('scoreedit.viewPiano')}
           </button>
           <button
             onClick={() => setActiveView('both')}
@@ -176,7 +178,7 @@ export function ScoreEditorPage() {
               activeView === 'both' ? 'bg-[#ff6a10] text-white' : 'text-[#888888] hover:bg-white/5'
             }`}
           >
-            双视图
+            {t('scoreedit.viewDual')}
           </button>
         </div>
 
@@ -186,13 +188,13 @@ export function ScoreEditorPage() {
             onClick={() => handleExport('musicxml')}
             className="px-3 py-2 bg-[#38bdf8] text-white rounded text-sm hover:opacity-80"
           >
-            导出 MusicXML
+            {t('scoreedit.exportMusicXml')}
           </button>
           <button
             onClick={() => handleExport('midi')}
             className="px-3 py-2 bg-[#34d399] text-white rounded text-sm hover:opacity-80"
           >
-            导出 MIDI
+            {t('scoreedit.exportMidi')}
           </button>
         </div>
       </div>
@@ -202,7 +204,7 @@ export function ScoreEditorPage() {
         {/* 五线谱视图 */}
         {(activeView === 'staff' || activeView === 'both') && (
           <div className="bg-[#1e1e1e] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[#888888] mb-3">五线谱视图</h3>
+            <h3 className="text-sm font-medium text-[#888888] mb-3">{t('scoreedit.staffView')}</h3>
             <ScoreStaff
               config={config}
               width={activeView === 'both' ? 650 : 1000}
@@ -215,7 +217,7 @@ export function ScoreEditorPage() {
         {/* 钢琴卷帘视图 */}
         {(activeView === 'piano' || activeView === 'both') && (
           <div className="bg-[#1e1e1e] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[#888888] mb-3">钢琴卷帘</h3>
+            <h3 className="text-sm font-medium text-[#888888] mb-3">{t('scoreedit.pianoRoll')}</h3>
             <PianoRoll
               notes={config.measures.flatMap(m => m.notes)}
               width={activeView === 'both' ? 650 : 1000}

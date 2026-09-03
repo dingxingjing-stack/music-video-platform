@@ -1185,5 +1185,20 @@
     "publishing": "Publicando...",
     "publish": "Publicar en la comunidad",
     "hint": "Añade notas en el editor MIDI primero, luego genera el audio"
+  },
+  "scoreedit": {
+    "toolSelect": "Seleccionar",
+    "toolPencil": "Dibujar",
+    "toolEraser": "Borrar",
+    "toolTie": "Ligadura",
+    "duration": "Duración",
+    "keyLabel": "{key}",
+    "viewStaff": "Pentagrama",
+    "viewPiano": "Piano roll",
+    "viewDual": "Vista doble",
+    "exportMusicXml": "Exportar MusicXML",
+    "exportMidi": "Exportar MIDI",
+    "staffView": "Vista de pentagrama",
+    "pianoRoll": "Piano roll"
   }
 }

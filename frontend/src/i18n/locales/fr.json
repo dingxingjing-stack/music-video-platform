@@ -1185,5 +1185,20 @@
     "publishing": "Publication...",
     "publish": "Publier dans la communauté",
     "hint": "Ajoutez d abord des notes dans l éditeur MIDI, puis générez l audio"
+  },
+  "scoreedit": {
+    "toolSelect": "Sélectionner",
+    "toolPencil": "Dessiner",
+    "toolEraser": "Effacer",
+    "toolTie": "Liaison",
+    "duration": "Durée",
+    "keyLabel": "{key}",
+    "viewStaff": "Partition",
+    "viewPiano": "Piano roll",
+    "viewDual": "Double vue",
+    "exportMusicXml": "Exporter MusicXML",
+    "exportMidi": "Exporter MIDI",
+    "staffView": "Vue partition",
+    "pianoRoll": "Piano roll"
   }
 }
