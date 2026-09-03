@@ -3,8 +3,8 @@
  *
  * 对接后端异步协议（POST /ai/generate -> task_id -> 轮询 /ai/task/{id}），
  * 展示完整阶段：排队中/准备中/生成中(ACE-Step)/分轨中(Demucs)/上传中/完成/失败。
- * 完成后展示 完整歌曲 + vocals/drums/bass/other 四轨，均可播放与下载；
- * 分轨失败时完整歌曲仍可播放/下载，并提供「重试分轨」（不重复扣额度）。
+ * 完成后展示 {t('aiGen.fullSong')} + vocals/drums/bass/other 四轨，均可播放与下载；
+ * 分轨失败时{t('aiGen.fullSong')}仍可播放/下载，并提供「重试分轨」（不重复扣额度）。
  * 下载统一走后端授权接口返回的短期预签名 URL（X-User-ID 归属校验）。
  */
 
@@ -15,6 +15,7 @@ import {
   STEM_NAMES,
   AiStems,
 } from '../../hooks/useAiMusicTask';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   onGenerated: (audioUrl: string, title: string) => void;
@@ -29,13 +30,13 @@ interface SongSection {
 }
 
 const DEFAULT_SECTIONS: SongSection[] = [
-  { id: 's1', type: 'intro', label: '前奏' },
-  { id: 's2', type: 'verse', label: '主歌 1' },
-  { id: 's3', type: 'chorus', label: '副歌' },
-  { id: 's4', type: 'verse', label: '主歌 2' },
-  { id: 's5', type: 'chorus', label: '副歌' },
-  { id: 's6', type: 'bridge', label: '桥段' },
-  { id: 's7', type: 'outro', label: '尾奏' },
+  { id: 's1', type: 'intro', label: 'section.intro' },
+  { id: 's2', type: 'verse', label: 'section.verse1' },
+  { id: 's3', type: 'chorus', label: 'section.chorus' },
+  { id: 's4', type: 'verse', label: 'section.verse2' },
+  { id: 's5', type: 'chorus', label: 'section.chorus' },
+  { id: 's6', type: 'bridge', label: 'section.bridge' },
+  { id: 's7', type: 'outro', label: 'section.outro' },
 ];
 
 const SECTION_COLORS: Record<string, string> = {
@@ -47,29 +48,30 @@ const SECTION_COLORS: Record<string, string> = {
 };
 
 const SECTION_TYPES: { value: string; label: string }[] = [
-  { value: 'intro', label: '前奏' },
-  { value: 'verse', label: '主歌' },
-  { value: 'chorus', label: '副歌' },
-  { value: 'bridge', label: '桥段' },
-  { value: 'outro', label: '尾奏' },
+  { value: 'intro', label: 'section.intro' },
+  { value: 'verse', label: 'section.verse' },
+  { value: 'chorus', label: 'section.chorus' },
+  { value: 'bridge', label: 'section.bridge' },
+  { value: 'outro', label: 'section.outro' },
 ];
 
 const VOCAL_OPTIONS = [
-  { value: 'auto', label: '.AUTO', icon: '🎵' },
-  { value: 'male', label: '男声', icon: '👨' },
-  { value: 'female', label: '女声', icon: '👩' },
-  { value: 'instrumental', label: '纯音乐', icon: '🎹' },
+  { value: 'auto', label: 'vocal.auto', icon: '🎵' },
+  { value: 'male', label: 'vocal.male', icon: '👨' },
+  { value: 'female', label: 'vocal.female', icon: '👩' },
+  { value: 'instrumental', label: 'vocal.instrumental', icon: '🎹' },
 ];
 
 const DURATION_OPTIONS = [
-  { value: 60, label: '1 分钟', desc: '短片段' },
-  { value: 120, label: '2 分钟', desc: '短视频' },
-  { value: 180, label: '3 分钟', desc: '标准(上限)' },
+  { value: 60, label: 'dur.1m', desc: 'dur.short' },
+  { value: 120, label: 'dur.2m', desc: 'dur.video' },
+  { value: 180, label: 'dur.3m', desc: 'dur.max' },
 ];
 
 const PROGRESS_STAGES = ['pending', 'processing', 'generating', 'separating', 'uploading'];
 
 export function AIGeneratePanel({ onGenerated, onClose }: Props) {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('pop');
   const [vocalType, setVocalType] = useState('auto');
@@ -89,11 +91,11 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
   onGeneratedRef.current = onGenerated;
 
   const styles = [
-    { value: 'pop', label: '流行' }, { value: 'rock', label: '摇滚' },
-    { value: 'electronic', label: '电子' }, { value: 'hip-hop', label: '嘻哈' },
-    { value: 'r&b', label: 'R&B' }, { value: 'jazz', label: '爵士' },
-    { value: 'classical', label: '古典' }, { value: 'ambient', label: '氛围' },
-    { value: 'cinematic', label: '电影配乐' }, { value: 'lo-fi', label: 'Lo-Fi' },
+    { value: 'pop', label: 'style.pop' }, { value: 'rock', label: 'style.rock' },
+    { value: 'electronic', label: 'style.electronic' }, { value: 'hip-hop', label: 'style.hiphop' },
+    { value: 'r&b', label: 'style.rnb' }, { value: 'jazz', label: 'style.jazz' },
+    { value: 'classical', label: 'style.classical' }, { value: 'ambient', label: 'style.ambient' },
+    { value: 'cinematic', label: 'style.cinematic' }, { value: 'lo-fi', label: 'style.lofi' },
   ];
 
   // ─── 结构操作 ─────────────────────────────────
@@ -126,7 +128,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
 
   // ─── 生成（异步任务）────────────────────────────
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) { setError('请输入音乐提示词'); return; }
+    if (!prompt.trim()) { setError(t('aiGen.promptRequired')); return; }
     setError(null);
     setGeneratedLyrics('');
     const structure = showStructure ? JSON.stringify({ sections: sections.map(s => s.type) }) : null;
@@ -140,7 +142,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
     });
     if (!taskId) {
       // submit 失败时 hook 已写入 task.error
-      setError(task.error || '提交失败，请稍后重试');
+      setError(task.error || t('aiGen.submitFailed'));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, style, duration, lyrics, showLyricsEditor, showStructure, sections, submit]);
@@ -171,7 +173,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
       a.click();
       a.remove();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '下载失败');
+      setError(e instanceof Error ? e.message : t('aiGen.downloadFailed'));
     }
   }, [download]);
 
@@ -188,8 +190,8 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-lg font-bold text-[#e0e0e0]">✨ AI 生成音频</h2>
-            <p className="text-xs text-[#777777]">输入提示词，AI 自动创作整曲并分轨 · 每日 1 首</p>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">✨ {t('aiGen.title')}</h2>
+            <p className="text-xs text-[#777777]">{t('aiGen.subtitle')}</p>
           </div>
           <button onClick={onClose} className="text-[#777777] hover:text-white transition" disabled={loading}>✕</button>
         </div>
@@ -198,31 +200,31 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
         {task.stage === 'completed' && (
           <div className="p-4 border-b border-[#2a2a2a] bg-[#141414]">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-emerald-400">✅ 生成完成</h3>
+              <h3 className="text-sm font-semibold text-emerald-400">✅ {t('aiGen.completed')}</h3>
               {task.stemsState === 'failed' && (
                 <button
                   onClick={handleRetryStems}
                   disabled={loading || (task.stemRetries ?? 0) >= 1}
                   className="px-3 py-1 text-xs rounded bg-[#2a2a2a] text-orange-400 hover:bg-[#333] disabled:opacity-40"
                 >
-                  重试分轨{task.stemRetries ? ` (${task.stemRetries}/1)` : ''}
+                  {t('aiGen.retryStems')}{task.stemRetries ? ` (${task.stemRetries}/1)` : ''}
                 </button>
               )}
             </div>
 
             {task.stemsState === 'failed' && (
               <p className="text-xs text-orange-400/90 mb-2">
-                ⚠️ 分轨失败，完整歌曲仍可播放与下载，可点击「重试分轨」（不扣生成额度）。
+                ⚠️ {t('aiGen.stemsFailedHint')}
               </p>
             )}
             {task.stemsState === 'skipped' && (
-              <p className="text-xs text-[#777777] mb-2">ℹ️ 本次未生成分轨（兜底链路）。</p>
+              <p className="text-xs text-[#777777] mb-2">ℹ️ {t('aiGen.stemsSkipped')}</p>
             )}
 
-            {/* 完整歌曲 */}
+            {/* {t('aiGen.fullSong')} */}
             <div className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-3 mb-2">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-[#e0e0e0]">完整歌曲</span>
+                <span className="text-xs font-medium text-[#e0e0e0]">{t('aiGen.fullSong')}</span>
                 <div className="flex gap-1.5">
                   <button onClick={() => handleDownload('full', 'mp3')} className="px-2 py-0.5 text-[11px] rounded bg-orange-500/20 text-orange-400 hover:bg-orange-500/30">⬇ MP3</button>
                   <button onClick={() => handleDownload('full', 'wav')} className="px-2 py-0.5 text-[11px] rounded bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333]">⬇ WAV</button>
@@ -240,14 +242,14 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                   <div key={key} className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-2.5">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium" style={{ color }}>{label} ({key})</span>
-                      <button onClick={() => handleDownload(key)} className="px-2 py-0.5 text-[11px] rounded bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333]">⬇ 下载</button>
+                      <button onClick={() => handleDownload(key)} className="px-2 py-0.5 text-[11px] rounded bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333]">⬇ {t('aiGen.download')}</button>
                     </div>
                     <audio controls src={url} className="w-full h-9" />
                   </div>
                 );
               })}
               {(!task.stems || Object.keys(task.stems).length === 0) && task.stemsState !== 'failed' && (
-                <p className="text-xs text-[#777777]">无可用分轨。</p>
+                <p className="text-xs text-[#777777]">{t('aiGen.noStems')}</p>
               )}
             </div>
           </div>
@@ -259,18 +261,18 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
           {(inProgress || loading) && (
             <div>
               <div className="flex items-center justify-between text-xs text-[#777777] mb-1">
-                <span>{task.stage ? STAGE_LABEL[task.stage] : '提交中...'}</span>
+                <span>{task.stage ? STAGE_LABEL[task.stage] : t('aiGen.submitting')}</span>
                 <span>{task.progress}%</span>
               </div>
               <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-orange-500 to-pink-500 transition-all" style={{ width: `${Math.max(4, task.progress || 5)}%` }} />
               </div>
               <p className="text-xs text-[#777777] mt-2 text-center">
-                {task.stage === 'generating' && 'AI 正在创作完整歌曲（ACE-Step GPU）...'}
-                {task.stage === 'separating' && '正在分离人声/鼓/贝斯/其他（Demucs）...'}
-                {task.stage === 'uploading' && '正在上传到私有存储...'}
-                {task.stage === 'pending' && '任务已排队，等待 GPU...'}
-                {!task.stage && '正在提交...'}
+                {task.stage === 'generating' && t('aiGen.statusGenerating')}
+                {task.stage === 'separating' && t('aiGen.statusSeparating')}
+                {task.stage === 'uploading' && t('aiGen.statusUploading')}
+                {task.stage === 'pending' && t('aiGen.statusPending')}
+                {!task.stage && t('aiGen.statusSubmitting')}
               </p>
             </div>
           )}
@@ -280,29 +282,29 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
             <button
               onClick={() => setActiveTab('basic')}
               className={`flex-1 px-4 py-2 text-sm font-medium transition ${activeTab === 'basic' ? 'text-orange-400 border-b-2 border-orange-500 bg-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'}`}
-            >基础设置</button>
+            >{t('aiGen.tabBasic')}</button>
             <button
               onClick={() => setActiveTab('advanced')}
               className={`flex-1 px-4 py-2 text-sm font-medium transition ${activeTab === 'advanced' ? 'text-orange-400 border-b-2 border-orange-500 bg-[#1a1a1a]' : 'text-[#777777] hover:text-[#e0e0e0]'}`}
-            >高级控制</button>
+            >{t('aiGen.tabAdvanced')}</button>
           </div>
 
           {/* ── 基础设置 Tab ── */}
           {activeTab === 'basic' && (
             <>
               <div>
-                <label className="text-xs text-[#777777] mb-1 block">音乐提示词</label>
+                <label className="text-xs text-[#777777] mb-1 block">{t('aiGen.musicPrompt')}</label>
                 <textarea
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
-                  placeholder={'描述你想要的音乐风格、情绪、节奏... 例如：夏日午后，轻松愉悦的流行音乐，轻快的吉他旋律'}
+                  placeholder={t('aiGen.promptPlaceholder')}
                   className="w-full h-24 bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg px-3 py-2 text-sm text-[#e0e0e0] resize-none focus:border-orange-500/50"
                   disabled={inProgress || loading}
                 />
               </div>
 
               <div>
-                <label className="text-xs text-[#777777] mb-1 block">音乐风格</label>
+                <label className="text-xs text-[#777777] mb-1 block">{t('aiGen.musicStyle')}</label>
                 <div className="grid grid-cols-5 gap-2">
                   {styles.map(s => (
                     <button
@@ -310,13 +312,13 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                       onClick={() => setStyle(s.value)}
                       className={`px-2 py-1.5 rounded text-xs transition ${style === s.value ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white' : 'bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333333]'}`}
                       disabled={inProgress || loading}
-                    >{s.label}</button>
+                    >{t(`aiGen.${s.label}`)}</button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs text-[#777777] mb-1 block">人声 / 性别</label>
+                <label className="text-xs text-[#777777] mb-1 block">{t('aiGen.vocalGender')}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {VOCAL_OPTIONS.map(v => (
                     <button
@@ -326,14 +328,14 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                       disabled={inProgress || loading}
                     >
                       <span>{v.icon}</span>
-                      <span>{v.label}</span>
+                      <span>{t(`aiGen.${v.label}`)}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs text-[#777777] mb-1 block">歌曲时长（上限 3 分钟）</label>
+                <label className="text-xs text-[#777777] mb-1 block">{t('aiGen.songDuration')}</label>
                 <div className="grid grid-cols-3 gap-2">
                   {DURATION_OPTIONS.map(opt => (
                     <button
@@ -342,8 +344,8 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                       className={`px-2 py-2 rounded-lg text-xs transition flex flex-col items-center gap-0.5 ${duration === opt.value ? 'bg-gradient-to-r from-orange-500/30 to-pink-500/30 border border-orange-500/50 text-white' : 'bg-[#2a2a2a] text-[#e0e0e0] hover:bg-[#333333] border border-transparent'}`}
                       disabled={inProgress || loading}
                     >
-                      <span className="font-medium">{opt.label}</span>
-                      <span className="text-[10px] text-[#777777]">{opt.desc}</span>
+                      <span className="font-medium">{t(`aiGen.${opt.label}`)}</span>
+                      <span className="text-[10px] text-[#777777]">{t(`aiGen.${opt.desc}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -369,7 +371,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs text-[#777777]">🎨 风格强度 (Style Strength)</label>
+                    <label className="text-xs text-[#777777]">{t('aiGen.styleStrength')}</label>
                     <span className="text-xs text-orange-400 font-mono">{Math.round(styleStrength * 100)}%</span>
                   </div>
                   <input
@@ -382,7 +384,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs text-[#777777]">🌀 风格偏离度 (Weirdness)</label>
+                    <label className="text-xs text-[#777777]">{t('aiGen.weirdness')}</label>
                     <span className="text-xs text-orange-400 font-mono">{Math.round(weirdness * 100)}%</span>
                   </div>
                   <input
@@ -402,7 +404,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                   className="w-full flex items-center justify-between px-3 py-2 text-xs text-[#e0e0e0] hover:bg-[#2a2a2a] transition"
                   disabled={inProgress || loading}
                 >
-                  <span>📝 歌词编辑器</span>
+                  <span>{t('aiGen.lyricsEditor')}</span>
                   <span className="text-[#777777]">{showLyricsEditor ? '▼' : '▶'}</span>
                 </button>
                 {showLyricsEditor && (
@@ -410,11 +412,11 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                     <textarea
                       value={lyrics}
                       onChange={e => setLyrics(e.target.value)}
-                      placeholder="[Verse 1]&#10;在这里输入你的歌词...&#10;用 [Verse] [Chorus] [Bridge] 标记段落"
+                      placeholder={t('aiGen.lyricsPlaceholder')}
                       className="w-full h-32 bg-[#2a2a2a] border border-[#3a3a3a] rounded px-2 py-1.5 text-sm text-[#e0e0e0] resize-none focus:border-orange-500/50"
                       disabled={inProgress || loading}
                     />
-                    <p className="text-[10px] text-[#555555] mt-1">留空则使用 AI 自动生成歌词</p>
+                    <p className="text-[10px] text-[#555555] mt-1">{t('aiGen.lyricsHint')}</p>
                   </div>
                 )}
               </div>
@@ -426,7 +428,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                   className="w-full flex items-center justify-between px-3 py-2 text-xs text-[#e0e0e0] hover:bg-[#2a2a2a] transition"
                   disabled={inProgress || loading}
                 >
-                  <span>🏗️ 歌曲结构编辑</span>
+                  <span>{t('aiGen.structureEditor')}</span>
                   <span className="text-[#777777]">{showStructure ? '▼' : '▶'}</span>
                 </button>
                 {showStructure && (
@@ -437,7 +439,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                         className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border bg-gradient-to-r ${SECTION_COLORS[s.type]} flex-wrap`}
                       >
                         <span className="text-xs text-[#e0e0e0] w-5 text-center font-mono text-[#555555]">{idx + 1}</span>
-                        <span className="text-xs text-[#e0e0e0] flex-1">{s.label}</span>
+                        <span className="text-xs text-[#e0e0e0] flex-1">{t(`aiGen.${s.label}`)}</span>
                         <button
                           onClick={() => moveSection(s.id, 'up')} disabled={idx === 0 || inProgress || loading}
                           className="text-xs text-[#777777] hover:text-white disabled:opacity-30 px-1 w-6 h-6"
@@ -459,7 +461,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                           onClick={() => addSection(t.value)}
                           disabled={inProgress || loading}
                           className="px-2 py-1 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-xs transition disabled:opacity-30"
-                        >+ {t.label}</button>
+                        >+ {t(`aiGen.${t.label}`)}</button>
                       ))}
                     </div>
                   </div>
@@ -477,19 +479,19 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
         {/* 底部按钮 */}
         <div className="p-4 border-t border-[#2a2a2a] flex items-center justify-between">
           <button onClick={onClose} disabled={inProgress || loading} className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50">
-            {task.stage === 'completed' ? '关闭' : '取消'}
+            {task.stage === 'completed' ? t('aiGen.close') : t('aiGen.cancel')}
           </button>
           <div className="text-xs text-[#555555]">
             {task.stage === 'completed'
-              ? '✅ 已生成'
-              : (vocalType !== 'auto' || weirdness !== 0.5 || showLyricsEditor || showStructure) ? '⚡ 高级模式' : '基础模式'}
+              ? t('aiGen.generated')
+              : (vocalType !== 'auto' || weirdness !== 0.5 || showLyricsEditor || showStructure) ? t('aiGen.advancedMode') : t('aiGen.basicMode')}
           </div>
           <button
             onClick={handleGenerate}
             disabled={inProgress || loading || !prompt.trim()}
             className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
           >
-            {inProgress ? STAGE_LABEL[task.stage] + '...' : task.stage === 'completed' ? '✨ 再生成一首' : '✨ 生成音频'}
+            {inProgress ? STAGE_LABEL[task.stage] + '...' : task.stage === 'completed' ? t('aiGen.generateAnother') : t('aiGen.generate')}
           </button>
         </div>
       </div>
