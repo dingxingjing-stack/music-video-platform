@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Plan {
   id: string;
@@ -54,6 +55,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export function MembershipCenter({ userId, onClose }: Props) {
+  const { t } = useTranslation();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -121,21 +123,21 @@ export function MembershipCenter({ userId, onClose }: Props) {
       
       const result = await response.json();
       if (response.ok) {
-        alert('购买成功！');
+        alert(t('membership.buySuccess'));
         loadSubscription();
         setTab('status');
       } else {
-        alert(`购买失败：${result.detail}`);
+        alert(t('membership.buyFailed', { detail: result.detail }));
       }
     } catch (error) {
       console.error('购买失败:', error);
-      alert('购买失败，请重试');
+      alert(t('membership.buyFailedRetry'));
     }
   }, [userId, billingCycle, loadSubscription]);
 
-  // 取消订阅
+  // {t('membership.cancelSub')}
   const cancelSubscription = useCallback(async () => {
-    if (!confirm('确定要取消订阅吗？')) return;
+    if (!confirm(t('membership.confirmCancel'))) return;
     
     try {
       const response = await fetch(`/api/v1/subscription/cancel?user_id=${userId}`, {
@@ -143,10 +145,10 @@ export function MembershipCenter({ userId, onClose }: Props) {
       });
       const result = await response.json();
       if (response.ok) {
-        alert(`取消成功，有效期到 ${new Date(result.end_date).toLocaleDateString()}`);
+        alert(t('membership.cancelSuccess', { date: new Date(result.end_date).toLocaleDateString() }));
         loadSubscription();
       } else {
-        alert(`取消失败：${result.detail}`);
+        alert(t('membership.cancelFailed', { detail: result.detail }));
       }
     } catch (error) {
       console.error('取消失败:', error);
@@ -162,9 +164,9 @@ export function MembershipCenter({ userId, onClose }: Props) {
     return (
       <div className="mb-4">
         <div className="flex justify-between text-sm mb-1">
-          <span className="text-[#e0e0e0]">{quota.label}</span>
+          <span className="text-[#e0e0e0]">{t(quota.label)}</span>
           <span className="text-[#777777]">
-            {quota.limit === -1 ? '无限制' : `${quota.remaining}/${quota.limit} ${quota.unit}`}
+            {quota.limit === -1 ? t('membership.unlimited') : `${quota.remaining}/${quota.limit} ${quota.unit.startsWith('membership.') ? t(quota.unit) : quota.unit}`}
           </span>
         </div>
         <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
@@ -192,10 +194,10 @@ export function MembershipCenter({ userId, onClose }: Props) {
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-xl font-bold text-[#e0e0e0]">👑 会员中心</h2>
+            <h2 className="text-xl font-bold text-[#e0e0e0]">👑 {t('membership.title')}</h2>
             <p className="text-xs text-[#777777]">
-              {subscription?.tier === 'vip' ? 'VIP 专业版' : 
-               subscription?.tier === 'premium' ? '高级版' : '免费版'}
+              {subscription?.tier === 'vip' ? t('membership.tierVip') : 
+               subscription?.tier === 'premium' ? t('membership.tierPremium') : t('membership.tierFree')}
             </p>
           </div>
           <button onClick={onClose} className="text-[#777777] hover:text-white transition">✕</button>
@@ -204,9 +206,9 @@ export function MembershipCenter({ userId, onClose }: Props) {
         {/* 标签页 */}
         <div className="flex border-b border-[#2a2a2a]">
           {[
-            { key: 'plans', label: '会员计划' },
-            { key: 'status', label: '我的会员' },
-            { key: 'usage', label: '使用配额' }
+            { key: 'plans', label: 'membership.tabPlans' },
+            { key: 'status', label: 'membership.tabStatus' },
+            { key: 'usage', label: 'membership.tabUsage' }
           ].map(item => (
             <button
               key={item.key}
@@ -217,7 +219,7 @@ export function MembershipCenter({ userId, onClose }: Props) {
                   : 'text-[#777777] hover:text-white'
               }`}
             >
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
@@ -225,7 +227,7 @@ export function MembershipCenter({ userId, onClose }: Props) {
         {/* 内容区 */}
         <div className="p-6 overflow-auto max-h-[60vh]">
           {loading ? (
-            <div className="text-center text-[#777777] py-8">加载中...</div>
+            <div className="text-center text-[#777777] py-8">{t('membership.loading')}</div>
           ) : tab === 'plans' ? (
             /* 会员计划 */
             <div className={`grid gap-4 ${
@@ -242,7 +244,7 @@ export function MembershipCenter({ userId, onClose }: Props) {
                 >
                   {plan.popular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full">
-                      最受欢迎
+                      {t('membership.popular')}
                     </div>
                   )}
                   
@@ -252,7 +254,7 @@ export function MembershipCenter({ userId, onClose }: Props) {
                   
                   <div className="text-3xl font-bold text-[#e0e0e0] mb-4">
                     ¥{billingCycle === 'yearly' ? plan.price_yearly : plan.price_monthly}
-                    <span className="text-sm font-normal text-[#777777]">/{billingCycle === 'yearly' ? '年' : '月'}</span>
+                    <span className="text-sm font-normal text-[#777777]">/{billingCycle === 'yearly' ? t('membership.perYear') : t('membership.perMonth')}</span>
                   </div>
                   
                   <ul className="space-y-2 mb-4">
@@ -271,7 +273,7 @@ export function MembershipCenter({ userId, onClose }: Props) {
                         onChange={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
                         className="accent-orange-500"
                       />
-                      {billingCycle === 'yearly' ? '年付省 17%' : '月付'}
+                      {billingCycle === 'yearly' ? t('membership.yearlySave') : t('membership.monthly')}
                     </label>
                   )}
                   
@@ -284,7 +286,7 @@ export function MembershipCenter({ userId, onClose }: Props) {
                         : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600'
                     }`}
                   >
-                    {subscription?.plan_id === plan.id ? '当前计划' : '立即购买'}
+                    {subscription?.plan_id === plan.id ? t('membership.currentPlan') : t('membership.buyNow')}
                   </button>
                 </div>
               ))}
@@ -296,15 +298,15 @@ export function MembershipCenter({ userId, onClose }: Props) {
                 <div className={`p-6 rounded-xl bg-gradient-to-br ${TIER_COLORS[subscription.tier]}`}>
                   <div className="text-white">
                     <div className="text-2xl font-bold mb-1">
-                      {subscription.tier === 'vip' ? 'VIP 专业版' : 
-                       subscription.tier === 'premium' ? '高级版' : '免费版'}
+                      {subscription.tier === 'vip' ? t('membership.tierVip') : 
+                       subscription.tier === 'premium' ? t('membership.tierPremium') : t('membership.tierFree')}
                     </div>
                     <div className="text-sm opacity-80">
-                      有效期至 {new Date(subscription.end_date).toLocaleDateString()}
+                      {t('membership.validUntil', { date: new Date(subscription.end_date).toLocaleDateString() })}
                     </div>
                     {subscription.trial_days_left && (
                       <div className="mt-2 text-xs bg-white/20 inline-block px-2 py-1 rounded">
-                        试用剩余 {subscription.trial_days_left} 天
+                        {t('membership.trialLeft', { n: subscription.trial_days_left })}
                       </div>
                     )}
                   </div>
@@ -313,30 +315,30 @@ export function MembershipCenter({ userId, onClose }: Props) {
                 {subscription.status !== 'cancelled' && (
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-[#777777]">
-                      自动续费：{subscription.auto_renew ? '已开启' : '已关闭'}
+                      {t('membership.autoRenew')}: {subscription.auto_renew ? t('membership.autoOn') : t('membership.autoOff')}
                     </div>
                     <button
                       onClick={cancelSubscription}
                       className="text-sm text-red-500 hover:text-red-400"
                     >
-                      取消订阅
+                      {t('membership.cancelSub')}
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-center text-[#777777] py-8">暂无会员信息</div>
+              <div className="text-center text-[#777777] py-8">{t('membership.noInfo')}</div>
             )
           ) : tab === 'usage' ? (
             /* 使用配额 */
             <div>
-              <h3 className="text-lg font-bold text-[#e0e0e0] mb-4">本月使用情况</h3>
+              <h3 className="text-lg font-bold text-[#e0e0e0] mb-4">{t('membership.usageTitle')}</h3>
               <div className="space-y-4">
                 {[
-                  { key: 'music_generation', label: 'AI 音乐生成', unit: '首' },
-                  { key: 'mv_templates', label: 'MV 模板使用', unit: '次' },
-                  { key: 'storage_gb', label: '存储空间', unit: 'GB' },
-                  { key: 'ai_features', label: 'AI 功能', unit: '次' }
+                  { key: 'music_generation', label: 'membership.quotaMusic', unit: 'membership.unitCount' },
+                  { key: 'mv_templates', label: 'membership.quotaMv', unit: 'membership.unitCount' },
+                  { key: 'storage_gb', label: 'membership.quotaStorage', unit: 'GB' },
+                  { key: 'ai_features', label: 'membership.quotaAi', unit: 'membership.unitCount' }
                 ].map(item => (
                   <UsageBar
                     key={item.key}
