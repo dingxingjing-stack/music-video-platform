@@ -762,5 +762,25 @@
     "highpass": "ハイパス",
     "bandpass": "バンドパス",
     "notch": "ノッチ"
+  },
+  "collab": {
+    "onlineMembers": "オンラインメンバー ({n})",
+    "me": "自分",
+    "operationHistory": "操作履歴",
+    "you": "あなた",
+    "others": "他人",
+    "title": "コラボ編集",
+    "desc": "セッションを作成または参加して、リアルタイムで共同編集",
+    "createSession": "セッションを作成",
+    "or": "または",
+    "joinPlaceholder": "参加するセッション ID を入力",
+    "editing": "共同編集中",
+    "leave": "退出",
+    "sessionId": "セッション ID",
+    "onlineTitle": "オンライン",
+    "online": "{n} 人在線",
+    "viewerMode": "閲覧モードのため編集できません",
+    "testActions": "テスト操作",
+    "addTrack": "トラックを追加"
   }
 }

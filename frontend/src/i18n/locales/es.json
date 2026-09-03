@@ -762,5 +762,25 @@
     "highpass": "Paso alto",
     "bandpass": "Paso banda",
     "notch": "Muesca"
+  },
+  "collab": {
+    "onlineMembers": "Miembros en línea ({n})",
+    "me": "yo",
+    "operationHistory": "Historial de operaciones",
+    "you": "Tú",
+    "others": "Otros",
+    "title": "Edición Colaborativa",
+    "desc": "Crea o únete a una sesión para editar proyectos en tiempo real",
+    "createSession": "Crear sesión",
+    "or": "o",
+    "joinPlaceholder": "Introduce un ID de sesión para unirte",
+    "editing": "Colaborando",
+    "leave": "Salir",
+    "sessionId": "ID de sesión",
+    "onlineTitle": "En línea",
+    "online": "{n} en línea",
+    "viewerMode": "Estás en modo solo lectura, no puedes editar",
+    "testActions": "Acciones de prueba",
+    "addTrack": "Añadir pista"
   }
 }

@@ -762,5 +762,25 @@
     "highpass": "Highpass",
     "bandpass": "Bandpass",
     "notch": "Notch"
+  },
+  "collab": {
+    "onlineMembers": "Online Members ({n})",
+    "me": "me",
+    "operationHistory": "Operation History",
+    "you": "You",
+    "others": "Others",
+    "title": "Collaborative Editing",
+    "desc": "Create or join a collaboration session to edit music projects together in real time",
+    "createSession": "Create Session",
+    "or": "or",
+    "joinPlaceholder": "Enter a session ID to join",
+    "editing": "Collaborating",
+    "leave": "Leave",
+    "sessionId": "Session ID",
+    "onlineTitle": "Online",
+    "online": "{n} online",
+    "viewerMode": "You are in view-only mode and cannot edit",
+    "testActions": "Test Actions",
+    "addTrack": "Add Track"
   }
 }

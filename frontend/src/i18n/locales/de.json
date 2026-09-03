@@ -762,5 +762,25 @@
     "highpass": "Hochpass",
     "bandpass": "Bandpass",
     "notch": "Kerbfilter"
+  },
+  "collab": {
+    "onlineMembers": "Online-Mitglieder ({n})",
+    "me": "ich",
+    "operationHistory": "Verlauf",
+    "you": "Sie",
+    "others": "Andere",
+    "title": "Kollaboratives Bearbeiten",
+    "desc": "Erstellen oder treten Sie einer Sitzung bei, um in Echtzeit zu bearbeiten",
+    "createSession": "Sitzung erstellen",
+    "or": "oder",
+    "joinPlaceholder": "Sitzungs-ID zum Beitreten eingeben",
+    "editing": "Zusammenarbeit",
+    "leave": "Verlassen",
+    "sessionId": "Sitzungs-ID",
+    "onlineTitle": "Online",
+    "online": "{n} online",
+    "viewerMode": "Sie sind im Nur-Lese-Modus und können nicht bearbeiten",
+    "testActions": "Testaktionen",
+    "addTrack": "Track hinzufügen"
   }
 }

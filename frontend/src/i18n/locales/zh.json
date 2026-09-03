@@ -762,5 +762,25 @@
     "highpass": "高通 (Highpass)",
     "bandpass": "带通 (Bandpass)",
     "notch": "陷波 (Notch)"
+  },
+  "collab": {
+    "onlineMembers": "在线成员 ({n})",
+    "me": "我",
+    "operationHistory": "操作历史",
+    "you": "你",
+    "others": "他人",
+    "title": "协作编辑",
+    "desc": "创建或加入协作会话，与他人实时协同编辑音乐项目",
+    "createSession": "创建协作会话",
+    "or": "或",
+    "joinPlaceholder": "输入会话 ID 加入",
+    "editing": "协作编辑中",
+    "leave": "离开",
+    "sessionId": "会话 ID",
+    "onlineTitle": "在线",
+    "online": "{n} 人在线",
+    "viewerMode": "当前为查看模式，无法编辑",
+    "testActions": "测试操作",
+    "addTrack": "添加轨道"
   }
 }

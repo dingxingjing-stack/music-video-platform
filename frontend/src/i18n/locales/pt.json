@@ -762,5 +762,25 @@
     "highpass": "Passa-alta",
     "bandpass": "Passa-banda",
     "notch": "Rejeição"
+  },
+  "collab": {
+    "onlineMembers": "Membros online ({n})",
+    "me": "eu",
+    "operationHistory": "Histórico de operações",
+    "you": "Você",
+    "others": "Outros",
+    "title": "Edição Colaborativa",
+    "desc": "Crie ou entre em uma sessão para editar projetos em tempo real",
+    "createSession": "Criar sessão",
+    "or": "ou",
+    "joinPlaceholder": "Digite um ID de sessão para entrar",
+    "editing": "Colaborando",
+    "leave": "Sair",
+    "sessionId": "ID da sessão",
+    "onlineTitle": "Online",
+    "online": "{n} online",
+    "viewerMode": "Você está no modo somente leitura, não pode editar",
+    "testActions": "Ações de teste",
+    "addTrack": "Adicionar faixa"
   }
 }

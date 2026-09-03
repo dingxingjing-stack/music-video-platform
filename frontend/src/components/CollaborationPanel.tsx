@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Member {
   user_id: string;
@@ -41,6 +42,7 @@ export default function CollaborationPanel({
   userId, 
   username 
 }: CollaborationPanelProps) {
+  const { t } = useTranslation();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [isCreator, setIsCreator] = useState(false);
@@ -51,7 +53,7 @@ export default function CollaborationPanel({
 
   const API_BASE = api.url('/api/v1/collab');
 
-  // 创建协作会话
+  // {t('collab.createSession')}
   const createSession = async () => {
     try {
       const res = await fetch(`${API_BASE}/session`, {
@@ -157,7 +159,7 @@ export default function CollaborationPanel({
 
       case 'user_left':
         setMembers(prev => prev.filter(m => m.user_id !== data.user_id));
-        console.log(`${data.username} 离开了协作`);
+        console.log(`${data.username} {t('collab.leave')}了协作`);
         break;
 
       case 'operation':
@@ -229,7 +231,7 @@ export default function CollaborationPanel({
     }));
   }, []);
 
-  // 离开会话
+  // {t('collab.leave')}会话
   const leaveSession = async () => {
     if (sessionId) {
       try {
@@ -239,7 +241,7 @@ export default function CollaborationPanel({
           body: JSON.stringify({ user_id: userId })
         });
       } catch (error) {
-        console.error('离开会话失败:', error);
+        console.error('{t('collab.leave')}会话失败:', error);
       }
     }
 
@@ -285,7 +287,7 @@ export default function CollaborationPanel({
   const renderMemberList = () => {
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-white">在线成员 ({members.length})</h3>
+        <h3 className="text-sm font-medium text-white">{t('collab.onlineMembers', { n: members.length })}</h3>
         {members.map(member => (
           <div 
             key={member.user_id}
@@ -298,7 +300,7 @@ export default function CollaborationPanel({
             <span className="text-sm text-white flex-1">{member.username}</span>
             <span className="text-xs text-[#777777] capitalize">{member.role}</span>
             {member.user_id === userId && (
-              <span className="text-xs text-[#FF6B6B]">(我)</span>
+              <span className="text-xs text-[#FF6B6B]">({t('collab.me')})</span>
             )}
           </div>
         ))}
@@ -310,11 +312,11 @@ export default function CollaborationPanel({
   const renderOperationHistory = () => {
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-white">操作历史</h3>
+        <h3 className="text-sm font-medium text-white">{t('collab.operationHistory')}</h3>
         <div className="max-h-48 overflow-y-auto space-y-1">
           {operations.slice(-10).reverse().map((op, i) => (
             <div key={op.id} className="text-xs text-[#777777]">
-              <span>{op.user_id === userId ? '你' : '他人'}</span>
+              <span>{op.user_id === userId ? t('collab.you') : t('collab.others')}</span>
               <span className="mx-1">{op.operation}</span>
               <span>{op.target}</span>
             </div>
@@ -328,21 +330,21 @@ export default function CollaborationPanel({
   if (!sessionId) {
     return (
       <div className="p-4 bg-[#1a1a1a] rounded-lg">
-        <h2 className="text-lg font-bold text-white mb-4">协作编辑</h2>
+        <h2 className="text-lg font-bold text-white mb-4">{t('collab.title')}</h2>
         <p className="text-sm text-[#777777] mb-4">
-          创建或加入协作会话，与他人实时协同编辑音乐项目
+          {t('collab.desc')}
         </p>
         <div className="space-y-2">
           <button
             onClick={createSession}
             className="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded hover:opacity-90 transition"
           >
-            创建协作会话
+            {t('collab.createSession')}
           </button>
-          <div className="text-xs text-[#777777] text-center">或</div>
+          <div className="text-xs text-[#777777] text-center">{t('collab.or')}</div>
           <input
             type="text"
-            placeholder="输入会话 ID 加入"
+            placeholder={t('collab.joinPlaceholder')}
             className="w-full px-3 py-2 bg-[#2a2a2a] text-white rounded text-sm border border-[#333]"
             onKeyDown={async (e) => {
               if (e.key === 'Enter') {
@@ -358,26 +360,26 @@ export default function CollaborationPanel({
   return (
     <div className="p-4 bg-[#1a1a1a] rounded-lg space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white">协作编辑中</h2>
+        <h2 className="text-lg font-bold text-white">{t('collab.editing')}</h2>
         <button
           onClick={leaveSession}
           className="text-xs text-[#777777] hover:text-white"
         >
-          离开
+          {t('collab.leave')}
         </button>
       </div>
 
       <div className="text-xs text-[#777777]">
-        会话 ID: <span className="text-white font-mono">{sessionId}</span>
+        {t('collab.sessionId')}: <span className="text-white font-mono">{sessionId}</span>
       </div>
 
       <div className="flex items-center gap-2">
         <div 
           className="w-3 h-3 rounded-full bg-green-500"
-          title="在线"
+          title={t('collab.onlineTitle')}
         />
         <span className="text-sm text-white">
-          {members.length} 人在线
+          {t('collab.online', { n: members.length })}
         </span>
       </div>
 
@@ -386,19 +388,19 @@ export default function CollaborationPanel({
 
       {myRole === 'viewer' && (
         <div className="text-xs text-yellow-500 bg-yellow-500/10 p-2 rounded">
-          ⚠️ 当前为查看模式，无法编辑
+          ⚠️ {t('collab.viewerMode')}
         </div>
       )}
 
       {/* 测试用操作按钮 */}
       {myRole !== 'viewer' && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-white">测试操作</h3>
+          <h3 className="text-sm font-medium text-white">{t('collab.testActions')}</h3>
           <button
             onClick={() => sendOperation('add', 'track', { name: '新轨道', id: Date.now() })}
             className="w-full px-3 py-1.5 bg-[#2a2a2a] text-white text-sm rounded hover:bg-[#333]"
           >
-            添加轨道
+            {t('collab.addTrack')}
           </button>
           <input
             type="range"

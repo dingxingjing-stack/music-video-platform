@@ -762,5 +762,25 @@
     "highpass": "하이패스",
     "bandpass": "밴드패스",
     "notch": "노치"
+  },
+  "collab": {
+    "onlineMembers": "온라인 멤버 ({n})",
+    "me": "나",
+    "operationHistory": "작업 기록",
+    "you": "당신",
+    "others": "다른 사람",
+    "title": "협업 편집",
+    "desc": "협업 세션을 만들거나 참여해 실시간으로 공동 편집",
+    "createSession": "세션 만들기",
+    "or": "또는",
+    "joinPlaceholder": "참여할 세션 ID 입력",
+    "editing": "협업 중",
+    "leave": "나가기",
+    "sessionId": "세션 ID",
+    "onlineTitle": "온라인",
+    "online": "{n}명 온라인",
+    "viewerMode": "보기 전용 모드로 편집할 수 없습니다",
+    "testActions": "테스트 작업",
+    "addTrack": "트랙 추가"
   }
 }
