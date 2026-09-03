@@ -542,5 +542,57 @@
     "selected": "Selected: {title}",
     "source": "Source: {source} | License: {license}",
     "showing": "Showing {shown} / {total} clips"
+  },
+  "lyricGen": {
+    "title": "AI Lyric Assistant",
+    "theme": "Theme",
+    "themePlaceholder": "e.g. chasing dreams, first love, summer trip...",
+    "moodLabel": "Mood",
+    "languageLabel": "Language",
+    "structureLabel": "Song Structure",
+    "continueWrite": "Continue (optional)",
+    "continuePlaceholder": "Existing lyric snippet, AI will continue...",
+    "generating": "🎵 Creating...",
+    "generate": "✨ Start Writing Lyrics",
+    "generatedTitle": "Generated Lyrics",
+    "copy": "Copy",
+    "apply": "Apply to Song",
+    "structureAnalysis": "Structure Analysis",
+    "rhymeAnalysis": "Rhyme Analysis",
+    "themeRequired": "Please enter a theme or story to create",
+    "success": "✅ Lyrics generated!\nStructure: {structure}",
+    "failed": "❌ Generation failed: {msg}",
+    "generateFailed": "Generation failed",
+    "applied": "✅ Lyrics sent to the song editor",
+    "copied": "✅ Lyrics copied to clipboard",
+    "style": {
+      "pop": "Pop ballad",
+      "rap": "Rap / Hip-hop",
+      "rock": "Rock",
+      "folk": "Folk",
+      "electronic": "Electronic",
+      "rnb": "R&B",
+      "country": "Country",
+      "jazz": "Jazz"
+    },
+    "mood": {
+      "happy": "Happy",
+      "sad": "Sad",
+      "energetic": "Energetic",
+      "romantic": "Romantic",
+      "angry": "Angry",
+      "nostalgic": "Nostalgic"
+    },
+    "lang": {
+      "zh": "Chinese",
+      "en": "English",
+      "ja": "Japanese"
+    },
+    "structure": {
+      "opt1": "Classic (verse-chorus-verse-chorus-bridge-chorus)",
+      "opt2": "Simple (verse-verse-chorus-chorus)",
+      "opt3": "Chorus first",
+      "opt4": "Short structure"
+    }
   }
 }

@@ -542,5 +542,57 @@
     "selected": "Sélectionné : {title}",
     "source": "Source : {source} | Licence : {license}",
     "showing": "Affichage de {shown} / {total} clips"
+  },
+  "lyricGen": {
+    "title": "Assistant de Paroles IA",
+    "theme": "Thème",
+    "themePlaceholder": "ex. poursuivre ses rêves, premier amour, voyage d été...",
+    "moodLabel": "Humeur",
+    "languageLabel": "Langue",
+    "structureLabel": "Structure de la chanson",
+    "continueWrite": "Continuer (facultatif)",
+    "continuePlaceholder": "Extrait de paroles existant, l IA continuera...",
+    "generating": "🎵 Création...",
+    "generate": "✨ Commencer à écrire",
+    "generatedTitle": "Paroles Générées",
+    "copy": "Copier",
+    "apply": "Appliquer à la chanson",
+    "structureAnalysis": "Analyse de structure",
+    "rhymeAnalysis": "Analyse de rimes",
+    "themeRequired": "Veuillez saisir un thème ou une histoire",
+    "success": "✅ Paroles générées !\nStructure : {structure}",
+    "failed": "❌ Échec de la génération : {msg}",
+    "generateFailed": "Échec de la génération",
+    "applied": "✅ Paroles envoyées à l éditeur",
+    "copied": "✅ Paroles copiées dans le presse-papiers",
+    "style": {
+      "pop": "Ballade pop",
+      "rap": "Rap / Hip-hop",
+      "rock": "Rock",
+      "folk": "Folk",
+      "electronic": "Électronique",
+      "rnb": "R&B",
+      "country": "Country",
+      "jazz": "Jazz"
+    },
+    "mood": {
+      "happy": "Heureux",
+      "sad": "Triste",
+      "energetic": "Énergique",
+      "romantic": "Romantique",
+      "angry": "En colère",
+      "nostalgic": "Nostalgique"
+    },
+    "lang": {
+      "zh": "Chinois",
+      "en": "Anglais",
+      "ja": "Japonais"
+    },
+    "structure": {
+      "opt1": "Classique (couplet-refrain-couplet-refrain-pont-refrain)",
+      "opt2": "Simple (couplet-couplet-refrain-refrain)",
+      "opt3": "Refrain d abord",
+      "opt4": "Structure courte"
+    }
   }
 }

@@ -542,5 +542,57 @@
     "selected": "選択：{title}",
     "source": "出典: {source} | ライセンス: {license}",
     "showing": "{shown} / {total} 件の素材を表示"
+  },
+  "lyricGen": {
+    "title": "AI 作詞アシスタント",
+    "theme": "テーマ",
+    "themePlaceholder": "例：夢を追う、初恋、夏の旅...",
+    "moodLabel": "気分",
+    "languageLabel": "言語",
+    "structureLabel": "曲の構成",
+    "continueWrite": "続き (任意)",
+    "continuePlaceholder": "既存の歌詞、AI が続きを制作...",
+    "generating": "🎵 作成中...",
+    "generate": "✨ 歌詞を作成",
+    "generatedTitle": "生成された歌詞",
+    "copy": "コピー",
+    "apply": "曲に適用",
+    "structureAnalysis": "構成分析",
+    "rhymeAnalysis": "韻分析",
+    "themeRequired": "テーマやストーリーを入力してください",
+    "success": "✅ 歌詞を生成しました！\n構成：{structure}",
+    "failed": "❌ 生成に失敗：{msg}",
+    "generateFailed": "生成に失敗",
+    "applied": "✅ 歌詞を曲エディターに送信しました",
+    "copied": "✅ 歌詞をクリップボードにコピーしました",
+    "style": {
+      "pop": "ポップバラード",
+      "rap": "ラップ/ヒップホップ",
+      "rock": "ロック",
+      "folk": "フォーク",
+      "electronic": "エレクトロニック",
+      "rnb": "R&B",
+      "country": "カントリー",
+      "jazz": "ジャズ"
+    },
+    "mood": {
+      "happy": "幸せ",
+      "sad": "悲しい",
+      "energetic": "元気",
+      "romantic": "ロマンチック",
+      "angry": "怒り",
+      "nostalgic": "懐かしい"
+    },
+    "lang": {
+      "zh": "中国語",
+      "en": "英語",
+      "ja": "日本語"
+    },
+    "structure": {
+      "opt1": "定番 (A-サビ-A-サビ-間奏-サビ)",
+      "opt2": "シンプル (A-A-サビ-サビ)",
+      "opt3": "サビ先行",
+      "opt4": "短い構成"
+    }
   }
 }

@@ -542,5 +542,57 @@
     "selected": "Ausgewählt: {title}",
     "source": "Quelle: {source} | Lizenz: {license}",
     "showing": "Zeige {shown} / {total} Clips"
+  },
+  "lyricGen": {
+    "title": "KI-Textassistent",
+    "theme": "Thema",
+    "themePlaceholder": "z. B. Träume verfolgen, erste Liebe, Sommerreise...",
+    "moodLabel": "Stimmung",
+    "languageLabel": "Sprache",
+    "structureLabel": "Songstruktur",
+    "continueWrite": "Weiterschreiben (optional)",
+    "continuePlaceholder": "Vorhandener Textabschnitt, die KI macht weiter...",
+    "generating": "🎵 Erstelle...",
+    "generate": "✨ Texte schreiben",
+    "generatedTitle": "Generierter Text",
+    "copy": "Kopieren",
+    "apply": "Auf Song anwenden",
+    "structureAnalysis": "Strukturanalyse",
+    "rhymeAnalysis": "Reimanalyse",
+    "themeRequired": "Bitte ein Thema oder eine Geschichte eingeben",
+    "success": "✅ Text generiert!\nStruktur: {structure}",
+    "failed": "❌ Generierung fehlgeschlagen: {msg}",
+    "generateFailed": "Generierung fehlgeschlagen",
+    "applied": "✅ Text an den Song-Editor gesendet",
+    "copied": "✅ Text in die Zwischenablage kopiert",
+    "style": {
+      "pop": "Pop-Ballade",
+      "rap": "Rap / Hip-Hop",
+      "rock": "Rock",
+      "folk": "Folk",
+      "electronic": "Elektronisch",
+      "rnb": "R&B",
+      "country": "Country",
+      "jazz": "Jazz"
+    },
+    "mood": {
+      "happy": "Glücklich",
+      "sad": "Traurig",
+      "energetic": "Energisch",
+      "romantic": "Romantisch",
+      "angry": "Wütend",
+      "nostalgic": "Nostalgisch"
+    },
+    "lang": {
+      "zh": "Chinesisch",
+      "en": "Englisch",
+      "ja": "Japanisch"
+    },
+    "structure": {
+      "opt1": "Klassisch (Strophe-Refrain-Strophe-Refrain-Brücke-Refrain)",
+      "opt2": "Einfach (Strophe-Strophe-Refrain-Refrain)",
+      "opt3": "Refrain zuerst",
+      "opt4": "Kurze Struktur"
+    }
   }
 }

@@ -542,5 +542,57 @@
     "selected": "선택됨: {title}",
     "source": "출처: {source} | 라이선스: {license}",
     "showing": "소재 {shown} / {total}개 표시"
+  },
+  "lyricGen": {
+    "title": "AI 작사 도우미",
+    "theme": "주제",
+    "themePlaceholder": "예: 꿈을 쫓기, 첫사랑, 여름 여행...",
+    "moodLabel": "감정",
+    "languageLabel": "언어",
+    "structureLabel": "곡 구조",
+    "continueWrite": "이어쓰기 (선택)",
+    "continuePlaceholder": "기존 가사, AI가 이어서 창작...",
+    "generating": "🎵 작성 중...",
+    "generate": "✨ 가사 쓰기 시작",
+    "generatedTitle": "생성된 가사",
+    "copy": "복사",
+    "apply": "노래에 적용",
+    "structureAnalysis": "구조 분석",
+    "rhymeAnalysis": "운율 분석",
+    "themeRequired": "주제나 스토리를 입력하세요",
+    "success": "✅ 가사 생성 성공!\n구조: {structure}",
+    "failed": "❌ 생성 실패: {msg}",
+    "generateFailed": "생성 실패",
+    "applied": "✅ 가사가 노래 편집기에 전송되었습니다",
+    "copied": "✅ 가사가 클립보드에 복사되었습니다",
+    "style": {
+      "pop": "팝 발라드",
+      "rap": "랩/힙합",
+      "rock": "록",
+      "folk": "포크",
+      "electronic": "일렉트로닉",
+      "rnb": "R&B",
+      "country": "컨트리",
+      "jazz": "재즈"
+    },
+    "mood": {
+      "happy": "기쁨",
+      "sad": "슬픔",
+      "energetic": "활기참",
+      "romantic": "로맨틱",
+      "angry": "분노",
+      "nostalgic": "그리움"
+    },
+    "lang": {
+      "zh": "중국어",
+      "en": "영어",
+      "ja": "일본어"
+    },
+    "structure": {
+      "opt1": "기본 (A-후렴-A-후렴-브릿지-후렴)",
+      "opt2": "단순 (A-A-후렴-후렴)",
+      "opt3": "후렴 먼저",
+      "opt4": "짧은 구조"
+    }
   }
 }

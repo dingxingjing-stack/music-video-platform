@@ -542,5 +542,57 @@
     "selected": "Seleccionado: {title}",
     "source": "Fuente: {source} | Licencia: {license}",
     "showing": "Mostrando {shown} / {total} clips"
+  },
+  "lyricGen": {
+    "title": "Asistente de Letras IA",
+    "theme": "Tema",
+    "themePlaceholder": "ej. perseguir sueños, primer amor, viaje de verano...",
+    "moodLabel": "Emoción",
+    "languageLabel": "Idioma",
+    "structureLabel": "Estructura de la canción",
+    "continueWrite": "Continuar (opcional)",
+    "continuePlaceholder": "Fragmento de letra existente, la IA continuará...",
+    "generating": "🎵 Creando...",
+    "generate": "✨ Empezar a escribir letras",
+    "generatedTitle": "Letras Generadas",
+    "copy": "Copiar",
+    "apply": "Aplicar a la canción",
+    "structureAnalysis": "Análisis de estructura",
+    "rhymeAnalysis": "Análisis de rima",
+    "themeRequired": "Introduce un tema o historia para crear",
+    "success": "✅ ¡Letras generadas!\nEstructura: {structure}",
+    "failed": "❌ Error de generación: {msg}",
+    "generateFailed": "Error de generación",
+    "applied": "✅ Letras enviadas al editor de canciones",
+    "copied": "✅ Letras copiadas al portapapeles",
+    "style": {
+      "pop": "Balada pop",
+      "rap": "Rap / Hip-hop",
+      "rock": "Rock",
+      "folk": "Folk",
+      "electronic": "Electrónica",
+      "rnb": "R&B",
+      "country": "Country",
+      "jazz": "Jazz"
+    },
+    "mood": {
+      "happy": "Feliz",
+      "sad": "Triste",
+      "energetic": "Enérgico",
+      "romantic": "Romántico",
+      "angry": "Enojado",
+      "nostalgic": "Nostálgico"
+    },
+    "lang": {
+      "zh": "Chino",
+      "en": "Inglés",
+      "ja": "Japonés"
+    },
+    "structure": {
+      "opt1": "Clásica (verso-estribillo-verso-estribillo-puente-estribillo)",
+      "opt2": "Simple (verso-verso-estribillo-estribillo)",
+      "opt3": "Estribillo primero",
+      "opt4": "Estructura corta"
+    }
   }
 }

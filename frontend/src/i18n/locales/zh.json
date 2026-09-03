@@ -542,5 +542,57 @@
     "selected": "已选择：{title}",
     "source": "来源: {source} | 许可证: {license}",
     "showing": "显示 {shown} / {total} 个素材"
+  },
+  "lyricGen": {
+    "title": "AI 作词助手",
+    "theme": "主题",
+    "themePlaceholder": "例如：追逐梦想、初恋、夏日旅行...",
+    "moodLabel": "情绪",
+    "languageLabel": "语言",
+    "structureLabel": "歌曲结构",
+    "continueWrite": "续写 (可选)",
+    "continuePlaceholder": "已有歌词片段，AI 将继续创作...",
+    "generating": "🎵 创作中...",
+    "generate": "✨ 开始创作歌词",
+    "generatedTitle": "生成的歌词",
+    "copy": "复制",
+    "apply": "应用到歌曲",
+    "structureAnalysis": "结构分析",
+    "rhymeAnalysis": "押韵分析",
+    "themeRequired": "请输入想要创作的主题或故事",
+    "success": "✅ 歌词生成成功！\n结构：{structure}",
+    "failed": "❌ 生成失败：{msg}",
+    "generateFailed": "生成失败",
+    "applied": "✅ 歌词已发送到歌曲编辑器",
+    "copied": "✅ 歌词已复制到剪贴板",
+    "style": {
+      "pop": "流行情歌",
+      "rap": "说唱/嘻哈",
+      "rock": "摇滚",
+      "folk": "民谣",
+      "electronic": "电子音乐",
+      "rnb": "R&B 节奏蓝调",
+      "country": "乡村音乐",
+      "jazz": "爵士"
+    },
+    "mood": {
+      "happy": "快乐",
+      "sad": "悲伤",
+      "energetic": "活力",
+      "romantic": "浪漫",
+      "angry": "愤怒",
+      "nostalgic": "怀旧"
+    },
+    "lang": {
+      "zh": "中文",
+      "en": "英文",
+      "ja": "日文"
+    },
+    "structure": {
+      "opt1": "经典 (主-副-主-副-桥-副)",
+      "opt2": "简单 (主-主-副-副)",
+      "opt3": "副歌先行",
+      "opt4": "短句结构"
+    }
   }
 }
