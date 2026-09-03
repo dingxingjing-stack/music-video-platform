@@ -7,6 +7,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { Track, MixTrackParams } from '../../types/trackStudio';
 import { mixDefaults } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   history: Track[];
@@ -26,6 +27,7 @@ function fmtPan(v: number): string {
 /* ── Component ───────────────────────────────────────────────────── */
 
 export function MixConsole({ history }: Props) {
+  const { t } = useTranslation();
   const completed = useMemo(
     () => history.filter((t) => t.status === 'completed' && t.url),
     [history],
@@ -142,9 +144,9 @@ export function MixConsole({ history }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-base font-bold text-[#ff6a10]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>◆</span>
-          <h2 className="text-sm font-semibold text-[#e0e0e0]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Mix Console</h2>
+          <h2 className="text-sm font-semibold text-[#e0e0e0]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{t('trackStudio.mixConsole')}</h2>
           <span className="text-xs px-2 py-0.5 bg-[#ff6a10]/10 text-[#ff6a10] rounded-full">
-            {completed.length} track{completed.length > 1 ? 's' : ''}
+            {t('trackStudio.trackCount', { n: completed.length })}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -158,13 +160,13 @@ export function MixConsole({ history }: Props) {
                   hover:bg-[#ff6a10] disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                {rendering ? `⏳ ${progress}%` : '🔊 Export Mix'}
+                {rendering ? `⏳ ${progress}%` : `🔊 ${t('trackStudio.exportMix')}`}
               </button>
               <button
                 onClick={() => { setCollapsed(true); setMixTracks([]); setRenderResult(null); setRenderError(null); }}
                 className="text-xs text-[#b0b0b0] hover:text-[#e0e0e0] transition-colors"
               >
-                ▲ Close
+                ▲ {t('trackStudio.close')}
               </button>
             </>
           )}
@@ -173,7 +175,7 @@ export function MixConsole({ history }: Props) {
               onClick={initMix}
               className="text-xs text-[#b0b0b0] hover:text-[#ff6a10] transition-colors"
             >
-              ▶ Open Console
+              ▶ {t('trackStudio.openConsole')}
             </button>
           )}
         </div>
@@ -182,14 +184,14 @@ export function MixConsole({ history }: Props) {
       {/* ── Render Result ── */}
       {renderResult && (
         <div className="rounded-lg border border-[#76b900]/30 bg-[#76b900]/5 p-3 space-y-2">
-          <p className="text-xs font-medium text-[#76b900]">Mix exported successfully</p>
+          <p className="text-xs font-medium text-[#76b900]">{t('trackStudio.mixExported')}</p>
           <audio controls src={renderResult} className="w-full" preload="metadata" />
           <a
             href={renderResult}
             download={`mix_master.${outputFormat}`}
             className="inline-block px-3 py-1 text-xs font-medium bg-[#76b900]/20 text-[#76b900] rounded hover:bg-[#76b900]/30 transition-colors"
           >
-            ⬇ Download .{outputFormat}
+            ⬇ {t('trackStudio.downloadFormat', { format: outputFormat.toUpperCase() })}
           </a>
         </div>
       )}
@@ -205,7 +207,7 @@ export function MixConsole({ history }: Props) {
         <div className="space-y-4">
           {/* Master Section */}
           <div className="flex items-center gap-4 p-3 rounded-lg border border-[#2a2a38] bg-[#262626]">
-            <span className="text-xs font-semibold text-[#ff6a10] w-14" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>MASTER</span>
+            <span className="text-xs font-semibold text-[#ff6a10] w-14" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{t('trackStudio.master')}</span>
             <div className="flex-1 flex items-center gap-3">
               <span className="text-[10px] text-[#777777] w-8">Vol</span>
               <input
@@ -266,7 +268,7 @@ export function MixConsole({ history }: Props) {
                             ? 'bg-[#ff6a10] text-white'
                             : 'bg-[#262626] text-[#777777] hover:text-[#ff6a10]'
                         }`}
-                        title="Solo"
+                        title={t('trackStudio.solo')}
                       >
                         S
                       </button>
@@ -277,7 +279,7 @@ export function MixConsole({ history }: Props) {
                             ? 'bg-red-600 text-white'
                             : 'bg-[#262626] text-[#777777] hover:text-red-400'
                         }`}
-                        title="Mute"
+                        title={t('trackStudio.mute')}
                       >
                         M
                       </button>

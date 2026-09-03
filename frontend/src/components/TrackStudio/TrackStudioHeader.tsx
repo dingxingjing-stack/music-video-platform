@@ -44,7 +44,7 @@ export function TrackStudioHeader({
           <span className="text-[#b0b0b0]">
             {t('common.loading')}:{' '}
             <span className={workflow.running ? 'text-[#febc2e]' : 'text-[#76b900]'}>
-              {workflow.running ? 'Generating...' : 'Idle'}
+              {workflow.running ? t('trackStudio.generating') : t('trackStudio.idle')}
             </span>
           </span>
 
@@ -53,7 +53,7 @@ export function TrackStudioHeader({
             <span className="text-[#777777] font-mono">
               {wsConnected ? '●' : '○'} {wsStatus ? wsStatus.toUpperCase() : '—'}
               {wsConnected && (
-                <span className="ml-1 text-[#38bdf8] animate-pulse">live</span>
+                <span className="ml-1 text-[#38bdf8] animate-pulse">{t('trackStudio.live')}</span>
               )}
             </span>
           )}
@@ -75,7 +75,7 @@ export function TrackStudioHeader({
                             : 'text-[#777777] hover:text-[#e0e0e0]'
                         }`}
                       >
-                        列表视图
+                        {t('trackStudio.listView')}
                       </button>
                       <button
                         onClick={() => onViewModeChange('multi-track')}
@@ -85,7 +85,7 @@ export function TrackStudioHeader({
                             : 'text-[#777777] hover:text-[#e0e0e0]'
                         }`}
                       >
-                        多轨编辑
+                        {t('trackStudio.multiTrackView')}
                       </button>
                     </div>
 

@@ -5,6 +5,7 @@
 
 import { useMemo } from 'react';
 import type { BatchState } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   batchState: BatchState;
@@ -12,13 +13,14 @@ interface Props {
 }
 
 export function BatchProgressDashboard({ batchState, getETA }: Props) {
+  const { t } = useTranslation();
   const eta = useMemo(() => getETA(), [getETA]);
   const pathLabel =
     batchState.path === 'a'
-      ? 'Path A'
+      ? t('trackStudio.pathA')
       : batchState.path === 'b'
-        ? 'Path B'
-        : 'Batch';
+        ? t('trackStudio.pathB')
+        : t('trackStudio.batch');
 
   return (
     <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f] p-5 space-y-4" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
@@ -28,17 +30,17 @@ export function BatchProgressDashboard({ batchState, getETA }: Props) {
           <span className="text-xl">📦</span>
           <div>
             <h3 className="text-sm font-semibold text-[#ff6a10]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {batchState.running ? 'Batch Processing' : 'Batch Error'}
+              {batchState.running ? t('trackStudio.batchProcessing') : t('trackStudio.batchError')}
             </h3>
             <p className="text-xs text-[#b0b0b0]">
-              {pathLabel} — {batchState.total} tasks
+              {pathLabel} — {batchState.total} {t('trackStudio.tasks')}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {batchState.running && (
             <span className="text-xs text-[#ff6a10] animate-pulse font-mono">
-              ● LIVE
+              ● {t('trackStudio.live')}
             </span>
           )}
           {batchState.error && (
@@ -51,19 +53,19 @@ export function BatchProgressDashboard({ batchState, getETA }: Props) {
       <div className="grid grid-cols-4 gap-3 text-center">
         <div className="bg-[#262626] rounded-lg p-2">
           <p className="text-lg font-bold text-[#e0e0e0]">{batchState.total}</p>
-          <p className="text-xs text-[#777777]">Total</p>
+          <p className="text-xs text-[#777777]">{t('trackStudio.total')}</p>
         </div>
         <div className="bg-[#76b900]/10 rounded-lg p-2">
           <p className="text-lg font-bold text-[#76b900]">{batchState.completed}</p>
-          <p className="text-xs text-[#777777]">Done</p>
+          <p className="text-xs text-[#777777]">{t('trackStudio.done')}</p>
         </div>
         <div className="bg-red-950/30 rounded-lg p-2">
           <p className="text-lg font-bold text-[#ef4444]">{batchState.failed}</p>
-          <p className="text-xs text-[#777777]">Failed</p>
+          <p className="text-xs text-[#777777]">{t('trackStudio.failed')}</p>
         </div>
         <div className="bg-[#262626] rounded-lg p-2">
           <p className="text-lg font-bold text-[#ff6a10]">{batchState.running ? eta : '—'}</p>
-          <p className="text-xs text-[#777777]">ETA</p>
+          <p className="text-xs text-[#777777]">{t('trackStudio.eta')}</p>
         </div>
       </div>
 
@@ -74,7 +76,7 @@ export function BatchProgressDashboard({ batchState, getETA }: Props) {
             {batchState.currentPrompt
               ? `▶ ${batchState.currentPrompt}`
               : batchState.running
-                ? 'Initializing...'
+                ? t('trackStudio.initializing')
                 : ''}
           </span>
           <span className="text-xs font-mono text-[#ff6a10]">

@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { EffectRack } from './EffectRack';
 import { EffectChain, defaultEffectChain, EffectType } from '../../types/effects';
+import { useTranslation } from '../../i18n/useTranslation';
 
 // 应用效果器到 Tone.js (简化实现)
 function applyEffectsToToneJS(trackId: string, chain: EffectChain) {
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export function EffectsPanel({ trackId, trackName, onClose }: Props) {
+  const { t } = useTranslation();
   const [chain, setChain] = useState<EffectChain>(defaultEffectChain);
 
   const handleChange = useCallback((newChain: EffectChain) => {
@@ -61,7 +63,7 @@ export function EffectsPanel({ trackId, trackName, onClose }: Props) {
       <div className="w-[600px] max-h-[80vh] bg-[#1e1e1e] rounded-xl border border-[#2a2a2a] overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-lg font-bold text-[#e0e0e0]">🎛️ 效果器链</h2>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">{t('trackStudio.effectsChain')}</h2>
             <p className="text-xs text-[#777777]">{trackName}</p>
           </div>
           <button
@@ -79,7 +81,7 @@ export function EffectsPanel({ trackId, trackName, onClose }: Props) {
             onClick={onClose}
             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition"
           >
-            完成
+            {t('trackStudio.done')}
           </button>
         </div>
       </div>

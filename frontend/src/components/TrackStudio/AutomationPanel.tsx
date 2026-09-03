@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { AutomationEditor } from './AutomationEditor';
 import { createDefaultLanes, AutomationLane } from '../../types/automation';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Zoom {
   x: number;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function AutomationPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [lanes, setLanes] = useState<AutomationLane[]>(createDefaultLanes());
   const [zoom, setZoom] = useState<Zoom>({ x: 50, y: 120 });
 
@@ -34,15 +36,15 @@ export function AutomationPanel({ onClose }: Props) {
       <div className="w-[800px] max-h-[80vh] bg-[#1e1e1e] rounded-xl border border-[#2a2a2a] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-lg font-bold text-[#e0e0e0]">📈 自动化曲线</h2>
-            <p className="text-xs text-[#777777]">绘制音量、声像、效果参数随时间变化</p>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">{t('trackStudio.automationCurve')}</h2>
+            <p className="text-xs text-[#777777]">{t('trackStudio.automationDesc')}</p>
           </div>
           <button onClick={onClose} className="text-[#777777] hover:text-white transition">✕</button>
         </div>
 
         {/* 轨道可见性切换 */}
         <div className="flex items-center gap-2 p-3 bg-[#121212] border-b border-[#2a2a2a] flex-wrap">
-          <span className="text-xs text-[#777777] mr-2">显示:</span>
+          <span className="text-xs text-[#777777] mr-2">{t('trackStudio.show')}:</span>
           {lanes.map(lane => (
             <button
               key={lane.type}
@@ -72,7 +74,7 @@ export function AutomationPanel({ onClose }: Props) {
         {/* 底部控制 */}
         <div className="p-4 border-t border-[#2a2a2a] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[#777777]">缩放:</span>
+            <span className="text-xs text-[#777777]">{t('trackStudio.zoom')}:</span>
             <button
               onClick={() => setZoom(z => ({ ...z, x: Math.max(20, z.x / 1.5) }))}
               className="px-2 py-1 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-xs"
@@ -91,7 +93,7 @@ export function AutomationPanel({ onClose }: Props) {
             onClick={onClose}
             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition"
           >
-            完成
+            {t('trackStudio.done')}
           </button>
         </div>
       </div>

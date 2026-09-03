@@ -11,6 +11,7 @@
 import { useEffect, useRef } from 'react';
 import { Music, Clock } from 'lucide-react';
 import type { LyricLine } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 // ---- Props ----------------------------------------------------------------
 interface Props {
@@ -98,6 +99,7 @@ function LyricsDisplay({
   compact: boolean;
 }) {
   const activeRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   // Find the current lyric line
   let activeIdx = -1;
@@ -121,7 +123,7 @@ function LyricsDisplay({
   if (lyrics.length === 0) {
     return (
       <p className="text-xs text-[#b0b0b0] italic">
-        No lyrics loaded. Generate or paste lyrics above.
+        {t('trackStudio.noLyrics')}
       </p>
     );
   }
@@ -200,6 +202,7 @@ function formatTime(seconds: number): string {
 
 export default function LyricsVisualizer({ lyrics, currentTime, duration, compact = false }: Props) {
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+  const { t } = useTranslation();
 
   return (
     <div className="lyrics-visualizer" style={{ width: '100%' }}>
@@ -207,9 +210,9 @@ export default function LyricsVisualizer({ lyrics, currentTime, duration, compac
       {!compact && (
         <div className="flex items-center gap-2 mb-1">
           <Music size={14} className="text-indigo-500" />
-          <span className="text-xs font-medium text-[#777777]">Lyrics Sync</span>
+          <span className="text-xs font-medium text-[#777777]">{t('trackStudio.lyricsSync')}</span>
           <span className="text-[10px] text-[#b0b0b0]">
-            {lyrics.length} lines · {formatTime(currentTime)} / {formatTime(duration)}
+            {t('trackStudio.lyricLines', { n: lyrics.length })} · {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
       )}

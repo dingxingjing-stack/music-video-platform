@@ -19,6 +19,7 @@ function readStoredLocale(): Locale {
 export function useTranslation() {
   const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
   const [t, setT] = useState<Record<string, any>>({});
+  const [enT, setEnT] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
   // 全局监听语言切换事件（其他组件触发时同步本组件）
@@ -37,11 +38,17 @@ export function useTranslation() {
     async function loadTranslations() {
       setLoading(true);
       try {
-        const mod = await import(`./locales/${locale}.json`);
-        setT(mod.default || mod);
+        // 同时加载当前语言与英文，作为缺失 key 的 fallback
+        const [locMod, enMod] = await Promise.all([
+          import(`./locales/${locale}.json`),
+          import('./locales/en.json'),
+        ]);
+        setT(locMod.default || locMod);
+        setEnT(enMod.default || enMod);
       } catch {
         const fallback = await import('./locales/en.json');
         setT(fallback.default || fallback);
+        setEnT(fallback.default || fallback);
       }
       setLoading(false);
     }
@@ -55,15 +62,22 @@ export function useTranslation() {
     window.dispatchEvent(new CustomEvent(LOCALE_EVENT, { detail: newLocale }));
   }, []);
 
-  const translate = (key: string, params?: Record<string, string | number>): string => {
+  const lookup = (obj: Record<string, any>, key: string): string | undefined => {
     const keys = key.split('.');
-    let value: any = t;
+    let value: any = obj;
     for (const k of keys) {
       value = value?.[k];
       if (value === undefined) break;
     }
+    if (typeof value !== 'string') return undefined;
+    return value;
+  };
+
+  const translate = (key: string, params?: Record<string, string | number>): string => {
+    // 当前语言 → 英文 fallback → 返回 key
+    let value = lookup(t, key);
+    if (value === undefined && enT !== t) value = lookup(enT, key);
     if (value === undefined) return key;
-    if (typeof value !== 'string') return key;
     if (params) {
       return value.replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? ''));
     }

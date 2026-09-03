@@ -9,6 +9,7 @@ import type { Track } from '../../types/trackStudio';
 import type { MidiTrack } from '../../types/trackStudio';
 import type { AutomationLane } from '../../types/automation';
 import type { EffectChain } from '../../types/effects';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface ProjectState {
   tracks: Track[];
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function ProjectManager({ projectState, onLoadProject, onClose }: Props) {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectMeta | null>(null);
   const [projectName, setProjectName] = useState('Untitled Project');
@@ -49,9 +51,9 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
       tempo: 120,
       totalDuration: 300,
     });
-    setSuccess('已新建项目');
+    setSuccess(t('trackStudio.projectNew'));
     setTimeout(() => setSuccess(null), 2000);
-  }, [onLoadProject]);
+  }, [onLoadProject, t]);
 
   // 保存项目
   const handleSave = useCallback(async () => {
@@ -67,14 +69,14 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
 
     try {
       const meta = await saveProject(project as any, { name: projectName, includeAudio: false, format: 'json' });
-      setSuccess(`已保存：${meta.name}`);
+      setSuccess(t('trackStudio.projectSaved', { name: meta.name }));
       setError(null);
       refreshProjects();
       setTimeout(() => setSuccess(null), 2000);
     } catch (e) {
-      setError('保存失败');
+      setError(t('trackStudio.projectSaveFailed'));
     }
-  }, [projectState, projectName, selectedProject, refreshProjects]);
+  }, [projectState, projectName, selectedProject, refreshProjects, t]);
 
   // 打开项目
   const handleOpen = useCallback(async () => {
@@ -91,32 +93,32 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
           tempo: result.project.tempo || 120,
           totalDuration: result.project.totalDuration || 300,
         });
-        setSuccess(`已加载：${result.project.name}`);
+        setSuccess(t('trackStudio.projectLoaded', { name: result.project.name }));
         setTimeout(() => setSuccess(null), 2000);
       } else {
-        setError(result.error || '加载失败');
+        setError(result.error || t('trackStudio.projectLoadFailed'));
       }
     } catch (e) {
-      setError('加载失败');
+      setError(t('trackStudio.projectLoadFailed'));
     }
-  }, [selectedProject, onLoadProject]);
+  }, [selectedProject, onLoadProject, t]);
 
   // 删除项目
   const handleDelete = useCallback(async () => {
     if (!selectedProject) return;
 
-    if (!confirm(`确定要删除 "${selectedProject.name}" 吗？`)) return;
+    if (!confirm(t('trackStudio.confirmDeleteProject', { name: selectedProject.name }))) return;
 
     try {
       await deleteProject(selectedProject.id);
       refreshProjects();
       setSelectedProject(null);
-      setSuccess('已删除项目');
+      setSuccess(t('trackStudio.projectDeleted'));
       setTimeout(() => setSuccess(null), 2000);
     } catch {
-      setError('删除失败');
+      setError(t('trackStudio.projectDeleteFailed'));
     }
-  }, [selectedProject, refreshProjects]);
+  }, [selectedProject, refreshProjects, t]);
 
   // 导出项目
   const handleExport = useCallback(() => {
@@ -125,11 +127,11 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
     loadProject(selectedProject.id).then((result: any) => {
       if (result.success) {
         exportProjectAsFile(result.project, selectedProject.name);
-        setSuccess('已导出项目文件');
+        setSuccess(t('trackStudio.projectExported'));
         setTimeout(() => setSuccess(null), 2000);
       }
     });
-  }, [selectedProject]);
+  }, [selectedProject, t]);
 
   // 导入项目
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,10 +150,10 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
           totalDuration: result.project.totalDuration || 300,
         });
         refreshProjects();
-        setSuccess(`已导入：${result.project.name}`);
+        setSuccess(t('trackStudio.projectImported', { name: result.project.name }));
         setTimeout(() => setSuccess(null), 2000);
       } else {
-        setError(result.error || '导入失败');
+        setError(result.error || t('trackStudio.projectImportFailed'));
       }
     });
 
@@ -159,7 +161,7 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [onLoadProject, refreshProjects]);
+  }, [onLoadProject, refreshProjects, t]);
 
   // 初始化加载列表
   useEffect(() => {
@@ -172,8 +174,8 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-lg font-bold text-[#e0e0e0]">📁 项目管理</h2>
-            <p className="text-xs text-[#777777]">新建/打开/保存/导入/导出 工程文件</p>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">📁 {t('trackStudio.projectManager')}</h2>
+            <p className="text-xs text-[#777777]">{t('trackStudio.projectManagerDesc')}</p>
           </div>
           <button onClick={onClose} className="text-[#777777] hover:text-white transition">✕</button>
         </div>
@@ -184,38 +186,38 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
             onClick={handleNewProject}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition"
           >
-            📄 新建
+            📄 {t('trackStudio.new')}
           </button>
           <button
             onClick={handleSave}
             disabled={!projectName}
             className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded text-sm transition disabled:opacity-50"
           >
-            💾 保存
+            💾 {t('trackStudio.save')}
           </button>
           <button
             onClick={handleOpen}
             disabled={!selectedProject}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50"
           >
-            📂 打开
+            📂 {t('trackStudio.open')}
           </button>
           <button
             onClick={handleDelete}
             disabled={!selectedProject}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#ef4444] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50"
           >
-            🗑️ 删除
+            🗑️ {t('trackStudio.delete')}
           </button>
           <button
             onClick={handleExport}
             disabled={!selectedProject}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50"
           >
-            📤 导出
+            📤 {t('trackStudio.export')}
           </button>
           <label className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition cursor-pointer">
-            📥 导入
+            📥 {t('trackStudio.import')}
             <input
               ref={fileInputRef}
               type="file"
@@ -228,21 +230,21 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
 
         {/* 项目名称输入 */}
         <div className="p-4 border-b border-[#2a2a2a]">
-          <label className="text-xs text-[#777777] mb-1 block">项目名称</label>
+          <label className="text-xs text-[#777777] mb-1 block">{t('trackStudio.projectName')}</label>
           <input
             type="text"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             className="w-full bg-[#2a2a2a] border border-[#3a3a3a] rounded px-3 py-2 text-sm text-[#e0e0e0]"
-            placeholder="Untitled Project"
+            placeholder={t('trackStudio.untitledProject')}
           />
         </div>
 
         {/* 项目列表 */}
         <div className="flex-1 overflow-auto p-4">
-          <h3 className="text-sm font-semibold text-[#e0e0e0] mb-3">已保存的项目</h3>
+          <h3 className="text-sm font-semibold text-[#e0e0e0] mb-3">{t('trackStudio.savedProjects')}</h3>
           {projects.length === 0 ? (
-            <p className="text-xs text-[#777777] text-center py-8">暂无项目</p>
+            <p className="text-xs text-[#777777] text-center py-8">{t('trackStudio.noProjects')}</p>
           ) : (
             <div className="space-y-2">
               {projects.map(project => (
@@ -263,7 +265,7 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
                       </p>
                     </div>
                     {selectedProject?.id === project.id && (
-                      <span className="text-xs text-orange-500">● 已选择</span>
+                      <span className="text-xs text-orange-500">● {t('trackStudio.selected')}</span>
                     )}
                   </div>
                 </div>
@@ -287,7 +289,7 @@ export function ProjectManager({ projectState, onLoadProject, onClose }: Props) 
             onClick={onClose}
             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition"
           >
-            完成
+            {t('trackStudio.done')}
           </button>
         </div>
       </div>

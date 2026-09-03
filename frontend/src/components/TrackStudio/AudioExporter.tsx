@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import type { Track } from '../../types/trackStudio';
 import { api } from '../../config/api';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface StemTrack {
   name: string;
@@ -39,6 +40,7 @@ const DEFAULT_OPTIONS: ExportOptions = {
 };
 
 export function AudioExporter({ tracks, onClose }: Props) {
+  const { t } = useTranslation();
   const [options, setOptions] = useState<ExportOptions>(DEFAULT_OPTIONS);
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -61,7 +63,7 @@ export function AudioExporter({ tracks, onClose }: Props) {
 
       setResult({
         success: true,
-        message: '导出成功！',
+        message: t('trackStudio.exportSuccess'),
         files: [
           'master.wav',
           ...tracks.filter(t => !t.muted).map(t => `${t.name}.wav`),
@@ -70,13 +72,13 @@ export function AudioExporter({ tracks, onClose }: Props) {
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : '导出失败',
+        message: error instanceof Error ? error.message : t('trackStudio.exportFailed'),
       });
     } finally {
       setIsExporting(false);
       setProgress(100);
     }
-  }, [tracks]);
+  }, [tracks, t]);
 
   // AI 智能分轨
   const handleAIStemsExport = useCallback(async () => {
@@ -97,17 +99,17 @@ export function AudioExporter({ tracks, onClose }: Props) {
         setStems(data.stems);
         setShowStems(true);
       } else {
-        alert('分轨失败：' + (data.error || '未知错误'));
+        alert(t('trackStudio.stemsFail', { msg: data.error || t('trackStudio.unknownError') }));
       }
     } catch (error) {
-      alert('分轨失败：' + (error instanceof Error ? error.message : '网络错误'));
+      alert(t('trackStudio.stemsFail', { msg: error instanceof Error ? error.message : t('trackStudio.networkError') }));
     }
-  }, [tracks]);
+  }, [tracks, t]);
 
   const formatLabels = {
-    wav: 'WAV (无损)',
-    mp3: 'MP3 (有损)',
-    flac: 'FLAC (无损压缩)',
+    wav: t('trackStudio.formatWav'),
+    mp3: t('trackStudio.formatMp3'),
+    flac: t('trackStudio.formatFlac'),
   };
 
   return (
@@ -116,8 +118,8 @@ export function AudioExporter({ tracks, onClose }: Props) {
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-lg font-bold text-[#e0e0e0]">🎵 音频导出</h2>
-            <p className="text-xs text-[#777777]">导出混音 + 分轨文件</p>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">🎵 {t('trackStudio.audioExport')}</h2>
+            <p className="text-xs text-[#777777]">{t('trackStudio.audioExportDesc')}</p>
           </div>
           <button onClick={onClose} className="text-[#777777] hover:text-white transition">✕</button>
         </div>
@@ -129,11 +131,11 @@ export function AudioExporter({ tracks, onClose }: Props) {
             disabled={tracks.length === 0}
             className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            🤖 AI 智能分轨
+            🤖 {t('trackStudio.aiStems')}
           </button>
           {showStems && stems.length > 0 && (
             <div className="mt-3 p-3 bg-[#2a2a2a] rounded-lg">
-              <p className="text-xs text-[#777777] mb-2">✅ 分轨结果 ({stems.length}轨):</p>
+              <p className="text-xs text-[#777777] mb-2">✅ {t('trackStudio.stemsResult', { n: stems.length })}</p>
               <div className="flex gap-2 flex-wrap">
                 {stems.map(stem => (
                   <div
@@ -154,7 +156,7 @@ export function AudioExporter({ tracks, onClose }: Props) {
         <div className="p-4 space-y-4 overflow-auto">
           {/* 格式选择 */}
           <div>
-            <label className="text-xs text-[#777777] mb-1 block">格式</label>
+            <label className="text-xs text-[#777777] mb-1 block">{t('trackStudio.format')}</label>
             <div className="flex gap-2">
               {(Object.keys(formatLabels) as Array<keyof typeof formatLabels>).map(fmt => (
                 <button
@@ -174,37 +176,37 @@ export function AudioExporter({ tracks, onClose }: Props) {
 
           {/* 采样率 */}
           <div>
-            <label className="text-xs text-[#777777] mb-1 block">采样率</label>
+            <label className="text-xs text-[#777777] mb-1 block">{t('trackStudio.sampleRate')}</label>
             <select
               value={options.sampleRate}
               onChange={(e) => setOptions({ ...options, sampleRate: Number(e.target.value) })}
               className="w-full bg-[#2a2a2a] border border-[#3a3a3a] rounded px-3 py-2 text-sm text-[#e0e0e0]"
             >
-              <option value={44100}>44.1 kHz (CD 标准)</option>
-              <option value={48000}>48 kHz (视频标准)</option>
-              <option value={96000}>96 kHz (高解析)</option>
+              <option value={44100}>44.1 kHz ({t('trackStudio.sr441')})</option>
+              <option value={48000}>48 kHz ({t('trackStudio.sr480')})</option>
+              <option value={96000}>96 kHz ({t('trackStudio.sr960')})</option>
             </select>
           </div>
 
           {/* 位深 */}
           <div>
-            <label className="text-xs text-[#777777] mb-1 block">位深</label>
+            <label className="text-xs text-[#777777] mb-1 block">{t('trackStudio.bitDepth')}</label>
             <select
               value={options.bitDepth}
               onChange={(e) => setOptions({ ...options, bitDepth: Number(e.target.value) })}
               className="w-full bg-[#2a2a2a] border border-[#3a3a3a] rounded px-3 py-2 text-sm text-[#e0e0e0]"
             >
-              <option value={16}>16-bit (CD 标准)</option>
-              <option value={24}>24-bit (专业标准)</option>
-              <option value={32}>32-bit float (最高质量)</option>
+              <option value={16}>16-bit ({t('trackStudio.bd16')})</option>
+              <option value={24}>24-bit ({t('trackStudio.bd24')})</option>
+              <option value={32}>32-bit float ({t('trackStudio.bd32')})</option>
             </select>
           </div>
 
           {/* 分轨导出 */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-[#e0e0e0]">导出分轨</p>
-              <p className="text-xs text-[#777777]">为每个轨道生成单独文件</p>
+              <p className="text-sm text-[#e0e0e0]">{t('trackStudio.exportStems')}</p>
+              <p className="text-xs text-[#777777]">{t('trackStudio.exportStemsHint')}</p>
             </div>
             <button
               onClick={() => setOptions({ ...options, includeStems: !options.includeStems })}
@@ -220,7 +222,7 @@ export function AudioExporter({ tracks, onClose }: Props) {
 
           {/* 轨道状态预览 */}
           <div>
-            <p className="text-xs text-[#777777] mb-2">轨道状态 ({tracks.length}个)</p>
+            <p className="text-xs text-[#777777] mb-2">{t('trackStudio.trackStatus', { n: tracks.length })}</p>
             <div className="space-y-1 max-h-32 overflow-auto">
               {tracks.map(track => (
                 <div key={track.id} className="flex items-center justify-between text-xs">
@@ -228,8 +230,8 @@ export function AudioExporter({ tracks, onClose }: Props) {
                     {track.name}
                   </span>
                   <div className="flex gap-2">
-                    {track.muted && <span className="text-[#ef4444]">🔇 静音</span>}
-                    {track.solo && <span className="text-orange-500">🎧 独奏</span>}
+                    {track.muted && <span className="text-[#ef4444]">🔇 {t('trackStudio.muted')}</span>}
+                    {track.solo && <span className="text-orange-500">🎧 {t('trackStudio.soloing')}</span>}
                   </div>
                 </div>
               ))}
@@ -246,7 +248,7 @@ export function AudioExporter({ tracks, onClose }: Props) {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-center text-[#777777] mt-2">正在导出... {progress}%</p>
+            <p className="text-xs text-center text-[#777777] mt-2">{t('trackStudio.exportingProgress', { n: progress })}</p>
           </div>
         )}
 
@@ -258,7 +260,7 @@ export function AudioExporter({ tracks, onClose }: Props) {
             <p className="font-medium">{result.message}</p>
             {result.files && (
               <div className="mt-2 text-xs text-[#777777]">
-                <p>生成文件:</p>
+                <p>{t('trackStudio.generatedFiles')}</p>
                 <ul className="list-disc list-inside">
                   {result.files.map((f, i) => (
                     <li key={i}>{f}</li>
@@ -276,14 +278,14 @@ export function AudioExporter({ tracks, onClose }: Props) {
             disabled={isExporting}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm transition disabled:opacity-50"
           >
-            取消
+            {t('trackStudio.cancel')}
           </button>
           <button
             onClick={handleExport}
             disabled={isExporting || tracks.length === 0}
             className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
           >
-            {isExporting ? '导出中...' : `导出 ${tracks.length}个轨道`}
+            {isExporting ? t('trackStudio.exporting') : t('trackStudio.exportTracks', { n: tracks.length })}
           </button>
         </div>
       </div>

@@ -9,6 +9,7 @@ import type { Track, RemixParameters } from '../../types/trackStudio';
 import { formatDate } from '../../types/trackStudio';
 import { AudioPlayer } from '../Audio/AudioPlayer';
 import { RemixTool } from './RemixTool';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   history: Track[];
@@ -33,25 +34,26 @@ export function HistoryPanel({
   onRemixError,
   onRemixDone,
 }: Props) {
+  const { t } = useTranslation();
   if (history.length === 0) return null;
 
   const handleClear = useCallback(() => {
-    if (confirm('Clear all saved tracks?')) {
+    if (confirm(t('trackStudio.confirmClearTracks'))) {
       onClear();
     }
-  }, [onClear]);
+  }, [onClear, t]);
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#b0b0b0] uppercase tracking-wider">
-          Saved Tracks ({history.length})
+          {t('trackStudio.savedTracks', { n: history.length })}
         </h2>
         <button
           onClick={handleClear}
           className="text-xs text-[#777777] hover:text-[#ef4444] transition-colors"
         >
-          Clear All
+          {t('trackStudio.clearAll')}
         </button>
       </div>
       <div
@@ -95,7 +97,7 @@ export function HistoryPanel({
               <button
                 onClick={() => onDelete(track.id)}
                 className="text-xs text-[#777777] hover:text-[#ef4444] transition-colors"
-                title="Delete"
+                title={t('trackStudio.delete')}
               >
                 ✕
               </button>
