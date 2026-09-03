@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Match {
   match_id: string;
@@ -56,13 +57,13 @@ export default function CopyrightCheckPanel() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.detail || '分析失败');
+        throw new Error(errorData.detail || t('copyright.analysisFailed'));
       }
 
       const data: CopyrightReport = await res.json();
       setReport(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '分析失败，请重试');
+      setError(err instanceof Error ? err.message : t('copyright.analysisFailedRetry'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -77,7 +78,7 @@ export default function CopyrightCheckPanel() {
     if (file && file.type.startsWith('audio/')) {
       analyzeAudio(file);
     } else {
-      setError('请上传音频文件');
+      setError(t('copyright.uploadAudio'));
     }
   }, [analyzeAudio]);
 
@@ -112,14 +113,22 @@ export default function CopyrightCheckPanel() {
     }
   };
 
+  const getRiskLabel = (risk: string) => {
+    const map: Record<string, string> = {
+      clear: t('copyright.riskClear'), low: t('copyright.riskLow'), medium: t('copyright.riskMedium'),
+      high: t('copyright.riskHigh'), critical: t('copyright.riskCritical'),
+    };
+    return map[risk] || t('copyright.riskLow');
+  };
+
   // 渲染匹配结果
   const renderMatches = () => {
     if (!report || report.matches.length === 0) {
       return (
         <div className="text-center py-8 text-[#777777]">
           <div className="text-4xl mb-2">🎉</div>
-          <div className="text-lg font-medium text-white">未发现版权风险</div>
-          <div className="text-sm mt-2">可以放心使用这首作品</div>
+          <div className="text-lg font-medium text-white">{t('copyright.noRisk')}</div>
+          <div className="text-sm mt-2">{t('copyright.safeToUse')}</div>
         </div>
       );
     }
@@ -127,7 +136,7 @@ export default function CopyrightCheckPanel() {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-white">
-          发现 {report.matches.length} 个相似作品
+          {t('copyright.matchesFound', { n: report.matches.length })}
         </h3>
         
         {report.matches.map((match, index) => (
@@ -171,7 +180,7 @@ export default function CopyrightCheckPanel() {
                 <span className="ml-1 capitalize">{match.risk_level}</span>
               </span>
               <span className="text-[#777777]">
-                相似度：{(match.similarity_score * 100).toFixed(1)}%
+                {t('copyright.similarity', { value: (match.similarity_score * 100).toFixed(1) })}%
               </span>
             </div>
           </div>
@@ -184,13 +193,13 @@ export default function CopyrightCheckPanel() {
   return (
     <div className="p-6 bg-[#1a1a1a] rounded-lg space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">版权检测</h2>
+        <h2 className="text-xl font-bold text-white">{t('copyright.title')}</h2>
         {report && (
           <button
             onClick={() => setReport(null)}
             className="text-sm text-[#777777] hover:text-white"
           >
-            清除报告
+            {t('copyright.clearReport')}
           </button>
         )}
       </div>
@@ -211,14 +220,14 @@ export default function CopyrightCheckPanel() {
         >
           <div className="text-4xl mb-4">🎵</div>
           <div className="text-lg font-medium text-white mb-2">
-            拖拽音频文件到此处
+            {t('copyright.dropAudio')}
           </div>
           <div className="text-sm text-[#777777] mb-4">
-            支持 MP3, WAV, FLAC, M4A 格式
+            {t('copyright.supported')}
           </div>
           <label className="inline-block">
             <span className="px-6 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded cursor-pointer hover:opacity-90 transition">
-              选择文件
+              {t('copyright.selectFile')}
             </span>
             <input
               type="file"
@@ -235,10 +244,10 @@ export default function CopyrightCheckPanel() {
         <div className="text-center py-12">
           <div className="text-4xl mb-4">🔍</div>
           <div className="text-lg font-medium text-white mb-2">
-            正在分析音频...
+            {t('copyright.analyzing')}
           </div>
           <div className="text-sm text-[#777777]">
-            提取指纹并比对版权数据库
+            {t('copyright.fingerprint')}
           </div>
           <div className="mt-6 flex justify-center">
             <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
@@ -266,26 +275,23 @@ export default function CopyrightCheckPanel() {
               <span className="text-2xl">{getRiskIcon(report.overall_risk)}</span>
               <div>
                 <div className={`text-lg font-bold ${getRiskColor(report.overall_risk)}`}>
-                  {report.overall_risk === 'clear' ? '版权安全' : 
-                   report.overall_risk === 'low' ? '低风险' :
-                   report.overall_risk === 'medium' ? '中等风险' :
-                   report.overall_risk === 'high' ? '高风险' : '极高风险'}
+                  {getRiskLabel(report.overall_risk)}
                 </div>
                 <div className="text-sm text-[#777777]">
-                  风险评分：{report.risk_score.toFixed(1)} / 100
+                  {t('copyright.riskScore', { score: report.risk_score.toFixed(1) })} / 100
                 </div>
               </div>
             </div>
             
             {report.is_clear_for_use && (
               <div className="text-green-500 text-sm mt-2">
-                ✅ 可以放心使用该作品
+                ✅ {t('copyright.clearUse')}
               </div>
             )}
             
             {!report.is_clear_for_use && (
               <div className="text-orange-500 text-sm mt-2">
-                ⚠️ 建议重新编曲或获取授权
+                ⚠️ {t('copyright.rearrange')}
               </div>
             )}
           </div>
@@ -293,7 +299,7 @@ export default function CopyrightCheckPanel() {
           {/* 建议 */}
           {report.recommendations.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white">检测建议</h3>
+              <h3 className="text-lg font-bold text-white">{t('copyright.recommendations')}</h3>
               {report.recommendations.map((rec, i) => (
                 <div key={i} className="p-3 bg-[#1a1a1a] rounded text-sm text-white">
                   {rec}
@@ -308,9 +314,9 @@ export default function CopyrightCheckPanel() {
           {/* 文件信息 */}
           <div className="pt-4 border-t border-[#333]">
             <div className="text-sm text-[#777777]">
-              <div>文件名：{report.audio_filename}</div>
-              <div>时长：{report.total_duration.toFixed(2)} 秒</div>
-              <div>报告 ID: {report.report_id}</div>
+              <div>{t('copyright.filename', { name: report.audio_filename })}</div>
+              <div>{t('copyright.duration', { duration: report.total_duration.toFixed(2) })}</div>
+              <div>{t('copyright.reportId')}: {report.report_id}</div>
             </div>
           </div>
         </div>
@@ -319,11 +325,11 @@ export default function CopyrightCheckPanel() {
       {/* 说明 */}
       {!report && !isAnalyzing && (
         <div className="text-xs text-[#777777] space-y-2">
-          <div className="font-medium text-white">检测原理:</div>
-          <div>• 提取音频指纹 (MFCC 特征 + 频谱峰值)</div>
-          <div>• 与百万级版权曲库比对</div>
-          <div>• 计算相似度并评估风险</div>
-          <div>• 生成详细检测报告</div>
+          <div className="font-medium text-white">{t('copyright.principle')}:</div>
+          <div>• {t('copyright.principle1')}</div>
+          <div>• {t('copyright.principle2')}</div>
+          <div>• {t('copyright.principle3')}</div>
+          <div>• {t('copyright.principle4')}</div>
         </div>
       )}
     </div>
