@@ -4,7 +4,7 @@
  * 功能:
  * - 上传音频文件
  * - 选择预设 (流媒体/YouTube/俱乐部等)
- * - 自定义参数 (响度/立体声宽度)
+ * - 自定义参数 ({t('mastering.loudness')}/立体声宽度)
  * - 实时进度显示
  * - 前后对比播放
  * - 分析数据显示 (LUFS, Peak)
@@ -12,6 +12,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface MasteringPreset {
   name: string;
@@ -21,6 +22,7 @@ interface MasteringPreset {
 }
 
 export function AudioMasteringPanel() {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [isMastering, setIsMastering] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -75,13 +77,13 @@ export function AudioMasteringPanel() {
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.message || '母带处理失败');
+        throw new Error(data.message || t('mastering.failed'));
       }
 
       setResult(data);
       setProgress(100);
     } catch (err: any) {
-      setError(err.message || '母带处理失败');
+      setError(err.message || t('mastering.failed'));
     } finally {
       setIsMastering(false);
     }
@@ -101,13 +103,13 @@ export function AudioMasteringPanel() {
     <div className="p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-2xl font-bold text-white mb-6">
-          🎚️ 自动母带处理
+          🎚️ {t('mastering.title')}
         </h2>
 
         {/* 上传区域 */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            选择音频文件
+            {t('mastering.selectFile')}
           </label>
           <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
             <input
@@ -121,10 +123,10 @@ export function AudioMasteringPanel() {
               <div className="text-gray-400">
                 <span className="text-4xl">📁</span>
                 <p className="mt-2">
-                  {file ? file.name : '点击选择或拖拽音频文件'}
+                  {file ? file.name : t('mastering.dropOrClick')}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  支持 MP3, WAV, FLAC, M4A
+                  {t('mastering.supported')}
                 </p>
               </div>
             </label>
@@ -134,7 +136,7 @@ export function AudioMasteringPanel() {
         {/* 预设选择 */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            快速预设
+            {t('mastering.quickPresets')}
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {presets.map((p) => (
@@ -156,12 +158,12 @@ export function AudioMasteringPanel() {
 
         {/* 自定义参数 */}
         <div className="mb-6 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">⚙️ 自定义参数</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">⚙️ {t('mastering.customParams')}</h3>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-gray-300 mb-2">
-                目标响度 (LUFS): {customLoudness} dB
+                {t('mastering.targetLoudness', { value: customLoudness })} dB
               </label>
               <input
                 type="range"
@@ -176,14 +178,14 @@ export function AudioMasteringPanel() {
                 className="w-full accent-orange-500"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>-20 LUFS (保守)</span>
-                <span>-6 LUFS (激进)</span>
+                <span>{t('mastering.conservative')}</span>
+                <span>{t('mastering.aggressive')}</span>
               </div>
             </div>
 
             <div>
               <label className="block text-sm text-gray-300 mb-2">
-                立体声宽度: {(customStereoWidth * 100).toFixed(0)}%
+                {t('mastering.stereoWidth', { value: (customStereoWidth * 100).toFixed(0) })}%
               </label>
               <input
                 type="range"
@@ -198,8 +200,8 @@ export function AudioMasteringPanel() {
                 className="w-full accent-orange-500"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>单声道</span>
-                <span>超宽立体声</span>
+                <span>{t('mastering.mono')}</span>
+                <span>{t('mastering.wide')}</span>
               </div>
             </div>
           </div>
@@ -215,7 +217,7 @@ export function AudioMasteringPanel() {
               : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:opacity-90'
           }`}
         >
-          {isMastering ? `母带处理中... ${progress.toFixed(0)}%` : '开始母带处理'}
+          {isMastering ? t('mastering.processing', { progress: progress.toFixed(0) }) : t('mastering.start')}
         </button>
 
         {/* 进度条 */}
@@ -241,22 +243,22 @@ export function AudioMasteringPanel() {
         {result && (
           <div className="mt-8">
             <h3 className="text-xl font-bold text-white mb-4">
-              ✅ 母带处理完成
+              ✅ {t('mastering.completed')}
             </h3>
 
             {/* 分析数据对比 */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-400 mb-2">处理前</h4>
+                <h4 className="text-sm font-medium text-gray-400 mb-2">{t('mastering.before')}</h4>
                 <div className="space-y-2">
                   <div>
-                    <span className="text-xs text-gray-500">响度</span>
+                    <span className="text-xs text-gray-500">{t('mastering.loudness')}</span>
                     <div className="text-lg font-bold text-orange-400">
                       {result.loudness_before} LUFS
                     </div>
                   </div>
                   <div>
-                    <span className="text-xs text-gray-500">峰值</span>
+                    <span className="text-xs text-gray-500">{t('mastering.peak')}</span>
                     <div className="text-lg font-bold text-orange-400">
                       {result.peak_before.toFixed(3)}
                     </div>
@@ -265,16 +267,16 @@ export function AudioMasteringPanel() {
               </div>
 
               <div className="p-4 bg-gray-800/50 border border-green-500/50 rounded-lg">
-                <h4 className="text-sm font-medium text-green-400 mb-2">处理后</h4>
+                <h4 className="text-sm font-medium text-green-400 mb-2">{t('mastering.after')}</h4>
                 <div className="space-y-2">
                   <div>
-                    <span className="text-xs text-gray-500">响度</span>
+                    <span className="text-xs text-gray-500">{t('mastering.loudness')}</span>
                     <div className="text-lg font-bold text-green-400">
                       {result.loudness_after} LUFS
                     </div>
                   </div>
                   <div>
-                    <span className="text-xs text-gray-500">峰值</span>
+                    <span className="text-xs text-gray-500">{t('mastering.peak')}</span>
                     <div className="text-lg font-bold text-green-400">
                       {result.peak_after.toFixed(3)}
                     </div>
@@ -286,12 +288,12 @@ export function AudioMasteringPanel() {
             {/* 前后对比播放器 */}
             <div className="space-y-4">
               <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-300 mb-2">原始音频</h4>
+                <h4 className="text-sm font-medium text-gray-300 mb-2">{t('mastering.original')}</h4>
                 {file && <audio ref={originalAudioRef} src={URL.createObjectURL(file)} className="w-full" />}
               </div>
 
               <div className="p-4 bg-gray-800/50 border border-green-500/50 rounded-lg">
-                <h4 className="text-sm font-medium text-green-400 mb-2">母带后音频</h4>
+                <h4 className="text-sm font-medium text-green-400 mb-2">{t('mastering.mastered')}</h4>
                 <audio ref={masteredAudioRef} src={result.output_path} className="w-full" />
               </div>
             </div>
@@ -301,11 +303,11 @@ export function AudioMasteringPanel() {
               onClick={downloadMastered}
               className="mt-6 w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:opacity-90"
             >
-              ⬇️ 下载母带后音频
+              ⬇️ {t('mastering.download')}
             </button>
 
             <div className="mt-4 p-4 bg-blue-900/30 border border-blue-500 rounded-lg text-blue-300">
-              💡 <strong>提示:</strong> 响度达到 -14 LUFS (流媒体标准)，峰值控制在 -1dB 以下防止削波。
+              💡 <strong>{t('mastering.tipLabel')}:</strong> {t('mastering.tip')}
             </div>
           </div>
         )}
