@@ -2,7 +2,7 @@
  * VoiceCloningPanel — 声音克隆面板
  * 
  * 功能:
- * - 上传声音样本
+ * - {t('voiceClone.uploadTitle')}
  * - 声音档案管理
  * - 声音克隆合成
  * - 音色库浏览
@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../../config/api';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface VoiceProfile {
   id: string;
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function VoiceCloningPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'upload' | 'clone' | 'library'>('upload');
   const [voices, setVoices] = useState<VoiceProfile[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
     }
   }, [activeTab]);
 
-  // 上传声音样本
+  // {t('voiceClone.uploadTitle')}
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -96,20 +98,20 @@ export function VoiceCloningPanel({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">🎤 AI 声音克隆</h2>
-            <p className="text-sm text-zinc-400 mt-1">上传样本 → 训练模型 → AI 模仿</p>
+            <h2 className="text-2xl font-bold text-white">🎤 {t('voiceClone.title')}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{t('voiceClone.subtitle')}</p>
           </div>
           <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-            关闭
+            {t('voiceClone.close')}
           </button>
         </div>
 
         {/* Tab 导航 */}
         <div className="flex gap-2 mb-6 border-b border-zinc-700">
           {[
-            { id: 'upload', label: '📤 上传样本', icon: '📤' },
-            { id: 'clone', label: '🎙️ 声音克隆', icon: '🎙️' },
-            { id: 'library', label: '📚 音色库', icon: '📚' },
+            { id: 'upload', label: 'voiceClone.uploadTab', icon: '📤' },
+            { id: 'clone', label: 'voiceClone.cloneTab', icon: '🎙️' },
+            { id: 'library', label: 'voiceClone.libraryTab', icon: '📚' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -120,7 +122,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              {tab.label}
+              {t(tab.label)}
             </button>
           ))}
         </div>
@@ -130,24 +132,24 @@ export function VoiceCloningPanel({ onClose }: Props) {
           <div>
             <div className="text-center py-12">
               <div className="text-5xl mb-4">🎤</div>
-              <h3 className="text-xl font-bold text-white mb-2">上传声音样本</h3>
+              <h3 className="text-xl font-bold text-white mb-2">{t('voiceClone.uploadTitle')}</h3>
               <p className="text-zinc-400 mb-6">
-                上传 1-5 分钟的清晰录音，AI 将学习声音特征
+                {t('voiceClone.uploadDesc')}
               </p>
 
               <div className="max-w-md mx-auto mb-6 p-6 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                <h4 className="text-sm font-medium text-white mb-3">📋 录制要求</h4>
+                <h4 className="text-sm font-medium text-white mb-3">{t('voiceClone.recordReqs')}</h4>
                 <ul className="text-left text-sm text-zinc-400 space-y-2">
-                  <li>✓ 清晰的人声，无背景噪音</li>
-                  <li>✓ 时长 1-5 分钟</li>
-                  <li>✓ 格式：WAV 或 MP3</li>
-                  <li>✓ 采样率 ≥ 44.1kHz</li>
-                  <li>✓ 单一说话人</li>
+                  <li>✓ {t('voiceClone.req1')}</li>
+                  <li>✓ {t('voiceClone.req2')}</li>
+                  <li>✓ {t('voiceClone.req3')}</li>
+                  <li>✓ {t('voiceClone.req4')}</li>
+                  <li>✓ {t('voiceClone.req5')}</li>
                 </ul>
               </div>
 
               <label className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition cursor-pointer">
-                {isProcessing ? '上传中...' : '📁 选择音频文件'}
+                {isProcessing ? t('voiceClone.uploading') : t('voiceClone.selectAudio')}
                 <input
                   type="file"
                   accept="audio/*"
@@ -165,11 +167,11 @@ export function VoiceCloningPanel({ onClose }: Props) {
           <div>
             {/* 声音选择 */}
             <div className="mb-6">
-              <label className="text-sm font-medium text-white mb-2 block">选择声音</label>
+              <label className="text-sm font-medium text-white mb-2 block">{t('voiceClone.selectVoice')}</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {voices.length === 0 ? (
                   <div className="col-span-full text-center text-zinc-400 py-4">
-                    暂无声音，请先上传样本
+                    {t('voiceClone.noVoices')}
                   </div>
                 ) : (
                   voices.map(voice => (
@@ -184,7 +186,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
                     >
                       <div className="text-white font-bold text-sm">{voice.name}</div>
                       <div className="text-xs text-zinc-400">
-                        {(voice.sample_duration / 60).toFixed(1)}分钟
+                        {t('voiceClone.durationMin', { n: (voice.sample_duration / 60).toFixed(1) })}
                       </div>
                     </button>
                   ))
@@ -194,27 +196,27 @@ export function VoiceCloningPanel({ onClose }: Props) {
 
             {/* 文本输入 */}
             <div className="mb-6">
-              <label className="text-sm font-medium text-white mb-2 block">合成文本</label>
+              <label className="text-sm font-medium text-white mb-2 block">{t('voiceClone.cloneText')}</label>
               <textarea
                 value={cloneText}
                 onChange={(e) => setCloneText(e.target.value)}
-                placeholder="输入要合成的文本内容..."
+                placeholder={t('voiceClone.cloneTextPlaceholder')}
                 rows={4}
                 maxLength={1000}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <div className="text-xs text-zinc-400 mt-1 text-right">
-                {cloneText.length}/1000 字符
+                {t('voiceClone.cloneTextCount', { n: cloneText.length })}
               </div>
             </div>
 
-            {/* 高级选项 */}
+            {/* {t('voiceClone.advanced')} */}
             <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
-              <h4 className="text-sm font-medium text-white mb-3">⚙️ 高级选项</h4>
+              <h4 className="text-sm font-medium text-white mb-3">⚙️ {t('voiceClone.advanced')}</h4>
               
               <div>
                 <label className="text-xs text-zinc-400 mb-2 block">
-                  速度：<span className="text-white font-medium">{cloneSpeed.toFixed(2)}x</span>
+                  {t('voiceClone.speed', { value: cloneSpeed.toFixed(2) })}
                 </label>
                 <input
                   type="range"
@@ -226,9 +228,9 @@ export function VoiceCloningPanel({ onClose }: Props) {
                   className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-zinc-500 mt-1">
-                  <span>0.5x (慢)</span>
-                  <span>1.0x (正常)</span>
-                  <span>2.0x (快)</span>
+                  <span>{t('voiceClone.speed0_5')}</span>
+                  <span>{t('voiceClone.speed1_0')}</span>
+                  <span>{t('voiceClone.speed2_0')}</span>
                 </div>
               </div>
             </div>
@@ -239,7 +241,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
               disabled={!selectedVoice || !cloneText || isProcessing}
               className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-bold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? '🎵 合成中...' : '🎙️ 开始克隆'}
+              {isProcessing ? t('voiceClone.synthesizing') : t('voiceClone.startClone')}
             </button>
           </div>
         )}
@@ -251,23 +253,23 @@ export function VoiceCloningPanel({ onClose }: Props) {
               <div className="flex items-center gap-3 mb-3">
                 <div className="text-3xl">✅</div>
                 <div>
-                  <div className="text-green-400 font-bold text-lg">声音克隆完成!</div>
-                  <div className="text-sm text-zinc-400">已生成语音</div>
+                  <div className="text-green-400 font-bold text-lg">{t('voiceClone.cloneComplete')}</div>
+                  <div className="text-sm text-zinc-400">{t('voiceClone.cloneDesc')}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-zinc-400">声音:</span>
+                  <span className="text-zinc-400">{t('voiceClone.voice')}:</span>
                   <span className="text-white ml-2">{cloneResult.voice_name}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400">时长:</span>
-                  <span className="text-white ml-2">{cloneResult.duration.toFixed(2)}秒</span>
+                  <span className="text-zinc-400">{t('voiceClone.duration')}:</span>
+                  <span className="text-white ml-2">{t('voiceClone.durationSec', { n: cloneResult.duration.toFixed(2) })}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-400">处理时间:</span>
-                  <span className="text-white ml-2">{cloneResult.processing_time.toFixed(2)}秒</span>
+                  <span className="text-zinc-400">{t('voiceClone.processingTime')}:</span>
+                  <span className="text-white ml-2">{t('voiceClone.processingSec', { n: cloneResult.processing_time.toFixed(2) })}</span>
                 </div>
               </div>
             </div>
@@ -279,7 +281,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
                   ▶
                 </button>
                 <div className="flex-1 h-12 bg-zinc-700 rounded-lg flex items-center px-4">
-                  <div className="text-sm text-zinc-400">音频波形可视化</div>
+                  <div className="text-sm text-zinc-400">{t('voiceClone.waveform')}</div>
                 </div>
               </div>
             </div>
@@ -290,10 +292,10 @@ export function VoiceCloningPanel({ onClose }: Props) {
                 onClick={() => setCloneResult(null)}
                 className="px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-medium transition"
               >
-                🔄 重新克隆
+                🔄 {t('voiceClone.cloneAgain')}
               </button>
               <button className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition">
-                📥 导出音频
+                📥 {t('voiceClone.exportAudio')}
               </button>
             </div>
           </div>
@@ -302,17 +304,17 @@ export function VoiceCloningPanel({ onClose }: Props) {
         {activeTab === 'library' && (
           /* 音色库 */
           <div>
-            <h3 className="text-lg font-bold text-white mb-4">📚 音色库 ({voices.length}个声音)</h3>
+            <h3 className="text-lg font-bold text-white mb-4">📚 {t('voiceClone.libraryTitle', { n: voices.length })}</h3>
             
             {voices.length === 0 ? (
               <div className="text-center text-zinc-400 py-12">
                 <div className="text-4xl mb-4">📦</div>
-                <div>暂无声音</div>
+                <div>{t('voiceClone.noVoices')}</div>
                 <button
                   onClick={() => setActiveTab('upload')}
                   className="mt-4 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm transition"
                 >
-                  上传第一个声音
+                  {t('voiceClone.uploadOne')}
                 </button>
               </div>
             ) : (
@@ -325,7 +327,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-white font-bold">{voice.name}</h4>
                       <span className="text-xs text-zinc-400">
-                        {(voice.sample_duration / 60).toFixed(1)}分钟
+                        {t('voiceClone.durationMin', { n: (voice.sample_duration / 60).toFixed(1) })}
                       </span>
                     </div>
                     {voice.description && (
@@ -348,7 +350,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
                       }}
                       className="mt-3 w-full px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm transition"
                     >
-                      使用此声音
+                      {t('voiceClone.useVoice')}
                     </button>
                   </div>
                 ))}
