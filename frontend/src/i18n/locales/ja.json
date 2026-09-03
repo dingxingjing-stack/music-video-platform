@@ -479,5 +479,68 @@
     "loadError": "読み込みに失敗",
     "searchFailed": "検索に失敗",
     "loadRetryError": "読み込みに失敗しました。更新して再試行してください"
+  },
+  "feed": {
+    "title": "おすすめフィード",
+    "subtitle": "あなたの好みに合わせた音楽",
+    "loading": "読み込み中...",
+    "empty": "おすすめはまだありません",
+    "emptyDesc": "もっと音楽を探索しましょう~",
+    "author": "作者：{name}",
+    "plays": "再生",
+    "likes": "いいね",
+    "favorites": "お気に入り",
+    "recommended": "おすすめ {n}"
+  },
+  "profile": {
+    "loading": "読み込み中...",
+    "follow": "フォロー",
+    "following": "フォロー中",
+    "followingStat": "フォロー",
+    "followers": "フォロワー",
+    "works": "作品",
+    "tabWorks": "作品",
+    "tabFavorites": "お気に入り",
+    "emptyWorks": "作品はまだありません",
+    "emptyFavorites": "お気に入りはまだありません",
+    "user": "ユーザー {id}",
+    "myWork": "マイ作品 {n}",
+    "favoriteWork": "お気に入りの作品 {n}",
+    "bioDefault": "このユーザーは何も書いていません~"
+  },
+  "studio": {
+    "title": "スタジオ",
+    "viewRecord": "録音",
+    "viewEdit": "編集",
+    "viewMix": "ミックス",
+    "plugins": "VST プラグイン",
+    "export": "書き出し",
+    "pianoRoll": "ピアノロールエディター",
+    "staffView": "五線譜ビュー",
+    "mixConsole": "ミックスコンソール",
+    "track": "トラック {n}"
+  },
+  "communityFeed": {
+    "title": "発見",
+    "subtitle": "コミュニティの優れた作品を探索",
+    "publish": "作品を投稿",
+    "empty": "コンテンツがありません",
+    "all": "すべて",
+    "justNow": "たった今",
+    "hoursAgo": "{n}時間前",
+    "daysAgo": "{n}日前"
+  },
+  "stockLibrary": {
+    "title": "無料ストックライブラリ",
+    "subtitle": "Pexels と Pixabay の 100+ の無料 HD ビデオ、商用利用可",
+    "searchPlaceholder": "素材を検索...",
+    "gridView": "グリッド表示",
+    "listView": "リスト表示",
+    "all": "すべて（{n}）",
+    "use": "使用",
+    "favorite": "お気に入り",
+    "selected": "選択：{title}",
+    "source": "出典: {source} | ライセンス: {license}",
+    "showing": "{shown} / {total} 件の素材を表示"
   }
 }

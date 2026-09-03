@@ -479,5 +479,68 @@
     "loadError": "Échec du chargement",
     "searchFailed": "Échec de la recherche",
     "loadRetryError": "Échec du chargement, actualisez et réessayez"
+  },
+  "feed": {
+    "title": "Flux Personnalisé",
+    "subtitle": "Musique recommandée selon vos préférences",
+    "loading": "Chargement...",
+    "empty": "Aucune recommandation",
+    "emptyDesc": "Explorez plus de musique~",
+    "author": "Auteur : {name}",
+    "plays": "lectures",
+    "likes": "j aime",
+    "favorites": "favoris",
+    "recommended": "Recommandé {n}"
+  },
+  "profile": {
+    "loading": "Chargement...",
+    "follow": "Suivre",
+    "following": "Abonné",
+    "followingStat": "Abonnements",
+    "followers": "Abonnés",
+    "works": "Œuvres",
+    "tabWorks": "Œuvres",
+    "tabFavorites": "Favoris",
+    "emptyWorks": "Aucune œuvre",
+    "emptyFavorites": "Aucun favori",
+    "user": "Utilisateur {id}",
+    "myWork": "Mon œuvre {n}",
+    "favoriteWork": "Œuvre favorite {n}",
+    "bioDefault": "Cet utilisateur est trop paresseux pour écrire~"
+  },
+  "studio": {
+    "title": "Studio",
+    "viewRecord": "Enregistrer",
+    "viewEdit": "Éditer",
+    "viewMix": "Mixer",
+    "plugins": "Plugins VST",
+    "export": "Exporter",
+    "pianoRoll": "Éditeur de piano roll",
+    "staffView": "Vue partition",
+    "mixConsole": "Console de mixage",
+    "track": "Piste {n}"
+  },
+  "communityFeed": {
+    "title": "Découvrir",
+    "subtitle": "Découvrez les œuvres remarquables de la communauté",
+    "publish": "Publier",
+    "empty": "Aucun contenu",
+    "all": "Tout",
+    "justNow": "à l instant",
+    "hoursAgo": "il y a {n}h",
+    "daysAgo": "il y a {n}j"
+  },
+  "stockLibrary": {
+    "title": "Bibliothèque de Stock Gratuite",
+    "subtitle": "Plus de 100 clips HD gratuits de Pexels et Pixabay, utilisables commercialement",
+    "searchPlaceholder": "Rechercher...",
+    "gridView": "Vue grille",
+    "listView": "Vue liste",
+    "all": "Tout ({n})",
+    "use": "Utiliser",
+    "favorite": "Favori",
+    "selected": "Sélectionné : {title}",
+    "source": "Source : {source} | Licence : {license}",
+    "showing": "Affichage de {shown} / {total} clips"
   }
 }

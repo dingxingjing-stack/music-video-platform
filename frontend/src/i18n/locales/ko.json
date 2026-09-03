@@ -479,5 +479,68 @@
     "loadError": "불러오기 실패",
     "searchFailed": "검색 실패",
     "loadRetryError": "불러오지 못했습니다. 새로고침 후 다시 시도하세요"
+  },
+  "feed": {
+    "title": "맞춤 피드",
+    "subtitle": "취향에 맞는 음악 추천",
+    "loading": "로딩 중...",
+    "empty": "아직 추천이 없습니다",
+    "emptyDesc": "음악을 더 탐색해 보세요~",
+    "author": "작성자: {name}",
+    "plays": "재생",
+    "likes": "좋아요",
+    "favorites": "즐겨찾기",
+    "recommended": "추천 {n}"
+  },
+  "profile": {
+    "loading": "로딩 중...",
+    "follow": "팔로우",
+    "following": "팔로우 중",
+    "followingStat": "팔로우",
+    "followers": "팔로워",
+    "works": "작품",
+    "tabWorks": "작품",
+    "tabFavorites": "즐겨찾기",
+    "emptyWorks": "작품이 없습니다",
+    "emptyFavorites": "즐겨찾기가 없습니다",
+    "user": "사용자 {id}",
+    "myWork": "내 작품 {n}",
+    "favoriteWork": "즐겨찾기 작품 {n}",
+    "bioDefault": "이 사용자는 아무것도 쓰지 않았습니다~"
+  },
+  "studio": {
+    "title": "스튜디오",
+    "viewRecord": "녹음",
+    "viewEdit": "편집",
+    "viewMix": "믹스",
+    "plugins": "VST 플러그인",
+    "export": "내보내기",
+    "pianoRoll": "피아노롤 편집기",
+    "staffView": "오선보 보기",
+    "mixConsole": "믹스 콘솔",
+    "track": "트랙 {n}"
+  },
+  "communityFeed": {
+    "title": "발견",
+    "subtitle": "커뮤니티의 훌륭한 작품 탐색",
+    "publish": "작품 게시",
+    "empty": "콘텐츠가 없습니다",
+    "all": "전체",
+    "justNow": "방금 전",
+    "hoursAgo": "{n}시간 전",
+    "daysAgo": "{n}일 전"
+  },
+  "stockLibrary": {
+    "title": "무료 스톡 라이브러리",
+    "subtitle": "Pexels & Pixabay의 무료 HD 영상 100+개, 상업적 사용 가능",
+    "searchPlaceholder": "소재 검색...",
+    "gridView": "그리드 보기",
+    "listView": "목록 보기",
+    "all": "전체 ({n})",
+    "use": "사용",
+    "favorite": "즐겨찾기",
+    "selected": "선택됨: {title}",
+    "source": "출처: {source} | 라이선스: {license}",
+    "showing": "소재 {shown} / {total}개 표시"
   }
 }

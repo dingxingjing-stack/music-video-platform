@@ -479,5 +479,68 @@
     "loadError": "Ошибка загрузки",
     "searchFailed": "Ошибка поиска",
     "loadRetryError": "Ошибка загрузки, обновите и повторите"
+  },
+  "feed": {
+    "title": "Персональная лента",
+    "subtitle": "Музыка по вашим предпочтениям",
+    "loading": "Загрузка...",
+    "empty": "Пока нет рекомендаций",
+    "emptyDesc": "Исследуйте больше музыки~",
+    "author": "Автор: {name}",
+    "plays": "прослушивания",
+    "likes": "лайки",
+    "favorites": "избранное",
+    "recommended": "Рекомендация {n}"
+  },
+  "profile": {
+    "loading": "Загрузка...",
+    "follow": "Подписаться",
+    "following": "Подписка",
+    "followingStat": "Подписки",
+    "followers": "Подписчики",
+    "works": "Работы",
+    "tabWorks": "Работы",
+    "tabFavorites": "Избранное",
+    "emptyWorks": "Работ пока нет",
+    "emptyFavorites": "Избранного нет",
+    "user": "Пользователь {id}",
+    "myWork": "Моя работа {n}",
+    "favoriteWork": "Избранная работа {n}",
+    "bioDefault": "Этот пользователь слишком ленив, чтобы писать~"
+  },
+  "studio": {
+    "title": "Студия",
+    "viewRecord": "Запись",
+    "viewEdit": "Редактирование",
+    "viewMix": "Микс",
+    "plugins": "VST плагины",
+    "export": "Экспорт",
+    "pianoRoll": "Редактор пиано-ролла",
+    "staffView": "Нотный стан",
+    "mixConsole": "Микшерный пульт",
+    "track": "Трек {n}"
+  },
+  "communityFeed": {
+    "title": "Открытия",
+    "subtitle": "Лучшие работы сообщества",
+    "publish": "Опубликовать работу",
+    "empty": "Контента пока нет",
+    "all": "Все",
+    "justNow": "только что",
+    "hoursAgo": "{n} ч. назад",
+    "daysAgo": "{n} д. назад"
+  },
+  "stockLibrary": {
+    "title": "Бесплатная библиотека стоков",
+    "subtitle": "Более 100 бесплатных HD-видео от Pexels и Pixabay, для коммерческого использования",
+    "searchPlaceholder": "Поиск стоков...",
+    "gridView": "Сетка",
+    "listView": "Список",
+    "all": "Все ({n})",
+    "use": "Использовать",
+    "favorite": "Избранное",
+    "selected": "Выбрано: {title}",
+    "source": "Источник: {source} | Лицензия: {license}",
+    "showing": "Показано {shown} / {total} материалов"
   }
 }

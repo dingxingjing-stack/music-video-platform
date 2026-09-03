@@ -479,5 +479,68 @@
     "loadError": "加载失败",
     "searchFailed": "搜索失败",
     "loadRetryError": "加载失败，请刷新重试"
+  },
+  "feed": {
+    "title": "个性化推荐",
+    "subtitle": "根据你的喜好推荐的音乐作品",
+    "loading": "加载中...",
+    "empty": "暂无推荐作品",
+    "emptyDesc": "先去探索更多音乐吧~",
+    "author": "作者：{name}",
+    "plays": "播放",
+    "likes": "点赞",
+    "favorites": "收藏",
+    "recommended": "推荐作品 {n}"
+  },
+  "profile": {
+    "loading": "加载中...",
+    "follow": "关注",
+    "following": "已关注",
+    "followingStat": "关注",
+    "followers": "粉丝",
+    "works": "作品",
+    "tabWorks": "作品",
+    "tabFavorites": "收藏",
+    "emptyWorks": "暂无作品",
+    "emptyFavorites": "暂无收藏",
+    "user": "用户 {id}",
+    "myWork": "我的作品 {n}",
+    "favoriteWork": "收藏的作品 {n}",
+    "bioDefault": "这个人很懒，什么都没写~"
+  },
+  "studio": {
+    "title": "录音室",
+    "viewRecord": "录音",
+    "viewEdit": "编辑",
+    "viewMix": "混音",
+    "plugins": "VST 插件",
+    "export": "导出",
+    "pianoRoll": "钢琴卷帘编辑器",
+    "staffView": "五线谱视图",
+    "mixConsole": "混音台",
+    "track": "轨道 {n}"
+  },
+  "communityFeed": {
+    "title": "发现",
+    "subtitle": "探索社区创作的优秀作品",
+    "publish": "发布作品",
+    "empty": "暂无内容",
+    "all": "全部",
+    "justNow": "刚刚",
+    "hoursAgo": "{n}小时前",
+    "daysAgo": "{n}天前"
+  },
+  "stockLibrary": {
+    "title": "免费素材库",
+    "subtitle": "100+ 免费高清视频素材，来自 Pexels & Pixabay，可用于商业用途",
+    "searchPlaceholder": "搜索素材...",
+    "gridView": "网格视图",
+    "listView": "列表视图",
+    "all": "全部 ({n})",
+    "use": "使用",
+    "favorite": "收藏",
+    "selected": "已选择：{title}",
+    "source": "来源: {source} | 许可证: {license}",
+    "showing": "显示 {shown} / {total} 个素材"
   }
 }

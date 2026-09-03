@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface TrackPost {
   id: string;
@@ -82,21 +83,22 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-function formatTimeAgo(timestamp: number): string {
+function formatTimeAgo(timestamp: number, tr: (k: string, p?: Record<string, string | number>) => string): string {
   const diff = Date.now() - timestamp;
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
   
-  if (hours < 1) return '刚刚';
-  if (hours < 24) return `${hours}小时前`;
-  if (days < 7) return `${days}天前`;
+  if (hours < 1) return tr('communityFeed.justNow');
+  if (hours < 24) return tr('communityFeed.hoursAgo', { n: hours });
+  if (days < 7) return tr('communityFeed.daysAgo', { n: days });
   return new Date(timestamp).toLocaleDateString();
 }
 
 export function CommunityFeed() {
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<TrackPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('全部');
+  const [filter, setFilter] = useState<string>(t('communityFeed.all'));
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   // 加载帖子
@@ -127,8 +129,8 @@ export function CommunityFeed() {
   }, []);
 
   // 过滤标签
-  const allTags = ['全部', ...new Set(posts.flatMap(p => p.tags))];
-  const filteredPosts = filter === '全部' 
+  const allTags = [t('communityFeed.all'), ...new Set(posts.flatMap(p => p.tags))];
+  const filteredPosts = filter === t('communityFeed.all') 
     ? posts 
     : posts.filter(p => p.tags.includes(filter));
 
@@ -139,11 +141,11 @@ export function CommunityFeed() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#e0e0e0]">🌍 发现</h1>
-              <p className="text-xs text-[#777777] mt-1">探索社区创作的优秀作品</p>
+              <h1 className="text-2xl font-bold text-[#e0e0e0]">🌍 {t('communityFeed.title')}</h1>
+              <p className="text-xs text-[#777777] mt-1">{t('communityFeed.subtitle')}</p>
             </div>
             <button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition">
-              ✨ 发布作品
+              ✨ {t('communityFeed.publish')}
             </button>
           </div>
 
@@ -180,7 +182,7 @@ export function CommunityFeed() {
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-[#777777]">暂无内容</p>
+            <p className="text-[#777777]">{t('communityFeed.empty')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -248,7 +250,7 @@ export function CommunityFeed() {
                         <span>{formatNumber(post.likes)}</span>
                       </button>
                     </div>
-                    <span>{formatTimeAgo(post.createdAt)}</span>
+                    <span>{formatTimeAgo(post.createdAt, t)}</span>
                   </div>
                 </div>
               </div>

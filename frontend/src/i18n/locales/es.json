@@ -479,5 +479,68 @@
     "loadError": "Error al cargar",
     "searchFailed": "Error de búsqueda",
     "loadRetryError": "Error al cargar, actualiza e inténtalo de nuevo"
+  },
+  "feed": {
+    "title": "Feed Personalizado",
+    "subtitle": "Música recomendada según tus preferencias",
+    "loading": "Cargando...",
+    "empty": "Aún no hay recomendaciones",
+    "emptyDesc": "¡Explora más música~",
+    "author": "Autor: {name}",
+    "plays": "reproducciones",
+    "likes": "me gusta",
+    "favorites": "favoritos",
+    "recommended": "Recomendado {n}"
+  },
+  "profile": {
+    "loading": "Cargando...",
+    "follow": "Seguir",
+    "following": "Siguiendo",
+    "followingStat": "Siguiendo",
+    "followers": "Seguidores",
+    "works": "Obras",
+    "tabWorks": "Obras",
+    "tabFavorites": "Favoritos",
+    "emptyWorks": "Aún no hay obras",
+    "emptyFavorites": "Aún no hay favoritos",
+    "user": "Usuario {id}",
+    "myWork": "Mi obra {n}",
+    "favoriteWork": "Obra favorita {n}",
+    "bioDefault": "Este usuario es demasiado perezoso para escribir~"
+  },
+  "studio": {
+    "title": "Estudio",
+    "viewRecord": "Grabar",
+    "viewEdit": "Editar",
+    "viewMix": "Mezclar",
+    "plugins": "Plugins VST",
+    "export": "Exportar",
+    "pianoRoll": "Editor de piano roll",
+    "staffView": "Vista de pentagrama",
+    "mixConsole": "Consola de mezcla",
+    "track": "Pista {n}"
+  },
+  "communityFeed": {
+    "title": "Descubrir",
+    "subtitle": "Explora obras destacadas de la comunidad",
+    "publish": "Publicar obra",
+    "empty": "Sin contenido",
+    "all": "Todos",
+    "justNow": "ahora mismo",
+    "hoursAgo": "hace {n}h",
+    "daysAgo": "hace {n}d"
+  },
+  "stockLibrary": {
+    "title": "Biblioteca de Stock Gratuita",
+    "subtitle": "Más de 100 clips HD gratuitos de Pexels y Pixabay, aptos para uso comercial",
+    "searchPlaceholder": "Buscar stock...",
+    "gridView": "Vista cuadrícula",
+    "listView": "Vista lista",
+    "all": "Todos ({n})",
+    "use": "Usar",
+    "favorite": "Favorito",
+    "selected": "Seleccionado: {title}",
+    "source": "Fuente: {source} | Licencia: {license}",
+    "showing": "Mostrando {shown} / {total} clips"
   }
 }

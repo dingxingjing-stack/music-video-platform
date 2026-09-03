@@ -479,5 +479,68 @@
     "loadError": "Laden fehlgeschlagen",
     "searchFailed": "Suche fehlgeschlagen",
     "loadRetryError": "Laden fehlgeschlagen, bitte aktualisieren und erneut versuchen"
+  },
+  "feed": {
+    "title": "Personalisierter Feed",
+    "subtitle": "Musik, basierend auf Ihren Vorlieben",
+    "loading": "Laden...",
+    "empty": "Noch keine Empfehlungen",
+    "emptyDesc": "Entdecken Sie mehr Musik~",
+    "author": "Von: {name}",
+    "plays": "Wiedergaben",
+    "likes": "Gefällt mir",
+    "favorites": "Favoriten",
+    "recommended": "Empfohlen {n}"
+  },
+  "profile": {
+    "loading": "Laden...",
+    "follow": "Folgen",
+    "following": "Gefolgt",
+    "followingStat": "Folgt",
+    "followers": "Follower",
+    "works": "Werke",
+    "tabWorks": "Werke",
+    "tabFavorites": "Favoriten",
+    "emptyWorks": "Noch keine Werke",
+    "emptyFavorites": "Noch keine Favoriten",
+    "user": "Benutzer {id}",
+    "myWork": "Mein Werk {n}",
+    "favoriteWork": "Favoriten-Werk {n}",
+    "bioDefault": "Dieser Benutzer ist zu faul, etwas zu schreiben~"
+  },
+  "studio": {
+    "title": "Studio",
+    "viewRecord": "Aufnehmen",
+    "viewEdit": "Bearbeiten",
+    "viewMix": "Mischen",
+    "plugins": "VST-Plugins",
+    "export": "Exportieren",
+    "pianoRoll": "Klavierrollen-Editor",
+    "staffView": "Notensystem-Ansicht",
+    "mixConsole": "Mischpult",
+    "track": "Track {n}"
+  },
+  "communityFeed": {
+    "title": "Entdecken",
+    "subtitle": "Entdecken Sie herausragende Werke der Community",
+    "publish": "Werk veröffentlichen",
+    "empty": "Noch kein Inhalt",
+    "all": "Alle",
+    "justNow": "gerade eben",
+    "hoursAgo": "vor {n} Std.",
+    "daysAgo": "vor {n} T."
+  },
+  "stockLibrary": {
+    "title": "Kostenlose Stock-Bibliothek",
+    "subtitle": "Über 100 kostenlose HD-Videos von Pexels & Pixabay, kommerziell nutzbar",
+    "searchPlaceholder": "Stock suchen...",
+    "gridView": "Rasteransicht",
+    "listView": "Listenansicht",
+    "all": "Alle ({n})",
+    "use": "Verwenden",
+    "favorite": "Favorit",
+    "selected": "Ausgewählt: {title}",
+    "source": "Quelle: {source} | Lizenz: {license}",
+    "showing": "Zeige {shown} / {total} Clips"
   }
 }

@@ -479,5 +479,68 @@
     "loadError": "Failed to load",
     "searchFailed": "Search failed",
     "loadRetryError": "Failed to load, please refresh and retry"
+  },
+  "feed": {
+    "title": "Personalized Feed",
+    "subtitle": "Music recommended based on your preferences",
+    "loading": "Loading...",
+    "empty": "No recommendations yet",
+    "emptyDesc": "Go explore more music~",
+    "author": "By: {name}",
+    "plays": "plays",
+    "likes": "likes",
+    "favorites": "favorites",
+    "recommended": "Recommended {n}"
+  },
+  "profile": {
+    "loading": "Loading...",
+    "follow": "Follow",
+    "following": "Following",
+    "followingStat": "Following",
+    "followers": "Followers",
+    "works": "Works",
+    "tabWorks": "Works",
+    "tabFavorites": "Favorites",
+    "emptyWorks": "No works yet",
+    "emptyFavorites": "No favorites yet",
+    "user": "User {id}",
+    "myWork": "My Work {n}",
+    "favoriteWork": "Favorite Work {n}",
+    "bioDefault": "This user is too lazy to write anything~"
+  },
+  "studio": {
+    "title": "Studio",
+    "viewRecord": "Record",
+    "viewEdit": "Edit",
+    "viewMix": "Mix",
+    "plugins": "VST Plugins",
+    "export": "Export",
+    "pianoRoll": "Piano Roll Editor",
+    "staffView": "Staff View",
+    "mixConsole": "Mix Console",
+    "track": "Track {n}"
+  },
+  "communityFeed": {
+    "title": "Discover",
+    "subtitle": "Explore outstanding works from the community",
+    "publish": "Publish Work",
+    "empty": "No content yet",
+    "all": "All",
+    "justNow": "just now",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago"
+  },
+  "stockLibrary": {
+    "title": "Free Stock Library",
+    "subtitle": "100+ free HD video clips from Pexels & Pixabay, usable for commercial purposes",
+    "searchPlaceholder": "Search stock...",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "all": "All ({n})",
+    "use": "Use",
+    "favorite": "Favorite",
+    "selected": "Selected: {title}",
+    "source": "Source: {source} | License: {license}",
+    "showing": "Showing {shown} / {total} clips"
   }
 }

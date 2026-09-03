@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { SocialSystem } from '../components/SocialSystem';
 import { Play, Music, Heart, Star } from 'lucide-react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface FeedItem {
   work_id: string;
@@ -44,6 +45,7 @@ const getHeaders = () => ({
 });
 
 export function Feed() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function Feed() {
         // Mock 数据补充 (因为后端返回的是 mock 数据)
         const enrichedItems = data.items.map((item, index) => ({
           ...item,
-          title: `推荐作品 ${index + 1}`,
+          title: t('feed.recommended', { n: index + 1 }),
           cover_url: `/covers/default_${(index % 5) + 1}.jpg`,
           audio_url: `/audio/demo_${(index % 3) + 1}.mp3`,
           duration: 180 + index * 10,
@@ -71,21 +73,21 @@ export function Feed() {
         setItems(enrichedItems);
       } else {
         // 使用 mock 数据
-        setItems(generateMockFeed());
+        setItems(generateMockFeed(t));
       }
     } catch (error) {
       console.error('Failed to load feed:', error);
-      setItems(generateMockFeed());
+      setItems(generateMockFeed(t));
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockFeed = (): FeedItem[] => {
+  const generateMockFeed = (tr: (k: string, p?: Record<string, string | number>) => string): FeedItem[] => {
     return Array.from({ length: 10 }, (_, i) => ({
       work_id: `work_${i + 1}`,
       author_id: `author_${(i % 3) + 1}`,
-      title: `推荐作品 ${i + 1}`,
+      title: tr('feed.recommended', { n: i + 1 }),
       likes: Math.floor(Math.random() * 1000),
       favorites: Math.floor(Math.random() * 500),
       plays: Math.floor(Math.random() * 5000),
@@ -126,8 +128,8 @@ export function Feed() {
       {/* 头部 */}
       <header className="sticky top-0 z-10 bg-bg-elevated/80 backdrop-blur-sm border-b border-border-default">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-orange-500">个性化推荐</h1>
-          <p className="text-text-secondary text-sm mt-1">根据你的喜好推荐的音乐作品</p>
+          <h1 className="text-2xl font-bold text-orange-500">{t('feed.title')}</h1>
+          <p className="text-text-secondary text-sm mt-1">{t('feed.subtitle')}</p>
         </div>
       </header>
 
@@ -135,13 +137,13 @@ export function Feed() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-text-muted animate-pulse">加载中...</div>
+            <div className="text-text-muted animate-pulse">{t('feed.loading')}</div>
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             <Music size={48} className="mb-4 opacity-50" />
-            <p>暂无推荐作品</p>
-            <p className="text-sm mt-2">先去探索更多音乐吧~</p>
+            <p>{t('feed.empty')}</p>
+            <p className="text-sm mt-2">{t('feed.emptyDesc')}</p>
           </div>
         ) : (
           <div className="grid gap-4">
@@ -196,22 +198,22 @@ export function Feed() {
                       {item.title}
                     </h3>
                     <p className="text-text-secondary text-sm mt-1">
-                      作者：{item.author_id}
+                      {t('feed.author', { name: item.author_id })}
                     </p>
 
                     {/* 统计 */}
                     <div className="flex items-center gap-4 mt-3 text-text-muted text-sm">
                       <span className="flex items-center gap-1">
                         <Play size={14} />
-                        {formatCount(item.plays)} 播放
+                        {formatCount(item.plays)} {t('feed.plays')}
                       </span>
                       <span className="flex items-center gap-1">
                         <Heart size={14} />
-                        {formatCount(item.likes)} 点赞
+                        {formatCount(item.likes)} {t('feed.likes')}
                       </span>
                       <span className="flex items-center gap-1">
                         <Star size={14} />
-                        {formatCount(item.favorites)} 收藏
+                        {formatCount(item.favorites)} {t('feed.favorites')}
                       </span>
                       {item.duration && (
                         <span className="text-text-muted">

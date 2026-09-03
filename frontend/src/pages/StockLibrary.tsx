@@ -16,6 +16,7 @@ import {
 import { Search, SearchEye, ViewList, GridView, Star, StarBorder, 
         PlayCircle, Download, Setting } from '@ant-design/icons';
 import { StockVideo, StockCategory } from '../types/video-sync';
+import { useTranslation } from '../i18n/useTranslation';
 
 // Mock 数据 (实际应从 API 获取)
 const MOCK_CATEGORIES: StockCategory[] = [
@@ -53,6 +54,7 @@ interface StockLibraryProps {
 }
 
 export default function StockLibrary({ onUseVideo }: StockLibraryProps) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -87,7 +89,7 @@ export default function StockLibrary({ onUseVideo }: StockLibraryProps) {
     if (onUseVideo) {
       onUseVideo(video);
     } else {
-      alert(`已选择：${video.title}`);
+      alert(t('stockLibrary.selected', { title: video.title }));
     }
   };
 
@@ -95,16 +97,16 @@ return (
      <div className="min-h-screen bg-[#121212] text-white p-6">
        {/* 头部 */}
        <div className="mb-8">
-         <h1 className="text-3xl font-bold mb-4">📚 免费素材库</h1>
+         <h1 className="text-3xl font-bold mb-4">📚 {t('stockLibrary.title')}</h1>
          <p className="text-gray-400 mb-6">
-           100+ 免费高清视频素材，来自 Pexels & Pixabay，可用于商业用途
+           {t('stockLibrary.subtitle')}
          </p>
 
          {/* 搜索和视图切换 */}
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
            <div className="flex w-full">
-             <Input.Search
-               placeholder="搜索素材..."
+<Input.Search
+                placeholder={t('stockLibrary.searchPlaceholder')}
                value={searchQuery}
                onChange={e => setSearchQuery(e.target.value)}
                enterButton
@@ -114,18 +116,18 @@ return (
            </div>
            <div className="flex items-center gap-2">
              <Button.Group>
-               <Button
-                 icon={<ViewOutlined />}
-                 title="网格视图"
-                 active={viewMode === 'grid'}
-                 onClick={() => setViewMode('grid')}
-               />
-               <Button
-                 icon={<GridViewOutlined />}
-                 title="列表视图"
-                 active={viewMode === 'list'}
-                 onClick={() => setViewMode('list')}
-               />
+<Button
+                  icon={<ViewOutlined />}
+                  title={t('stockLibrary.gridView')}
+                  active={viewMode === 'grid'}
+                  onClick={() => setViewMode('grid')}
+                />
+                <Button
+                  icon={<GridViewOutlined />}
+                  title={t('stockLibrary.listView')}
+                  active={viewMode === 'list'}
+                  onClick={() => setViewMode('list')}
+                />
              </Button.Group>
            </div>
          </div>
@@ -137,7 +139,7 @@ return (
              onClick={() => setSelectedCategory('all')}
              block={false}
            >
-             全部 ({MOCK_VIDEOS.length})
+             {t('stockLibrary.all', { n: MOCK_VIDEOS.length })}
            </Button>
            {MOCK_CATEGORIES.map(cat => (
              <Button
@@ -199,8 +201,8 @@ return (
                            type="primary"
                            size="small"
                          >
-                           使用
-                         </Button>
+{t('stockLibrary.use')}
+                        </Button>
                        </div>
                      </div>
                    </div>
@@ -234,7 +236,7 @@ return (
                  cover={<img src={video.thumbnail} alt={video.title} className="h-48 w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=Preview'; }} />}
                  actions={[
                    <div key="1" className="flex items-center gap-2">
-                     <Tooltip title="收藏">
+                     <Tooltip title={t('stockLibrary.favorite')}>
                        <Button
                          icon={favorites.has(video.id) ? <StarFilled /> : <StarOutlined />}
                          onClick={(e) => {
@@ -247,15 +249,15 @@ return (
                      </Tooltip>
                    </div>,
                    <div key="2" className="flex items-center gap-2">
-                     <Tooltip title="使用">
-                       <Button
-                         onClick={() => handleUseVideo(video)}
-                         size="small"
-                         type="primary"
-                       >
-                         使用
-                       </Button>
-                     </Tooltip>
+<Tooltip title={t('stockLibrary.use')}>
+                        <Button
+                          onClick={() => handleUseVideo(video)}
+                          size="small"
+                          type="primary"
+                        >
+                          {t('stockLibrary.use')}
+                        </Button>
+                      </Tooltip>
                    </div>
                  ]}
                  extra={
@@ -275,8 +277,8 @@ return (
                        </Tag>
                      ))}
                    </div>
-                   <div className="text-xs text-gray-500">
-                     来源: {video.source === 'pexels' ? 'Pexels' : 'Pixabay'} | 许可证: {video.license}
+<div className="text-xs text-gray-500">
+                      {t('stockLibrary.source', { source: video.source === 'pexels' ? 'Pexels' : 'Pixabay', license: video.license })}
                    </div>
                  </div>
                </Card>
@@ -287,7 +289,7 @@ return (
 
         {/* 结果统计 */}
         <div className="mt-8 text-center text-gray-400">
-          显示 {filteredVideos.length} / {MOCK_VIDEOS.length} 个素材
+          {t('stockLibrary.showing', { shown: filteredVideos.length, total: MOCK_VIDEOS.length })}
         </div>
       </div>
     );

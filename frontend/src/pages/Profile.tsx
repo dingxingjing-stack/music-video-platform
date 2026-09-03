@@ -9,6 +9,7 @@ import { useParams } from 'react-router-dom';
 import { SocialSystem } from '../components/SocialSystem';
 import { User, Music, Heart, Star, Play } from 'lucide-react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface UserProfile {
   user_id: string;
@@ -50,6 +51,7 @@ type TabType = 'works' | 'favorites';
 
 export function Profile() {
   const { userId } = useParams<{ userId: string }>();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
   const [favorites, setFavorites] = useState<Work[]>([]);
@@ -74,9 +76,9 @@ export function Profile() {
         const data = await response.json();
         setProfile({
           user_id: targetUserId,
-          username: `用户 ${targetUserId.slice(-6)}`,
+          username: t('profile.user', { id: targetUserId.slice(-6) }),
           avatar: undefined,
-          bio: '这个人很懒，什么都没写~',
+          bio: t('profile.bioDefault'),
           followers: data.followers || 0,
           following: data.following || 0,
           is_following: data.is_following || false,
@@ -85,9 +87,9 @@ export function Profile() {
         // Mock 数据
         setProfile({
           user_id: targetUserId,
-          username: `用户 ${targetUserId.slice(-6)}`,
+          username: t('profile.user', { id: targetUserId.slice(-6) }),
           avatar: undefined,
-          bio: '这个人很懒，什么都没写~',
+          bio: t('profile.bioDefault'),
           followers: Math.floor(Math.random() * 1000),
           following: Math.floor(Math.random() * 100),
           is_following: false,
@@ -97,9 +99,9 @@ export function Profile() {
       console.error('Failed to load profile:', error);
       setProfile({
         user_id: targetUserId,
-        username: `用户 ${targetUserId.slice(-6)}`,
+        username: t('profile.user', { id: targetUserId.slice(-6) }),
         avatar: undefined,
-        bio: '这个人很懒，什么都没写~',
+        bio: t('profile.bioDefault'),
         followers: 0,
         following: 0,
         is_following: false,
@@ -111,7 +113,7 @@ export function Profile() {
     // Mock 作品数据
     const mockWorks: Work[] = Array.from({ length: 6 }, (_, i) => ({
       work_id: `work_${targetUserId}_${i + 1}`,
-      title: `我的作品 ${i + 1}`,
+      title: t('profile.myWork', { n: i + 1 }),
       cover_url: `/covers/default_${(i % 5) + 1}.jpg`,
       likes: Math.floor(Math.random() * 500),
       favorites: Math.floor(Math.random() * 200),
@@ -122,7 +124,7 @@ export function Profile() {
 
     const mockFavorites: Work[] = Array.from({ length: 4 }, (_, i) => ({
       work_id: `fav_work_${i + 1}`,
-      title: `收藏的作品 ${i + 1}`,
+      title: t('profile.favoriteWork', { n: i + 1 }),
       cover_url: `/covers/default_${(i % 5) + 1}.jpg`,
       likes: Math.floor(Math.random() * 1000),
       favorites: Math.floor(Math.random() * 500),
@@ -183,7 +185,7 @@ export function Profile() {
             {/* 信息 */}
             <div className="flex-1">
               <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-bold">{profile?.username || '加载中...'}</h1>
+                <h1 className="text-2xl font-bold">{profile?.username || t('profile.loading')}</h1>
                 {!isOwnProfile && profile && (
                   <button
                     onClick={handleFollow}
@@ -193,7 +195,7 @@ export function Profile() {
                         : 'bg-orange-600 text-white hover:bg-orange-700'
                     }`}
                   >
-                    {profile.is_following ? '已关注' : '关注'}
+                    {profile.is_following ? t('profile.following') : t('profile.follow')}
                   </button>
                 )}
               </div>
@@ -202,13 +204,13 @@ export function Profile() {
               {/* 统计 */}
               <div className="flex items-center gap-6 mt-4">
                 <span className="text-text-secondary">
-                  <strong className="text-white">{formatCount(profile?.following || 0)}</strong> 关注
+                  <strong className="text-white">{formatCount(profile?.following || 0)}</strong> {t('profile.followingStat')}
                 </span>
                 <span className="text-text-secondary">
-                  <strong className="text-white">{formatCount(profile?.followers || 0)}</strong> 粉丝
+                  <strong className="text-white">{formatCount(profile?.followers || 0)}</strong> {t('profile.followers')}
                 </span>
                 <span className="text-text-secondary">
-                  <strong className="text-white">{works.length}</strong> 作品
+                  <strong className="text-white">{works.length}</strong> {t('profile.works')}
                 </span>
               </div>
             </div>
@@ -226,7 +228,7 @@ export function Profile() {
             >
               <div className="flex items-center gap-2">
                 <Music size={18} />
-                <span>作品</span>
+                <span>{t('profile.tabWorks')}</span>
               </div>
               {activeTab === 'works' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
@@ -242,7 +244,7 @@ export function Profile() {
             >
               <div className="flex items-center gap-2">
                 <Heart size={18} />
-                <span>收藏</span>
+                <span>{t('profile.tabFavorites')}</span>
               </div>
               {activeTab === 'favorites' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
@@ -256,7 +258,7 @@ export function Profile() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="text-text-muted animate-pulse">加载中...</div>
+            <div className="text-text-muted animate-pulse">{t('profile.loading')}</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -317,7 +319,7 @@ export function Profile() {
         {(activeTab === 'works' ? works : favorites).length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             {activeTab === 'works' ? <Music size={48} className="mb-4 opacity-50" /> : <Heart size={48} className="mb-4 opacity-50" />}
-            <p>暂无{activeTab === 'works' ? '作品' : '收藏'}</p>
+            <p>{t(activeTab === 'works' ? 'profile.emptyWorks' : 'profile.emptyFavorites')}</p>
           </div>
         )}
       </main>

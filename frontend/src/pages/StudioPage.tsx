@@ -14,8 +14,10 @@ import { VSTPluginManager } from '../components/VSTPluginManager';
 import { PianoRoll } from '../components/PianoRoll';
 import { ScoreStaff } from '../components/ScoreStaff';
 import { Note } from '../types/score';
+import { useTranslation } from '../i18n/useTranslation';
 
 export function StudioPage() {
+  const { t } = useTranslation();
   const [activeView, setActiveView] = useState<'record' | 'edit' | 'mix'>('record');
   const [showPluginManager, setShowPluginManager] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -32,7 +34,7 @@ export function StudioPage() {
       {/* 顶部工具栏 */}
       <div className="bg-gray-900 border-b border-gray-800 p-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-white font-bold text-xl">🎙️ 录音室</h1>
+          <h1 className="text-white font-bold text-xl">🎙️ {t('studio.title')}</h1>
           
           {/* 视图切换 */}
           <div className="flex bg-gray-800 rounded p-1">
@@ -44,7 +46,7 @@ export function StudioPage() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              🎤 录音
+              🎤 {t('studio.viewRecord')}
             </button>
             <button
               onClick={() => setActiveView('edit')}
@@ -54,7 +56,7 @@ export function StudioPage() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              ✏️ 编辑
+              ✏️ {t('studio.viewEdit')}
             </button>
             <button
               onClick={() => setActiveView('mix')}
@@ -64,7 +66,7 @@ export function StudioPage() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              🎚️ 混音
+              🎚️ {t('studio.viewMix')}
             </button>
           </div>
         </div>
@@ -79,12 +81,12 @@ export function StudioPage() {
                 : 'bg-gray-800 text-gray-400 hover:text-white'
             }`}
           >
-            🎛️ VST 插件
+            🎛️ {t('studio.plugins')}
           </button>
 
           {/* 导出按钮 */}
           <button className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition">
-            💾 导出
+            💾 {t('studio.export')}
           </button>
         </div>
       </div>
@@ -104,7 +106,7 @@ export function StudioPage() {
           {activeView === 'edit' && (
             <div className="space-y-4">
               <div className="bg-gray-900 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-3">钢琴卷帘编辑器</h3>
+                <h3 className="text-white font-semibold mb-3">{t('studio.pianoRoll')}</h3>
                 <PianoRoll
                   notes={notes}
                   onChange={setNotes}
@@ -114,7 +116,7 @@ export function StudioPage() {
               </div>
 
               <div className="bg-gray-900 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-3">五线谱视图</h3>
+                <h3 className="text-white font-semibold mb-3">{t('studio.staffView')}</h3>
                 <ScoreStaff
                   notes={notes}
                   config={staffConfig}
@@ -125,11 +127,11 @@ export function StudioPage() {
 
           {activeView === 'mix' && (
             <div className="bg-gray-900 rounded-lg p-4">
-              <h3 className="text-white font-semibold mb-3">混音台</h3>
+              <h3 className="text-white font-semibold mb-3">{t('studio.mixConsole')}</h3>
               <div className="grid grid-cols-8 gap-2">
                 {Array(8).fill(null).map((_, i) => (
                   <div key={i} className="bg-gray-800 rounded p-3 flex flex-col items-center">
-                    <div className="text-gray-400 text-xs mb-2">轨道 {i + 1}</div>
+                    <div className="text-gray-400 text-xs mb-2">{t('studio.track', { n: i + 1 })}</div>
                     
                     {/* 推子 */}
                     <div className="h-48 w-12 bg-gray-700 rounded relative mb-2">
