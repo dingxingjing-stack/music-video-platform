@@ -1003,5 +1003,33 @@
     "appliedChanges": "Modifications appliquées",
     "again": "Refaire le remix",
     "export": "Exporter le remix"
+  },
+  "timestretch": {
+    "title": "Étirement Temporel",
+    "subtitle": "Tempo sans changement de hauteur · Warp Marker · Quantifier",
+    "close": "Fermer",
+    "detectBpmTitle": "Détecter le BPM",
+    "detectBpmDesc": "Analyser automatiquement le tempo",
+    "detecting": "Détection...",
+    "detectBpm": "Détecter le BPM",
+    "originalBpm": "BPM d origine",
+    "targetBpm": "BPM cible",
+    "stretchRatio": "Ratio : {value}x",
+    "stretching": "Traitement...",
+    "applyStretch": "✨ Appliquer l étirement",
+    "warpMarkers": "Warp Markers ({n})",
+    "addMarker": "Ajouter un marqueur",
+    "markerTime": "Temps {time}",
+    "locked": "Verrouillé",
+    "unlocked": "Verrouiller",
+    "gridQuantize": "Quantifier sur la grille",
+    "gridResolution": "Résolution de grille",
+    "note16": "Double croche",
+    "note8": "Croche",
+    "note4": "Noire",
+    "note2": "Blanche",
+    "noteWhole": "Ronde",
+    "quantizeStrength": "Force de quantification",
+    "applyQuantize": "Appliquer la quantification"
   }
 }

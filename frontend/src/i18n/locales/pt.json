@@ -1003,5 +1003,33 @@
     "appliedChanges": "Alterações aplicadas",
     "again": "Refazer remix",
     "export": "Exportar remix"
+  },
+  "timestretch": {
+    "title": "Alongamento de Tempo",
+    "subtitle": "Tempo sem mudar o tom · Warp Marker · Quantizar",
+    "close": "Fechar",
+    "detectBpmTitle": "Detectar BPM",
+    "detectBpmDesc": "Analisar o tempo do áudio automaticamente",
+    "detecting": "Detectando...",
+    "detectBpm": "Detectar BPM",
+    "originalBpm": "BPM original",
+    "targetBpm": "BPM alvo",
+    "stretchRatio": "Proporção: {value}x",
+    "stretching": "Processando...",
+    "applyStretch": "✨ Aplicar alongamento",
+    "warpMarkers": "Warp Markers ({n})",
+    "addMarker": "Adicionar marcador",
+    "markerTime": "Tempo {time}",
+    "locked": "Bloqueado",
+    "unlocked": "Bloquear",
+    "gridQuantize": "Quantizar na grade",
+    "gridResolution": "Resolução da grade",
+    "note16": "Semicolcheia",
+    "note8": "Colcheia",
+    "note4": "Semínima",
+    "note2": "Mínima",
+    "noteWhole": "Semibreve",
+    "quantizeStrength": "Força de quantização",
+    "applyQuantize": "Aplicar quantização"
   }
 }

@@ -9,6 +9,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface WarpMarker {
   id: string;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function TimeStretchPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [detectedBpm, setDetectedBpm] = useState<number | null>(null);
   const [targetBpm, setTargetBpm] = useState(120);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -83,11 +85,11 @@ export function TimeStretchPanel({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">⏱️ 时间伸缩</h2>
-            <p className="text-sm text-zinc-400 mt-1">变速不变调 · Warp Marker · 量化</p>
+            <h2 className="text-2xl font-bold text-white">⏱️ {t('timestretch.title')}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{t('timestretch.subtitle')}</p>
           </div>
           <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-            关闭
+            {t('timestretch.close')}
           </button>
         </div>
 
@@ -95,15 +97,15 @@ export function TimeStretchPanel({ onClose }: Props) {
         {!detectedBpm ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-4">⏱️</div>
-            <h3 className="text-xl font-bold text-white mb-2">检测 BPM</h3>
-            <p className="text-zinc-400 mb-6">自动分析音频节奏速度</p>
+            <h3 className="text-xl font-bold text-white mb-2">{t('timestretch.detectBpmTitle')}</h3>
+            <p className="text-zinc-400 mb-6">{t('timestretch.detectBpmDesc')}</p>
             
             <button
               onClick={handleDetectBpm}
               disabled={isProcessing}
               className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition disabled:opacity-50"
             >
-              {isProcessing ? '检测中...' : '🎵 检测 BPM'}
+              {isProcessing ? t('timestretch.detecting') : t('timestretch.detectBpm')}
             </button>
           </div>
         ) : (
@@ -113,12 +115,12 @@ export function TimeStretchPanel({ onClose }: Props) {
             <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1 block">原始 BPM</label>
+                  <label className="text-xs text-zinc-400 mb-1 block">{t('timestretch.originalBpm')}</label>
                   <div className="text-3xl font-bold text-purple-400">{detectedBpm}</div>
                 </div>
                 
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1 block">目标 BPM</label>
+                  <label className="text-xs text-zinc-400 mb-1 block">{t('timestretch.targetBpm')}</label>
                   <input
                     type="number"
                     value={targetBpm}
@@ -130,14 +132,14 @@ export function TimeStretchPanel({ onClose }: Props) {
               
               <div className="mt-4 flex items-center justify-between">
                 <div className="text-sm text-zinc-400">
-                  伸缩比例：<span className="text-white font-medium">{stretchRatio.toFixed(2)}x</span>
+                  {t('timestretch.stretchRatio', { value: stretchRatio.toFixed(2) })}
                 </div>
                 <button
                   onClick={handleStretch}
                   disabled={isProcessing}
                   className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition disabled:opacity-50"
                 >
-                  {isProcessing ? '处理中...' : '🚀 应用伸缩'}
+                  {isProcessing ? t('timestretch.stretching') : t('timestretch.applyStretch')}
                 </button>
               </div>
             </div>
@@ -145,9 +147,9 @@ export function TimeStretchPanel({ onClose }: Props) {
             {/* Warp Marker 列表 */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-bold text-white">Warp Markers ({markers.length}个)</h3>
+                <h3 className="text-lg font-bold text-white">{t('timestretch.warpMarkers', { n: markers.length })}</h3>
                 <button className="text-xs text-purple-400 hover:text-purple-300">
-                  添加标记
+                  {t('timestretch.addMarker')}
                 </button>
               </div>
               
@@ -171,7 +173,7 @@ export function TimeStretchPanel({ onClose }: Props) {
                       </div>
                       <div>
                         <div className="text-white text-sm font-medium">
-                          第 {marker.grid_time.toFixed(2)} 拍
+                          {t('timestretch.markerTime', { time: marker.grid_time.toFixed(2) })}
                         </div>
                         <div className="text-xs text-zinc-500">
                           {marker.audio_time.toFixed(2)}s · {marker.bpm.toFixed(1)} BPM
@@ -187,7 +189,7 @@ export function TimeStretchPanel({ onClose }: Props) {
                           : 'bg-zinc-700 text-zinc-400 hover:text-white'
                       }`}
                     >
-                      {marker.is_locked ? '已锁定' : '锁定'}
+                      {marker.is_locked ? t('timestretch.locked') : t('timestretch.unlocked')}
                     </button>
                   </div>
                 ))}
@@ -196,21 +198,21 @@ export function TimeStretchPanel({ onClose }: Props) {
 
             {/* 量化选项 */}
             <div className="p-4 bg-zinc-800/50 rounded-xl">
-              <h4 className="text-sm font-medium text-white mb-3">📐 量化到网格</h4>
+              <h4 className="text-sm font-medium text-white mb-3">{t('timestretch.gridQuantize')}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1 block">网格分辨率</label>
+                  <label className="text-xs text-zinc-400 mb-1 block">{t('timestretch.gridResolution')}</label>
                   <select className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-sm text-white">
-                    <option value="0.0625">16 分音符</option>
-                    <option value="0.125">8 分音符</option>
-                    <option value="0.25" selected>4 分音符</option>
-                    <option value="0.5">2 分音符</option>
-                    <option value="1">全音符</option>
+                    <option value="0.0625">{t('timestretch.note16')}</option>
+                    <option value="0.125">{t('timestretch.note8')}</option>
+                    <option value="0.25" selected>{t('timestretch.note4')}</option>
+                    <option value="0.5">{t('timestretch.note2')}</option>
+                    <option value="1">{t('timestretch.noteWhole')}</option>
                   </select>
                 </div>
                 
                 <div>
-                  <label className="text-xs text-zinc-400 mb-1 block">量化强度</label>
+                  <label className="text-xs text-zinc-400 mb-1 block">{t('timestretch.quantizeStrength')}</label>
                   <input
                     type="range"
                     min="0"
@@ -222,7 +224,7 @@ export function TimeStretchPanel({ onClose }: Props) {
               </div>
               
               <button className="mt-3 w-full px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-sm font-medium transition">
-                应用量化
+                {t('timestretch.applyQuantize')}
               </button>
             </div>
           </div>

@@ -1003,5 +1003,33 @@
     "appliedChanges": "Changes Applied",
     "again": "Remix Again",
     "export": "Export Remix"
+  },
+  "timestretch": {
+    "title": "Time Stretch",
+    "subtitle": "Pitch-preserving tempo · Warp Marker · Quantize",
+    "close": "Close",
+    "detectBpmTitle": "Detect BPM",
+    "detectBpmDesc": "Automatically analyze the audio tempo",
+    "detecting": "Detecting...",
+    "detectBpm": "Detect BPM",
+    "originalBpm": "Original BPM",
+    "targetBpm": "Target BPM",
+    "stretchRatio": "Stretch ratio: {value}x",
+    "stretching": "Processing...",
+    "applyStretch": "✨ Apply Stretch",
+    "warpMarkers": "Warp Markers ({n})",
+    "addMarker": "Add Marker",
+    "markerTime": "Beat {time}",
+    "locked": "Locked",
+    "unlocked": "Lock",
+    "gridQuantize": "Quantize to Grid",
+    "gridResolution": "Grid Resolution",
+    "note16": "16th note",
+    "note8": "8th note",
+    "note4": "Quarter note",
+    "note2": "Half note",
+    "noteWhole": "Whole note",
+    "quantizeStrength": "Quantize Strength",
+    "applyQuantize": "Apply Quantize"
   }
 }

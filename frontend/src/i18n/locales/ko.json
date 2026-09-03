@@ -1003,5 +1003,33 @@
     "appliedChanges": "적용된 변경",
     "again": "다시 리믹스",
     "export": "리믹스 내보내기"
+  },
+  "timestretch": {
+    "title": "타임 스트레치",
+    "subtitle": "피치 유지 변속 · Warp Marker · 양자화",
+    "close": "닫기",
+    "detectBpmTitle": "BPM 감지",
+    "detectBpmDesc": "오디오 템포 자동 분석",
+    "detecting": "감지 중...",
+    "detectBpm": "BPM 감지",
+    "originalBpm": "원래 BPM",
+    "targetBpm": "목표 BPM",
+    "stretchRatio": "신축 비율: {value}x",
+    "stretching": "처리 중...",
+    "applyStretch": "✨ 신축 적용",
+    "warpMarkers": "Warp Markers ({n}개)",
+    "addMarker": "마커 추가",
+    "markerTime": "비트 {time}",
+    "locked": "잠김",
+    "unlocked": "잠금",
+    "gridQuantize": "그리드 양자화",
+    "gridResolution": "그리드 해상도",
+    "note16": "16분음표",
+    "note8": "8분음표",
+    "note4": "4분음표",
+    "note2": "2분음표",
+    "noteWhole": "온음표",
+    "quantizeStrength": "양자화 강도",
+    "applyQuantize": "양자화 적용"
   }
 }

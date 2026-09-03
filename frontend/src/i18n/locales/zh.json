@@ -1003,5 +1003,33 @@
     "appliedChanges": "应用的变化",
     "again": "重新 Remix",
     "export": "导出 Remix"
+  },
+  "timestretch": {
+    "title": "时间伸缩",
+    "subtitle": "变速不变调 · Warp Marker · 量化",
+    "close": "关闭",
+    "detectBpmTitle": "检测 BPM",
+    "detectBpmDesc": "自动分析音频节奏速度",
+    "detecting": "检测中...",
+    "detectBpm": "检测 BPM",
+    "originalBpm": "原始 BPM",
+    "targetBpm": "目标 BPM",
+    "stretchRatio": "伸缩比例：{value}x",
+    "stretching": "处理中...",
+    "applyStretch": "✨ 应用伸缩",
+    "warpMarkers": "Warp Markers ({n}个)",
+    "addMarker": "添加标记",
+    "markerTime": "第 {time} 拍",
+    "locked": "已锁定",
+    "unlocked": "锁定",
+    "gridQuantize": "量化到网格",
+    "gridResolution": "网格分辨率",
+    "note16": "16 分音符",
+    "note8": "8 分音符",
+    "note4": "4 分音符",
+    "note2": "2 分音符",
+    "noteWhole": "全音符",
+    "quantizeStrength": "量化强度",
+    "applyQuantize": "应用量化"
   }
 }

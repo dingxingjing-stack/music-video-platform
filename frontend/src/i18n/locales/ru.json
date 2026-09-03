@@ -1003,5 +1003,33 @@
     "appliedChanges": "Применённые изменения",
     "again": "Повторить ремикс",
     "export": "Экспорт ремикса"
+  },
+  "timestretch": {
+    "title": "Растяжение времени",
+    "subtitle": "Темп без изменения тона · Warp Marker · Квантизация",
+    "close": "Закрыть",
+    "detectBpmTitle": "Определить BPM",
+    "detectBpmDesc": "Автоматический анализ темпа аудио",
+    "detecting": "Определение...",
+    "detectBpm": "Определить BPM",
+    "originalBpm": "Исходный BPM",
+    "targetBpm": "Целевой BPM",
+    "stretchRatio": "Коэффициент: {value}x",
+    "stretching": "Обработка...",
+    "applyStretch": "✨ Применить растяжение",
+    "warpMarkers": "Warp Markers ({n})",
+    "addMarker": "Добавить маркер",
+    "markerTime": "Доля {time}",
+    "locked": "Заблокировано",
+    "unlocked": "Заблокировать",
+    "gridQuantize": "Квантизация по сетке",
+    "gridResolution": "Разрешение сетки",
+    "note16": "Шестнадцатая",
+    "note8": "Восьмая",
+    "note4": "Четверть",
+    "note2": "Половина",
+    "noteWhole": "Целая",
+    "quantizeStrength": "Сила квантизации",
+    "applyQuantize": "Применить квантизацию"
   }
 }

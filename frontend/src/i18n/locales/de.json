@@ -1003,5 +1003,33 @@
     "appliedChanges": "Angewandte Änderungen",
     "again": "Erneut remixen",
     "export": "Remix exportieren"
+  },
+  "timestretch": {
+    "title": "Zeitdehnung",
+    "subtitle": "Tonhöhenneutrales Tempo · Warp Marker · Quantisieren",
+    "close": "Schließen",
+    "detectBpmTitle": "BPM erkennen",
+    "detectBpmDesc": "Tempo des Audios automatisch analysieren",
+    "detecting": "Erkenne...",
+    "detectBpm": "BPM erkennen",
+    "originalBpm": "Original-BPM",
+    "targetBpm": "Ziel-BPM",
+    "stretchRatio": "Verhältnis: {value}x",
+    "stretching": "Verarbeite...",
+    "applyStretch": "✨ Dehnung anwenden",
+    "warpMarkers": "Warp Markers ({n})",
+    "addMarker": "Marker hinzufügen",
+    "markerTime": "Beat {time}",
+    "locked": "Gesperrt",
+    "unlocked": "Sperren",
+    "gridQuantize": "Auf Raster quantisieren",
+    "gridResolution": "Rasterauflösung",
+    "note16": "Sechzehntel",
+    "note8": "Achtel",
+    "note4": "Viertel",
+    "note2": "Halbe",
+    "noteWhole": "Ganze",
+    "quantizeStrength": "Quantisierungsstärke",
+    "applyQuantize": "Quantisierung anwenden"
   }
 }

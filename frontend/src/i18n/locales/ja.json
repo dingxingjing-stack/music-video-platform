@@ -1003,5 +1003,33 @@
     "appliedChanges": "適用された変更",
     "again": "再度リミックス",
     "export": "Remix を書き出し"
+  },
+  "timestretch": {
+    "title": "タイムストレッチ",
+    "subtitle": "ピッチ保持の変速 · Warp Marker · 量子化",
+    "close": "閉じる",
+    "detectBpmTitle": "BPM を検出",
+    "detectBpmDesc": "オーディオのテンポを自動解析",
+    "detecting": "検出中...",
+    "detectBpm": "BPM を検出",
+    "originalBpm": "元 BPM",
+    "targetBpm": "目標 BPM",
+    "stretchRatio": "伸縮率：{value}x",
+    "stretching": "処理中...",
+    "applyStretch": "✨ 伸縮を適用",
+    "warpMarkers": "Warp Markers ({n})",
+    "addMarker": "マーカーを追加",
+    "markerTime": "ビート {time}",
+    "locked": "ロック中",
+    "unlocked": "ロック",
+    "gridQuantize": "グリッドに量子化",
+    "gridResolution": "グリッド解像度",
+    "note16": "16 分音符",
+    "note8": "8 分音符",
+    "note4": "4 分音符",
+    "note2": "2 分音符",
+    "noteWhole": "全音符",
+    "quantizeStrength": "量子化の強さ",
+    "applyQuantize": "量子化を適用"
   }
 }
