@@ -1387,5 +1387,26 @@
     "download": "Baixar",
     "buy": "Comprar",
     "footer": "Materiais pagos podem ser baixados ilimitadamente após a compra · Suporta Alipay/WeChat Pay"
+  },
+  "lyricedit": {
+    "title": "Legendas de Letras",
+    "importLabel": "Importar letras (uma por linha)",
+    "importPlaceholder": "Cole as letras aqui...",
+    "autoSync": "Sincronizar tempo automaticamente",
+    "manualAdjust": "Habilitar ajuste manual",
+    "timeline": "Linha do tempo de letras",
+    "start": "Início",
+    "end": "Fim",
+    "subtitleStyle": "Estilo de legenda",
+    "fontSize": "Tamanho da fonte",
+    "position": "Posição",
+    "posTop": "Superior",
+    "posCenter": "Centro",
+    "posBottom": "Inferior",
+    "animation": "Animação",
+    "animNone": "Nenhuma",
+    "animKaraoke": "Karaokê",
+    "animScroll": "Rolagem",
+    "color": "Cor"
   }
 }

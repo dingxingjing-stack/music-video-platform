@@ -1387,5 +1387,26 @@
     "download": "Herunterladen",
     "buy": "Kaufen",
     "footer": "Bezahlte Materialien nach Kauf unbegrenzt herunterladbar · Unterstützt Alipay/WeChat Pay"
+  },
+  "lyricedit": {
+    "title": "Text-Untertitel",
+    "importLabel": "Texte importieren (einer pro Zeile)",
+    "importPlaceholder": "Texte hier einfügen...",
+    "autoSync": "Timing automatisch synchronisieren",
+    "manualAdjust": "Manuelle Feinstellung aktivieren",
+    "timeline": "Text-Zeitleiste",
+    "start": "Start",
+    "end": "Ende",
+    "subtitleStyle": "Untertitelstil",
+    "fontSize": "Schriftgröße",
+    "position": "Position",
+    "posTop": "Oben",
+    "posCenter": "Mitte",
+    "posBottom": "Unten",
+    "animation": "Animation",
+    "animNone": "Keine",
+    "animKaraoke": "Karaoke",
+    "animScroll": "Scrollen",
+    "color": "Farbe"
   }
 }

@@ -1387,5 +1387,26 @@
     "download": "Скачать",
     "buy": "Купить",
     "footer": "Платные материалы скачиваются без ограничений после покупки · Поддержка Alipay/WeChat Pay"
+  },
+  "lyricedit": {
+    "title": "Субтитры текста",
+    "importLabel": "Импорт текста (по строке)",
+    "importPlaceholder": "Вставьте текст сюда...",
+    "autoSync": "Авто-синхронизация времени",
+    "manualAdjust": "Включить ручную настройку",
+    "timeline": "Временная шкала текста",
+    "start": "Начало",
+    "end": "Конец",
+    "subtitleStyle": "Стиль субтитров",
+    "fontSize": "Размер шрифта",
+    "position": "Позиция",
+    "posTop": "Сверху",
+    "posCenter": "Центр",
+    "posBottom": "Снизу",
+    "animation": "Анимация",
+    "animNone": "Нет",
+    "animKaraoke": "Караоке",
+    "animScroll": "Прокрутка",
+    "color": "Цвет"
   }
 }

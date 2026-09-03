@@ -1387,5 +1387,26 @@
     "download": "下载",
     "buy": "购买",
     "footer": "付费素材购买后可无限次下载 · 支持支付宝/微信支付"
+  },
+  "lyricedit": {
+    "title": "歌词字幕",
+    "importLabel": "导入歌词 (每行一句)",
+    "importPlaceholder": "在这里粘贴歌词...",
+    "autoSync": "自动同步时间",
+    "manualAdjust": "启用手动微调",
+    "timeline": "歌词时间轴",
+    "start": "开始",
+    "end": "结束",
+    "subtitleStyle": "字幕样式",
+    "fontSize": "字体大小",
+    "position": "位置",
+    "posTop": "顶部",
+    "posCenter": "中间",
+    "posBottom": "底部",
+    "animation": "动画",
+    "animNone": "无",
+    "animKaraoke": "卡拉 OK",
+    "animScroll": "滚动",
+    "color": "颜色"
   }
 }

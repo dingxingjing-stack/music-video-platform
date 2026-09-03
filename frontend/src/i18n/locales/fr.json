@@ -1387,5 +1387,26 @@
     "download": "Télécharger",
     "buy": "Acheter",
     "footer": "Les matériaux payants se téléchargent sans limite après achat · Prend en charge Alipay/WeChat Pay"
+  },
+  "lyricedit": {
+    "title": "Sous-titres des paroles",
+    "importLabel": "Importer les paroles (une par ligne)",
+    "importPlaceholder": "Collez les paroles ici...",
+    "autoSync": "Synchroniser le timing",
+    "manualAdjust": "Activer le réglage manuel",
+    "timeline": "Chronologie des paroles",
+    "start": "Début",
+    "end": "Fin",
+    "subtitleStyle": "Style des sous-titres",
+    "fontSize": "Taille de police",
+    "position": "Position",
+    "posTop": "Haut",
+    "posCenter": "Centre",
+    "posBottom": "Bas",
+    "animation": "Animation",
+    "animNone": "Aucune",
+    "animKaraoke": "Karaoké",
+    "animScroll": "Défilement",
+    "color": "Couleur"
   }
 }

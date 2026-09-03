@@ -1387,5 +1387,26 @@
     "download": "Download",
     "buy": "Buy",
     "footer": "Paid assets can be downloaded unlimited times after purchase · Supports Alipay/WeChat Pay"
+  },
+  "lyricedit": {
+    "title": "Lyric Subtitles",
+    "importLabel": "Import lyrics (one per line)",
+    "importPlaceholder": "Paste lyrics here...",
+    "autoSync": "Auto-sync timing",
+    "manualAdjust": "Enable manual fine-tuning",
+    "timeline": "Lyric Timeline",
+    "start": "Start",
+    "end": "End",
+    "subtitleStyle": "Subtitle Style",
+    "fontSize": "Font Size",
+    "position": "Position",
+    "posTop": "Top",
+    "posCenter": "Center",
+    "posBottom": "Bottom",
+    "animation": "Animation",
+    "animNone": "None",
+    "animKaraoke": "Karaoke",
+    "animScroll": "Scroll",
+    "color": "Color"
   }
 }

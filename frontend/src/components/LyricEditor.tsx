@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import { LyricLine, LyricStyle } from '../types/video-sync';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   lyrics: LyricLine[];
@@ -26,6 +27,7 @@ export function LyricEditor({
   onLyricsChange,
   onStyleChange
 }: Props) {
+  const { t } = useTranslation();
   const [rawLyrics, setRawLyrics] = useState('');
   const [autoSync, setAutoSync] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<LyricStyle>({
@@ -73,7 +75,7 @@ export function LyricEditor({
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 h-full flex flex-col">
-      <h3 className="text-white font-semibold mb-3">歌词字幕</h3>
+      <h3 className="text-white font-semibold mb-3">{t('lyricedit.title')}</h3>
       
       {/* 歌词预览 */}
       <div className="mb-4 p-4 bg-gray-800 rounded h-40 relative overflow-hidden">
@@ -99,20 +101,20 @@ export function LyricEditor({
       {/* 原始歌词输入 */}
       <div className="mb-4">
         <label className="text-gray-300 text-sm block mb-2">
-          导入歌词 (每行一句)
+          {t('lyricedit.importLabel')}
         </label>
         <textarea
           value={rawLyrics}
           onChange={(e) => setRawLyrics(e.target.value)}
           className="w-full h-32 bg-gray-800 text-white p-2 rounded resize-none"
-          placeholder="在这里粘贴歌词..."
+          placeholder={t('lyricedit.importPlaceholder')}
         />
         <div className="flex gap-2 mt-2">
           <button
             onClick={handleImportLyrics}
             className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm"
           >
-            自动同步时间
+            {t('lyricedit.autoSync')}
           </button>
           <label className="flex items-center text-sm text-gray-400">
             <input
@@ -121,14 +123,14 @@ export function LyricEditor({
               onChange={(e) => setAutoSync(e.target.checked)}
               className="mr-2"
             />
-            启用手动微调
+            {t('lyricedit.manualAdjust')}
           </label>
         </div>
       </div>
       
       {/* 歌词列表编辑 */}
       <div className="flex-1 overflow-y-auto">
-        <h4 className="text-white text-sm font-medium mb-2">歌词时间轴</h4>
+        <h4 className="text-white text-sm font-medium mb-2">{t('lyricedit.timeline')}</h4>
         {lyrics.map((lyric, index) => (
           <div
             key={lyric.id}
@@ -156,7 +158,7 @@ export function LyricEditor({
                   onChange={(e) => handleTimeAdjust(lyric.id, 'startTime', parseFloat(e.target.value))}
                   className="w-20 bg-gray-700 text-white text-xs p-1 rounded"
                   step="0.1"
-                  placeholder="开始"
+                  placeholder={t('lyricedit.start')}
                 />
                 <input
                   type="number"
@@ -164,7 +166,7 @@ export function LyricEditor({
                   onChange={(e) => handleTimeAdjust(lyric.id, 'endTime', parseFloat(e.target.value))}
                   className="w-20 bg-gray-700 text-white text-xs p-1 rounded"
                   step="0.1"
-                  placeholder="结束"
+                  placeholder={t('lyricedit.end')}
                 />
               </>
             )}
@@ -174,10 +176,10 @@ export function LyricEditor({
       
       {/* 样式设置 */}
       <div className="mt-4 border-t border-gray-700 pt-4">
-        <h4 className="text-white text-sm font-medium mb-2">字幕样式</h4>
+        <h4 className="text-white text-sm font-medium mb-2">{t('lyricedit.subtitleStyle')}</h4>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-gray-400 text-xs">字体大小</label>
+            <label className="text-gray-400 text-xs">{t('lyricedit.fontSize')}</label>
             <input
               type="range"
               min="12"
@@ -192,7 +194,7 @@ export function LyricEditor({
             />
           </div>
           <div>
-            <label className="text-gray-400 text-xs">位置</label>
+            <label className="text-gray-400 text-xs">{t('lyricedit.position')}</label>
             <select
               value={selectedStyle.position}
               onChange={(e) => {
@@ -202,13 +204,13 @@ export function LyricEditor({
               }}
               className="w-full bg-gray-700 text-white text-xs p-1 rounded"
             >
-              <option value="top">顶部</option>
-              <option value="center">中间</option>
-              <option value="bottom">底部</option>
+              <option value="top">{t('lyricedit.posTop')}</option>
+              <option value="center">{t('lyricedit.posCenter')}</option>
+              <option value="bottom">{t('lyricedit.posBottom')}</option>
             </select>
           </div>
           <div>
-            <label className="text-gray-400 text-xs">动画</label>
+            <label className="text-gray-400 text-xs">{t('lyricedit.animation')}</label>
             <select
               value={selectedStyle.animation}
               onChange={(e) => {
@@ -218,13 +220,13 @@ export function LyricEditor({
               }}
               className="w-full bg-gray-700 text-white text-xs p-1 rounded"
             >
-              <option value="none">无</option>
-              <option value="karaoke">卡拉 OK</option>
-              <option value="scroll">滚动</option>
+              <option value="none">{t('lyricedit.animNone')}</option>
+              <option value="karaoke">{t('lyricedit.animKaraoke')}</option>
+              <option value="scroll">{t('lyricedit.animScroll')}</option>
             </select>
           </div>
           <div>
-            <label className="text-gray-400 text-xs">颜色</label>
+            <label className="text-gray-400 text-xs">{t('lyricedit.color')}</label>
             <input
               type="color"
               value={selectedStyle.color}

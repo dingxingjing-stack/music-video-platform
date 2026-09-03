@@ -1387,5 +1387,26 @@
     "download": "다운로드",
     "buy": "구매",
     "footer": "유료 소재는 구매 후 무제한 다운로드 · 알리페이/위챗페이 지원"
+  },
+  "lyricedit": {
+    "title": "가사 자막",
+    "importLabel": "가사 가져오기 (한 줄에 한 구절)",
+    "importPlaceholder": "여기에 가사를 붙여넣기...",
+    "autoSync": "타이밍 자동 동기화",
+    "manualAdjust": "수동 미세 조정 활성화",
+    "timeline": "가사 타임라인",
+    "start": "시작",
+    "end": "끝",
+    "subtitleStyle": "자막 스타일",
+    "fontSize": "글꼴 크기",
+    "position": "위치",
+    "posTop": "상단",
+    "posCenter": "중앙",
+    "posBottom": "하단",
+    "animation": "애니메이션",
+    "animNone": "없음",
+    "animKaraoke": "노래방",
+    "animScroll": "스크롤",
+    "color": "색상"
   }
 }

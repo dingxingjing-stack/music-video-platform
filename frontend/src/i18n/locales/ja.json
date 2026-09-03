@@ -1387,5 +1387,26 @@
     "download": "ダウンロード",
     "buy": "購入",
     "footer": "有料素材は購入後何度でもダウンロード可能 · Alipay/WeChat Pay 対応"
+  },
+  "lyricedit": {
+    "title": "歌詞字幕",
+    "importLabel": "歌詞をインポート（1 行に 1 句）",
+    "importPlaceholder": "ここに歌詞を貼り付け...",
+    "autoSync": "タイミングを自動同期",
+    "manualAdjust": "手動微調整を有効化",
+    "timeline": "歌詞タイムライン",
+    "start": "開始",
+    "end": "終了",
+    "subtitleStyle": "字幕スタイル",
+    "fontSize": "フォントサイズ",
+    "position": "位置",
+    "posTop": "上部",
+    "posCenter": "中央",
+    "posBottom": "下部",
+    "animation": "アニメーション",
+    "animNone": "なし",
+    "animKaraoke": "カラオケ",
+    "animScroll": "スクロール",
+    "color": "色"
   }
 }
