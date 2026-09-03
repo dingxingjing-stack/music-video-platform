@@ -906,5 +906,33 @@
       "hiphop": "Hip-Hop",
       "ballad": "Ballad"
     }
+  },
+  "stockLib": {
+    "title": "Stock Video Library",
+    "assetCount": "{n} clips",
+    "searchPlaceholder": "Search stock (title/description/tags)...",
+    "category": "Category",
+    "duration": "Duration",
+    "resolution": "Resolution",
+    "fps": "Frame Rate",
+    "resetFilters": "Reset Filters",
+    "results": "{n} results",
+    "filteredFrom": " (filtered from {m} clips)",
+    "addToTimeline": "Add to Timeline",
+    "loading": "Loading...",
+    "noResults": "No matching clips found",
+    "resetConditions": "Reset Filters",
+    "showAll": "Showing all {n} clips",
+    "sourceNote": "Sources: Pexels, Pixabay, Mixkit (free for commercial use)",
+    "seconds": "{n} s",
+    "source": "Source",
+    "tags": "Tags",
+    "close": "Close",
+    "durAny": "Any duration",
+    "durShort": "Short (<10s)",
+    "durMedium": "Medium (10-20s)",
+    "durLong": "Long (>20s)",
+    "resAny": "Any resolution",
+    "fpsAny": "Any frame rate"
   }
 }

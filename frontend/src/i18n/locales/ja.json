@@ -906,5 +906,33 @@
       "hiphop": "ヒップホップ",
       "ballad": "バラード"
     }
+  },
+  "stockLib": {
+    "title": "ビデオ素材ライブラリ",
+    "assetCount": "{n} 件",
+    "searchPlaceholder": "素材を検索（タイトル/説明/タグ）...",
+    "category": "分類",
+    "duration": "長さ",
+    "resolution": "解像度",
+    "fps": "フレームレート",
+    "resetFilters": "フィルターをリセット",
+    "results": "{n} 件の結果",
+    "filteredFrom": " ({m} 件からフィルター)",
+    "addToTimeline": "タイムラインに追加",
+    "loading": "読み込み中...",
+    "noResults": "一致する素材がありません",
+    "resetConditions": "フィルターをリセット",
+    "showAll": "全 {n} 件を表示",
+    "sourceNote": "出典: Pexels, Pixabay, Mixkit (商用無料)",
+    "seconds": "{n} 秒",
+    "source": "出典",
+    "tags": "タグ",
+    "close": "閉じる",
+    "durAny": "任意の長さ",
+    "durShort": "短い (<10s)",
+    "durMedium": "中 (10-20s)",
+    "durLong": "長い (>20s)",
+    "resAny": "任意の解像度",
+    "fpsAny": "任意のフレームレート"
   }
 }

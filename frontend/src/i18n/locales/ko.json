@@ -906,5 +906,33 @@
       "hiphop": "힙합",
       "ballad": "발라드"
     }
+  },
+  "stockLib": {
+    "title": "영상 소재 라이브러리",
+    "assetCount": "소재 {n}개",
+    "searchPlaceholder": "소재 검색 (제목/설명/태그)...",
+    "category": "분류",
+    "duration": "길이",
+    "resolution": "해상도",
+    "fps": "프레임 레이트",
+    "resetFilters": "필터 초기화",
+    "results": "결과 {n}개",
+    "filteredFrom": " ({m}개에서 필터링)",
+    "addToTimeline": "타임라인에 추가",
+    "loading": "로딩 중...",
+    "noResults": "일치하는 소재가 없습니다",
+    "resetConditions": "필터 초기화",
+    "showAll": "소재 {n}개 모두 표시",
+    "sourceNote": "출처: Pexels, Pixabay, Mixkit (상업용 무료)",
+    "seconds": "{n}초",
+    "source": "출처",
+    "tags": "태그",
+    "close": "닫기",
+    "durAny": "전체 길이",
+    "durShort": "짧음 (<10초)",
+    "durMedium": "중간 (10-20초)",
+    "durLong": "김 (>20초)",
+    "resAny": "전체 해상도",
+    "fpsAny": "전체 프레임 레이트"
   }
 }

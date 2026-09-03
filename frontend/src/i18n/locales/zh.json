@@ -906,5 +906,33 @@
       "hiphop": "嘻哈",
       "ballad": "抒情"
     }
+  },
+  "stockLib": {
+    "title": "视频素材库",
+    "assetCount": "{n} 个素材",
+    "searchPlaceholder": "搜索素材（标题/描述/标签）...",
+    "category": "分类",
+    "duration": "时长",
+    "resolution": "分辨率",
+    "fps": "帧率",
+    "resetFilters": "重置筛选",
+    "results": "共 {n} 个结果",
+    "filteredFrom": " (筛选自 {m} 个素材)",
+    "addToTimeline": "添加到时间轴",
+    "loading": "加载中...",
+    "noResults": "没有找到匹配的素材",
+    "resetConditions": "重置筛选条件",
+    "showAll": "已显示全部 {n} 个素材",
+    "sourceNote": "素材来源：Pexels, Pixabay, Mixkit (免费商用)",
+    "seconds": "{n} 秒",
+    "source": "来源",
+    "tags": "标签",
+    "close": "关闭",
+    "durAny": "任意时长",
+    "durShort": "短 (<10s)",
+    "durMedium": "中 (10-20s)",
+    "durLong": "长 (>20s)",
+    "resAny": "任意分辨率",
+    "fpsAny": "任意帧率"
   }
 }

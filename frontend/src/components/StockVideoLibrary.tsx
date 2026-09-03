@@ -6,12 +6,13 @@
  * - 搜索/筛选（分类/时长/分辨率）
  * - 分页/无限滚动
  * - 预览
- * - 添加到时间轴
+ * - {t('stockLib.addToTimeline')}
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { StockVideo } from '../types/video-sync';
 import { STOCK_VIDEOS, STOCK_VIDEO_CATEGORIES } from '../data/stock-videos';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   onVideoSelect: (video: StockVideo) => void;
@@ -22,28 +23,29 @@ const PAGE_SIZE = 20; // 每页显示 20 个视频
 
 // 时长选项
 const DURATION_OPTIONS = [
-  { label: '任意时长', value: 'all' },
-  { label: '短 (<10s)', value: 'short' },
-  { label: '中 (10-20s)', value: 'medium' },
-  { label: '长 (>20s)', value: 'long' },
+  { label: 'stockLib.durAny', value: 'all' },
+  { label: 'stockLib.durShort', value: 'short' },
+  { label: 'stockLib.durMedium', value: 'medium' },
+  { label: 'stockLib.durLong', value: 'long' },
 ];
 
 // 分辨率选项
 const RESOLUTION_OPTIONS = [
-  { label: '任意分辨率', value: 'all' },
+  { label: 'stockLib.resAny', value: 'all' },
   { label: '1080p', value: '1080p' },
   { label: '4K', value: '4K' },
 ];
 
 // 帧率选项
 const FPS_OPTIONS = [
-  { label: '任意帧率', value: 'all' },
+  { label: 'stockLib.fpsAny', value: 'all' },
   { label: '24 fps', value: '24' },
   { label: '30 fps', value: '30' },
   { label: '60 fps', value: '60' },
 ];
 
 export function StockVideoLibrary({ onVideoSelect }: Props) {
+  const { t } = useTranslation();
   // 数据状态
   const [videos, setVideos] = useState<StockVideo[]>([]);
   const [filteredVideos, setFilteredVideos] = useState<StockVideo[]>([]);
@@ -165,7 +167,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
     };
   }, [hasMore, loading]);
 
-  // 重置筛选
+  // {t('stockLib.resetFilters')}
   const handleResetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('全部');
@@ -175,7 +177,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
     setCurrentPage(1);
   };
 
-  // 添加到时间轴
+  // {t('stockLib.addToTimeline')}
   const handleAddToTimeline = (video: StockVideo) => {
     onVideoSelect(video);
   };
@@ -189,14 +191,14 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="搜索素材（标题/描述/标签）..."
+          placeholder={t('stockLib.searchPlaceholder')}
           className="flex-1 bg-gray-800 text-white px-3 py-2 rounded text-sm border border-gray-700 focus:border-orange-500 focus:outline-none"
         />
       </div>
       
       {/* 分类选择 */}
       <div className="flex items-center gap-2">
-        <span className="text-gray-400 text-xs whitespace-nowrap">分类:</span>
+        <span className="text-gray-400 text-xs whitespace-nowrap">{t('stockLib.category')}:</span>
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
@@ -212,7 +214,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
       
       {/* 时长选择 */}
       <div className="flex items-center gap-2">
-        <span className="text-gray-400 text-xs whitespace-nowrap">时长:</span>
+        <span className="text-gray-400 text-xs whitespace-nowrap">{t('stockLib.duration')}:</span>
         <select
           value={selectedDuration}
           onChange={(e) => setSelectedDuration(e.target.value)}
@@ -220,7 +222,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
         >
           {DURATION_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
@@ -228,7 +230,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
       
       {/* 分辨率选择 */}
       <div className="flex items-center gap-2">
-        <span className="text-gray-400 text-xs whitespace-nowrap">分辨率:</span>
+        <span className="text-gray-400 text-xs whitespace-nowrap">{t('stockLib.resolution')}:</span>
         <select
           value={selectedResolution}
           onChange={(e) => setSelectedResolution(e.target.value)}
@@ -236,7 +238,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
         >
           {RESOLUTION_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
@@ -244,7 +246,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
       
       {/* 帧率选择 */}
       <div className="flex items-center gap-2">
-        <span className="text-gray-400 text-xs whitespace-nowrap">帧率:</span>
+        <span className="text-gray-400 text-xs whitespace-nowrap">{t('stockLib.fps')}:</span>
         <select
           value={selectedFps}
           onChange={(e) => setSelectedFps(e.target.value)}
@@ -252,7 +254,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
         >
           {FPS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.label)}
             </option>
           ))}
         </select>
@@ -263,12 +265,12 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
         onClick={handleResetFilters}
         className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition"
       >
-        重置筛选
+        {t('stockLib.resetFilters')}
       </button>
       
       {/* 结果统计 */}
       <div className="text-xs text-gray-500 text-center">
-        共 {filteredVideos.length} 个结果 {filteredVideos.length !== STOCK_VIDEOS.length && `(筛选自 ${STOCK_VIDEOS.length} 个素材)`}
+        {t('stockLib.results', { n: filteredVideos.length })}{filteredVideos.length !== STOCK_VIDEOS.length && t('stockLib.filteredFrom', { m: STOCK_VIDEOS.length })}
       </div>
     </div>
   );
@@ -333,7 +335,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
         }}
         className="w-full py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition"
       >
-        + 添加到时间轴
+        + {t('stockLib.addToTimeline')}
       </button>
     </div>
   );
@@ -341,8 +343,8 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
   return (
     <div className="bg-gray-900 rounded-lg p-4 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-white font-semibold">视频素材库</h3>
-        <span className="text-xs text-gray-500">{STOCK_VIDEOS.length} 个素材</span>
+        <h3 className="text-white font-semibold">{t('stockLib.title')}</h3>
+        <span className="text-xs text-gray-500">{t('stockLib.assetCount', { n: STOCK_VIDEOS.length })}</span>
       </div>
       
       <div className="flex gap-4 h-full">
@@ -355,16 +357,16 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 overflow-y-auto">
             {loading && currentPage === 1 ? (
-              <div className="text-center text-gray-400 py-8">加载中...</div>
+              <div className="text-center text-gray-400 py-8">{t('stockLib.loading')}</div>
             ) : filteredVideos.length === 0 ? (
               <div className="text-center text-gray-400 py-8">
                 <div className="text-4xl mb-2">🔍</div>
-                <p>没有找到匹配的素材</p>
+                <p>{t('stockLib.noResults')}</p>
                 <button
                   onClick={handleResetFilters}
                   className="mt-3 text-orange-500 hover:text-orange-400 text-sm"
                 >
-                  重置筛选条件
+                  {t('stockLib.resetConditions')}
                 </button>
               </div>
             ) : (
@@ -376,11 +378,11 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
                 {/* 加载更多指示器 */}
                 <div ref={loadMoreRef} className="py-4 text-center">
                   {loading && (
-                    <div className="text-gray-400 text-sm">加载中...</div>
+                    <div className="text-gray-400 text-sm">{t('stockLib.loading')}</div>
                   )}
                   {!hasMore && filteredVideos.length > 0 && (
                     <div className="text-gray-500 text-sm">
-                      已显示全部 {filteredVideos.length} 个素材
+                      {t('stockLib.showAll', { n: filteredVideos.length })}
                     </div>
                   )}
                 </div>
@@ -392,7 +394,7 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
       
       {/* 来源说明 */}
       <div className="mt-3 pt-3 border-t border-gray-800 text-xs text-gray-500 flex items-center justify-between">
-        <span>素材来源：Pexels, Pixabay, Mixkit (免费商用)</span>
+        <span>{t('stockLib.sourceNote')}</span>
         <span>{currentPageVideos.length} / {filteredVideos.length}</span>
       </div>
       
@@ -426,26 +428,26 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
             {/* 详细信息 */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-gray-900 rounded p-3">
-                <div className="text-gray-400 text-xs mb-1">分辨率</div>
+                <div className="text-gray-400 text-xs mb-1">{t('stockLib.resolution')}</div>
                 <div className="text-white text-sm">{previewVideo.width}x{previewVideo.height} ({previewVideo.resolution})</div>
               </div>
               <div className="bg-gray-900 rounded p-3">
-                <div className="text-gray-400 text-xs mb-1">帧率</div>
+                <div className="text-gray-400 text-xs mb-1">{t('stockLib.fps')}</div>
                 <div className="text-white text-sm">{previewVideo.fps} fps</div>
               </div>
               <div className="bg-gray-900 rounded p-3">
-                <div className="text-gray-400 text-xs mb-1">时长</div>
-                <div className="text-white text-sm">{previewVideo.duration} 秒</div>
+                <div className="text-gray-400 text-xs mb-1">{t('stockLib.duration')}</div>
+                <div className="text-white text-sm">{t('stockLib.seconds', { n: previewVideo.duration })}</div>
               </div>
               <div className="bg-gray-900 rounded p-3">
-                <div className="text-gray-400 text-xs mb-1">来源</div>
+                <div className="text-gray-400 text-xs mb-1">{t('stockLib.source')}</div>
                 <div className="text-white text-sm uppercase">{previewVideo.source}</div>
               </div>
             </div>
             
             {/* 标签 */}
             <div className="mb-4">
-              <div className="text-gray-400 text-xs mb-2">标签</div>
+              <div className="text-gray-400 text-xs mb-2">{t('stockLib.tags')}</div>
               <div className="flex flex-wrap gap-2">
                 {previewVideo.tags.map(tag => (
                   <span key={tag} className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
@@ -463,13 +465,13 @@ export function StockVideoLibrary({ onVideoSelect }: Props) {
                 }}
                 className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded font-medium transition"
               >
-                添加到时间轴
+                {t('stockLib.addToTimeline')}
               </button>
               <button
                 onClick={() => setPreviewVideo(null)}
                 className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition"
               >
-                关闭
+                {t('stockLib.close')}
               </button>
             </div>
           </div>

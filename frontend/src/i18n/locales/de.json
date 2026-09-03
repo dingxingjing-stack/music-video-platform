@@ -906,5 +906,33 @@
       "hiphop": "Hip-Hop",
       "ballad": "Ballade"
     }
+  },
+  "stockLib": {
+    "title": "Stock-Videobibliothek",
+    "assetCount": "{n} Clips",
+    "searchPlaceholder": "Stock suchen (Titel/Beschreibung/Tags)...",
+    "category": "Kategorie",
+    "duration": "Dauer",
+    "resolution": "Auflösung",
+    "fps": "Bildrate",
+    "resetFilters": "Filter zurücksetzen",
+    "results": "{n} Ergebnisse",
+    "filteredFrom": " (gefiltert aus {m} Clips)",
+    "addToTimeline": "Zur Timeline hinzufügen",
+    "loading": "Laden...",
+    "noResults": "Keine passenden Clips",
+    "resetConditions": "Filter zurücksetzen",
+    "showAll": "Alle {n} Clips anzeigen",
+    "sourceNote": "Quellen: Pexels, Pixabay, Mixkit (kostenlos für kommerzielle Nutzung)",
+    "seconds": "{n} s",
+    "source": "Quelle",
+    "tags": "Tags",
+    "close": "Schließen",
+    "durAny": "Beliebige Dauer",
+    "durShort": "Kurz (<10s)",
+    "durMedium": "Mittel (10-20s)",
+    "durLong": "Lang (>20s)",
+    "resAny": "Beliebige Auflösung",
+    "fpsAny": "Beliebige Bildrate"
   }
 }
