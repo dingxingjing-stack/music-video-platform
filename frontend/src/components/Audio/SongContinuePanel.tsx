@@ -51,48 +51,48 @@ interface TaskStatus {
 }
 
 const DURATION_OPTIONS = [
-  { value: 'auto', label: 'AI 自动决定' },
-  { value: 10, label: '10 秒' },
-  { value: 20, label: '20 秒' },
-  { value: 30, label: '30 秒' },
-  { value: 40, label: '40 秒' },
-  { value: 60, label: '60 秒' },
-  { value: 80, label: '80 秒' },
-  { value: 100, label: '100 秒' },
-  { value: 120, label: '120 秒 (最大)' },
+  { value: 'auto', label: 'continue.durAuto' },
+  { value: 10, label: 'continue.dur10' },
+  { value: 20, label: 'continue.dur20' },
+  { value: 30, label: 'continue.dur30' },
+  { value: 40, label: 'continue.dur40' },
+  { value: 60, label: 'continue.dur60' },
+  { value: 80, label: 'continue.dur80' },
+  { value: 100, label: 'continue.dur100' },
+  { value: 120, label: 'continue.dur120' },
 ];
 
 const MODE_OPTIONS = [
-  { value: 'auto', label: 'AI 自动继续', description: '根据歌曲结构自动决定续写内容' },
-  { value: 'keep_style', label: '保持原风格继续', description: '延续当前歌曲的风格、BPM、调性' },
-  { value: 'new_style', label: '指定新风格继续', description: '改变风格进行续写（需选择风格）' },
-  { value: 'variation', label: '变奏', description: '基于主题进行变奏发展' },
-  { value: 'bridge', label: '添加桥段', description: '插入对比性的桥段，再回到主歌/副歌' },
-  { value: 'outro_extend', label: '延长结尾', description: '在当前结尾基础上淡出延长' },
+  { value: 'auto', label: 'continue.modeAuto', description: 'continue.modeAutoDesc' },
+  { value: 'keep_style', label: 'continue.modeKeep', description: 'continue.modeKeepDesc' },
+  { value: 'new_style', label: 'continue.modeNew', description: 'continue.modeNewDesc' },
+  { value: 'variation', label: 'continue.modeVariation', description: 'continue.modeVariationDesc' },
+  { value: 'bridge', label: 'continue.modeBridge', description: 'continue.modeBridgeDesc' },
+  { value: 'outro_extend', label: 'continue.modeOutro', description: 'continue.modeOutroDesc' },
 ];
 
 const STYLE_OPTIONS = [
-  { value: 'pop', label: '流行' },
-  { value: 'rock', label: '摇滚' },
-  { value: 'electronic', label: '电子' },
-  { value: 'hip-hop', label: '嘻哈' },
-  { value: 'r&b', label: 'R&B' },
-  { value: 'jazz', label: '爵士' },
-  { value: 'classical', label: '古典' },
-  { value: 'ambient', label: '氛围' },
-  { value: 'cinematic', label: '电影配乐' },
-  { value: 'lo-fi', label: 'Lo-Fi' },
-  { value: 'country', label: '乡村' },
-  { value: 'folk', label: '民谣' },
-  { value: 'reggae', label: '雷鬼' },
-  { value: 'blues', label: '蓝调' },
-  { value: 'funk', label: '放克' },
-  { value: 'disco', label: '迪斯科' },
-  { value: 'house', label: 'House' },
-  { value: 'techno', label: 'Techno' },
-  { value: 'trance', label: 'Trance' },
-  { value: 'dubstep', label: 'Dubstep' },
-  { value: 'drum-and-bass', label: 'Drum & Bass' },
+  { value: 'pop', label: 'continue.style.pop' },
+  { value: 'rock', label: 'continue.style.rock' },
+  { value: 'electronic', label: 'continue.style.electronic' },
+  { value: 'hip-hop', label: 'continue.style.hiphop' },
+  { value: 'r&b', label: 'continue.style.rnb' },
+  { value: 'jazz', label: 'continue.style.jazz' },
+  { value: 'classical', label: 'continue.style.classical' },
+  { value: 'ambient', label: 'continue.style.ambient' },
+  { value: 'cinematic', label: 'continue.style.cinematic' },
+  { value: 'lo-fi', label: 'continue.style.lofi' },
+  { value: 'country', label: 'continue.style.country' },
+  { value: 'folk', label: 'continue.style.folk' },
+  { value: 'reggae', label: 'continue.style.reggae' },
+  { value: 'blues', label: 'continue.style.blues' },
+  { value: 'funk', label: 'continue.style.funk' },
+  { value: 'disco', label: 'continue.style.disco' },
+  { value: 'house', label: 'continue.style.house' },
+  { value: 'techno', label: 'continue.style.techno' },
+  { value: 'trance', label: 'continue.style.trance' },
+  { value: 'dubstep', label: 'continue.style.dubstep' },
+  { value: 'drum-and-bass', label: 'continue.style.drumBass' },
 ];
 
 export function SongContinuePanel({
@@ -273,8 +273,8 @@ export function SongContinuePanel({
                       : 'border-[var(--border)] hover:border-[var(--accent-gradient-start)]/50'
                   } disabled:opacity-40`}
                 >
-                  <div className="font-medium">{opt.label}</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-1">{opt.description}</div>
+                  <div className="font-medium">{t(opt.label)}</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">{t(opt.description)}</div>
                 </button>
               ))}
             </div>
@@ -293,7 +293,7 @@ export function SongContinuePanel({
                 className="w-full rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-3 text-sm focus:outline-none focus:border-[var(--accent-gradient-start)]"
               >
                 {STYLE_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
+                  <option key={s.value} value={s.value}>{t(s.label)}</option>
                 ))}
               </select>
             </div>
@@ -316,7 +316,7 @@ export function SongContinuePanel({
                       : 'bg-[var(--bg-elevated)] border-[var(--border)] hover:border-[var(--accent-gradient-start)]/50'
                   } ${typeof opt.value === 'number' && opt.value > remainingTime ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               ))}
             </div>
