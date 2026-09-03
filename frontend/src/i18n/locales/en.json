@@ -815,5 +815,26 @@
     "principle2": "Match against a million-scale copyright library",
     "principle3": "Compute similarity and assess risk",
     "principle4": "Generate a detailed detection report"
+  },
+  "mvGallery": {
+    "title": "MV Template Library",
+    "searchPlaceholder": "Search templates...",
+    "all": "All",
+    "apply": "Apply This Template",
+    "empty": "No templates",
+    "stats": "{total} templates | showing {shown}",
+    "category": "Category",
+    "style": "Style",
+    "duration": "Duration",
+    "seconds": "{n} s",
+    "defaultTransition": "Default transition",
+    "fade": "Fade",
+    "config": "Template Config",
+    "subtitlePosition": "Subtitle position: {value}",
+    "filter": "Filter: {value}",
+    "beatSync": "Beat sync",
+    "bottom": "Bottom",
+    "none": "None",
+    "close": "Close"
   }
 }

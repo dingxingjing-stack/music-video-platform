@@ -7,12 +7,14 @@
 
 import { useState } from 'react';
 import { MV_TEMPLATES, MVTemplate, MV_CATEGORIES } from '../data/mv-templates';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   onTemplateSelect: (template: MVTemplate) => void;
 }
 
 export function MVTemplateGallery({ onTemplateSelect }: Props) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [previewTemplate, setPreviewTemplate] = useState<MVTemplate | null>(null);
@@ -30,7 +32,7 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 h-full flex flex-col">
-      <h3 className="text-white font-semibold mb-3">🎬 MV 模板库</h3>
+      <h3 className="text-white font-semibold mb-3">🎬 {t('mvGallery.title')}</h3>
       
       {/* 搜索栏 */}
       <div className="mb-4 flex gap-2">
@@ -38,7 +40,7 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
           type="text"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          placeholder="搜索模板..."
+          placeholder={t('mvGallery.searchPlaceholder')}
           className="flex-1 bg-gray-800 text-white px-3 py-2 rounded text-sm"
         />
       </div>
@@ -53,7 +55,7 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
               : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
           }`}
         >
-          全部
+          {t('mvGallery.all')}
         </button>
         {MV_CATEGORIES.map(cat => (
           <button
@@ -107,7 +109,7 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
                 }}
                 className="w-full py-1.5 bg-orange-600/0 group-hover:bg-orange-600 hover:bg-orange-500 text-white text-xs transition font-medium"
               >
-                应用此模板
+                {t('mvGallery.apply')}
               </button>
             </div>
           ))}
@@ -115,14 +117,14 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
         
         {filteredTemplates.length === 0 && (
           <div className="text-center text-gray-400 py-8">
-            暂无模板
+            {t('mvGallery.empty')}
           </div>
         )}
       </div>
       
       {/* 统计信息 */}
       <div className="mt-3 text-xs text-gray-500 border-t border-gray-700 pt-2">
-        共 {MV_TEMPLATES.length} 个模板 | 当前显示 {filteredTemplates.length} 个
+        {t('mvGallery.stats', { total: MV_TEMPLATES.length, shown: filteredTemplates.length })}
       </div>
       
       {/* 预览弹窗 */}
@@ -157,31 +159,31 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
               <p className="text-gray-300 text-sm mb-2">{previewTemplate.description}</p>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-gray-400">分类:</span>
+                  <span className="text-gray-400">{t('mvGallery.category')}:</span>
                   <span className="text-white ml-2">{previewTemplate.category}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400">风格:</span>
+                  <span className="text-gray-400">{t('mvGallery.style')}:</span>
                   <span className="text-white ml-2">{previewTemplate.style}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400">时长:</span>
-                  <span className="text-white ml-2">{previewTemplate.duration}秒</span>
+                  <span className="text-gray-400">{t('mvGallery.duration')}:</span>
+                  <span className="text-white ml-2">{t('mvGallery.seconds', { n: previewTemplate.duration })}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400">默认转场:</span>
-                  <span className="text-white ml-2">{previewTemplate.config.defaultTransition || '淡入淡出'}</span>
+                  <span className="text-gray-400">{t('mvGallery.defaultTransition')}:</span>
+                  <span className="text-white ml-2">{previewTemplate.config.defaultTransition || t('mvGallery.fade')}</span>
                 </div>
               </div>
             </div>
             
             {/* 配置预览 */}
             <div className="bg-gray-900 rounded p-3 mb-4">
-              <h5 className="text-white text-xs font-medium mb-2">模板配置:</h5>
+              <h5 className="text-white text-xs font-medium mb-2">{t('mvGallery.config')}:</h5>
               <div className="text-xs text-gray-400 space-y-1">
-                <div>字幕位置：{previewTemplate.config.subtitlePosition || '底部'}</div>
-                <div>滤镜：{previewTemplate.config.filter || '无'}</div>
-                <div>节奏匹配：{previewTemplate.config.beatSync ? '✅' : '❌'}</div>
+                <div>{t('mvGallery.subtitlePosition', { value: previewTemplate.config.subtitlePosition || t('mvGallery.bottom') })}</div>
+                <div>{t('mvGallery.filter', { value: previewTemplate.config.filter || t('mvGallery.none') })}</div>
+                <div>{t('mvGallery.beatSync')}: {previewTemplate.config.beatSync ? '✅' : '❌'}</div>
               </div>
             </div>
             
@@ -194,13 +196,13 @@ export function MVTemplateGallery({ onTemplateSelect }: Props) {
                 }}
                 className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded font-medium"
               >
-                应用此模板
+                {t('mvGallery.apply')}
               </button>
               <button
                 onClick={() => setPreviewTemplate(null)}
                 className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded"
               >
-                关闭
+                {t('mvGallery.close')}
               </button>
             </div>
           </div>

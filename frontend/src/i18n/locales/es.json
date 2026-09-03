@@ -815,5 +815,26 @@
     "principle2": "Comparar con una biblioteca de millones",
     "principle3": "Calcular similitud y evaluar riesgo",
     "principle4": "Generar informe detallado"
+  },
+  "mvGallery": {
+    "title": "Biblioteca de Plantillas MV",
+    "searchPlaceholder": "Buscar plantillas...",
+    "all": "Todos",
+    "apply": "Aplicar plantilla",
+    "empty": "Sin plantillas",
+    "stats": "{total} plantillas | mostrando {shown}",
+    "category": "Categoría",
+    "style": "Estilo",
+    "duration": "Duración",
+    "seconds": "{n} s",
+    "defaultTransition": "Transición predeterminada",
+    "fade": "Fundido",
+    "config": "Config de plantilla",
+    "subtitlePosition": "Posición de subtítulos: {value}",
+    "filter": "Filtro: {value}",
+    "beatSync": "Sincronización de ritmo",
+    "bottom": "Inferior",
+    "none": "Ninguno",
+    "close": "Cerrar"
   }
 }

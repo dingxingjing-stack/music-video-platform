@@ -815,5 +815,26 @@
     "principle2": "Mit Millionenbibliothek abgleichen",
     "principle3": "Ähnlichkeit berechnen und Risiko bewerten",
     "principle4": "Detaillierten Bericht erstellen"
+  },
+  "mvGallery": {
+    "title": "MV-Vorlagenbibliothek",
+    "searchPlaceholder": "Vorlagen suchen...",
+    "all": "Alle",
+    "apply": "Diese Vorlage anwenden",
+    "empty": "Keine Vorlagen",
+    "stats": "{total} Vorlagen | zeige {shown}",
+    "category": "Kategorie",
+    "style": "Stil",
+    "duration": "Dauer",
+    "seconds": "{n} s",
+    "defaultTransition": "Standardübergang",
+    "fade": "Blende",
+    "config": "Vorlagenkonfiguration",
+    "subtitlePosition": "Untertitelposition: {value}",
+    "filter": "Filter: {value}",
+    "beatSync": "Beat-Synchronisation",
+    "bottom": "Unten",
+    "none": "Keine",
+    "close": "Schließen"
   }
 }

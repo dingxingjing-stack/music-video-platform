@@ -815,5 +815,26 @@
     "principle2": "与百万级版权曲库比对",
     "principle3": "计算相似度并评估风险",
     "principle4": "生成详细检测报告"
+  },
+  "mvGallery": {
+    "title": "MV 模板库",
+    "searchPlaceholder": "搜索模板...",
+    "all": "全部",
+    "apply": "应用此模板",
+    "empty": "暂无模板",
+    "stats": "共 {total} 个模板 | 当前显示 {shown} 个",
+    "category": "分类",
+    "style": "风格",
+    "duration": "时长",
+    "seconds": "{n} 秒",
+    "defaultTransition": "默认转场",
+    "fade": "淡入淡出",
+    "config": "模板配置",
+    "subtitlePosition": "字幕位置：{value}",
+    "filter": "滤镜：{value}",
+    "beatSync": "节奏匹配",
+    "bottom": "底部",
+    "none": "无",
+    "close": "关闭"
   }
 }

@@ -815,5 +815,26 @@
     "principle2": "대규모 저작권 라이브러리와 비교",
     "principle3": "유사도 계산 및 위험 평가",
     "principle4": "상세 보고서 생성"
+  },
+  "mvGallery": {
+    "title": "MV 템플릿 라이브러리",
+    "searchPlaceholder": "템플릿 검색...",
+    "all": "전체",
+    "apply": "이 템플릿 적용",
+    "empty": "템플릿이 없습니다",
+    "stats": "총 {total}개 | 현재 {shown}개 표시",
+    "category": "분류",
+    "style": "스타일",
+    "duration": "길이",
+    "seconds": "{n}초",
+    "defaultTransition": "기본 전환",
+    "fade": "페이드",
+    "config": "템플릿 설정",
+    "subtitlePosition": "자막 위치: {value}",
+    "filter": "필터: {value}",
+    "beatSync": "비트 동기화",
+    "bottom": "하단",
+    "none": "없음",
+    "close": "닫기"
   }
 }

@@ -815,5 +815,26 @@
     "principle2": "Comparar com biblioteca de milhões",
     "principle3": "Calcular similaridade e avaliar risco",
     "principle4": "Gerar relatório detalhado"
+  },
+  "mvGallery": {
+    "title": "Biblioteca de Modelos MV",
+    "searchPlaceholder": "Buscar modelos...",
+    "all": "Todos",
+    "apply": "Aplicar modelo",
+    "empty": "Nenhum modelo",
+    "stats": "{total} modelos | exibindo {shown}",
+    "category": "Categoria",
+    "style": "Estilo",
+    "duration": "Duração",
+    "seconds": "{n} s",
+    "defaultTransition": "Transição padrão",
+    "fade": "Desvanecer",
+    "config": "Configuração do modelo",
+    "subtitlePosition": "Posição da legenda: {value}",
+    "filter": "Filtro: {value}",
+    "beatSync": "Sincronização de batida",
+    "bottom": "Inferior",
+    "none": "Nenhum",
+    "close": "Fechar"
   }
 }

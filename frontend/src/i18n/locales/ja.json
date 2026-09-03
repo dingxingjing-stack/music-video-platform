@@ -815,5 +815,26 @@
     "principle2": "大規模著作権ライブラリと照合",
     "principle3": "類似度を計算しリスクを評価",
     "principle4": "詳細レポートを生成"
+  },
+  "mvGallery": {
+    "title": "MV テンプレートライブラリ",
+    "searchPlaceholder": "テンプレートを検索...",
+    "all": "すべて",
+    "apply": "このテンプレートを適用",
+    "empty": "テンプレートがありません",
+    "stats": "全 {total} 件 | 表示中 {shown} 件",
+    "category": "分類",
+    "style": "スタイル",
+    "duration": "長さ",
+    "seconds": "{n} 秒",
+    "defaultTransition": "デフォルトトランジション",
+    "fade": "フェード",
+    "config": "テンプレート設定",
+    "subtitlePosition": "字幕位置：{value}",
+    "filter": "フィルター：{value}",
+    "beatSync": "ビート同期",
+    "bottom": "下部",
+    "none": "なし",
+    "close": "閉じる"
   }
 }
