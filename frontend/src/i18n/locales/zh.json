@@ -1467,5 +1467,19 @@
     "quotaStorage": "存储空间",
     "quotaAi": "AI 功能",
     "unitCount": "次"
+  },
+  "gray": {
+    "badge": "灰度功能",
+    "onlyTesters": "仅资深测试用户开放",
+    "apply": "申请灰度权限",
+    "submitted": "申请已提交",
+    "review": "我们会在 1-3 个工作日内审核并通知",
+    "applyTitle": "申请灰度权限",
+    "reason": "申请理由",
+    "reasonPlaceholder": "请描述您需要该功能的原因...",
+    "contact": "联系方式（选填）",
+    "contactPlaceholder": "邮箱 / 微信",
+    "cancel": "取消",
+    "submit": "提交申请"
   }
 }

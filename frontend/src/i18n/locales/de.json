@@ -1467,5 +1467,19 @@
     "quotaStorage": "Speicher",
     "quotaAi": "KI-Funktionen",
     "unitCount": "Mal"
+  },
+  "gray": {
+    "badge": "Gray-Funktion",
+    "onlyTesters": "Nur für erfahrene Tester",
+    "apply": "Gray-Zugriff beantragen",
+    "submitted": "Antrag eingereicht",
+    "review": "Wir prüfen und benachrichtigen innerhalb von 1-3 Werktagen",
+    "applyTitle": "Gray-Zugriff beantragen",
+    "reason": "Grund",
+    "reasonPlaceholder": "Beschreiben Sie, warum Sie diese Funktion benötigen...",
+    "contact": "Kontakt (optional)",
+    "contactPlaceholder": "E-Mail / WeChat",
+    "cancel": "Abbrechen",
+    "submit": "Antrag senden"
   }
 }

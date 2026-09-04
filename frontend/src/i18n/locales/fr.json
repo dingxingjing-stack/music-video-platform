@@ -1467,5 +1467,19 @@
     "quotaStorage": "Stockage",
     "quotaAi": "Fonctions IA",
     "unitCount": "fois"
+  },
+  "gray": {
+    "badge": "Fonction grise",
+    "onlyTesters": "Réservé aux testeurs expérimentés",
+    "apply": "Demander l accès gris",
+    "submitted": "Demande envoyée",
+    "review": "Nous examinerons et vous notifierons sous 1-3 jours ouvrés",
+    "applyTitle": "Demander l accès gris",
+    "reason": "Motif",
+    "reasonPlaceholder": "Décrivez pourquoi vous avez besoin de cette fonction...",
+    "contact": "Contact (facultatif)",
+    "contactPlaceholder": "E-mail / WeChat",
+    "cancel": "Annuler",
+    "submit": "Envoyer la demande"
   }
 }

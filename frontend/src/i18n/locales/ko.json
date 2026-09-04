@@ -1467,5 +1467,19 @@
     "quotaStorage": "스토리지",
     "quotaAi": "AI 기능",
     "unitCount": "회"
+  },
+  "gray": {
+    "badge": "그레이 기능",
+    "onlyTesters": "숙련된 테스터만 이용 가능",
+    "apply": "그레이 권한 신청",
+    "submitted": "신청이 제출되었습니다",
+    "review": "1-3 영업일 내에 심사하여 알려드립니다",
+    "applyTitle": "그레이 권한 신청",
+    "reason": "신청 사유",
+    "reasonPlaceholder": "이 기능이 필요한 이유를 설명하세요...",
+    "contact": "연락처 (선택)",
+    "contactPlaceholder": "이메일 / 위챗",
+    "cancel": "취소",
+    "submit": "신청 제출"
   }
 }

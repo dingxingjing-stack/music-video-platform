@@ -1467,5 +1467,19 @@
     "quotaStorage": "Armazenamento",
     "quotaAi": "Recursos IA",
     "unitCount": "vezes"
+  },
+  "gray": {
+    "badge": "Recurso cinza",
+    "onlyTesters": "Apenas para testadores experientes",
+    "apply": "Solicitar acesso cinza",
+    "submitted": "Solicitação enviada",
+    "review": "Revisaremos e notificaremos em 1-3 dias úteis",
+    "applyTitle": "Solicitar acesso cinza",
+    "reason": "Motivo",
+    "reasonPlaceholder": "Descreva por que você precisa deste recurso...",
+    "contact": "Contato (opcional)",
+    "contactPlaceholder": "E-mail / WeChat",
+    "cancel": "Cancelar",
+    "submit": "Enviar solicitação"
   }
 }

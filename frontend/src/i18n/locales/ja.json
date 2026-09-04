@@ -1467,5 +1467,19 @@
     "quotaStorage": "ストレージ",
     "quotaAi": "AI 機能",
     "unitCount": "回"
+  },
+  "gray": {
+    "badge": "グレー機能",
+    "onlyTesters": "ベテランテスターのみ",
+    "apply": "グレー権限を申請",
+    "submitted": "申請を送信しました",
+    "review": "1〜3 営業日以内に審査して通知します",
+    "applyTitle": "グレー権限を申請",
+    "reason": "申請理由",
+    "reasonPlaceholder": "この機能が必要な理由を説明してください...",
+    "contact": "連絡先（任意）",
+    "contactPlaceholder": "メール / WeChat",
+    "cancel": "キャンセル",
+    "submit": "申請を送信"
   }
 }
