@@ -1481,5 +1481,21 @@
     "contactPlaceholder": "이메일 / 위챗",
     "cancel": "취소",
     "submit": "신청 제출"
+  },
+  "recorder": {
+    "recordMidi": "MIDI 녹음",
+    "stopMidi": "MIDI 중지",
+    "readyTip": "녹음 준비",
+    "monitorTip": "모니터",
+    "inputGain": "입력 게인",
+    "clip": "CLIP",
+    "optionMic": "마이크",
+    "optionInstrument": "악기",
+    "optionLine": "라인",
+    "midiEvents": "녹음된 MIDI 이벤트 ({n})",
+    "quantizeTitle": "퀀타이즈 설정",
+    "gridType": "그리드 유형",
+    "strength": "강도",
+    "applyQuantize": "퀀타이즈 적용"
   }
 }

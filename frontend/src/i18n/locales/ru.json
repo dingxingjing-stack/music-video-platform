@@ -1481,5 +1481,21 @@
     "contactPlaceholder": "Эл. почта / WeChat",
     "cancel": "Отмена",
     "submit": "Отправить заявку"
+  },
+  "recorder": {
+    "recordMidi": "Запись MIDI",
+    "stopMidi": "Стоп MIDI",
+    "readyTip": "Готов к записи",
+    "monitorTip": "Мониторинг",
+    "inputGain": "Входное усиление",
+    "clip": "CLIP",
+    "optionMic": "Микрофон",
+    "optionInstrument": "Инструмент",
+    "optionLine": "Линия",
+    "midiEvents": "Записанные MIDI-события ({n})",
+    "quantizeTitle": "Настройки квантизации",
+    "gridType": "Тип сетки",
+    "strength": "Сила",
+    "applyQuantize": "Применить квантизацию"
   }
 }

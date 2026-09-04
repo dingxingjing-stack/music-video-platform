@@ -1481,5 +1481,21 @@
     "contactPlaceholder": "メール / WeChat",
     "cancel": "キャンセル",
     "submit": "申請を送信"
+  },
+  "recorder": {
+    "recordMidi": "MIDI を録音",
+    "stopMidi": "MIDI を停止",
+    "readyTip": "録音準備",
+    "monitorTip": "モニター",
+    "inputGain": "入力ゲイン",
+    "clip": "CLIP",
+    "optionMic": "マイク",
+    "optionInstrument": "楽器",
+    "optionLine": "ライン",
+    "midiEvents": "録音された MIDI イベント ({n})",
+    "quantizeTitle": "クオンタイズ設定",
+    "gridType": "グリッドタイプ",
+    "strength": "強さ",
+    "applyQuantize": "クオンタイズを適用"
   }
 }

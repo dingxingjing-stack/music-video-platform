@@ -12,12 +12,14 @@
 import { useState, useEffect } from 'react';
 import { RecordingEngine } from '../utils/RecordingEngine';
 import { RecordingTrackConfig, LevelMeterData } from '../types/vst';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   onRecordingComplete?: (session: any) => void;
 }
 
 export function ProfessionalRecorder({ onRecordingComplete }: Props) {
+  const { t } = useTranslation();
   const [engine] = useState(() => new RecordingEngine());
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -208,7 +210,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
               isRecording ? 'bg-red-500' : 'bg-purple-600 hover:bg-purple-500'
             } text-white`}
           >
-            {isRecording ? '停止 MIDI' : '录制 MIDI'}
+            {isRecording ? t('recorder.stopMidi') : t('recorder.recordMidi')}
           </button>
         )}
       </div>
@@ -238,7 +240,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
                     ? 'bg-red-500 hover:bg-red-600'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
-                title="录音准备"
+                title={t('recorder.readyTip')}
               >
                 {track.recordArmed ? '🔴' : '⚪'}
               </button>
@@ -251,14 +253,14 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
                     ? 'bg-blue-500 hover:bg-blue-600'
                     : 'bg-gray-700 hover:bg-gray-600'
                 }`}
-                title="监听"
+                title={t('recorder.monitorTip')}
               >
                 🎧
               </button>
 
               {/* 输入增益 */}
               <div className="flex-1">
-                <label className="text-gray-400 text-xs block mb-1">输入增益</label>
+                <label className="text-gray-400 text-xs block mb-1">{t('recorder.inputGain')}</label>
                 <input
                   type="range"
                   min="-20"
@@ -285,7 +287,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
                 </div>
                 <div className="text-gray-400 text-xs text-right font-mono">
                   {level.toFixed(1)} dB
-                  {meter?.clipping && <span className="text-red-500 ml-2">🔴 CLIP</span>}
+                  {meter?.clipping && <span className="text-red-500 ml-2">🔴 {t('recorder.clip')}</span>}
                 </div>
               </div>
 
@@ -302,9 +304,9 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
                 }}
                 className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
               >
-                <option value="mic">🎤 麦克风</option>
-                <option value="instrument">🎸 乐器</option>
-                <option value="line">📀 线路</option>
+                <option value="mic">{t('recorder.optionMic')}</option>
+                <option value="instrument">{t('recorder.optionInstrument')}</option>
+                <option value="line">{t('recorder.optionLine')}</option>
               </select>
             </div>
           );
@@ -314,7 +316,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
       {/* MIDI 事件列表 (MIDI 模式) */}
       {midiMode && midiEvents.length > 0 && (
         <div className="mt-4 bg-gray-800 rounded p-3">
-          <h4 className="text-white font-semibold mb-2">录制的 MIDI 事件 ({midiEvents.length})</h4>
+          <h4 className="text-white font-semibold mb-2">{t('recorder.midiEvents', { n: midiEvents.length })}</h4>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {midiEvents.slice(0, 20).map((event, i) => (
               <div key={i} className="text-gray-400 text-xs font-mono">
@@ -327,10 +329,10 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
 
       {/* 量化设置 */}
       <div className="mt-4 bg-gray-800 rounded p-3">
-        <h4 className="text-white font-semibold mb-3">量化设置</h4>
+        <h4 className="text-white font-semibold mb-3">{t('recorder.quantizeTitle')}</h4>
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <label className="text-gray-400 text-xs block mb-1">网格类型</label>
+            <label className="text-gray-400 text-xs block mb-1">{t('recorder.gridType')}</label>
             <select className="w-full bg-gray-700 text-white px-2 py-1 rounded text-sm">
               <option>1/4</option>
               <option>1/8</option>
@@ -339,7 +341,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
             </select>
           </div>
           <div>
-            <label className="text-gray-400 text-xs block mb-1">强度</label>
+            <label className="text-gray-400 text-xs block mb-1">{t('recorder.strength')}</label>
             <input
               type="range"
               min="0"
@@ -362,7 +364,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
           </div>
           <div className="flex items-end">
             <button className="w-full bg-purple-600 hover:bg-purple-500 text-white py-1 rounded text-sm">
-              应用量化
+              {t('recorder.applyQuantize')}
             </button>
           </div>
         </div>

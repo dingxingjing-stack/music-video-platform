@@ -1481,5 +1481,21 @@
     "contactPlaceholder": "Correo / WeChat",
     "cancel": "Cancelar",
     "submit": "Enviar solicitud"
+  },
+  "recorder": {
+    "recordMidi": "Grabar MIDI",
+    "stopMidi": "Detener MIDI",
+    "readyTip": "Listo para grabar",
+    "monitorTip": "Monitoreo",
+    "inputGain": "Ganancia de entrada",
+    "clip": "CLIP",
+    "optionMic": "Micrófono",
+    "optionInstrument": "Instrumento",
+    "optionLine": "Línea",
+    "midiEvents": "Eventos MIDI grabados ({n})",
+    "quantizeTitle": "Ajustes de cuantización",
+    "gridType": "Tipo de cuadrícula",
+    "strength": "Fuerza",
+    "applyQuantize": "Aplicar cuantización"
   }
 }

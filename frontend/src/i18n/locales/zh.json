@@ -1481,5 +1481,21 @@
     "contactPlaceholder": "邮箱 / 微信",
     "cancel": "取消",
     "submit": "提交申请"
+  },
+  "recorder": {
+    "recordMidi": "录制 MIDI",
+    "stopMidi": "停止 MIDI",
+    "readyTip": "录音准备",
+    "monitorTip": "监听",
+    "inputGain": "输入增益",
+    "clip": "CLIP",
+    "optionMic": "麦克风",
+    "optionInstrument": "乐器",
+    "optionLine": "线路",
+    "midiEvents": "录制的 MIDI 事件 ({n})",
+    "quantizeTitle": "量化设置",
+    "gridType": "网格类型",
+    "strength": "强度",
+    "applyQuantize": "应用量化"
   }
 }
