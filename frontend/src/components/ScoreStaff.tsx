@@ -10,6 +10,7 @@
  */
 
 import { Note, StaffConfig, NoteDuration } from '../types/score';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   config: StaffConfig;
@@ -39,6 +40,7 @@ const ACCIDENTAL_SYMBOLS = {
 };
 
 export function ScoreStaff({ config, width = 800, height = 200, onNoteClick, onNoteDoubleCick }: Props) {
+  const { t } = useTranslation();
   // 五线谱参数
   const staffTop = 40;
   const lineSpacing = 10;
@@ -211,7 +213,7 @@ export function ScoreStaff({ config, width = 800, height = 200, onNoteClick, onN
         fontSize="12"
         fill="#888"
       >
-        {keySig}调
+        {t('score.keySignature', { key: keySig })}
       </text>
     );
   };

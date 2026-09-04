@@ -56,7 +56,7 @@ export function AutomationPanel({ onClose }: Props) {
               }`}
               style={{ borderColor: lane.visible ? lane.color : undefined }}
             >
-              {lane.label}
+              {t(`automation.${lane.type}`)}
             </button>
           ))}
         </div>

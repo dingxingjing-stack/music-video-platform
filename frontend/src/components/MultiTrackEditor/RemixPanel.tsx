@@ -61,10 +61,10 @@ export function RemixPanel({ onClose }: Props) {
         original_bpm: 120,
         remixed_bpm: 128,
         changes_applied: [
-          `节奏模式：${selectedStyle}`,
-          `强度：${intensity}`,
-          addDrops ? '添加 Drop 段落' : '',
-          addBuildups ? '添加 Buildup 段落' : '',
+          t('remix.rhythmMode', { style: selectedStyle }),
+          t('remix.intensity', { intensity }),
+          addDrops ? t('remix.addDropSection') : '',
+          addBuildups ? t('remix.addBuildupSection') : '',
         ].filter(Boolean),
         remixed_audio_url: `mock://remix_${selectedStyle}.wav`,
       };

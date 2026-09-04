@@ -12,6 +12,7 @@
 import { useState, useEffect } from 'react';
 import { VSTHost } from '../utils/VSTHost';
 import { PluginInfo, LoadedPlugin } from '../types/vst';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   onPluginLoad?: (plugin: LoadedPlugin) => void;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
+  const { t } = useTranslation();
   const [host] = useState(() => new VSTHost());
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [loadedPlugins, setLoadedPlugins] = useState<LoadedPlugin[]>([]);
@@ -163,13 +165,13 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
   const savePreset = async () => {
     if (!selectedInstance) return;
     
-    const name = prompt('预设名称:');
+    const name = prompt(t('vstm.presetNamePrompt'));
     if (!name) return;
 
     const preset = host.saveUserPreset(selectedInstance.instanceId, name);
     if (preset) {
       console.log(`[VSTManager] 预设已保存：${preset.name}`);
-      alert(`预设 "${preset.name}" 已保存!`);
+      alert(t('vstm.presetSaved', { name: preset.name }));
     }
   };
 
@@ -186,20 +188,20 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
     <div className="bg-gray-900 rounded-lg p-4 h-full flex flex-col">
       {/* 头部 */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-bold text-lg">VST 插件管理器</h3>
+        <h3 className="text-white font-bold text-lg">VST {t('vstm.pluginManager')}</h3>
         <button
           onClick={scanPlugins}
           disabled={isScanning}
           className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-600 text-white text-sm rounded transition"
         >
-          {isScanning ? '扫描中...' : '扫描插件'}
+          {isScanning ? t('vstm.scanning') : t('vstm.scanPlugins')}
         </button>
       </div>
 
       <div className="flex-1 grid grid-cols-2 gap-4 overflow-hidden">
         {/* 左侧：可用插件列表 */}
         <div className="bg-gray-800 rounded p-3 overflow-y-auto">
-          <h4 className="text-gray-300 text-sm font-semibold mb-2">可用插件 ({plugins.length})</h4>
+          <h4 className="text-gray-300 text-sm font-semibold mb-2">{t('vstm.availablePlugins')} ({plugins.length})</h4>
           
           {plugins.map(plugin => (
             <div
@@ -221,7 +223,7 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
 
           {plugins.length === 0 && !isScanning && (
             <div className="text-gray-500 text-sm text-center py-8">
-              点击"扫描插件"加载可用的 VST 插件
+              {t('vstm.scanHint')}
             </div>
           )}
         </div>
@@ -229,7 +231,7 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
         {/* 右侧：已加载插件 */}
         <div className="bg-gray-800 rounded p-3 overflow-y-auto">
           <h4 className="text-gray-300 text-sm font-semibold mb-2">
-            已加载插件 ({loadedPlugins.length}/{maxInserts})
+            {t('vstm.loadedPlugins')} ({loadedPlugins.length}/{maxInserts})
           </h4>
           
           {loadedPlugins.map(plugin => (
@@ -278,7 +280,7 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
 
           {loadedPlugins.length === 0 && (
             <div className="text-gray-500 text-sm text-center py-8">
-              点击左侧插件添加到轨道
+              {t('vstm.addHint')}
             </div>
           )}
         </div>
@@ -289,20 +291,20 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
         <div className="mt-4 bg-gray-800 rounded p-3">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-white font-semibold">
-              {selectedInstance.name} - 参数
+              {selectedInstance.name} - {t('vstm.parameters')}
             </h4>
             <div className="flex gap-2">
               <button
                 onClick={savePreset}
                 className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded"
               >
-                保存预设
+                {t('vstm.savePreset')}
               </button>
               <button
                 onClick={() => setShowPluginUI(true)}
                 className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs rounded"
               >
-                打开界面
+                {t('vstm.openUI')}
               </button>
             </div>
           </div>
@@ -350,12 +352,12 @@ export function VSTPluginManager({ onPluginLoad, maxInserts = 8 }: Props) {
             <div className="bg-gray-900 rounded p-4 aspect-video flex items-center justify-center">
               <div className="text-gray-500 text-center">
                 <div className="text-4xl mb-4">🎛️</div>
-                <div className="text-lg">插件界面</div>
+                <div className="text-lg">{t('vstm.pluginUI')}</div>
                 <div className="text-sm mt-2">
-                  实际部署时会渲染插件的 WebAssembly UI
+                  {t('vstm.placeholderUI')}
                 </div>
                 <div className="text-xs mt-4 text-gray-600">
-                  尺寸：{(selectedInstance as any).id === 'vst-synth-1' ? '900x600' : '800x500'}
+                  {t('vstm.dimensions')}：{(selectedInstance as any).id === 'vst-synth-1' ? '900x600' : '800x500'}
                 </div>
               </div>
             </div>

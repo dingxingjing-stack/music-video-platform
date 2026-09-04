@@ -15,30 +15,30 @@ export interface FeatureConfig {
 
 export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   // ===== 全开放（公测无限制）=====
-  mureka_generate:   { key: 'mureka_generate',   name: 'AI 作曲生成',   level: 'open',  description: 'Mureka API 一键生成歌曲', icon: '🎵' },
-  lyrics_generate:   { key: 'lyrics_generate',   name: 'AI 歌词创作',   level: 'open',  description: 'AI 生成/续写歌词',         icon: '✍️' },
-  midi_basic:         { key: 'midi_basic',         name: '基础 MIDI 编曲',level: 'open',  description: '钢琴卷帘编辑、基础编曲',   icon: '🎹' },
-  tts:                { key: 'tts',                name: 'TTS 人声合成',  level: 'open',  description: '文字转语音人声合成',       icon: '🎤' },
-  daw_edit:           { key: 'daw_edit',           name: 'DAW 剪辑',      level: 'open',  description: '多轨编辑、音频剪辑',       icon: '🎛️' },
-  watermark:          { key: 'watermark',          name: '音频水印',      level: 'open',  description: '作品水印嵌入与提取',       icon: '💧' },
-  like_favorite:      { key: 'like_favorite',      name: '点赞收藏',      level: 'open',  description: '社区点赞与收藏作品',       icon: '❤️' },
-  basic_copyright:    { key: 'basic_copyright',    name: '基础版权检测',  level: 'open',  description: '基础音频指纹比对',         icon: '🔒' },
+  mureka_generate:   { key: 'mureka_generate',   name: 'features.murekaGenerate.name',   level: 'open',  description: 'features.murekaGenerate.desc', icon: '🎵' },
+  lyrics_generate:   { key: 'lyrics_generate',   name: 'features.lyricsGenerate.name',   level: 'open',  description: 'features.lyricsGenerate.desc', icon: '✍️' },
+  midi_basic:         { key: 'midi_basic',         name: 'features.midiBasic.name',       level: 'open',  description: 'features.midiBasic.desc', icon: '🎹' },
+  tts:                { key: 'tts',                name: 'features.tts.name',             level: 'open',  description: 'features.tts.desc', icon: '🎤' },
+  daw_edit:           { key: 'daw_edit',           name: 'features.dawEdit.name',         level: 'open',  description: 'features.dawEdit.desc', icon: '🎛️' },
+  watermark:          { key: 'watermark',          name: 'features.watermark.name',       level: 'open',  description: 'features.watermark.desc', icon: '💧' },
+  like_favorite:      { key: 'like_favorite',      name: 'features.likeFavorite.name',    level: 'open',  description: 'features.likeFavorite.desc', icon: '❤️' },
+  basic_copyright:    { key: 'basic_copyright',    name: 'features.basicCopyright.name',  level: 'open',  description: 'features.basicCopyright.desc', icon: '🔒' },
 
   // ===== 灰度锁定（仅资深测试用户）=====
-  voice_clone:        { key: 'voice_clone',        name: '声音克隆',      level: 'open',  description: '创建与管理专属声音模型',   icon: '🎙️' },
-  ws_collab:          { key: 'ws_collab',          name: '实时协作编辑',  level: 'gray',  description: 'WebSocket 多人协作',     icon: '🤝' },
-  hf_models:          { key: 'hf_models',          name: 'HF 第三方模型', level: 'gray',  description: 'HuggingFace 高级模型',   icon: '🧠' },
-  subtitle:           { key: 'subtitle',           name: '字幕识别',      level: 'gray',  description: '自动语音识别字幕',         icon: '📝' },
-  oneclick_publish:   { key: 'oneclick_publish',   name: '一键多平台发布',level: 'gray',  description: '多平台同步发布',           icon: '📢' },
+  voice_clone:        { key: 'voice_clone',        name: 'features.voiceClone.name',      level: 'open',  description: 'features.voiceClone.desc', icon: '🎙️' },
+  ws_collab:          { key: 'ws_collab',          name: 'features.wsCollab.name',        level: 'gray',  description: 'features.wsCollab.desc', icon: '🤝' },
+  hf_models:          { key: 'hf_models',          name: 'features.hfModels.name',        level: 'gray',  description: 'features.hfModels.desc', icon: '🧠' },
+  subtitle:           { key: 'subtitle',           name: 'features.subtitle.name',        level: 'gray',  description: 'features.subtitle.desc', icon: '📝' },
+  oneclick_publish:   { key: 'oneclick_publish',   name: 'features.oneclickPublish.name', level: 'gray',  description: 'features.oneclickPublish.desc', icon: '📢' },
 
   // ===== 完全关闭（隐藏入口）=====
   // mv_generate 已移除，改为声音克隆；保留兼容键但关闭
-  mv_generate:        { key: 'mv_generate',        name: 'MV 生成（已下线）', level: 'closed',description: '已下线，改为声音克隆', icon: '🎬' },
-  asset_store:        { key: 'asset_store',        name: '素材商城',      level: 'closed',description: '公测暂不开放',           icon: '🛒' },
-  paid_subscription:  { key: 'paid_subscription',  name: '付费订阅',      level: 'closed',description: '公测暂不开放',           icon: '💳' },
-  messaging:          { key: 'messaging',          name: '私信聊天',      level: 'closed',description: '公测暂不开放',           icon: '💬' },
-  ugc_earnings:       { key: 'ugc_earnings',       name: 'UGC 收益提现',  level: 'closed',description: '公测暂不开放',           icon: '💰' },
-  deep_copyright_db: { key: 'deep_copyright_db',  name: '深度版权比对库',level: 'closed',description: '公测暂不开放',           icon: '📚' },
+  mv_generate:        { key: 'mv_generate',        name: 'features.mvGenerate.name',      level: 'closed', description: 'features.mvGenerate.desc', icon: '🎬' },
+  asset_store:        { key: 'asset_store',        name: 'features.assetStore.name',      level: 'closed', description: 'features.assetStore.desc', icon: '🛒' },
+  paid_subscription:  { key: 'paid_subscription',  name: 'features.paidSubscription.name',level: 'closed', description: 'features.paidSubscription.desc', icon: '💳' },
+  messaging:          { key: 'messaging',          name: 'features.messaging.name',       level: 'closed', description: 'features.messaging.desc', icon: '💬' },
+  ugc_earnings:       { key: 'ugc_earnings',       name: 'features.ugcEarnings.name',     level: 'closed', description: 'features.ugcEarnings.desc', icon: '💰' },
+  deep_copyright_db: { key: 'deep_copyright_db',  name: 'features.deepCopyrightDb.name',  level: 'closed', description: 'features.deepCopyrightDb.desc', icon: '📚' },
 };
 
 /** 全开放功能列表（导航用）*/

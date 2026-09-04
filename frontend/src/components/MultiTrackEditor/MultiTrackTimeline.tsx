@@ -3,6 +3,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { Track, AudioClip } from '../../types/trackStudio';
 import { TimelineHeader } from './TimelineHeader';
 import { Playhead } from './Playhead';
@@ -26,6 +27,7 @@ export function MultiTrackTimeline({
   isPlaying,
   currentTime,
 }: Props) {
+  const { t } = useTranslation();
   const [zoom, setZoom] = useState<Zoom>({ x: 50, y: 80 });
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -140,7 +142,7 @@ export function MultiTrackTimeline({
 
             {tracks.length === 0 && (
               <div className="flex items-center justify-center h-32 text-[#777777]">
-                <p>点击 "添加轨道" 开始创建多轨工程</p>
+                <p>{t('mt.emptyHint')}</p>
               </div>
             )}
           </div>

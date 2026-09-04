@@ -3,6 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { Track, AudioClip } from '../../types/trackStudio';
 import { AudioClipView } from './AudioClipView';
 import { Zoom } from './Toolbar';
@@ -26,6 +27,7 @@ export function TrackLane({
   onClipChange,
   onAddClip,
 }: Props) {
+  const { t } = useTranslation();
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [localMute, setLocalMute] = useState(track.muted);
   const [localSolo, setLocalSolo] = useState(track.solo);
@@ -103,7 +105,7 @@ export function TrackLane({
             value={localVolume}
             onChange={handleVolumeChange}
             className="w-full h-1 bg-[#3a3a3a] rounded-lg appearance-none cursor-pointer accent-orange-500"
-            title="音量"
+            title={t('mt.volume')}
           />
           <input
             type="range"
@@ -113,7 +115,7 @@ export function TrackLane({
             value={localPan}
             onChange={handlePanChange}
             className="w-full h-1 bg-[#3a3a3a] rounded-lg appearance-none cursor-pointer accent-orange-500"
-            title="声像"
+            title={t('mt.pan')}
           />
         </div>
       </div>
@@ -151,7 +153,7 @@ export function TrackLane({
           }}
           className="absolute top-1/2 left-2 -translate-y-1/2 px-2 py-1 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-xs transition-colors"
         >
-          + 片段
+          + {t('mt.addClip')}
         </button>
       </div>
     </div>

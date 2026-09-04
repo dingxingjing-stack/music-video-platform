@@ -3,6 +3,7 @@
  * Uses backend API to split audio and package stems.
  */
 import { useState } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   audioUrl: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function StemExporter({ audioUrl, trackName }: Props) {
+  const { t } = useTranslation();
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
@@ -40,7 +42,7 @@ export function StemExporter({ audioUrl, trackName }: Props) {
       setDone(true);
     } catch (err) {
       console.error('Stem export error:', err);
-      alert('⚠️ 分轨导出失败，请重试');
+      alert(`⚠️ ${t('stem.exportFailed')}`);
     } finally {
       setExporting(false);
     }
@@ -48,10 +50,10 @@ export function StemExporter({ audioUrl, trackName }: Props) {
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-3">
-      <h2 className="font-display font-semibold">📦 分轨导出 (Stems)</h2>
+      <h2 className="font-display font-semibold">📦 {t('stem.title')}</h2>
       <p className="text-xs text-[var(--text-muted)]">
-        将音频拆分为人声、鼓、贝斯、旋律等独立音轨，打包为 ZIP 下载。
-        <span className="text-[var(--accent-pink)] ml-1">该分轨在当前导出配置下不可用。</span>
+        {t('stem.description')}
+        <span className="text-[var(--accent-pink)] ml-1">{t('stem.unavailableHint')}</span>
       </p>
 
       {/* Progress Bar */}
@@ -73,11 +75,11 @@ export function StemExporter({ audioUrl, trackName }: Props) {
         onClick={handleExport}
         disabled={exporting}
       >
-        {exporting ? '⏳ 正在拆分导出...' : done ? '✅ 已下载' : '⬇ 导出 Stem ZIP'}
+        {exporting ? `⏳ ${t('stem.exporting')}` : done ? `✅ ${t('stem.downloaded')}` : `⬇ ${t('stem.export')}`}
       </button>
 
       {done && (
-        <p className="text-xs text-[var(--accent-green)]">✅ 导出成功！ZIP 包含：人声、鼓组、贝斯、旋律、和声等音轨。</p>
+        <p className="text-xs text-[var(--accent-green)]">✅ {t('stem.success')}</p>
       )}
     </section>
   );

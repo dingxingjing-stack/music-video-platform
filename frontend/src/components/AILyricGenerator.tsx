@@ -73,10 +73,10 @@ export function AILyricGenerator() {
   ];
   
   const STRUCTURES = [
-    { value: 'verse-chorus-verse-chorus-bridge-chorus', label: t('lyricGen.structure.opts1') },
-    { value: 'verse-verse-chorus-chorus', label: t('lyricGen.structure.opts2') },
-    { value: 'chorus-verse-chorus-verse', label: t('lyricGen.structure.opts3') },
-    { value: 'verse-chorus-bridge-chorus', label: t('lyricGen.structure.opts4') },
+    { value: 'verse-chorus-verse-chorus-bridge-chorus', label: t('lyricGen.structure.opt1') },
+    { value: 'verse-verse-chorus-chorus', label: t('lyricGen.structure.opt2') },
+    { value: 'chorus-verse-chorus-verse', label: t('lyricGen.structure.opt3') },
+    { value: 'verse-chorus-bridge-chorus', label: t('lyricGen.structure.opt4') },
   ];
   
   // 加载风格和情绪

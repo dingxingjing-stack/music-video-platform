@@ -19,8 +19,10 @@ import { SubtitleRecognizer } from '../components/SubtitleRecognizer';
 import { MVTemplateGallery } from '../components/MVTemplateGallery';
 import { TransitionLibrary } from '../components/TransitionLibrary';
 import { VideoTrack, VideoClip, LyricLine, VideoProject, StockVideo, ExportConfig } from '../types/video-sync';
+import { useTranslation } from '../i18n/useTranslation';
 
 export function VideoSyncStudio() {
+  const { t } = useTranslation();
   // 项目状态
   const [project, setProject] = useState<VideoProject | null>(null);
   const [audioFile, setAudioFile] = useState<string | null>(null);
@@ -132,7 +134,7 @@ export function VideoSyncStudio() {
     if (tracks.length === 0) {
       const newTrack: VideoTrack = {
         id: 'track-1',
-        name: '视频轨道 1',
+        name: t('vsync.trackName', { n: 1 }),
         color: '#f97316',
         visible: true,
         locked: false,
@@ -202,7 +204,7 @@ export function VideoSyncStudio() {
       );
     } catch (error) {
       console.error('导出失败:', error);
-      alert('导出失败，请重试');
+      alert(t('vsync.exportFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -213,15 +215,15 @@ export function VideoSyncStudio() {
     return (
       <div className="h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">🎬 视频同步工作室</h1>
-          <p className="text-gray-400 mb-8">从音乐制作专业 MV</p>
+          <h1 className="text-4xl font-bold text-white mb-4">🎬 {t('vsync.title')}</h1>
+          <p className="text-gray-400 mb-8">{t('vsync.subtitle')}</p>
           
           <div className="space-y-4 max-w-md mx-auto">
             <div>
-              <label className="block text-gray-300 mb-2">项目名称</label>
+              <label className="block text-gray-300 mb-2">{t('vsync.projectNameLabel')}</label>
               <input
                 type="text"
-                placeholder="我的 MV"
+                placeholder={t('vsync.projectNamePlaceholder')}
                 onChange={(e) => {
                   setProject({
                     id: Date.now().toString(),
@@ -241,7 +243,7 @@ export function VideoSyncStudio() {
             </div>
             
             <div>
-              <label className="block text-gray-300 mb-2">选择音乐文件</label>
+              <label className="block text-gray-300 mb-2">{t('vsync.selectAudioLabel')}</label>
               <input
                 type="file"
                 accept="audio/*"
@@ -258,7 +260,7 @@ export function VideoSyncStudio() {
               disabled={!project || !audioFile}
               className="w-full py-3 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 text-white rounded font-semibold"
             >
-              开始制作 MV
+              {t('vsync.startButton')}
             </button>
           </div>
         </div>
@@ -280,7 +282,7 @@ export function VideoSyncStudio() {
               onClick={togglePlay}
               className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded"
             >
-              {isPlaying ? '⏸ 暂停' : '▶ 播放'}
+              {isPlaying ? `⏸ ${t('vsync.pause')}` : `▶ ${t('vsync.play')}`}
             </button>
             <span className="text-white font-mono">
               {formatTime(currentTime)} / {formatTime(duration)}
@@ -291,7 +293,7 @@ export function VideoSyncStudio() {
         <div className="flex items-center gap-4">
           {/* 缩放控制 */}
           <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">缩放:</span>
+            <span className="text-gray-400 text-sm">{t('vsync.zoom')}:</span>
             <input
               type="range"
               min="20"
@@ -308,7 +310,7 @@ export function VideoSyncStudio() {
             disabled={isExporting}
             className="px-6 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 text-white rounded font-semibold"
           >
-            {isExporting ? `导出中... ${exportProgress}%` : '🎬 导出 MV'}
+            {isExporting ? `${t('vsync.exporting')} ${exportProgress}%` : `🎬 ${t('vsync.exportButton')}`}
           </button>
         </div>
       </div>
@@ -327,7 +329,7 @@ export function VideoSyncStudio() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              📹 素材
+              📹 {t('vsync.tabVideos')}
             </button>
             <button
               onClick={() => setActiveToolTab('lyrics')}
@@ -337,7 +339,7 @@ export function VideoSyncStudio() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              📝 歌词
+              📝 {t('vsync.tabLyrics')}
             </button>
             <button
               onClick={() => setActiveToolTab('subtitles')}
@@ -347,7 +349,7 @@ export function VideoSyncStudio() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              🎤 字幕
+              🎤 {t('vsync.tabSubtitles')}
             </button>
             <button
               onClick={() => setActiveToolTab('templates')}
@@ -357,7 +359,7 @@ export function VideoSyncStudio() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              🎬 模板
+              🎬 {t('vsync.tabTemplates')}
             </button>
             <button
               onClick={() => setActiveToolTab('transitions')}
@@ -367,7 +369,7 @@ export function VideoSyncStudio() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              🎞️ 转场
+              🎞️ {t('vsync.tabTransitions')}
             </button>
             <button
               onClick={() => setActiveToolTab('continue')}
@@ -377,7 +379,7 @@ export function VideoSyncStudio() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              ✨ 续写
+              ✨ {t('vsync.tabContinue')}
             </button>
           </div>
           
@@ -424,7 +426,7 @@ export function VideoSyncStudio() {
             onTrackAdd={() => {
               const newTrack: VideoTrack = {
                 id: `track-${tracks.length + 1}`,
-                name: `视频轨道 ${tracks.length + 1}`,
+                name: t('vsync.trackName', { n: tracks.length + 1 }),
                 color: '#3b82f6',
                 visible: true,
                 locked: false,

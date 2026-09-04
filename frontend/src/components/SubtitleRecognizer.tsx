@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface SubtitleLine {
   id: string;
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState('auto');
   const [recognizing, setRecognizing] = useState(false);
@@ -136,7 +138,7 @@ export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) 
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 h-full flex flex-col">
-      <h3 className="text-white font-semibold mb-3">🎤 自动字幕识别</h3>
+      <h3 className="text-white font-semibold mb-3">🎤 {t('subtitle.title')}</h3>
       
       {/* 上传区域 */}
       <div
@@ -164,23 +166,23 @@ export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) 
         ) : (
           <div>
             <div className="text-4xl mb-2">📁</div>
-            <p className="text-white">拖拽音频文件到此处</p>
-            <p className="text-gray-400 text-sm">或点击选择文件</p>
-            <p className="text-gray-500 text-xs mt-1">支持 MP3, WAV, FLAC, M4A</p>
+            <p className="text-white">{t('subtitle.dragHere')}</p>
+            <p className="text-gray-400 text-sm">{t('subtitle.orClickToSelect')}</p>
+            <p className="text-gray-500 text-xs mt-1">{t('subtitle.supportedFormats')}</p>
           </div>
         )}
       </div>
       
       {/* 语言选择 */}
       <div className="flex items-center gap-3 mt-4">
-        <label className="text-gray-300 text-sm whitespace-nowrap">语言:</label>
+        <label className="text-gray-300 text-sm whitespace-nowrap">{t('subtitle.language')}:</label>
         <select
           value={language}
           onChange={e => setLanguage(e.target.value)}
           className="flex-1 bg-gray-800 text-white px-3 py-2 rounded text-sm"
         >
           {LANGUAGES.map(lang => (
-            <option key={lang.value} value={lang.value}>{lang.label}</option>
+            <option key={lang.value} value={lang.value}>{lang.value === 'auto' ? t('subtitle.autoDetect') : lang.label}</option>
           ))}
         </select>
         
@@ -189,7 +191,7 @@ export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) 
           disabled={!file || recognizing}
           className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 text-white rounded text-sm font-medium"
         >
-          {recognizing ? '识别中...' : '开始识别'}
+          {recognizing ? t('subtitle.recognizing') : t('subtitle.startRecognize')}
         </button>
       </div>
       
@@ -202,7 +204,7 @@ export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) 
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-gray-400 text-xs mt-1 text-center">识别中 {progress}%</p>
+          <p className="text-gray-400 text-xs mt-1 text-center">{t('subtitle.recognizingProgress', { n: progress })}</p>
         </div>
       )}
       
@@ -212,9 +214,9 @@ export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) 
           <div className="flex-1 overflow-y-auto mt-4 border-t border-gray-700 pt-4">
             <div className="flex justify-between mb-2">
               <h4 className="text-white text-sm font-medium">
-                识别结果 ({result.length} 行)
+                {t('subtitle.results', { n: result.length })}
               </h4>
-              <span className="text-gray-400 text-xs">双击可编辑文字</span>
+              <span className="text-gray-400 text-xs">{t('subtitle.doubleClickEdit')}</span>
             </div>
             
             <div className="space-y-2">
@@ -243,13 +245,13 @@ export function SubtitleRecognizer({ onSubtitlesReady, duration = 180 }: Props) 
               onClick={handleSave}
               className="flex-1 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded font-medium"
             >
-              ✅ 导入字幕到时间轴
+              ✅ {t('subtitle.importToTimeline')}
             </button>
             <button
               onClick={() => setResult([])}
               className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded"
             >
-              重新识别
+              {t('subtitle.recognizeAgain')}
             </button>
           </div>
         </>

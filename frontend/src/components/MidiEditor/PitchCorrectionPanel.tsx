@@ -10,8 +10,21 @@
 
 import { useState, useCallback } from 'react';
 import { SCALES, type ScaleType } from '../../utils/scaleAssistant';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const ROOT_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+// Map ScaleType (snake_case) to existing scale.* locale keys
+const SCALE_NAME_KEYS: Record<ScaleType, string> = {
+  major: 'major',
+  natural_minor: 'naturalMinor',
+  harmonic_minor: 'harmonicMinor',
+  melodic_minor: 'melodicMinor',
+  major_pentatonic: 'majorPentatonic',
+  minor_pentatonic: 'minorPentatonic',
+  blues: 'blues',
+  chromatic: 'chromatic',
+};
 
 interface PitchNote {
   time: number;
@@ -27,6 +40,7 @@ interface Props {
 }
 
 export function PitchCorrectionPanel({ onClose }: Props) {
+  const { t } = useTranslation();
   const [rootNote, setRootNote] = useState('C');
   const [scaleType, setScaleType] = useState<ScaleType>('major');
   const [autoCorrect, setAutoCorrect] = useState(true);
@@ -77,11 +91,11 @@ export function PitchCorrectionPanel({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">🎤 音高修正</h2>
-            <p className="text-sm text-zinc-400 mt-1">类似 VariAudio 的简易音高调整</p>
+            <h2 className="text-2xl font-bold text-white">🎤 {t('pitch.title')}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{t('pitch.subtitle')}</p>
           </div>
           <button onClick={onClose} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition">
-            关闭
+            {t('pitch.close')}
           </button>
         </div>
 
@@ -89,7 +103,7 @@ export function PitchCorrectionPanel({ onClose }: Props) {
         <div className="grid grid-cols-4 gap-4 mb-6 p-4 bg-zinc-800/50 rounded-xl">
           {/* 根音选择 */}
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">根音</label>
+            <label className="text-xs text-zinc-400 mb-1 block">{t('pitch.rootNote')}</label>
             <select
               value={rootNote}
               onChange={(e) => setRootNote(e.target.value)}
@@ -103,21 +117,21 @@ export function PitchCorrectionPanel({ onClose }: Props) {
 
           {/* 音阶类型 */}
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">音阶</label>
+            <label className="text-xs text-zinc-400 mb-1 block">{t('pitch.scale')}</label>
             <select
               value={scaleType}
               onChange={(e) => setScaleType(e.target.value as ScaleType)}
               className="w-full bg-zinc-700 border border-zinc-600 rounded px-3 py-2 text-sm text-white"
             >
               {(Object.keys(SCALES) as ScaleType[]).map(key => (
-                <option key={key} value={key}>{SCALES[key].name}</option>
+                <option key={key} value={key}>{t('scale.' + SCALE_NAME_KEYS[key])}</option>
               ))}
             </select>
           </div>
 
           {/* 修正强度 */}
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">修正强度</label>
+            <label className="text-xs text-zinc-400 mb-1 block">{t('pitch.strength')}</label>
             <input
               type="range"
               min="0"
@@ -139,7 +153,7 @@ export function PitchCorrectionPanel({ onClose }: Props) {
                   : 'bg-zinc-700 text-zinc-400'
               }`}
             >
-              {autoCorrect ? '自动修正 ✓' : '手动模式'}
+              {autoCorrect ? `${t('pitch.autoCorrectOn')} ✓` : t('pitch.manualMode')}
             </button>
           </div>
         </div>
@@ -151,25 +165,25 @@ export function PitchCorrectionPanel({ onClose }: Props) {
             disabled={isAnalyzing}
             className="flex-1 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-medium transition disabled:opacity-50"
           >
-            {isAnalyzing ? '分析中...' : detectedNotes.length ? '重新分析' : '分析音高'}
+            {isAnalyzing ? `${t('pitch.analyzing')}...` : detectedNotes.length ? t('pitch.reanalyze') : t('pitch.analyze')}
           </button>
           <button
             onClick={handleCorrect}
             disabled={isAnalyzing || detectedNotes.length === 0}
             className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-medium transition disabled:opacity-50"
           >
-            {isAnalyzing ? '修正中...' : '执行修正'}
+            {isAnalyzing ? `${t('pitch.correcting')}...` : t('pitch.executeCorrect')}
           </button>
         </div>
 
         {/* 音符列表 */}
         {detectedNotes.length > 0 && (
           <div>
-            <h3 className="text-lg font-bold text-white mb-3">检测到的音符 ({detectedNotes.length}个)</h3>
+            <h3 className="text-lg font-bold text-white mb-3">{t('pitch.detectedNotes', { n: detectedNotes.length })}</h3>
             <div className="grid grid-cols-2 gap-4">
               {/* 原始音符 */}
               <div className="bg-zinc-800/50 rounded-xl p-4">
-                <h4 className="text-sm font-medium text-zinc-400 mb-2">原始</h4>
+                <h4 className="text-sm font-medium text-zinc-400 mb-2">{t('pitch.original')}</h4>
                 <div className="space-y-2">
                   {detectedNotes.map((note, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
@@ -183,13 +197,13 @@ export function PitchCorrectionPanel({ onClose }: Props) {
 
               {/* 修正后音符 */}
               <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                <h4 className="text-sm font-medium text-purple-400 mb-2">修正后</h4>
+                <h4 className="text-sm font-medium text-purple-400 mb-2">{t('pitch.corrected')}</h4>
                 <div className="space-y-2">
                   {correctedNotes.map((note, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-white font-medium">{note.note_name}</span>
                       <span className="text-zinc-500">{note.frequency.toFixed(1)} Hz</span>
-                      <span className="text-purple-400 text-xs">✓ 已修正</span>
+                      <span className="text-purple-400 text-xs">✓ {t('pitch.correctedMark')}</span>
                     </div>
                   ))}
                 </div>
@@ -202,8 +216,8 @@ export function PitchCorrectionPanel({ onClose }: Props) {
         {detectedNotes.length === 0 && (
           <div className="text-center py-12 text-zinc-500">
             <div className="text-4xl mb-4">🎤</div>
-            <p>点击"分析音高"开始检测</p>
-            <p className="text-xs mt-2">支持 WAV/MP3 格式，自动检测人声/乐器音高</p>
+            <p>{t('pitch.emptyHint')}</p>
+            <p className="text-xs mt-2">{t('pitch.formatsHint')}</p>
           </div>
         )}
       </div>

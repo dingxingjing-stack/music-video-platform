@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface ProgressModalProps {
   visible: boolean;
@@ -8,6 +9,7 @@ interface ProgressModalProps {
 }
 
 export function ProgressModal({ visible, title, progress, message }: ProgressModalProps) {
+  const { t } = useTranslation();
   return (
     <AnimatePresence>
       {visible && (
@@ -27,7 +29,7 @@ export function ProgressModal({ visible, title, progress, message }: ProgressMod
                 transition={{ duration: 0.3 }}
               />
             </div>
-            <p className="text-xs text-text-muted">{message || `处理中 ${progress}%`}</p>
+            <p className="text-xs text-text-muted">{message ?? t('progress.processing', { n: progress })}</p>
           </motion.div>
         </motion.div>
       )}

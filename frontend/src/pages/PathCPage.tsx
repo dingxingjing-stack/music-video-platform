@@ -21,10 +21,10 @@ interface QuotaInfo { used: number; limit: number; can_clone: boolean; }
 const API = api.base;
 
 const CONSENT_TEXT = [
-  '本次上传的音频为本人自有嗓音，已完整取得该声音的使用授权，绝不盗用、克隆公众人物、亲友、陌生人等第三方声音；',
-  '授权平台使用 Agnes AI 接口完成声音克隆，生成的音色仅可在本平台内本人账号下使用，不可导出、分发、商用授权给第三方；',
-  '若因本人提交侵权音频产生民事、刑事责任，全部由本人承担，平台有权删除音色、封禁账号、留存证据移交监管部门；',
-  '知悉平台可对音频内容、音色用途进行核查，违规音色会直接下架。',
+  'pathc.consent1',
+  'pathc.consent2',
+  'pathc.consent3',
+  'pathc.consent4',
 ];
 
 export function PathCPage() {
@@ -71,9 +71,9 @@ export function PathCPage() {
   };
 
   const handleUpload = async () => {
-    if (!consentChecked) { alert('请先勾选声音克隆授权协议'); return; }
-    if (!uploadUrl) { alert('请输入音频 URL'); return; }
-    if (!quota.can_clone) { alert(`本月克隆次数已达上限（${quota.limit}次）`); return; }
+    if (!consentChecked) { alert(t('pathc.alertConsent')); return; }
+    if (!uploadUrl) { alert(t('pathc.alertAudioUrl')); return; }
+    if (!quota.can_clone) { alert(t('pathc.alertQuota', { n: quota.limit })); return; }
 
     setIsUploading(true);
     setQueueStatus('');
@@ -89,20 +89,20 @@ export function PathCPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data = await res.json();
-      setQueueStatus(`克隆任务已提交（ID: ${data.voice_id || data.id}），依托 Agnes AI 云端处理，预计数分钟完成，完成后将出现在「我的克隆音色」分组。`);
+      setQueueStatus(t('pathc.queueStatus', { id: data.voice_id || data.id }));
       fetchVoices();
       fetchQuota();
       setActiveTab('library');
     } catch (e: any) {
-      alert(`❌ 上传失败：${e.message}`);
+      alert(t('pathc.alertUploadFailed', { msg: e.message }));
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleClone = async () => {
-    if (!cloneText.trim()) { alert('请输入要合成的文本'); return; }
-    if (!selectedVoice) { alert('请选择声音'); return; }
+    if (!cloneText.trim()) { alert(t('pathc.alertTextRequired')); return; }
+    if (!selectedVoice) { alert(t('pathc.alertSelectVoice')); return; }
 
     setIsCloning(true);
     setCloneResult(null);
@@ -118,26 +118,26 @@ export function PathCPage() {
       setCloneResult(data);
       if (data.success && data.audio_url) new Audio(data.audio_url).play();
     } catch (e: any) {
-      alert(`❌ 合成失败：${e.message}`);
+      alert(t('pathc.alertCloneFailed', { msg: e.message }));
     } finally {
       setIsCloning(false);
     }
   };
 
   const allVoices = [
-    ...publicVoices.map(v => ({ ...v, group: '官方音色库' as const })),
-    ...privateVoices.map(v => ({ ...v, group: '我的克隆音色' as const })),
+    ...publicVoices.map(v => ({ ...v, group: t('pathc.groupOfficial') as const })),
+    ...privateVoices.map(v => ({ ...v, group: t('pathc.groupMine') as const })),
   ];
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">🎤 声音克隆</h1>
+      <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">{t('pathc.title')}</h1>
 
       <div className="flex gap-2 mb-6 border-b border-zinc-800">
         {(['library','upload','clone'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-t-lg transition ${activeTab === tab ? 'bg-zinc-800 text-orange-400 border-b-2 border-orange-400' : 'text-zinc-400 hover:text-white'}`}>
-            {tab === 'library' ? '🎵 音色库' : tab === 'upload' ? '📤 上传声音' : '🎙️ 克隆合成'}
+            {tab === 'library' ? t('pathc.tabLibrary') : tab === 'upload' ? t('pathc.tabUpload') : t('pathc.tabClone')}
           </button>
         ))}
       </div>
@@ -146,19 +146,19 @@ export function PathCPage() {
       {activeTab === 'library' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">可用声音</h2>
-            <span className="text-xs text-zinc-500">本月克隆 {quota.used}/{quota.limit}</span>
+            <h2 className="text-xl font-semibold">{t('pathc.availableVoices')}</h2>
+            <span className="text-xs text-zinc-500">{t('pathc.monthlyQuota', { used: quota.used, limit: quota.limit })}</span>
           </div>
 
           {allVoices.length === 0 ? (
             <div className="card-solid p-10 text-center">
               <div className="text-5xl mb-4">🎤</div>
-              <p className="text-secondary mb-2">还没有声音样本</p>
-              <p className="text-muted text-sm mb-6">去「上传声音」标签页添加你的第一个声音</p>
-              <button onClick={() => setActiveTab('upload')} className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-medium">📤 上传声音</button>
+              <p className="text-secondary mb-2">{t('pathc.noSamples')}</p>
+              <p className="text-muted text-sm mb-6">{t('pathc.addFirstVoice')}</p>
+              <button onClick={() => setActiveTab('upload')} className="btn-base px-5 py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-medium">{t('pathc.uploadButton')}</button>
             </div>
           ) : (
-            ['官方音色库', '我的克隆音色'].map(group => {
+            [t('pathc.groupOfficial'), t('pathc.groupMine')].map(group => {
               const groupVoices = allVoices.filter(v => v.group === group);
               if (groupVoices.length === 0) return null;
               return (
@@ -174,7 +174,7 @@ export function PathCPage() {
                         </div>
                         <audio controls src={v.audio_url} className="h-8" />
                       </div>
-                      {selectedVoice === v.id && <div className="mt-2 text-xs text-orange-400">✓ 已选择</div>}
+                      {selectedVoice === v.id && <div className="mt-2 text-xs text-orange-400">{t('pathc.selected')}</div>}
                     </div>
                   ))}
                 </div>
@@ -188,20 +188,20 @@ export function PathCPage() {
       {activeTab === 'upload' && (
         <div className="space-y-4">
           <div className="card-solid p-6">
-            <h2 className="text-xl font-semibold mb-1">上传声音样本</h2>
-            <p className="text-xs text-zinc-500 mb-4">声音克隆须知：① 仅允许上传本人人声；克隆他人嗓音属于侵权行为，平台会下架音色并封禁账号；② 生成音色仅限您个人在本站使用，不可导出、商用；③ 每位用户每月可免费创建 {quota.limit} 个私有克隆音色（本月已用 {quota.used}/{quota.limit}）。</p>
+            <h2 className="text-xl font-semibold mb-1">{t('pathc.uploadTitle')}</h2>
+            <p className="text-xs text-zinc-500 mb-4">{t('pathc.uploadNotice', { limit: quota.limit, used: quota.used })}</p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">音频 URL（3-10 分钟，MP3，单人朗读，无背景杂音）</label>
+                <label className="block text-sm text-zinc-400 mb-2">{t('pathc.audioUrlLabel')}</label>
                 <input type="url" value={uploadUrl} onChange={e => setUploadUrl(e.target.value)} placeholder="https://example.com/voice.mp3"
                   className="w-full px-4 py-2 bg-bg-elevated border border-border-default rounded-lg input-glow text-white" />
-                <p className="text-xs text-zinc-500 mt-1">💡 建议使用安静环境录制，清晰朗读日常语句，克隆效果更佳</p>
+                <p className="text-xs text-zinc-500 mt-1">{t('pathc.recordingHint')}</p>
               </div>
 
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">声音名称（可选）</label>
-                <input type="text" value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="我的声音"
+                <label className="block text-sm text-zinc-400 mb-2">{t('pathc.voiceNameLabel')}</label>
+                <input type="text" value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder={t('pathc.voiceNamePlaceholder')}
                   className="w-full px-4 py-2 bg-bg-elevated border border-border-default rounded-lg input-glow text-white" />
               </div>
 
@@ -210,15 +210,15 @@ export function PathCPage() {
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.target.checked)} className="mt-1 accent-orange-400" />
                   <div className="text-xs text-zinc-400 leading-relaxed">
-                    <p className="text-white font-medium mb-1">本人郑重声明：</p>
-                    {CONSENT_TEXT.map((t, i) => <p key={i} className="mb-1">{i + 1}. {t}</p>)}
+                    <p className="text-white font-medium mb-1">{t('pathc.declaration')}</p>
+                    {CONSENT_TEXT.map((key, i) => <p key={i} className="mb-1">{i + 1}. {t(key)}</p>)}
                   </div>
                 </label>
               </div>
 
               <button onClick={handleUpload} disabled={isUploading || !uploadUrl || !consentChecked || !quota.can_clone}
                 className="w-full py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                {isUploading ? '⏳ 上传中...' : quota.can_clone ? '📤 上传声音' : '🚫 本月额度已用完'}
+                {isUploading ? t('pathc.uploading') : quota.can_clone ? t('pathc.uploadButton') : t('pathc.quotaExhausted')}
               </button>
 
               {queueStatus && <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 text-sm text-green-300">{queueStatus}</div>}
@@ -231,17 +231,17 @@ export function PathCPage() {
       {activeTab === 'clone' && (
         <div className="space-y-4">
           <div className="card-solid p-6">
-            <h2 className="text-xl font-semibold mb-4">声音克隆合成</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('pathc.cloneTitle')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">选择声音</label>
+                <label className="block text-sm text-zinc-400 mb-2">{t('pathc.selectVoice')}</label>
                 <select value={selectedVoice} onChange={e => setSelectedVoice(e.target.value)}
                   className="w-full px-4 py-2 bg-bg-elevated border border-border-default rounded-lg input-glow text-white">
-                  <optgroup label="── 官方音色库 ──">
+                  <optgroup label={`── ${t('pathc.groupOfficial')} ──`}>
                     {publicVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </optgroup>
                   {privateVoices.length > 0 && (
-                    <optgroup label="── 我的克隆音色 ──">
+                    <optgroup label={`── ${t('pathc.groupMine')} ──`}>
                       {privateVoices.map(v => <option key={v.id} value={v.id}>{v.name} 🔒</option>)}
                     </optgroup>
                   )}
@@ -249,37 +249,37 @@ export function PathCPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">合成文本</label>
-                <textarea value={cloneText} onChange={e => setCloneText(e.target.value)} placeholder="输入要合成的文本（最多 1000 字符）" rows={4} maxLength={1000}
+                <label className="block text-sm text-zinc-400 mb-2">{t('pathc.cloneTextLabel')}</label>
+                <textarea value={cloneText} onChange={e => setCloneText(e.target.value)} placeholder={t('pathc.cloneTextPlaceholder')} rows={4} maxLength={1000}
                   className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-orange-400 text-white resize-none" />
                 <p className="text-xs text-zinc-500 mt-1">{cloneText.length}/1000</p>
               </div>
 
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">播放速度：{speed}x</label>
+                <label className="block text-sm text-zinc-400 mb-2">{t('pathc.speedLabel', { speed })}</label>
                 <input type="range" min="0.5" max="2.0" step="0.1" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="w-full accent-orange-400" />
               </div>
 
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">音高偏移：{pitchShift > 0 ? '+' : ''}{pitchShift}</label>
+                <label className="block text-sm text-zinc-400 mb-2">{t('pathc.pitchLabel', { value: `${pitchShift > 0 ? '+' : ''}${pitchShift}` })}</label>
                 <input type="range" min="-12" max="12" step="1" value={pitchShift} onChange={e => setPitchShift(parseInt(e.target.value))} className="w-full accent-orange-400" />
               </div>
 
               <button onClick={handleClone} disabled={isCloning || !cloneText.trim() || !selectedVoice}
                 className="w-full py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                {isCloning ? '⏳ 合成中...' : '🎙️ 开始合成'}
+                {isCloning ? t('pathc.synthesizing') : t('pathc.startSynthesize')}
               </button>
             </div>
           </div>
 
           {cloneResult && (
             <div className={`p-6 rounded-lg ${cloneResult.success ? 'bg-green-900/20 border border-green-500' : 'bg-red-900/20 border border-red-500'}`}>
-              <h3 className="text-lg font-semibold mb-2">{cloneResult.success ? '✅ 合成成功' : '❌ 合成失败'}</h3>
+              <h3 className="text-lg font-semibold mb-2">{cloneResult.success ? t('pathc.cloneSuccess') : t('pathc.cloneFailed')}</h3>
               {cloneResult.message && <p className="text-sm text-zinc-300 whitespace-pre-line mb-4">{cloneResult.message}</p>}
               {cloneResult.success && cloneResult.audio_url && (
                 <div className="space-y-3">
                   <audio controls src={cloneResult.audio_url} className="w-full" />
-                  <p className="text-xs text-zinc-400">时长：{cloneResult.duration}s</p>
+                  <p className="text-xs text-zinc-400">{t('pathc.durationLabel', { duration: cloneResult.duration })}</p>
                 </div>
               )}
             </div>

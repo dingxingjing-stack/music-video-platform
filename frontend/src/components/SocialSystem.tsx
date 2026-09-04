@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, Star, User, UserCheck } from 'lucide-react';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface SocialSystemProps {
   workId: string;
@@ -46,6 +47,7 @@ const getHeaders = () => ({
 });
 
 export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpdate }: SocialSystemProps) {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<SocialStats>({
     likes: 0,
     favorites: 0,
@@ -222,7 +224,7 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   };
 
   if (loading) {
-    return <div className="flex gap-4 text-zinc-500">加载中...</div>;
+    return <div className="flex gap-4 text-zinc-500">{t('social.loading')}</div>;
   }
 
   return (
@@ -264,7 +266,7 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
       {/* 播放数 (只读) */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 text-zinc-400 rounded-full">
         <span className="text-sm font-medium">{formatCount(stats.plays)}</span>
-        <span className="text-xs">播放</span>
+        <span className="text-xs">{t('social.plays')}</span>
       </div>
 
       {/* 关注按钮 */}
@@ -280,12 +282,12 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
           {stats.isFollowing ? (
             <>
               <UserCheck size={18} />
-              <span className="text-sm font-medium">已关注</span>
+              <span className="text-sm font-medium">{t('social.following')}</span>
             </>
           ) : (
             <>
               <User size={18} />
-              <span className="text-sm font-medium">关注</span>
+              <span className="text-sm font-medium">{t('social.follow')}</span>
             </>
           )}
         </button>

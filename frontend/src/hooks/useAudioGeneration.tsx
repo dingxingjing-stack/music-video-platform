@@ -12,6 +12,7 @@
 import { useState, useCallback } from 'react';
 import { getUserId } from './useAiMusicTask';
 import { api } from '../config/api';
+import { useTranslation } from '../i18n/useTranslation';
 
 const API = api.base;
 
@@ -96,12 +97,13 @@ export function useAudioGeneration(opts?: UseAudioGenOptions) {
 
 /** 限流提示横幅 */
 export function RateLimitBanner({ onDismiss }: { onDismiss: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] bg-[#2a1a1a] border border-[#cc3333] rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3">
       <span className="text-lg">⏳</span>
       <div>
-        <p className="text-sm text-[#fca5a5] font-medium">请求过于频繁</p>
-        <p className="text-xs text-[#888888]">免费额度已达上限，请稍后再试</p>
+        <p className="text-sm text-[#fca5a5] font-medium">{t('audioGen.rateError')}</p>
+        <p className="text-xs text-[#888888]">{t('audioGen.rateLimitDesc')}</p>
       </div>
       <button onClick={onDismiss} className="text-[#888888] hover:text-white ml-2">✕</button>
     </div>
@@ -110,13 +112,14 @@ export function RateLimitBanner({ onDismiss }: { onDismiss: () => void }) {
 
 /** PathB 占位弹窗 */
 export function ComingSoonModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-gradient-to-b from-[#1e1e1e] to-[#0e0e0e] border border-[#2a2a2a] rounded-2xl p-6 max-w-sm mx-4 text-center" onClick={e => e.stopPropagation()}>
         <div className="text-5xl mb-4">🚧</div>
-        <h3 className="text-lg font-bold text-white mb-2">功能开发中</h3>
-        <p className="text-sm text-[#888888] mb-4">混合模式正在开发，敬请期待。</p>
-        <button onClick={onClose} className="w-full py-2 rounded-lg bg-gradient-to-r from-[#ff6a10] to-[#ee0979] text-white text-sm font-medium">知道了</button>
+        <h3 className="text-lg font-bold text-white mb-2">{t('comingSoon.title')}</h3>
+        <p className="text-sm text-[#888888] mb-4">{t('comingSoon.desc')}</p>
+        <button onClick={onClose} className="w-full py-2 rounded-lg bg-gradient-to-r from-[#ff6a10] to-[#ee0979] text-white text-sm font-medium">{t('comingSoon.ok')}</button>
       </div>
     </div>
   );

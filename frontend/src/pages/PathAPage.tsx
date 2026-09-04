@@ -37,15 +37,15 @@ export function PathAPage() {
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => navigate('/')} className="text-sm text-[var(--text-secondary)] hover:text-white transition">&larr; {t('common.back') || '返回'}</button>
-        <h1 className="text-2xl font-display font-bold gradient-text">路径 A — AI 快速创作</h1>
+        <h1 className="text-2xl font-display font-bold gradient-text">{t('pathA.title')}</h1>
       </div>
-      <p className="text-sm text-[var(--text-muted)]">提示词 → Agnes AI → 全曲生成（免费）</p>
+      <p className="text-sm text-[var(--text-muted)]">{t('pathA.tagline')}</p>
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-4">
-        <h2 className="font-display font-semibold">🎤 音乐提示词</h2>
+        <h2 className="font-display font-semibold">🎤 {t('ui.musicPrompt')}</h2>
         <textarea
           className="w-full h-24 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-3 text-sm resize-none focus:outline-none focus:border-[var(--accent-gradient-start)]"
-          placeholder="输入提示词描述想要的音乐风格、情感、乐器..."
+          placeholder={t('ui.promptPlaceholder')}
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
         />
@@ -53,14 +53,14 @@ export function PathAPage() {
           <button
             onClick={handleGenerate}
             disabled={loading || !prompt.trim()}
-            title={!prompt.trim() ? '请输入提示词后再生成' : loading ? '正在生成，请稍候' : '点击生成音乐'}
+            title={!prompt.trim() ? t('pathA.tooltipNeedPrompt') : loading ? t('pathA.tooltipGenerating') : t('pathA.tooltipGenerate')}
             className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {loading ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> 生成中...</> : '✨ 🎵 生成音乐'}
+            {loading ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> {t('pathA.generating')}</> : t('ui.generateMusic')}
           </button>
-          <button onClick={handleRandom} className="btn-secondary">🔀 随机提示</button>
+          <button onClick={handleRandom} className="btn-secondary">{t('ui.randomPrompt')}</button>
           {!prompt.trim() && !loading && (
-            <span className="text-xs text-[var(--text-muted)]">先输入提示词，或点击 🔺 随机提示</span>
+            <span className="text-xs text-[var(--text-muted)]">{t('ui.promptHint')}</span>
           )}
         </div>
       </section>
@@ -70,8 +70,8 @@ export function PathAPage() {
       <MixConsole history={[]} />
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-        <h2 className="font-display font-semibold mb-3">📋 版本历史</h2>
-        <p className="text-sm text-[var(--text-muted)]">暂无历史记录。生成的音乐会自动保存到这里。</p>
+        <h2 className="font-display font-semibold mb-3">{t('ui.versionHistory')}</h2>
+        <p className="text-sm text-[var(--text-muted)]">{t('ui.historyEmpty')}</p>
       </section>
 
       {rateLimited && <RateLimitBanner onDismiss={() => setRateLimited(false)} />}

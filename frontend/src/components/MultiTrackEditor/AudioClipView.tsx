@@ -3,6 +3,7 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { AudioClip } from '../../types/trackStudio';
 
 interface Zoom {
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function AudioClipView({ clip, zoom, isSelected, onSelect, onChange }: Props) {
+  const { t } = useTranslation();
   const width = clip.duration * zoom.x;
   const left = clip.startTime * zoom.x;
 
@@ -129,7 +131,7 @@ export function AudioClipView({ clip, zoom, isSelected, onSelect, onChange }: Pr
       {(clip.fadeIn || 0) > 0 && (
         <div
           className="absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r from-black/20 to-transparent cursor-ew-resize"
-          title="淡入"
+          title={t('mt.fadeIn')}
           onMouseDown={handleFadeInStart}
         />
       )}

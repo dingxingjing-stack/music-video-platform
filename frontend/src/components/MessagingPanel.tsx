@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Conversation {
   conversation_id: string;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export function MessagingPanel({ userId, onClose }: Props) {
+  const { t } = useTranslation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -166,12 +168,12 @@ export function MessagingPanel({ userId, onClose }: Props) {
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
     
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes}分钟前`;
+    if (minutes < 1) return t('msg.justNow');
+    if (minutes < 60) return t('msg.minutesAgo', { n: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}小时前`;
+    if (hours < 24) return t('msg.hoursAgo', { n: hours });
     const days = Math.floor(hours / 24);
-    return `${days}天前`;
+    return t('msg.daysAgo', { n: days });
   };
 
   return (
@@ -180,13 +182,13 @@ export function MessagingPanel({ userId, onClose }: Props) {
         {/* 左侧：对话列表 */}
         <div className="w-80 border-r border-[#2a2a2a] flex flex-col">
           <div className="p-4 border-b border-[#2a2a2a]">
-            <h2 className="text-lg font-bold text-[#e0e0e0]">💬 私信</h2>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">💬 {t('msg.privateMessages')}</h2>
           </div>
           
           <div className="flex-1 overflow-auto">
             {conversations.length === 0 ? (
               <div className="p-8 text-center text-[#777777]">
-                暂无对话
+                {t('msg.noConversations')}
               </div>
             ) : (
               <div className="divide-y divide-[#2a2a2a]">
@@ -229,7 +231,7 @@ export function MessagingPanel({ userId, onClose }: Props) {
         <div className="flex-1 flex flex-col">
           {!selectedPartner ? (
             <div className="flex-1 flex items-center justify-center text-[#777777]">
-              选择一个对话开始聊天
+              {t('msg.selectConversation')}
             </div>
           ) : (
             <>
@@ -243,10 +245,10 @@ export function MessagingPanel({ userId, onClose }: Props) {
               {/* 消息列表 */}
               <div className="flex-1 overflow-auto p-4 space-y-4">
                 {loading ? (
-                  <div className="text-center text-[#777777]">加载中...</div>
+                  <div className="text-center text-[#777777]">{t('msg.loading')}</div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-[#777777]">
-                    还没有消息，开始对话吧！
+                    {t('msg.noMessages')}
                   </div>
                 ) : (
                   messages.map(msg => (
@@ -282,7 +284,7 @@ export function MessagingPanel({ userId, onClose }: Props) {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="输入消息..."
+                    placeholder={t('msg.inputPlaceholder')}
                     className="flex-1 bg-[#2a2a2a] text-[#e0e0e0] px-4 py-2 rounded-lg border border-[#2a2a2a] focus:outline-none focus:border-orange-500"
                   />
                   <button
@@ -290,7 +292,7 @@ export function MessagingPanel({ userId, onClose }: Props) {
                     disabled={!newMessage.trim()}
                     className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg font-medium hover:from-orange-600 hover:to-pink-600 transition disabled:opacity-50"
                   >
-                    发送
+                    {t('msg.send')}
                   </button>
                 </div>
               </div>

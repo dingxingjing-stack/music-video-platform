@@ -3,13 +3,26 @@
  * Sends partial lyrics to backend LLM endpoint, displays typewriter-style completions.
  */
 import { useState, useRef, useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   value: string;
   onChange: (v: string) => void;
 }
 
+const STYLE_OPTIONS = [
+  { value: '流行', key: 'pop' },
+  { value: '摇滚', key: 'rock' },
+  { value: 'R&B', key: 'rnb' },
+  { value: '嘻哈', key: 'hiphop' },
+  { value: '电子', key: 'electronic' },
+  { value: '民谣', key: 'folk' },
+  { value: '古典', key: 'classical' },
+  { value: '爵士', key: 'jazz' },
+];
+
 export function AILyricsCompletion({ value, onChange }: Props) {
+  const { t } = useTranslation();
   const [suggestion, setSuggestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [style, setStyle] = useState('流行');
@@ -39,7 +52,7 @@ export function AILyricsCompletion({ value, onChange }: Props) {
       setSuggestion(result);
     } catch (err) {
       console.error('Lyrics completion error:', err);
-      setSuggestion('⚠️ 生成失败，请重试');
+      setSuggestion(`⚠️ ${t('ailyr.generationFailed')}`);
     } finally {
       setLoading(false);
     }
@@ -54,14 +67,14 @@ export function AILyricsCompletion({ value, onChange }: Props) {
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-3">
-      <h2 className="font-display font-semibold">🤖 AI 歌词智能补全</h2>
+      <h2 className="font-display font-semibold">🤖 {t('ailyr.title')}</h2>
 
       {/* Input */}
       <textarea
         ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="输入你已经写好的歌词片段，AI 会自动续写..."
+        placeholder={t('ailyr.placeholder')}
         className="w-full h-28 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-3 text-sm resize-none focus:outline-none focus:border-[var(--accent-gradient-start)]"
       />
 
@@ -72,8 +85,8 @@ export function AILyricsCompletion({ value, onChange }: Props) {
           onChange={(e) => setStyle(e.target.value)}
           className="rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          {['流行', '摇滚', 'R&B', '嘻哈', '电子', '民谣', '古典', '爵士'].map((s) => (
-            <option key={s} value={s}>{s}</option>
+          {STYLE_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value}>{t('ailyr.style.' + s.key)}</option>
           ))}
         </select>
         <select
@@ -90,7 +103,7 @@ export function AILyricsCompletion({ value, onChange }: Props) {
           onClick={handleComplete}
           disabled={loading || !value.trim()}
         >
-          {loading ? '⏳ 生成中...' : '✨ AI 续写'}
+          {loading ? `⏳ ${t('ailyr.generating')}` : `✨ ${t('ailyr.continue')}`}
         </button>
       </div>
 
@@ -100,10 +113,10 @@ export function AILyricsCompletion({ value, onChange }: Props) {
           <p className="text-sm whitespace-pre-wrap text-[var(--text-primary)]">{suggestion}</p>
           <div className="flex gap-2">
             <button className="btn-primary !px-3 !py-1 text-xs" onClick={applySuggestion}>
-              ✅ 应用
+              ✅ {t('ailyr.apply')}
             </button>
             <button className="btn-secondary !px-3 !py-1 text-xs" onClick={() => setSuggestion('')}>
-              ❌ 忽略
+              ❌ {t('ailyr.ignore')}
             </button>
           </div>
         </div>

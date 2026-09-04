@@ -4,6 +4,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { AutomationLane, AutomationPoint, generatePointId } from '../../types/automation';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Zoom {
   x: number; // px per second
@@ -28,6 +29,7 @@ function getValueLabel(value: number, type: string): string {
 }
 
 export function AutomationEditor({ lanes, onLanesChange, zoom, duration }: Props) {
+  const { t } = useTranslation();
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState<string | null>(null);
@@ -191,7 +193,7 @@ export function AutomationEditor({ lanes, onLanesChange, zoom, duration }: Props
               className="absolute left-2 top-1 text-xs font-medium"
               style={{ color: lane.color }}
             >
-              {lane.label}
+              {t(`automation.${lane.type}`)}
             </div>
 
             {/* SVG 曲线 */}

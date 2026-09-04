@@ -35,22 +35,22 @@ interface ChordProgression {
   total_duration: number;
 }
 
-const PROGRESSIONS = {
-  pop_basic: '流行基础 (I-V-vi-IV)',
-  pop_variant: '流行变体 (I-vi-IV-V)',
-  jazz_ii_v_i: '爵士 II-V-I',
-  blues_12: '12 小节蓝调',
-  emotional: '情感/抒情 (vi-IV-I-V)',
-  epic: '史诗/电影',
-};
+const PROGRESSIONS = (t: (key: string) => string) => ({
+  pop_basic: t('chp.progPopBasic'),
+  pop_variant: t('chp.progPopVariant'),
+  jazz_ii_v_i: t('chp.progJazzIIVI'),
+  blues_12: t('chp.progBlues12'),
+  emotional: t('chp.progEmotional'),
+  epic: t('chp.progEpic'),
+});
 
-const QUALITY_LABELS: Record<string, string> = {
-  major: '大三和弦',
-  minor: '小三和弦',
-  '7th': '七和弦',
-  dim: '减和弦',
-  aug: '增和弦',
-};
+const QUALITY_LABELS = (t: (key: string) => string): Record<string, string> => ({
+  major: t('chp.qualityMajor'),
+  minor: t('chp.qualityMinor'),
+  '7th': t('chp.quality7th'),
+  dim: t('chp.qualityDim'),
+  aug: t('chp.qualityAug'),
+});
 
 interface Props {
   onClose: () => void;
@@ -156,7 +156,7 @@ export function ChordTrackPanel({ onClose }: Props) {
                         : 'bg-zinc-800 text-zinc-400 hover:text-white'
                     }`}
                   >
-                    {q === 'all' ? t('chp.all') : QUALITY_LABELS[q] || q}
+                    {q === 'all' ? t('chp.all') : QUALITY_LABELS(t)[q] || q}
                   </button>
                 ))}
               </div>
@@ -174,7 +174,7 @@ export function ChordTrackPanel({ onClose }: Props) {
                       {chord.name}
                     </div>
                     <div className="text-xs text-zinc-500 mb-2">
-                      {QUALITY_LABELS[chord.quality] || chord.quality}
+                      {QUALITY_LABELS(t)[chord.quality] || chord.quality}
                     </div>
                     <div className="flex justify-center gap-1">
                       {chord.notes.map((note, i) => (
@@ -200,7 +200,7 @@ export function ChordTrackPanel({ onClose }: Props) {
             <div className="mb-6 p-4 bg-zinc-800/50 rounded-xl">
               <h3 className="text-sm font-medium text-white mb-3">{t('chp.selectProgression')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {Object.entries(PROGRESSIONS).map(([key, label]) => (
+                {Object.entries(PROGRESSIONS(t)).map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => {}}

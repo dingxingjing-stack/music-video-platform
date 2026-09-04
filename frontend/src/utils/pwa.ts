@@ -3,6 +3,25 @@
  * 精简版：KISS
  */
 
+import { getDefaultLocale } from '../i18n/config';
+
+const PWA_CONFIRM_TEXT: Record<string, string> = {
+  zh: '🎉 新版本已就绪！立即刷新？',
+  en: '🎉 New version is ready! Refresh now?',
+  ja: '🎉 新しいバージョンが利用可能です！今すぐ更新しますか？',
+  ko: '🎉 새 버전이 준비되었습니다! 지금 새로고침할까요?',
+  es: '🎉 ¡Nueva versión lista! ¿Actualizar ahora?',
+  fr: '🎉 Nouvelle version prête ! Actualiser maintenant ?',
+  pt: '🎉 Nova versão pronta! Atualizar agora?',
+  ru: '🎉 Новая версия готова! Обновить сейчас?',
+  de: '🎉 Neue Version bereit! Jetzt aktualisieren?',
+};
+
+function getPwaConfirmText(): string {
+  const locale = getDefaultLocale();
+  return PWA_CONFIRM_TEXT[locale] || PWA_CONFIRM_TEXT.en;
+}
+
 export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
@@ -16,7 +35,7 @@ export function registerServiceWorker() {
 
           worker.addEventListener('statechange', () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-              if (confirm('🎉 新版本已就绪！立即刷新？')) {
+              if (confirm(getPwaConfirmText())) {
                 window.location.reload();
               }
             }

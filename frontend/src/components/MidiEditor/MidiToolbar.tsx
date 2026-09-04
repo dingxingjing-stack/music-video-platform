@@ -4,6 +4,7 @@
 
 import { useCallback } from 'react';
 import { GM_INSTRUMENTS } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Zoom {
   x: number;
@@ -33,6 +34,7 @@ export function MidiToolbar({
   instrumentName,
   onInstrumentChange,
 }: Props) {
+  const { t } = useTranslation();
   const handleZoomIn = useCallback(() => {
     onZoomChange({ x: Math.min(zoom.x * 1.2, 10), y: Math.min(zoom.y * 1.2, 40) });
   }, [zoom, onZoomChange]);
@@ -57,13 +59,13 @@ export function MidiToolbar({
               : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:from-orange-600 hover:to-pink-600'
           }`}
         >
-          {isPlaying ? '⏹ 停止' : '▶ 播放'}
+          {isPlaying ? `⏹ ${t('miditb.stop')}` : `▶ ${t('miditb.play')}`}
         </button>
       </div>
 
       {/* Zoom */}
       <div className="flex items-center gap-2 border-l border-[#2a2a2a] pl-4">
-        <span className="text-xs text-[#777777]">缩放:</span>
+        <span className="text-xs text-[#777777]">{t('miditb.zoom')}:</span>
         <button
           onClick={handleZoomOut}
           className="w-7 h-7 flex items-center justify-center bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-sm"
@@ -83,7 +85,7 @@ export function MidiToolbar({
 
       {/* Tempo */}
       <div className="flex items-center gap-2 border-l border-[#2a2a2a] pl-4">
-        <span className="text-xs text-[#777777]">速度:</span>
+        <span className="text-xs text-[#777777]">{t('miditb.tempo')}:</span>
         <input
           type="range"
           min="40"
@@ -97,7 +99,7 @@ export function MidiToolbar({
 
       {/* Instrument */}
       <div className="flex items-center gap-2 border-l border-[#2a2a2a] pl-4">
-        <span className="text-xs text-[#777777]">乐器:</span>
+        <span className="text-xs text-[#777777]">{t('miditb.instrument')}:</span>
         <select
           value={instrumentName}
           onChange={(e) => {

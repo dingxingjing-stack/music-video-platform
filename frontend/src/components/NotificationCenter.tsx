@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Notification {
   id: string;
@@ -50,6 +51,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function NotificationCenter({ userId, onClose }: Props) {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'like' | 'favorite' | 'follow'>('all');
@@ -179,12 +181,12 @@ export function NotificationCenter({ userId, onClose }: Props) {
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
     
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes}分钟前`;
+    if (minutes < 1) return t('ncenter.justNow');
+    if (minutes < 60) return t('ncenter.minutesAgo', { n: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}小时前`;
+    if (hours < 24) return t('ncenter.hoursAgo', { n: hours });
     const days = Math.floor(hours / 24);
-    return `${days}天前`;
+    return t('ncenter.daysAgo', { n: days });
   };
 
   return (
@@ -193,9 +195,9 @@ export function NotificationCenter({ userId, onClose }: Props) {
         {/* 头部 */}
         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
           <div>
-            <h2 className="text-lg font-bold text-[#e0e0e0]">🔔 通知中心</h2>
+            <h2 className="text-lg font-bold text-[#e0e0e0]">🔔 {t('ncenter.title')}</h2>
             <p className="text-xs text-[#777777]">
-              {unreadCount > 0 ? `${unreadCount} 条未读` : '全部已读'}
+              {unreadCount > 0 ? t('ncenter.unreadCount', { n: unreadCount }) : t('ncenter.allRead')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -204,7 +206,7 @@ export function NotificationCenter({ userId, onClose }: Props) {
                 onClick={markAllAsRead}
                 className="text-xs text-orange-500 hover:text-orange-400 transition"
               >
-                全部已读
+                {t('ncenter.markAllRead')}
               </button>
             )}
             <button
@@ -219,11 +221,11 @@ export function NotificationCenter({ userId, onClose }: Props) {
         {/* 筛选器 */}
         <div className="flex items-center gap-2 p-3 border-b border-[#2a2a2a]">
           {[
-            { key: 'all', label: '全部' },
-            { key: 'unread', label: '未读' },
-            { key: 'like', label: '👍 点赞' },
-            { key: 'favorite', label: '⭐ 收藏' },
-            { key: 'follow', label: '👤 关注' }
+            { key: 'all', label: t('ncenter.filterAll') },
+            { key: 'unread', label: t('ncenter.filterUnread') },
+            { key: 'like', label: `👍 ${t('ncenter.filterLike')}` },
+            { key: 'favorite', label: `⭐ ${t('ncenter.filterFavorite')}` },
+            { key: 'follow', label: `👤 ${t('ncenter.filterFollow')}` }
           ].map(item => (
             <button
               key={item.key}
@@ -242,10 +244,10 @@ export function NotificationCenter({ userId, onClose }: Props) {
         {/* 通知列表 */}
         <div className="flex-1 overflow-auto">
           {loading ? (
-            <div className="p-8 text-center text-[#777777]">加载中...</div>
+            <div className="p-8 text-center text-[#777777]">{t('ncenter.loading')}</div>
           ) : notifications.length === 0 ? (
             <div className="p-8 text-center text-[#777777]">
-              🎉 暂无通知
+              🎉 {t('ncenter.noNotifications')}
             </div>
           ) : (
             <div className="divide-y divide-[#2a2a2a]">
@@ -265,7 +267,7 @@ export function NotificationCenter({ userId, onClose }: Props) {
                           <p className="text-sm text-[#999999] mt-1">{notif.content}</p>
                           {notif.sender_name && (
                             <p className="text-xs text-[#777777] mt-1">
-                              来自：{notif.sender_name}
+                              {t('ncenter.from', { name: notif.sender_name })}
                             </p>
                           )}
                         </div>
@@ -278,7 +280,7 @@ export function NotificationCenter({ userId, onClose }: Props) {
                               onClick={() => markAsRead(notif.id)}
                               className="text-xs text-orange-500 hover:text-orange-400"
                             >
-                              标记已读
+                              {t('ncenter.markRead')}
                             </button>
                           )}
                           <button

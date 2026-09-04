@@ -4,7 +4,7 @@ import { useTranslation } from '../i18n/useTranslation';
 
 const CONSENT_KEY = 'zyvexo_clone_consent';
 
-const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: string; confirm: string; cancel: string }> = {
+const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: string; confirm: string; cancel: string; legalLiability: string }> = {
   'zh': {
     title: '声音克隆法律授权协议',
     lines: [
@@ -16,6 +16,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: '我已阅读并同意以上全部条款',
     confirm: '✓ 已同意，开始克隆',
     cancel: '取消',
+    legalLiability: '违规克隆他人声音将承担全部法律责任。',
   },
   'en': {
     title: 'Voice Clone Legal Consent',
@@ -28,6 +29,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: 'I have read and agree to all terms above',
     confirm: '✓ Agreed, start cloning',
     cancel: 'Cancel',
+    legalLiability: 'Illegal cloning of others\' voices will result in full legal liability.',
   },
   'pt': {
     title: 'Consentimento Legal para Clonagem de Voz',
@@ -40,6 +42,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: 'Li e concordo com todos os termos acima',
     confirm: '✓ Concordo, começar',
     cancel: 'Cancelar',
+    legalLiability: 'A clonagem ilegal de outras vozes resultará em total responsabilidade legal.',
   },
   'es': {
     title: 'Consentimiento Legal para Clonación de Voz',
@@ -52,6 +55,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: 'He leído y acepto todos los términos',
     confirm: '✓ Acepto, comenzar',
     cancel: 'Cancelar',
+    legalLiability: 'La clonación ilegal de voces ajenas acarreará plena responsabilidad legal.',
   },
   'fr': {
     title: 'Consentement Légal pour Clonage Vocal',
@@ -64,6 +68,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: 'J\'ai lu et accepte tous les termes ci-dessus',
     confirm: '✓ J\'accepte, commencer',
     cancel: 'Annuler',
+    legalLiability: 'Le clonage illégal de voix d\'autrui entraînera une pleine responsabilité juridique.',
   },
   'de': {
     title: 'Rechtliche Einwilligung zur Stimmklonung',
@@ -76,6 +81,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: 'Ich habe alle Bedingungen gelesen und stimme zu',
     confirm: '✓ Zugestimmt, beginnen',
     cancel: 'Abbrechen',
+    legalLiability: 'Illegales Klonen fremder Stimmen führt zu voller rechtlicher Haftung.',
   },
   'ja': {
     title: '音声クローン法的同意',
@@ -88,6 +94,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: '上記全条件に同意します',
     confirm: '✓ 同意、開始',
     cancel: 'キャンセル',
+    legalLiability: '他人の音声を不正にクローンすることは、すべての法的責任を負うものとします。',
   },
   'ko': {
     title: '음성 클론 법적 동의',
@@ -100,6 +107,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: '위 모든 약관에 동의합니다',
     confirm: '✓ 동의, 시작',
     cancel: '취소',
+    legalLiability: '다른 사람의 음성을 불법적으로 복제하면 모든 법적 책임을 부담하게 됩니다.',
   },
   'ru': {
     title: 'Юридическое согласие на клонирование голоса',
@@ -112,6 +120,7 @@ const CONSENT_TEXTS: Record<string, { title: string; lines: string[]; checkbox: 
     checkbox: 'Я прочитал и согласен со всеми условиями',
     confirm: '✓ Согласен, начать',
     cancel: 'Отмена',
+    legalLiability: 'Незаконное клонирование чужого голоса влечёт полную юридическую ответственность.',
   },
 };
 
@@ -131,7 +140,7 @@ export function CloneConsentModal({ onAgree, onDismiss }: { onAgree: () => void;
             <p key={i} className="text-xs text-zinc-400 leading-relaxed">{i + 1}. {line}</p>
           ))}
         </div>
-        <p className="text-xs text-red-400 mb-4">⚠️ {lang === 'en' ? 'Illegal cloning of others\' voices will result in full legal liability.' : '违规克隆他人声音将承担全部法律责任。'}</p>
+        <p className="text-xs text-red-400 mb-4">⚠️ {t.fullLegalLiability}</p>
         <label className="flex items-start gap-3 cursor-pointer mb-4 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
           <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} className="mt-1 accent-orange-400 w-4 h-4" />
           <span className="text-sm text-zinc-300">{t.checkbox}</span>

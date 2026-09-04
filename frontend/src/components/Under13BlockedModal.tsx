@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 const UNDER_13_COOKIE = 'user_age_consent';
 const CONSENT_VALUE = 'verified';
@@ -16,6 +17,7 @@ function setCookie(name: string, value: string, days = 365) {
 }
 
 export const Under13BlockedModal: React.FC = () => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -33,21 +35,21 @@ export const Under13BlockedModal: React.FC = () => {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div className="bg-white rounded-xl p-8 max-w-md w-full box-shadow-lg">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">年龄验证</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">{t('ageVerify.title')}</h2>
           <p className="text-gray-600 mb-6">
-            根据当地法规，您需要验证年龄后方可继续使用本服务。
+            {t('ageVerify.body')}
           </p>
           <button
             onClick={accept}
             className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
-            我已满 13 岁，继续使用
+            {t('ageVerify.continue')}
           </button>
           <button
             onClick={accept}
             className="w-full py-3 px-4 mt-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
           >
-            退出
+            {t('ageVerify.exit')}
           </button>
         </div>
       </div>

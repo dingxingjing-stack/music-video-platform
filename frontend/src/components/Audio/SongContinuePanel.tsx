@@ -151,7 +151,7 @@ export function SongContinuePanel({
             // 父组件会通过轮询原任务或其他方式获取新音频
           } else if (data.status === 'failed') {
             setPolling(false);
-            setError(data.error || '续写失败');
+            setError(data.error || t('continue.continueFailed'));
             setLoading(false);
           }
         }
@@ -187,7 +187,7 @@ export function SongContinuePanel({
       // 注意：onContinue 应该返回新的任务 ID
       // 这里简化处理，实际需要从 onContinue 返回值获取
     } catch (e: any) {
-      setError(e.message || '续写请求失败');
+      setError(e.message || t('continue.requestFailed'));
       setLoading(false);
     }
   };

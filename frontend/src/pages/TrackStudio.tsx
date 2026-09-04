@@ -323,7 +323,7 @@ export function TrackStudio() {
                 throw new Error(t('errors.audioRequired'));
               }
               body.audio_base64 = uploadedFile.base64;
-              body.stem_count = t('common.stemCount4');
+              body.stem_count = 4;
             } else if (selectedPath === 'd') {
               if (!midiProject) {
                 throw new Error(t('errors.midiProjectRequired'));

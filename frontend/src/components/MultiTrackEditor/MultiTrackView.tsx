@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 import { MultiTrackTimeline } from '../MultiTrackEditor';
 import type { Track } from '../../types/trackStudio';
 import type { MidiTrack } from '../../types/trackStudio';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function MultiTrackView({ tracks, onTracksChange, onBack }: Props) {
+  const { t } = useTranslation();
   const [showEffects, setShowEffects] = useState(false);
   const [showAutomation, setShowAutomation] = useState(false);
   const [showProjectManager, setShowProjectManager] = useState(false);
@@ -128,28 +130,28 @@ export function MultiTrackView({ tracks, onTracksChange, onBack }: Props) {
           onClick={onBack}
           className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors"
         >
-          ← 返回
+          ← {t('mt.back')}
         </button>
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-[#e0e0e0]">多轨编辑器</h2>
+          <h2 className="text-lg font-bold text-[#e0e0e0]">{t('mt.title')}</h2>
           <button
             onClick={() => setShowAIGenerate(true)}
             className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg text-sm font-medium transition"
           >
-            ✨ AI 生成
+            ✨ {t('mt.aiGenerate')}
           </button>
           <button
             onClick={() => setShowProjectManager(true)}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors"
           >
-            📁 项目
+            📁 {t('mt.project')}
           </button>
           <button
             onClick={() => setShowAudioExporter(true)}
             disabled={tracks.length === 0}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
           >
-            📤 导出音频
+            📤 {t('mt.exportAudio')}
           </button>
           <button
             onClick={() => {
@@ -160,19 +162,19 @@ export function MultiTrackView({ tracks, onTracksChange, onBack }: Props) {
             }}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors"
           >
-            🎛️ 效果器
+            🎛️ {t('mt.effects')}
           </button>
           <button
             onClick={() => setShowAutomation(true)}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors"
           >
-            📈 自动化
+            📈 {t('mt.automation')}
           </button>
           <button
             onClick={() => setShowMixConsole(true)}
             className="px-3 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors"
           >
-            🎚️ 混音台
+            🎚️ {t('mt.mixConsole')}
           </button>
         </div>
         <div className="w-20" />

@@ -305,6 +305,7 @@ interface VideoCardProps {
 }
 
 function VideoCard({ video, isFavorite, onToggleFavorite, onUseVideo }: VideoCardProps) {
+  const { t } = useTranslation();
   return (
     <div className="bg-[#1a1a1a] rounded-lg overflow-hidden hover:scale-105 transition-transform group">
       {/* 缩略图 */}
@@ -340,7 +341,7 @@ function VideoCard({ video, isFavorite, onToggleFavorite, onUseVideo }: VideoCar
             onClick={onUseVideo}
             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full text-sm font-medium hover:scale-110 transition-transform"
           >
-            使用
+            {t('stockLibrary.use')}
           </button>
         </div>
       </div>
@@ -367,6 +368,7 @@ interface VideoListItemProps {
 }
 
 function VideoListItem({ video, isFavorite, onToggleFavorite, onUseVideo }: VideoListItemProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-4 p-4 bg-[#1a1a1a] rounded-lg hover:bg-[#222] transition-colors">
       {/* 缩略图 */}
@@ -413,7 +415,7 @@ function VideoListItem({ video, isFavorite, onToggleFavorite, onUseVideo }: Vide
           onClick={onUseVideo}
           className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full text-sm font-medium hover:scale-105 transition-transform"
         >
-          使用
+          {t('stockLibrary.use')}
         </button>
       </div>
     </div>

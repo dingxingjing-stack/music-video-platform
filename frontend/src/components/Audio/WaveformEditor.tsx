@@ -3,6 +3,7 @@
  * Uses wavesurfer.js for rendering, supports play/crop/fade-in-fade-out.
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   url: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function WaveformEditor({ url, onTrim }: Props) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<any>(null);
   const [playing, setPlaying] = useState(false);
@@ -80,7 +82,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-3">
-      <h2 className="font-display font-semibold">🌊 波形编辑器</h2>
+      <h2 className="font-display font-semibold">🌊 {t('wave.editorTitle')}</h2>
 
       {/* Waveform */}
       <div className="relative">
@@ -94,7 +96,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
       {/* Playback Controls */}
       <div className="flex items-center gap-4 text-sm">
         <button onClick={togglePlay} className="btn-primary !px-4 !py-2 text-sm">
-          {playing ? '⏸ 暂停' : '▶ 播放'}
+          {playing ? `⏸ ${t('wave.pause')}` : `▶ ${t('wave.play')}`}
         </button>
         <span className="text-[var(--text-muted)] font-mono">
           {formatTime(currentTime)} / {formatTime(duration)}
@@ -104,7 +106,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
       {/* Trim Sliders */}
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-xs text-[var(--text-secondary)]">
-          开始裁剪
+          {t('wave.trimStart')}
           <input
             type="range"
             min={0}
@@ -120,7 +122,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
           <span className="font-mono">{formatTime(trimStart)}</span>
         </label>
         <label className="flex flex-col gap-1 text-xs text-[var(--text-secondary)]">
-          结束裁剪
+          {t('wave.trimEnd')}
           <input
             type="range"
             min={0}
@@ -140,7 +142,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
       {/* Fade Controls */}
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-xs text-[var(--text-secondary)]">
-          淡入 (秒)
+          {t('wave.fadeIn')}
           <input
             type="range"
             min={0}
@@ -153,7 +155,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
           <span className="font-mono">{fadeIn.toFixed(1)}s</span>
         </label>
         <label className="flex flex-col gap-1 text-xs text-[var(--text-secondary)]">
-          淡出 (秒)
+          {t('wave.fadeOut')}
           <input
             type="range"
             min={0}
@@ -172,7 +174,7 @@ export function WaveformEditor({ url, onTrim }: Props) {
         className="btn-primary !px-4 !py-2 text-sm"
         onClick={() => onTrim?.(trimStart, trimEnd)}
       >
-        ✅ 应用裁剪
+        ✅ {t('wave.applyTrim')}
       </button>
     </section>
   );

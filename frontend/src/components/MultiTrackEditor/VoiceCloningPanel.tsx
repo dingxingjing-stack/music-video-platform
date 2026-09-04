@@ -61,7 +61,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
       const newVoice: VoiceProfile = {
         id: `voice_${Date.now()}`,
         name: file.name.replace(/\.[^.]+$/, ''),
-        description: '用户上传的声音',
+        description: t('voiceClone.userUploaded'),
         sample_duration: 120,
         tags: ['user-uploaded'],
         created_at: new Date().toISOString(),
@@ -85,7 +85,7 @@ export function VoiceCloningPanel({ onClose }: Props) {
         success: true,
         audio_url: `mock://cloned_${selectedVoice}.wav`,
         duration: cloneText.length * 0.08,
-        voice_name: '克隆声音',
+        voice_name: t('voiceClone.clonedVoice'),
         processing_time: 2.5,
       });
       setIsProcessing(false);

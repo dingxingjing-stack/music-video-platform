@@ -28,7 +28,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
   const [tracks, setTracks] = useState<RecordingTrackConfig[]>([
     {
       trackId: 'track-1',
-      name: '人声',
+      name: t('recorder.trackVocal'),
       inputType: 'mic',
       inputChannel: 1,
       monitoringEnabled: true,
@@ -41,7 +41,7 @@ export function ProfessionalRecorder({ onRecordingComplete }: Props) {
     },
     {
       trackId: 'track-2',
-      name: '吉他',
+      name: t('recorder.trackGuitar'),
       inputType: 'instrument',
       inputChannel: 1,
       monitoringEnabled: true,

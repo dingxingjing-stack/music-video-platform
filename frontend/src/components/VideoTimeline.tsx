@@ -11,6 +11,7 @@
 
 import { useState, useRef } from 'react';
 import { VideoTrack, BeatMarker, WaveformData } from '../types/video-sync';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface Props {
   tracks: VideoTrack[];
@@ -36,6 +37,7 @@ export function VideoTimeline({
   onTrackAdd,
   zoom = 50
 }: Props) {
+  const { t } = useTranslation();
   const timelineRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedClip, setDraggedClip] = useState<string | null>(null);
@@ -266,7 +268,7 @@ export function VideoTimeline({
           onClick={onTrackAdd}
           className="mt-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded text-sm"
         >
-          + 添加轨道
+          + {t('vtl.addTrack')}
         </button>
       )}
     </div>

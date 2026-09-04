@@ -64,7 +64,7 @@ export default function FoundingMemberPage() {
 
           {/* 倒计时 */}
           <div className="mt-8 text-sm text-gray-400">
-            ⏰ {t('founding.offerEnds')}: <span className="text-orange-400 font-mono">6 天 23:59:59</span>
+            ⏰ {t('founding.offerEnds')}: <span className="text-orange-400 font-mono">{t('founding.days', { n: 6 })} 23:59:59</span>
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function FoundingMemberPage() {
                 ¥0
               </div>
               <div className="text-gray-400">
-                <span className="line-through">¥299/年</span> {t('founding.lifetimeFree')}
+                <span className="line-through">¥299/{t('founding.perYear')}</span> {t('founding.lifetimeFree')}
               </div>
             </div>
           </div>

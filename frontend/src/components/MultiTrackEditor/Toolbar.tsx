@@ -3,6 +3,7 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from '../../i18n/useTranslation';
 
 export type Tool = 'select' | 'split' | 'trim' | 'fade';
 
@@ -28,6 +29,7 @@ export function Toolbar({
   onPlay,
   onStop,
 }: Props) {
+  const { t } = useTranslation();
   const handleZoomIn = useCallback(() => {
     onZoomChange({ ...zoom, x: Math.min(zoom.x * 1.2, 200) });
   }, [zoom, onZoomChange]);
@@ -44,13 +46,13 @@ export function Toolbar({
           onClick={isPlaying ? onStop : onPlay}
           className="px-4 py-1.5 bg-[#ff6a10] hover:bg-[#ff8533] text-[#121212] rounded-lg text-sm font-medium transition-colors"
         >
-          {isPlaying ? '⏹ 停止' : '▶ 播放'}
+          {isPlaying ? `⏹ ${t('mt.stop')}` : `▶ ${t('mt.play')}`}
         </button>
       </div>
 
       {/* Zoom controls */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-[#777777]">缩放:</span>
+        <span className="text-xs text-[#777777]">{t('mt.zoom')}:</span>
         <button
           onClick={handleZoomOut}
           className="px-2 py-1 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded text-xs"
@@ -74,7 +76,7 @@ export function Toolbar({
           onClick={onAddTrack}
           className="px-4 py-1.5 bg-[#2a2a2a] hover:bg-[#333333] text-[#e0e0e0] rounded-lg text-sm font-medium transition-colors"
         >
-          + 添加轨道
+          + {t('mt.addTrack')}
         </button>
       </div>
     </div>

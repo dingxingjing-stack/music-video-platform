@@ -14,8 +14,21 @@ import {
   getScaleVisualNotes,
   type ScaleType,
 } from '../../utils/scaleAssistant';
+import { useTranslation } from '../../i18n/useTranslation';
 
 const ROOT_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+// Map ScaleType (snake_case) to existing scale.* locale keys
+const SCALE_NAME_KEYS: Record<ScaleType, string> = {
+  major: 'major',
+  natural_minor: 'naturalMinor',
+  harmonic_minor: 'harmonicMinor',
+  melodic_minor: 'melodicMinor',
+  major_pentatonic: 'majorPentatonic',
+  minor_pentatonic: 'minorPentatonic',
+  blues: 'blues',
+  chromatic: 'chromatic',
+};
 
 interface Props {
   enabled: boolean;
@@ -38,6 +51,7 @@ export function ScaleAssistant({
   onScaleTypeChange,
   onAutoQuantizeChange,
 }: Props) {
+  const { t } = useTranslation();
   const [showKeyboard, setShowKeyboard] = useState(false);
 
   // 获取当前音阶的音符
@@ -56,8 +70,8 @@ export function ScaleAssistant({
         <div className="flex items-center gap-3">
           <span className="text-lg">🎹</span>
           <div>
-            <h3 className="text-white font-medium">音阶辅助</h3>
-            <p className="text-xs text-[#777777]">防止弹错音，自动修正到音阶内</p>
+            <h3 className="text-white font-medium">{t('sassist.title')}</h3>
+            <p className="text-xs text-[#777777]">{t('sassist.subtitle')}</p>
           </div>
         </div>
         <button
@@ -68,7 +82,7 @@ export function ScaleAssistant({
               : 'bg-[#2a2a2a] text-[#777777]'
           }`}
         >
-          {enabled ? '已启用' : '已禁用'}
+          {enabled ? t('sassist.enabled') : t('sassist.disabled')}
         </button>
       </div>
 
@@ -78,7 +92,7 @@ export function ScaleAssistant({
           <div className="grid grid-cols-3 gap-3 mb-4">
             {/* 根音选择 */}
             <div>
-              <label className="text-xs text-[#777777] mb-1 block">根音</label>
+              <label className="text-xs text-[#777777] mb-1 block">{t('sassist.rootNote')}</label>
               <select
                 value={rootNote}
                 onChange={(e) => onRootNoteChange(e.target.value)}
@@ -92,21 +106,21 @@ export function ScaleAssistant({
 
             {/* 音阶类型 */}
             <div>
-              <label className="text-xs text-[#777777] mb-1 block">音阶</label>
+              <label className="text-xs text-[#777777] mb-1 block">{t('sassist.scale')}</label>
               <select
                 value={scaleType}
                 onChange={(e) => onScaleTypeChange(e.target.value as ScaleType)}
                 className="w-full bg-[#2a2a2a] border border-[#3a3a3a] rounded px-2 py-1.5 text-sm text-white"
               >
                 {(Object.keys(SCALES) as ScaleType[]).map((key) => (
-                  <option key={key} value={key}>{SCALES[key].name}</option>
+                  <option key={key} value={key}>{t('scale.' + SCALE_NAME_KEYS[key])}</option>
                 ))}
               </select>
             </div>
 
             {/* 自动修正 */}
             <div>
-              <label className="text-xs text-[#777777] mb-1 block">自动修正</label>
+              <label className="text-xs text-[#777777] mb-1 block">{t('sassist.autoQuantize')}</label>
               <button
                 onClick={() => onAutoQuantizeChange(!autoQuantize)}
                 className={`w-full px-3 py-1.5 rounded text-sm font-medium transition ${
@@ -115,7 +129,7 @@ export function ScaleAssistant({
                     : 'bg-[#2a2a2a] text-[#777777]'
                 }`}
               >
-                {autoQuantize ? '开启 ✓' : '关闭 ✕'}
+                {autoQuantize ? `${t('sassist.on')} ✓` : `${t('sassist.off')} ✕`}
               </button>
             </div>
           </div>
@@ -123,12 +137,12 @@ export function ScaleAssistant({
           {/* 音阶可视化 */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-[#777777]">音阶内音符:</p>
+              <p className="text-xs text-[#777777]">{t('sassist.scaleNotesLabel')}</p>
               <button
                 onClick={() => setShowKeyboard(!showKeyboard)}
                 className="text-xs text-purple-400 hover:text-purple-300"
               >
-                {showKeyboard ? '隐藏键盘' : '显示键盘'}
+                {showKeyboard ? t('sassist.hideKeyboard') : t('sassist.showKeyboard')}
               </button>
             </div>
             <div className="flex gap-1 flex-wrap">
@@ -164,7 +178,7 @@ export function ScaleAssistant({
                 })}
               </div>
               <p className="text-xs text-[#777777] mt-2 text-center">
-                彩色 = 音阶内音符 · 灰色 = 音阶外音符
+                {t('sassist.keyboardLegend')}
               </p>
             </div>
           )}
@@ -172,7 +186,7 @@ export function ScaleAssistant({
           {/* 提示信息 */}
           <div className="mt-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg">
             <p className="text-xs text-purple-300">
-              💡 提示: 启用"自动修正"后，MIDI 输入会自动调整到最近的音阶内音符
+              {t('sassist.tip')}
             </p>
           </div>
         </>

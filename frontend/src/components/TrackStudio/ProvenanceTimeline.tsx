@@ -13,11 +13,12 @@ import type {
   ProvenanceOperationType,
 } from '../../types/trackStudio';
 import { formatDate } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 // ── Operation Metadata ──────────────────────────────────────────────────────
 
 interface OpMeta {
-  label: string;
+  labelKey: string;
   icon: string;
   color: string;
   bgColor: string;
@@ -26,49 +27,49 @@ interface OpMeta {
 
 const OP_META: Record<ProvenanceOperationType, OpMeta> = {
   generate: {
-    label: '生成',
+    labelKey: 'ptl.opGenerate',
     icon: '✨',
     color: 'text-[#76b900]',
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/40',
   },
   remix_pitch_shift: {
-    label: '移调',
+    labelKey: 'ptl.opPitchShift',
     icon: '🎚️',
     color: 'text-violet-400',
     bgColor: 'bg-violet-500/10',
     borderColor: 'border-violet-500/40',
   },
   remix_tempo_change: {
-    label: '变速',
+    labelKey: 'ptl.opTempoChange',
     icon: '⏱️',
     color: 'text-sky-400',
     bgColor: 'bg-sky-500/10',
     borderColor: 'border-sky-500/40',
   },
   remix_timbre_transform: {
-    label: '音色变换',
+    labelKey: 'ptl.opTimbreTransform',
     icon: '🎨',
     color: 'text-[#febc2e]',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/40',
   },
   trim: {
-    label: '裁剪',
+    labelKey: 'ptl.opTrim',
     icon: '✂️',
     color: 'text-rose-400',
     bgColor: 'bg-rose-500/10',
     borderColor: 'border-rose-500/40',
   },
   download: {
-    label: '下载',
+    labelKey: 'ptl.opDownload',
     icon: '📥',
     color: 'text-teal-400',
     bgColor: 'bg-teal-500/10',
     borderColor: 'border-teal-500/40',
   },
   mv_generate: {
-    label: 'MV 生成',
+    labelKey: 'ptl.opMvGenerate',
     icon: '🎬',
     color: 'text-fuchsia-400',
     bgColor: 'bg-fuchsia-500/10',
@@ -115,6 +116,7 @@ export function ProvenanceTimeline({
   provenance,
   compact = false,
 }: ProvenanceTimelineProps) {
+  const { t } = useTranslation();
   const sortedOps = useMemo(
     () => [...provenance.operations].sort((a, b) => a.timestamp - b.timestamp),
     [provenance.operations],
@@ -123,7 +125,7 @@ export function ProvenanceTimeline({
   if (sortedOps.length === 0) {
     return (
       <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/50 p-6 text-center">
-        <p className="text-sm text-[#777777]">暂无操作记录</p>
+        <p className="text-sm text-[#777777]">{t('ptl.empty')}</p>
       </div>
     );
   }
@@ -137,7 +139,7 @@ export function ProvenanceTimeline({
         <div className="flex items-center gap-2">
           <span className="text-lg">🔗</span>
           <h3 className="text-sm font-semibold text-[#e0e0e0]">
-            溯源时间轴
+            {t('ptl.title')}
           </h3>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
@@ -146,7 +148,7 @@ export function ProvenanceTimeline({
                 : 'bg-amber-500/20 text-[#febc2e]'
             }`}
           >
-            {provenance.originality === 'original' ? '原创' : '衍生'}
+            {provenance.originality === 'original' ? t('ptl.original') : t('ptl.derived')}
           </span>
         </div>
         <span className="text-[11px] text-[#777777] font-mono">
@@ -177,7 +179,7 @@ export function ProvenanceTimeline({
                 <div className={`flex-1 rounded-lg border ${meta.borderColor} ${meta.bgColor} p-3`}>
                   <div className="flex items-center justify-between">
                     <span className={`text-xs font-semibold ${meta.color}`}>
-                      {meta.label}
+                      {t(meta.labelKey)}
                     </span>
                     <span className="text-[11px] text-[#777777] font-mono">
                       {formatDate(op.timestamp)}
@@ -209,7 +211,7 @@ export function ProvenanceTimeline({
         <div className="mt-4 border-t border-[#2a2a38] pt-3">
           {provenance.outputHash && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#777777]">指纹:</span>
+              <span className="text-[10px] text-[#777777]">{t('ptl.fingerprint')}:</span>
               <code className="text-[10px] font-mono text-[#777777] truncate max-w-[200px]">
                 {provenance.outputHash}
               </code>
@@ -231,7 +233,7 @@ export function ProvenanceTimeline({
                 URL.revokeObjectURL(url);
               }}
             >
-              📄 导出 JSON-LD 证明文档
+              📄 {t('ptl.exportProof')}
             </button>
           )}
         </div>

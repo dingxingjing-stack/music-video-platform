@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 
 export interface Platform {
   id: string;
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function PlatformSelector({ selectedPlatforms, onPlatformToggle }: Props) {
+  const { t } = useTranslation();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,14 +79,14 @@ export function PlatformSelector({ selectedPlatforms, onPlatformToggle }: Props)
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-400">加载平台列表...</div>
+        <div className="text-gray-400">{t('psel.loading')}</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <h4 className="text-white text-sm font-medium">选择发布平台</h4>
+      <h4 className="text-white text-sm font-medium">{t('psel.title')}</h4>
       
       <div className="grid grid-cols-3 gap-3">
         {platforms.map(platform => {
@@ -112,7 +114,7 @@ export function PlatformSelector({ selectedPlatforms, onPlatformToggle }: Props)
               
               {/* 授权状态 */}
               <div className={`text-xs mt-1 ${platform.authorized ? 'text-green-400' : 'text-gray-400'}`}>
-                {platform.authorized ? '已授权' : '未授权'}
+                {platform.authorized ? t('psel.authorized') : t('psel.notAuthorized')}
               </div>
               
               {/* 选择指示器 */}
@@ -129,14 +131,14 @@ export function PlatformSelector({ selectedPlatforms, onPlatformToggle }: Props)
       {/* 提示信息 */}
       {!platforms.some(p => p.authorized) && (
         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded p-3 text-yellow-200 text-xs">
-          ⚠️ 部分平台未授权，发布前请完成授权
+          ⚠️ {t('psel.warningBanner')}
         </div>
       )}
       
       {/* 已选平台提示 */}
       {selectedPlatforms.length > 0 && (
         <div className="text-xs text-gray-400 mt-2">
-          已选择 {selectedPlatforms.length} 个平台：{
+          {t('psel.summary', { n: selectedPlatforms.length })}：{
             selectedPlatforms.map(id => platforms.find(p => p.id === id)?.name).join(', ')
           }
         </div>
