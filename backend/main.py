@@ -305,6 +305,7 @@ app.add_middleware(
     allow_origins=[
         "https://music-video-platform.pages.dev",
         "http://localhost:3000",
+        "https://music-video-platform.dingxingjing.workers.dev",
     ],
     allow_credentials=True,
     allow_methods=["*"],
