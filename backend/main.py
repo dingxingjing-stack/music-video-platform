@@ -304,6 +304,7 @@ app.add_middleware(PrivacyMiddleware)
 _PRODUCTION_ORIGINS = [
     "https://music-video-platform.pages.dev",
     "https://music-video-platform.zezhending90.workers.dev",
+    "https://music-video-platform.dingxingjing.workers.dev",
 ]
 
 def _cors_origins() -> list[str]:
