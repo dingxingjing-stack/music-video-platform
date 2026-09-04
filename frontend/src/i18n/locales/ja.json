@@ -13,7 +13,20 @@
     "preview": "プレビュー",
     "error": "エラー",
     "clearConfirm": "すべての履歴を消去しますか？",
-    "helloWorld": "こんにちは、世界"
+    "helloWorld": "こんにちは、世界",
+    "trackNum": "トラック{n}",
+    "localeNames": {
+      "zh": "中国語",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "韓国語",
+      "es": "スペイン語",
+      "fr": "フランス語",
+      "pt": "ポルトガル語",
+      "ru": "ロシア語",
+      "de": "ドイツ語"
+    },
+    "cancelled": "キャンセル済み"
   },
   "paths": {
     "pathA": "AIクイック作成",
@@ -23,7 +36,8 @@
     "pathC": "パス C — ステム分離 / リミックス",
     "pathCDesc": "オーディオアップロード → Demucs ステム → ステム取得",
     "pathD": "パス D — オリジナル制作",
-    "pathDDesc": "ゼロからのマルチトラック制作、ピアノロール + MIDI"
+    "pathDDesc": "ゼロからのマルチトラック制作、ピアノロール + MIDI",
+    "pathB.ttsDefault": "今日は天気が良く、日差しが眩しい"
   },
   "ui": {
     "musicPrompt": "音楽プロンプト",
@@ -108,7 +122,9 @@
     "batchNotSupported": "パスC（リミックス）ではバッチモードはサポートされていません",
     "midiProjectRequired": "MIDIプロジェクトが必要です",
     "unknownError": "不明なエラー",
-    "rateLimited": "リクエストが多すぎます。無料プランの上限に達しました。しばらくしてから再試行してください。"
+    "rateLimited": "リクエストが多すぎます。無料プランの上限に達しました。しばらくしてから再試行してください。",
+    "ageFetchFailed": "年齢の取得に失敗しました: {msg}",
+    "queryFailed": "タスククエリ失敗 ({status})"
   },
   "nav": {
     "workbench": "ワークベンチ",
@@ -178,7 +194,14 @@
       "sample5": "幻想的なアンビエント音楽。幻想的なボーカル、環境音、ゆっくりしたパルス"
     },
     "title": "パス A — AI クイック制作",
-    "generating": "生成中..."
+    "generating": "生成中...",
+    "randomPrompts": [
+      "ピアノ伴奏の明るいポップソング、温かく癒やされる",
+      "エピックなオーケストラ、映画音楽風、壮大で圧倒的",
+      "ローファイヒップホップビート、リラックス、勉強に最適",
+      "エレクトロニックダンスミュージック、強いビート、ナイトクラブの雰囲気",
+      "クラシックギターソロ、スペイン風、ロマンチックで優雅"
+    ]
   },
   "legal": {
     "links": {
@@ -188,7 +211,17 @@
       "voiceCloning": "音声クローンポリシー",
       "creditsRefund": "クレジットと返金",
       "aup": "利用規定"
-    }
+    },
+    "titleAiCopyright": "AI音楽著作権ポリシー",
+    "titleAup": "許容使用ポリシー",
+    "titleCredits": "Credits・返金ポリシー",
+    "titlePrivacy": "プライバシーポリシー",
+    "titleTerms": "利用規約",
+    "titleVoice": "音声クローンポリシー",
+    "updated": "最終更新：2026年8月",
+    "effective": "発効日：2026年8月",
+    "version": "バージョン：v2.0 商用正式版",
+    "rights": "© 2026 Zyvexo. All rights reserved."
   },
   "home": {
     "badge": "AIミュージックスタジオ · モダンな制作プラットフォーム",
@@ -581,7 +614,35 @@
     "all": "すべて",
     "justNow": "たった今",
     "hoursAgo": "{n}時間前",
-    "daysAgo": "{n}日前"
+    "daysAgo": "{n}日前",
+    "mock1": {
+      "title": "夏の微風",
+      "artist": "アーティスト A",
+      "tag1": "ポップ",
+      "tag2": "夏",
+      "tag3": "チル"
+    },
+    "mock2": {
+      "title": "真夜中のコード",
+      "artist": "アーティスト B",
+      "tag1": "エレクトロニック",
+      "tag2": "集中",
+      "tag3": "アンビエント"
+    },
+    "mock3": {
+      "title": "朝のランニング",
+      "artist": "アーティスト C",
+      "tag1": "ロック",
+      "tag2": "ワークアウト",
+      "tag3": "エネルギー"
+    },
+    "mock4": {
+      "title": "雨のカフェ",
+      "artist": "アーティスト D",
+      "tag1": "ジャズ",
+      "tag2": "リラックス",
+      "tag3": "雨"
+    }
   },
   "stockLibrary": {
     "title": "無料ストックライブラリ",
@@ -1705,7 +1766,11 @@
     "tabTemplates": "テンプレート",
     "tabTransitions": "トランジション",
     "tabContinue": "続きを作る",
-    "trackName": "ビデオトラック {n}"
+    "trackName": "ビデオトラック {n}",
+    "exportPreparing": "エクスポートを準備中...",
+    "exportEncoding": "動画をエンコード中...",
+    "exportFinalizing": "最終処理中...",
+    "exportCompleted": "エクスポート完了!"
   },
   "vtl": {
     "addTrack": "トラックを追加"
@@ -1813,7 +1878,17 @@
     "generating": "生成中...",
     "continue": "AI 続きを書く",
     "apply": "適用",
-    "ignore": "無視"
+    "ignore": "無視",
+    "style": {
+      "pop": "ポップ",
+      "rock": "ロック",
+      "rnb": "R&B",
+      "hiphop": "ヒップホップ",
+      "electronic": "エレクトロニック",
+      "folk": "フォーク",
+      "classical": "クラシック",
+      "jazz": "ジャズ"
+    }
   },
   "ailyr.style": {
     "pop": "ポップ",
@@ -1920,5 +1995,15 @@
     "pan": "パン",
     "addClip": "クリップを追加",
     "fadeIn": "フェードイン"
+  },
+  "aiTask": {
+    "queryFailed": "ステータス確認に失敗しました ({status})",
+    "networkErrorRetrying": "ネットワークエラー、再試行しています...",
+    "submitFailed": "送信に失敗しました ({status})",
+    "submitFailedNetwork": "ネットワークエラー、送信できませんでした",
+    "retryFailed": "再試行に失敗しました ({status})",
+    "retryFailedNetwork": "ネットワークエラー、再試行できませんでした",
+    "taskNotFound": "タスクが見つかりません",
+    "downloadFailed": "ダウンロードに失敗しました ({status})"
   }
 }

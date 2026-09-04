@@ -7,14 +7,6 @@ import { StemExporter } from '../components/Audio/StemExporter';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAudioGeneration, RateLimitBanner } from '../hooks/useAudioGeneration';
 
-const RANDOM_PROMPTS = [
-  '一首轻快的流行歌曲，钢琴伴奏，温暖治愈',
-  '史诗管弦乐，电影配乐风格，宏大震撼',
-  'Lo-fi 嘻哈节奏，放松舒缓，适合学习',
-  '电子舞曲，强劲节拍，夜店氛围',
-  '古典吉他独奏，西班牙风格，浪漫优雅',
-];
-
 export function PathAPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -30,7 +22,8 @@ export function PathAPage() {
   };
 
   const handleRandom = () => {
-    setPrompt(RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)]);
+    const prompts = t('pathA.randomPrompts', { returnObjects: true }) as string[];
+    setPrompt(prompts[Math.floor(Math.random() * prompts.length)]);
   };
 
   return (

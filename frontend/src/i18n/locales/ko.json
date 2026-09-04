@@ -13,7 +13,20 @@
     "preview": "미리보기",
     "error": "오류",
     "clearConfirm": "전체 기록을 지우시겠습니까?",
-    "helloWorld": "안녕하세요, 세계"
+    "helloWorld": "안녕하세요, 세계",
+    "trackNum": "트랙 {n}",
+    "localeNames": {
+      "zh": "중국어",
+      "en": "English",
+      "ja": "일본어",
+      "ko": "한국어",
+      "es": "스페인어",
+      "fr": "프랑스어",
+      "pt": "포르투갈어",
+      "ru": "러시아어",
+      "de": "독일어"
+    },
+    "cancelled": "취소됨"
   },
   "paths": {
     "pathA": "AI 빠른 생성",
@@ -23,7 +36,8 @@
     "pathC": "경로 C — 스템 분리 / 리믹스",
     "pathCDesc": "오디오 업로드 → Demucs 스템 → 스템 획득",
     "pathD": "경로 D — 오리지널 창작",
-    "pathDDesc": "제로부터 멀티트랙 창작, 피아노 롤 + MIDI"
+    "pathDDesc": "제로부터 멀티트랙 창작, 피아노 롤 + MIDI",
+    "pathB.ttsDefault": "오늘 날씨가 정말 좋아요, 햇살이 밝습니다"
   },
   "ui": {
     "musicPrompt": "음악 프롬프트",
@@ -108,7 +122,9 @@
     "batchNotSupported": "경로 C(리믹스)는 배치 모드를 지원하지 않습니다",
     "midiProjectRequired": "MIDI 프로젝트가 필요합니다",
     "unknownError": "알 수 없는 오류",
-    "rateLimited": "요청이 너무 많습니다. 무료 플랜 한도에 도달했습니다. 잠시 후 다시 시도해 주세요."
+    "rateLimited": "요청이 너무 많습니다. 무료 플랜 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.",
+    "ageFetchFailed": "나이 가져오기 실패: {msg}",
+    "queryFailed": "작업 조회 실패 ({status})"
   },
   "nav": {
     "workbench": "작업실",
@@ -178,7 +194,14 @@
       "sample5": "몽환적인 보컬과 앰비언트 질감, 느린 펄스가 어우러진 드림 앰비언트"
     },
     "title": "경로 A — AI 빠른 제작",
-    "generating": "생성 중..."
+    "generating": "생성 중...",
+    "randomPrompts": [
+      "피아노 반주의 경쾌한 팝송, 따뜻하고 치유되는",
+      "서사시적인 오케스트라, 영화 음악 스타일, 웅장하고 압도적",
+      "로파이 힙합 비트, 편안함, 공부에 적합",
+      "일렉트로닉 댄스 음악, 강한 비트, 나이트클럽 분위기",
+      "클래식 기타 독주, 스페인 스타일, 로맨틱하고 우아한"
+    ]
   },
   "legal": {
     "links": {
@@ -188,7 +211,17 @@
       "voiceCloning": "음성 복제 정책",
       "creditsRefund": "크레딧 및 환불",
       "aup": "허용되는 사용 정책"
-    }
+    },
+    "titleAiCopyright": "AI 음악 저작권 정책",
+    "titleAup": "허용 사용 정책",
+    "titleCredits": "Credits 및 환불 정책",
+    "titlePrivacy": "개인정보처리방침",
+    "titleTerms": "서비스 약관",
+    "titleVoice": "음성 클론 정책",
+    "updated": "마지막 업데이트: 2026년 8월",
+    "effective": "시행일: 2026년 8월",
+    "version": "버전: v2.0 상용 정식판",
+    "rights": "© 2026 Zyvexo. All rights reserved."
   },
   "home": {
     "badge": "AI 뮤직 스튜디오 · 현대적인 제작 플랫폼",
@@ -581,7 +614,35 @@
     "all": "전체",
     "justNow": "방금 전",
     "hoursAgo": "{n}시간 전",
-    "daysAgo": "{n}일 전"
+    "daysAgo": "{n}일 전",
+    "mock1": {
+      "title": "여름 바람",
+      "artist": "아티스트 A",
+      "tag1": "팝",
+      "tag2": "여름",
+      "tag3": "릴랙스"
+    },
+    "mock2": {
+      "title": "한밤중 코드",
+      "artist": "아티스트 B",
+      "tag1": "전자음악",
+      "tag2": "집중",
+      "tag3": "앰비언트"
+    },
+    "mock3": {
+      "title": "아침 러닝",
+      "artist": "아티스트 C",
+      "tag1": "록",
+      "tag2": "운동",
+      "tag3": "에너지"
+    },
+    "mock4": {
+      "title": "비 오는 카페",
+      "artist": "아티스트 D",
+      "tag1": "재즈",
+      "tag2": "릴랙스",
+      "tag3": "비"
+    }
   },
   "stockLibrary": {
     "title": "무료 스톡 라이브러리",
@@ -1705,7 +1766,11 @@
     "tabTemplates": "템플릿",
     "tabTransitions": "전환",
     "tabContinue": "이어 쓰기",
-    "trackName": "비디오 트랙 {n}"
+    "trackName": "비디오 트랙 {n}",
+    "exportPreparing": "내보내기 준비 중...",
+    "exportEncoding": "비디오 인코딩 중...",
+    "exportFinalizing": "마무리 중...",
+    "exportCompleted": "내보내기 완료!"
   },
   "vtl": {
     "addTrack": "트랙 추가"
@@ -1813,7 +1878,17 @@
     "generating": "생성 중...",
     "continue": "AI 이어쓰기",
     "apply": "적용",
-    "ignore": "무시"
+    "ignore": "무시",
+    "style": {
+      "pop": "팝",
+      "rock": "록",
+      "rnb": "R&B",
+      "hiphop": "힙합",
+      "electronic": "일렉트로닉",
+      "folk": "포크",
+      "classical": "클래식",
+      "jazz": "재즈"
+    }
   },
   "ailyr.style": {
     "pop": "팝",
@@ -1920,5 +1995,15 @@
     "pan": "팬",
     "addClip": "클립 추가",
     "fadeIn": "페이드 인"
+  },
+  "aiTask": {
+    "queryFailed": "상태 조회 실패 ({status})",
+    "networkErrorRetrying": "네트워크 오류, 다시 시도 중...",
+    "submitFailed": "제출 실패 ({status})",
+    "submitFailedNetwork": "네트워크 오류, 제출 실패",
+    "retryFailed": "다시 시도 실패 ({status})",
+    "retryFailedNetwork": "네트워크 오류, 다시 시도 실패",
+    "taskNotFound": "작업을 찾을 수 없습니다",
+    "downloadFailed": "다운로드 실패 ({status})"
   }
 }

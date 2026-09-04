@@ -13,7 +13,20 @@
     "preview": "Preview",
     "error": "Error",
     "clearConfirm": "Are you sure you want to clear all history?",
-    "helloWorld": "Hello, World"
+    "helloWorld": "Hello, World",
+    "trackNum": "Track {n}",
+    "localeNames": {
+      "zh": "Chinese",
+      "en": "English",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "es": "Spanish",
+      "fr": "French",
+      "pt": "Portuguese",
+      "ru": "Russian",
+      "de": "German"
+    },
+    "cancelled": "Cancelled"
   },
   "paths": {
     "pathA": "AI Quick Create",
@@ -23,7 +36,8 @@
     "pathC": "Path C — Stem Separation / Remix",
     "pathCDesc": "Upload Audio → Demucs Stems → Get Stems",
     "pathD": "Path D — Original Creation",
-    "pathDDesc": "Multi-track from Scratch, Piano Roll + MIDI"
+    "pathDDesc": "Multi-track from Scratch, Piano Roll + MIDI",
+    "pathB.ttsDefault": "The weather is nice today, sunny and bright"
   },
   "ui": {
     "musicPrompt": "Music Prompt",
@@ -108,7 +122,9 @@
     "batchNotSupported": "Batch mode not supported for Path C (Remix)",
     "midiProjectRequired": "MIDI project required",
     "unknownError": "Unknown error",
-    "rateLimited": "Too many requests. You have reached the free tier limit. Please try again later."
+    "rateLimited": "Too many requests. You have reached the free tier limit. Please try again later.",
+    "ageFetchFailed": "Failed to fetch age: {msg}",
+    "queryFailed": "Query task failed ({status})"
   },
   "nav": {
     "workbench": "Workbench",
@@ -178,7 +194,14 @@
       "sample5": "Dreamy ambient music with ethereal vocals, atmospheric textures, and slow pulses"
     },
     "title": "Path A — AI Quick Creation",
-    "generating": "Generating..."
+    "generating": "Generating...",
+    "randomPrompts": [
+      "Upbeat pop song with piano, warm and healing",
+      "Epic orchestral, cinematic style, grand and powerful",
+      "Lo-fi hip hop beat, relaxing, good for studying",
+      "Electronic dance music, strong beat, nightclub vibe",
+      "Classical guitar solo, Spanish style, romantic and elegant"
+    ]
   },
   "legal": {
     "links": {
@@ -188,7 +211,17 @@
       "voiceCloning": "Voice Cloning Policy",
       "creditsRefund": "Credits & Refunds",
       "aup": "Acceptable Use Policy"
-    }
+    },
+    "titleAiCopyright": "AI Music Copyright Policy",
+    "titleAup": "Acceptable Use Policy",
+    "titleCredits": "Credits & Refund Policy",
+    "titlePrivacy": "Privacy Policy",
+    "titleTerms": "Terms of Service",
+    "titleVoice": "Voice Cloning Policy",
+    "updated": "Last updated: August 2026",
+    "effective": "Effective: August 2026",
+    "version": "Version: v2.0 Commercial Release",
+    "rights": "© 2026 Zyvexo. All rights reserved."
   },
   "home": {
     "badge": "AI Music Studio · Modern Creation Platform",
@@ -581,7 +614,35 @@
     "all": "All",
     "justNow": "just now",
     "hoursAgo": "{n}h ago",
-    "daysAgo": "{n}d ago"
+    "daysAgo": "{n}d ago",
+    "mock1": {
+      "title": "Summer Breeze",
+      "artist": "Artist A",
+      "tag1": "Pop",
+      "tag2": "Summer",
+      "tag3": "Chill"
+    },
+    "mock2": {
+      "title": "Midnight Code",
+      "artist": "Artist B",
+      "tag1": "Electronic",
+      "tag2": "Focus",
+      "tag3": "Ambient"
+    },
+    "mock3": {
+      "title": "Morning Run",
+      "artist": "Artist C",
+      "tag1": "Rock",
+      "tag2": "Workout",
+      "tag3": "Energy"
+    },
+    "mock4": {
+      "title": "Rainy Cafe",
+      "artist": "Artist D",
+      "tag1": "Jazz",
+      "tag2": "Relax",
+      "tag3": "Rainy"
+    }
   },
   "stockLibrary": {
     "title": "Free Stock Library",
@@ -1705,7 +1766,11 @@
     "tabTemplates": "Templates",
     "tabTransitions": "Transitions",
     "tabContinue": "Continue",
-    "trackName": "Video Track {n}"
+    "trackName": "Video Track {n}",
+    "exportPreparing": "Preparing export...",
+    "exportEncoding": "Encoding video...",
+    "exportFinalizing": "Finalizing...",
+    "exportCompleted": "Export completed!"
   },
   "vtl": {
     "addTrack": "Add Track"
@@ -1813,7 +1878,17 @@
     "generating": "Generating...",
     "continue": "AI Continue",
     "apply": "Apply",
-    "ignore": "Ignore"
+    "ignore": "Ignore",
+    "style": {
+      "pop": "Pop",
+      "rock": "Rock",
+      "rnb": "R&B",
+      "hiphop": "Hip-Hop",
+      "electronic": "Electronic",
+      "folk": "Folk",
+      "classical": "Classical",
+      "jazz": "Jazz"
+    }
   },
   "ailyr.style": {
     "pop": "Pop",
@@ -1920,5 +1995,15 @@
     "pan": "Pan",
     "addClip": "Add Clip",
     "fadeIn": "Fade In"
+  },
+  "aiTask": {
+    "queryFailed": "Status query failed ({status})",
+    "networkErrorRetrying": "Network error, retrying...",
+    "submitFailed": "Submit failed ({status})",
+    "submitFailedNetwork": "Network error, submit failed",
+    "retryFailed": "Retry failed ({status})",
+    "retryFailedNetwork": "Network error, retry failed",
+    "taskNotFound": "Task not found",
+    "downloadFailed": "Download failed ({status})"
   }
 }

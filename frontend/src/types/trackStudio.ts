@@ -405,7 +405,7 @@ export const PATHS: PathDefinition[] = [
     prompt: 'chill lofi hip hop beat',
     musicLabel: 'Music Prompt',
     ttsLabel: 'TTS Text',
-    ttsDefault: '今天天气真好，阳光明媚',
+    ttsDefault: 'paths.pathB.ttsDefault',
   },
   {
     id: 'c',

@@ -1,7 +1,9 @@
 ﻿import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../i18n/useTranslation';
 
 export function TermsOfService() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#e0e0e0] px-6 py-8">
@@ -11,12 +13,12 @@ export function TermsOfService() {
             onClick={() => navigate(-1)}
             className="text-sm text-[#888888] hover:text-white transition mb-4 inline-block border border-[#2a2a2a] bg-[#1e1e1e] px-3 py-1 rounded"
           >
-            ← 返回
+            ← {t('common.back')}
           </button>
-          <h1 className="text-3xl font-black text-white mb-2">服务条款</h1>
-          <p className="text-sm text-[#888888]">最后更新：2026年8月</p>
-          <p className="text-sm text-[#888888]">生效日期：2026年8月</p>
-          <p className="text-sm text-[#888888]">版本：v2.0 商业化正式版</p>
+          <h1 className="text-3xl font-black text-white mb-2">{t('legal.titleTerms')}</h1>
+          <p className="text-sm text-[#888888]">{t('legal.updated')}</p>
+          <p className="text-sm text-[#888888]">{t('legal.effective')}</p>
+          <p className="text-sm text-[#888888]">{t('legal.version')}</p>
         </div>
 
         <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-lg p-6 mb-6">
@@ -345,7 +347,7 @@ export function TermsOfService() {
           <p className="text-xs text-[#666666] text-center">
             使用本平台即表示您已阅读、理解并同意遵守本服务条款。如您不同意本条款，请停止使用本平台相关服务。本条款不影响消费者所在地法律规定的、依法不得排除或限制的强制性权利。
           </p>
-          <p className="text-xs text-[#666666] text-center mt-2">© 2026 Zyvexo. 保留所有权利。</p>
+          <p className="text-xs text-[#666666] text-center mt-2">{t('legal.rights')}</p>
         </div>
       </div>
     </div>

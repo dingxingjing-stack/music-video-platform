@@ -11,7 +11,7 @@ interface TrackPost {
   artist: string;
   avatar?: string;
   coverArt?: string;
-  duration: number; // seconds
+  duration: number;
   plays: number;
   likes: number;
   tags: string[];
@@ -20,56 +20,58 @@ interface TrackPost {
   isLiked: boolean;
 }
 
-const MOCK_POSTS: TrackPost[] = [
-  {
-    id: '1',
-    title: '夏日微风',
-    artist: '音乐人 A',
-    coverArt: 'https://picsum.photos/seed/summer/400/400',
-    duration: 185,
-    plays: 12340,
-    likes: 856,
-    tags: ['流行', '夏日', '轻松'],
-    createdAt: Date.now() - 3600000,
-    isLiked: false,
-  },
-  {
-    id: '2',
-    title: '深夜代码',
-    artist: '音乐人 B',
-    coverArt: 'https://picsum.photos/seed/night/400/400',
-    duration: 245,
-    plays: 8920,
-    likes: 642,
-    tags: ['电子', '专注', '氛围'],
-    createdAt: Date.now() - 7200000,
-    isLiked: true,
-  },
-  {
-    id: '3',
-    title: '晨跑节奏',
-    artist: '音乐人 C',
-    coverArt: 'https://picsum.photos/seed/morning/400/400',
-    duration: 198,
-    plays: 15670,
-    likes: 1024,
-    tags: ['摇滚', '运动', '能量'],
-    createdAt: Date.now() - 86400000,
-    isLiked: false,
-  },
-  {
-    id: '4',
-    title: '雨后咖啡馆',
-    artist: '音乐人 D',
-    coverArt: 'https://picsum.photos/seed/cafe/400/400',
-    duration: 210,
-    plays: 6780,
-    likes: 445,
-    tags: ['爵士', '放松', '雨天'],
-    createdAt: Date.now() - 172800000,
-    isLiked: false,
-  },
-];
+function getMockPosts(t: (key: string) => string): TrackPost[] {
+  return [
+    {
+      id: '1',
+      title: t('communityFeed.mock1.title'),
+      artist: t('communityFeed.mock1.artist'),
+      coverArt: 'https://picsum.photos/seed/summer/400/400',
+      duration: 185,
+      plays: 12340,
+      likes: 856,
+      tags: [t('communityFeed.mock1.tag1'), t('communityFeed.mock1.tag2'), t('communityFeed.mock1.tag3')],
+      createdAt: Date.now() - 3600000,
+      isLiked: false,
+    },
+    {
+      id: '2',
+      title: t('communityFeed.mock2.title'),
+      artist: t('communityFeed.mock2.artist'),
+      coverArt: 'https://picsum.photos/seed/night/400/400',
+      duration: 245,
+      plays: 8920,
+      likes: 642,
+      tags: [t('communityFeed.mock2.tag1'), t('communityFeed.mock2.tag2'), t('communityFeed.mock2.tag3')],
+      createdAt: Date.now() - 7200000,
+      isLiked: true,
+    },
+    {
+      id: '3',
+      title: t('communityFeed.mock3.title'),
+      artist: t('communityFeed.mock3.artist'),
+      coverArt: 'https://picsum.photos/seed/morning/400/400',
+      duration: 198,
+      plays: 15670,
+      likes: 1024,
+      tags: [t('communityFeed.mock3.tag1'), t('communityFeed.mock3.tag2'), t('communityFeed.mock3.tag3')],
+      createdAt: Date.now() - 86400000,
+      isLiked: false,
+    },
+    {
+      id: '4',
+      title: t('communityFeed.mock4.title'),
+      artist: t('communityFeed.mock4.artist'),
+      coverArt: 'https://picsum.photos/seed/cafe/400/400',
+      duration: 210,
+      plays: 6780,
+      likes: 445,
+      tags: [t('communityFeed.mock4.tag1'), t('communityFeed.mock4.tag2'), t('communityFeed.mock4.tag3')],
+      createdAt: Date.now() - 172800000,
+      isLiked: false,
+    },
+  ];
+}
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -105,11 +107,11 @@ export function CommunityFeed() {
   useEffect(() => {
     // Mock 加载延迟
     const timer = setTimeout(() => {
-      setPosts(MOCK_POSTS);
+      setPosts(getMockPosts(t));
       setLoading(false);
     }, 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [t]);
 
   // 点赞/取消点赞
   const toggleLike = useCallback((postId: string) => {

@@ -32,6 +32,15 @@ export interface AiStems {
   other?: string;
 }
 
+/**
+ * 结构化任务错误。hook 只返回 key（+动态参数），不直接写任何语言文本；
+ * UI 层渲染时用 resolveTaskError(t, err) 翻译，保证跟随当前 locale。
+ */
+export interface TaskError {
+  key: string;
+  status?: number | string;
+}
+
 export interface AiMusicTask {
   taskId: string | null;
   stage: AiStage;
@@ -39,9 +48,36 @@ export interface AiMusicTask {
   audioUrl: string | null;
   stems: AiStems | null;
   stemsState: StemsState;
-  error: string | null;
+  error: string | TaskError | null;
   retries: number;
   stemRetries: number;
+}
+
+/** 把 task.error 解析为最终展示文本（string 透传多为后端返回信息；对象走 t 翻译）。 */
+export function resolveTaskError(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  err: string | TaskError | null | undefined,
+): string | null {
+  if (err == null) return null;
+  if (typeof err === 'string') return err;
+  return t(err.key, err.status === undefined ? undefined : { status: err.status });
+}
+
+/** 供 download() 等 Promise 场景抛出结构化错误（Error.message 保持可读的 key 本身）。 */
+function throwTaskError(key: string, status?: number | string): never {
+  const err = new Error(key);
+  (err as unknown as { taskError: TaskError }).taskError =
+    status === undefined ? { key } : { key, status };
+  throw err;
+}
+
+/** 从 download() 抛出的 Error 中取出结构化 i18n 错误（若有）。 */
+export function getThrownTaskError(e: unknown): TaskError | undefined {
+  if (e instanceof Error) {
+    const info = (e as unknown as { taskError?: TaskError }).taskError;
+    if (info && typeof info.key === 'string') return info;
+  }
+  return undefined;
 }
 
 export const STAGE_LABEL: Record<AiStage, string> = {
@@ -126,7 +162,7 @@ export function useAiMusicTask() {
         });
         if (!res.ok) {
           if (mountedRef.current) {
-            setTask(t => ({ ...t, stage: 'failed', error: `状态查询失败 (${res.status})` }));
+            setTask(t => ({ ...t, stage: 'failed', error: { key: 'aiTask.queryFailed', status: res.status } }));
           }
           setLoading(false);
           return;
@@ -150,7 +186,7 @@ export function useAiMusicTask() {
           return;
         }
       } catch {
-        if (mountedRef.current) setTask(t => ({ ...t, error: '网络错误，正在重试...' }));
+        if (mountedRef.current) setTask(t => ({ ...t, error: { key: 'aiTask.networkErrorRetrying' } }));
       }
       if (mountedRef.current) timerRef.current = setTimeout(tick, 1500);
     };
@@ -170,7 +206,7 @@ export function useAiMusicTask() {
       const d = await res.json().catch(() => ({}));
       if (!res.ok || !d.success || !d.task_id) {
         if (mountedRef.current) {
-          setTask({ ...EMPTY, stage: 'failed', error: d.error || `提交失败 (${res.status})` });
+          setTask({ ...EMPTY, stage: 'failed', error: d.error || { key: 'aiTask.submitFailed', status: res.status } });
         }
         setLoading(false);
         return null;
@@ -180,7 +216,7 @@ export function useAiMusicTask() {
       poll(taskId);
       return taskId;
     } catch {
-      if (mountedRef.current) setTask({ ...EMPTY, stage: 'failed', error: '网络错误，提交失败' });
+      if (mountedRef.current) setTask({ ...EMPTY, stage: 'failed', error: { key: 'aiTask.submitFailedNetwork' } });
       setLoading(false);
       return null;
     }
@@ -195,25 +231,28 @@ export function useAiMusicTask() {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (mountedRef.current) setTask(t => ({ ...t, error: d.detail || `重试失败 (${res.status})` }));
+        if (mountedRef.current) setTask(t => ({ ...t, error: d.detail || { key: 'aiTask.retryFailed', status: res.status } }));
         return;
       }
       setLoading(true);
       if (mountedRef.current) setTask(t => ({ ...t, stage: 'separating', error: null, stemRetries: t.stemRetries + 1 }));
       poll(task.taskId);
     } catch {
-      if (mountedRef.current) setTask(t => ({ ...t, error: '网络错误，重试失败' }));
+      if (mountedRef.current) setTask(t => ({ ...t, error: { key: 'aiTask.retryFailedNetwork' } }));
     }
   }, [task.taskId, userId, poll]);
 
   const download = useCallback(
     async (file: 'full' | 'vocals' | 'drums' | 'bass' | 'other', fmt = 'mp3'): Promise<string> => {
-      if (!task.taskId) throw new Error('任务不存在');
+      if (!task.taskId) throwTaskError('aiTask.taskNotFound');
       const res = await fetch(`${AI_API_BASE}/task/${task.taskId}/download?file=${file}&fmt=${fmt}`, {
         headers: { 'X-User-ID': userId || '' },
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.detail || `下载失败 (${res.status})`);
+      if (!res.ok) {
+        if (d.detail) throw new Error(d.detail);
+        throwTaskError('aiTask.downloadFailed', res.status);
+      }
       return d.url as string;
     },
     [task.taskId, userId],

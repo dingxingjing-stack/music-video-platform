@@ -13,6 +13,7 @@ import { VideoTimeline } from '../components/VideoTimeline';
 import { LyricEditor } from '../components/LyricEditor';
 import { StockVideoLibrary } from '../components/StockVideoLibrary';
 import { VideoExporter } from '../utils/VideoExporter';
+import type { ExportMessages } from '../utils/VideoExporter';
 import { WaveformAnalyzer } from '../utils/WaveformAnalyzer';
 import { SongContinuePanel } from '../components/SongContinuePanel';
 import { SubtitleRecognizer } from '../components/SubtitleRecognizer';
@@ -188,6 +189,13 @@ export function VideoSyncStudio() {
         audioFile: audioFile || undefined
       };
 
+      const messages: ExportMessages = {
+        preparing: t('vsync.exportPreparing'),
+        encoding: t('vsync.exportEncoding'),
+        finalizing: t('vsync.exportFinalizing'),
+        completed: t('vsync.exportCompleted'),
+      };
+
       await videoExporter.current.exportVideo(
         exportProject,
         config,
@@ -200,7 +208,8 @@ export function VideoSyncStudio() {
             a.click();
           }
           setExportProgress(progress.progress);
-        }
+        },
+        messages
       );
     } catch (error) {
       console.error('导出失败:', error);

@@ -13,13 +13,26 @@
     "preview": "预览",
     "error": "错误",
     "clearConfirm": "确定要清空所有历史记录吗？",
-    "helloWorld": "你好，世界"
+    "helloWorld": "你好，世界",
+    "trackNum": "音轨{n}",
+    "localeNames": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "es": "Español",
+      "fr": "Français",
+      "pt": "Português",
+      "ru": "Русский",
+      "de": "Deutsch"
+    }
   },
   "paths": {
     "pathA": "AI 快速创作",
     "pathADesc": "提示词 → MusicGen → 完整音频",
     "pathB": "路径 B — 混合模式",
     "pathBDesc": "MusicGen 伴奏 + TTS 人声 → 合成轨道",
+    "pathB.ttsDefault": "今天天气真好，阳光明媚",
     "pathC": "路径 C — 扒带/Remix",
     "pathCDesc": "上传音频 → Demucs 分轨 → 获取分轨",
     "pathD": "路径 D — 原创创作",
@@ -108,7 +121,38 @@
     "batchNotSupported": "路径 C（扒带）不支持批量模式",
     "midiProjectRequired": "需要 MIDI 项目",
     "unknownError": "未知错误",
-    "rateLimited": "请求过于频繁，免费额度已达上限，请稍后再试"
+    "rateLimited": "请求过于频繁，免费额度已达上限，请稍后再试",
+    "ageFetchFailed": "获取年龄失败: {msg}",
+    "queryFailed": "查询任务失败 ({status})"
+  },
+  "common": {
+    "loading": "加载中...",
+    "logout": "退出登录",
+    "login": "登录",
+    "dismiss": "关闭",
+    "appName": "Zyvexo",
+    "back": "返回",
+    "cancel": "取消",
+    "save": "保存",
+    "reset": "重置",
+    "settings": "设置",
+    "preview": "预览",
+    "error": "错误",
+    "clearConfirm": "确定要清空所有历史记录吗？",
+    "helloWorld": "你好，世界",
+    "trackNum": "音轨{n}",
+    "localeNames": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "es": "Español",
+      "fr": "Français",
+      "pt": "Português",
+      "ru": "Русский",
+      "de": "Deutsch"
+    },
+    "cancelled": "已取消"
   },
   "nav": {
     "workbench": "工作台",
@@ -177,6 +221,13 @@
       "sample4": "轻松慵懒的爵士咖啡馆音乐，柔和萨克斯和爵士鼓",
       "sample5": "梦幻氛围音乐，空灵人声、环境音和缓慢脉冲"
     },
+    "randomPrompts": [
+      "一首轻快的流行歌曲，钢琴伴奏，温暖治愈",
+      "史诗管弦乐，电影配乐风格，宏大震撼",
+      "Lo-fi 嘻哈节奏，放松舒缓，适合学习",
+      "电子舞曲，强劲节拍，夜店氛围",
+      "古典吉他独奏，西班牙风格，浪漫优雅"
+    ],
     "title": "路径 A — AI 快速创作",
     "generating": "生成中..."
   },
@@ -188,7 +239,17 @@
       "voiceCloning": "声音克隆政策",
       "creditsRefund": "积分退款",
       "aup": "可接受使用"
-    }
+    },
+    "titleAiCopyright": "AI 音乐版权政策",
+    "titleAup": "可接受使用政策",
+    "titleCredits": "Credits 与退款政策",
+    "titlePrivacy": "隐私政策",
+    "titleTerms": "服务条款",
+    "titleVoice": "声音克隆使用政策",
+    "updated": "最后更新：2026年8月",
+    "effective": "生效日期：2026年8月",
+    "version": "版本：v2.0 商业化正式版",
+    "rights": "© 2026 Zyvexo. 保留所有权利。"
   },
   "home": {
     "badge": "AI 音乐工作室 · 现代创作平台",
@@ -581,7 +642,35 @@
     "all": "全部",
     "justNow": "刚刚",
     "hoursAgo": "{n}小时前",
-    "daysAgo": "{n}天前"
+    "daysAgo": "{n}天前",
+    "mock1": {
+      "title": "夏日微风",
+      "artist": "音乐人 A",
+      "tag1": "流行",
+      "tag2": "夏日",
+      "tag3": "轻松"
+    },
+    "mock2": {
+      "title": "深夜代码",
+      "artist": "音乐人 B",
+      "tag1": "电子",
+      "tag2": "专注",
+      "tag3": "氛围"
+    },
+    "mock3": {
+      "title": "晨跑节奏",
+      "artist": "音乐人 C",
+      "tag1": "摇滚",
+      "tag2": "运动",
+      "tag3": "能量"
+    },
+    "mock4": {
+      "title": "雨后咖啡馆",
+      "artist": "音乐人 D",
+      "tag1": "爵士",
+      "tag2": "放松",
+      "tag3": "雨天"
+    }
   },
   "stockLibrary": {
     "title": "免费素材库",
@@ -1686,12 +1775,12 @@
     "features.deepCopyrightDb.name": "深度版权比对库",
     "features.deepCopyrightDb.desc": "公测暂不开放"
   },
-  "vsync": {
+"vsync": {
     "title": "视频同步工作室",
-    "subtitle": "从音乐制作专业 MV",
+    "subtitle": "打造专业 MV",
     "projectNameLabel": "项目名称",
     "projectNamePlaceholder": "我的 MV",
-    "selectAudioLabel": "选择音乐文件",
+    "selectAudioLabel": "选择音频文件",
     "startButton": "开始制作 MV",
     "play": "播放",
     "pause": "暂停",
@@ -1699,13 +1788,17 @@
     "exportButton": "导出 MV",
     "exporting": "导出中...",
     "exportFailed": "导出失败，请重试",
-    "tabVideos": "素材",
+    "tabVideos": "视频",
     "tabLyrics": "歌词",
     "tabSubtitles": "字幕",
     "tabTemplates": "模板",
     "tabTransitions": "转场",
     "tabContinue": "续写",
-    "trackName": "视频轨道 {n}"
+    "trackName": "视频轨道 {n}",
+    "exportPreparing": "准备导出...",
+    "exportEncoding": "正在合成视频...",
+    "exportFinalizing": "正在编码...",
+    "exportCompleted": "导出完成!"
   },
   "vtl": {
     "addTrack": "添加轨道"
@@ -1813,7 +1906,17 @@
     "generating": "生成中...",
     "continue": "AI 续写",
     "apply": "应用",
-    "ignore": "忽略"
+    "ignore": "忽略",
+    "style": {
+      "pop": "流行",
+      "rock": "摇滚",
+      "rnb": "R&B",
+      "hiphop": "嘻哈",
+      "electronic": "电子",
+      "folk": "民谣",
+      "classical": "古典",
+      "jazz": "爵士"
+    }
   },
   "ailyr.style": {
     "pop": "流行",
@@ -1920,5 +2023,15 @@
     "pan": "声像",
     "addClip": "添加片段",
     "fadeIn": "淡入"
+  },
+  "aiTask": {
+    "queryFailed": "状态查询失败 ({status})",
+    "networkErrorRetrying": "网络错误，正在重试...",
+    "submitFailed": "提交失败 ({status})",
+    "submitFailedNetwork": "网络错误，提交失败",
+    "retryFailed": "重试失败 ({status})",
+    "retryFailedNetwork": "网络错误，重试失败",
+    "taskNotFound": "任务不存在",
+    "downloadFailed": "下载失败 ({status})"
   }
 }

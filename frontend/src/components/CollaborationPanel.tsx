@@ -241,7 +241,7 @@ export default function CollaborationPanel({
           body: JSON.stringify({ user_id: userId })
         });
       } catch (error) {
-        console.error('{t('collab.leave')}会话失败:', error);
+        console.error('leave session failed:', error);
       }
     }
 

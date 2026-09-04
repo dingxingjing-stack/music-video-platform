@@ -84,7 +84,7 @@ export function PathDPage() {
             onClick={handleBackToForm}
             className="text-sm text-[#777777] hover:text-white transition"
           >
-            ← 返回
+            ← {t('common.back')}
           </button>
           <h1 className="text-xl font-bold text-[#e0e0e0]">🎹 {t('pathd.midiTitle')}</h1>
           <span className="text-xs text-[#777777] ml-2">
@@ -99,7 +99,7 @@ export function PathDPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3 mb-2">
-        <button onClick={() => navigate('/')} className="text-sm text-[#777777] hover:text-white transition">← {t('common.back') || '返回'}</button>
+        <button onClick={() => navigate('/')} className="text-sm text-[#777777] hover:text-white transition">← {t('common.back')}</button>
         <h1 className="text-2xl font-bold gradient-text">{t('pathd.title')}</h1>
       </div>
       <p className="text-sm text-[#777777]">{t('pathd.subtitle')}</p>

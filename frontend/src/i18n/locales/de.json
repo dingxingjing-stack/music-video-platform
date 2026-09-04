@@ -13,7 +13,20 @@
     "preview": "Vorschau",
     "error": "Fehler",
     "clearConfirm": "Möchten Sie wirklich den gesamten Verlauf löschen?",
-    "helloWorld": "Hallo, Welt"
+    "helloWorld": "Hallo, Welt",
+    "trackNum": "Track {n}",
+    "localeNames": {
+      "zh": "Chinesisch",
+      "en": "English",
+      "ja": "Japanisch",
+      "ko": "Koreanisch",
+      "es": "Spanisch",
+      "fr": "Französisch",
+      "pt": "Portugiesisch",
+      "ru": "Russisch",
+      "de": "Deutsch"
+    },
+    "cancelled": "Abgebrochen"
   },
   "paths": {
     "pathA": "AI Schnell-Erstellung",
@@ -23,7 +36,8 @@
     "pathC": "Pfad C — Stem-Trennung / Remix",
     "pathCDesc": "Audio hochladen → Demucs Stems → Stems erhalten",
     "pathD": "Pfad D — Originalerstellung",
-    "pathDDesc": "Multitrack von Grund auf, Piano Roll + MIDI"
+    "pathDDesc": "Multitrack von Grund auf, Piano Roll + MIDI",
+    "pathB.ttsDefault": "Das Wetter ist heute schön, sonnig und hell"
   },
   "ui": {
     "musicPrompt": "Musik Prompt",
@@ -108,7 +122,9 @@
     "batchNotSupported": "Stapelmodus nicht für Pfad C (Remix) unterstützt",
     "midiProjectRequired": "MIDI-Projekt erforderlich",
     "unknownError": "Unbekannter Fehler",
-    "rateLimited": "Zu viele Anfragen. Sie haben das Limit des kostenlosen Tarifs erreicht. Bitte versuchen Sie es später erneut."
+    "rateLimited": "Zu viele Anfragen. Sie haben das Limit des kostenlosen Tarifs erreicht. Bitte versuchen Sie es später erneut.",
+    "ageFetchFailed": "Alter konnte nicht abgerufen werden: {msg}",
+    "queryFailed": "Aufgabenabfrage fehlgeschlagen ({status})"
   },
   "nav": {
     "workbench": "Arbeitsbereich",
@@ -178,7 +194,14 @@
       "sample5": "Verträumte Ambient-Musik mit ätherischem Gesang, atmosphärischen Texturen und langsamen Pulsen"
     },
     "title": "Pfad A — Schnelle KI-Erstellung",
-    "generating": "Wird generiert..."
+    "generating": "Wird generiert...",
+    "randomPrompts": [
+      "Fröhlicher Popsong mit Klavier, warm und heilend",
+      "Episches Orchester, Filmmusik-Stil, grandios und mächtig",
+      "Lo-Fi Hip-Hop Beat, entspannend, gut zum Lernen",
+      "Electronic Dance Music, starker Beat, Nachtclub-Atmosphäre",
+      "Klassisches Gitarrensolo, spanischer Stil, romantisch und elegant"
+    ]
   },
   "legal": {
     "links": {
@@ -188,7 +211,17 @@
       "voiceCloning": "Richtlinie zum Stimmenklonen",
       "creditsRefund": "Credits & Rückerstattungen",
       "aup": "Richtlinie zur zulässigen Nutzung"
-    }
+    },
+    "titleAiCopyright": "KI-Musik-Urheberrechtsrichtlinie",
+    "titleAup": "Richtlinie zur akzeptablen Nutzung",
+    "titleCredits": "Credits- und Rückerstattungsrichtlinie",
+    "titlePrivacy": "Datenschutzrichtlinie",
+    "titleTerms": "Nutzungsbedingungen",
+    "titleVoice": "Stimmklonungsrichtlinie",
+    "updated": "Zuletzt aktualisiert: August 2026",
+    "effective": "Gültig ab: August 2026",
+    "version": "Version: v2.0 kommerzielle Ausgabe",
+    "rights": "© 2026 Zyvexo. Alle Rechte vorbehalten."
   },
   "home": {
     "badge": "AI Musikstudio · Moderne Plattform",
@@ -581,7 +614,35 @@
     "all": "Alle",
     "justNow": "gerade eben",
     "hoursAgo": "vor {n} Std.",
-    "daysAgo": "vor {n} T."
+    "daysAgo": "vor {n} T.",
+    "mock1": {
+      "title": "Sommerbrise",
+      "artist": "Künstler A",
+      "tag1": "Pop",
+      "tag2": "Sommer",
+      "tag3": "Entspannt"
+    },
+    "mock2": {
+      "title": "Mitternachtscode",
+      "artist": "Künstler B",
+      "tag1": "Electronic",
+      "tag2": "Fokus",
+      "tag3": "Ambient"
+    },
+    "mock3": {
+      "title": "Morgenlauf",
+      "artist": "Künstler C",
+      "tag1": "Rock",
+      "tag2": "Training",
+      "tag3": "Energie"
+    },
+    "mock4": {
+      "title": "Regnerisches Café",
+      "artist": "Künstler D",
+      "tag1": "Jazz",
+      "tag2": "Entspannt",
+      "tag3": "Regnerisch"
+    }
   },
   "stockLibrary": {
     "title": "Kostenlose Stock-Bibliothek",
@@ -1705,7 +1766,11 @@
     "tabTemplates": "Vorlagen",
     "tabTransitions": "Übergänge",
     "tabContinue": "Weiterschreiben",
-    "trackName": "Videospur {n}"
+    "trackName": "Videospur {n}",
+    "exportPreparing": "Export vorbereiten...",
+    "exportEncoding": "Video kodieren...",
+    "exportFinalizing": "Finalisieren...",
+    "exportCompleted": "Export abgeschlossen!"
   },
   "vtl": {
     "addTrack": "Spur hinzufügen"
@@ -1813,7 +1878,17 @@
     "generating": "Wird generiert...",
     "continue": "Mit KI fortfahren",
     "apply": "Übernehmen",
-    "ignore": "Ignorieren"
+    "ignore": "Ignorieren",
+    "style": {
+      "pop": "Pop",
+      "rock": "Rock",
+      "rnb": "R&B",
+      "hiphop": "Hip-Hop",
+      "electronic": "Elektronisch",
+      "folk": "Folk",
+      "classical": "Klassisch",
+      "jazz": "Jazz"
+    }
   },
   "ailyr.style": {
     "pop": "Pop",
@@ -1920,5 +1995,15 @@
     "pan": "Panorama",
     "addClip": "Clip hinzufügen",
     "fadeIn": "Einblenden"
+  },
+  "aiTask": {
+    "queryFailed": "Statusabfrage fehlgeschlagen ({status})",
+    "networkErrorRetrying": "Netzwerkfehler, wiederhole...",
+    "submitFailed": "Senden fehlgeschlagen ({status})",
+    "submitFailedNetwork": "Netzwerkfehler, Senden fehlgeschlagen",
+    "retryFailed": "Wiederholung fehlgeschlagen ({status})",
+    "retryFailedNetwork": "Netzwerkfehler, Wiederholung fehlgeschlagen",
+    "taskNotFound": "Aufgabe nicht gefunden",
+    "downloadFailed": "Download fehlgeschlagen ({status})"
   }
 }

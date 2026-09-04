@@ -21,9 +21,26 @@ declare global {
   }
 }
 
+export interface ExportMessages {
+  preparing: string;
+  encoding: string;
+  finalizing: string;
+  completed: string;
+}
+
 export class VideoExporter {
   private ffmpeg: any = null;
   private initialized = false;
+  private messages: ExportMessages;
+
+  constructor(messages?: Partial<ExportMessages>) {
+    this.messages = {
+      preparing: messages?.preparing || 'Preparing export...',
+      encoding: messages?.encoding || 'Encoding video...',
+      finalizing: messages?.finalizing || 'Finalizing...',
+      completed: messages?.completed || 'Export completed!',
+    };
+  }
 
   /**
    * 初始化 FFmpeg.wasm
@@ -56,13 +73,21 @@ export class VideoExporter {
   async exportVideo(
     project: VideoProject,
     config: ExportConfig,
-    onProgress: (progress: ExportProgress) => void
+    onProgress: (progress: ExportProgress) => void,
+    messages?: Partial<ExportMessages>
   ): Promise<string> {
+    const effectiveMessages: ExportMessages = {
+      preparing: messages?.preparing || this.messages.preparing,
+      encoding: messages?.encoding || this.messages.encoding,
+      finalizing: messages?.finalizing || this.messages.finalizing,
+      completed: messages?.completed || this.messages.completed,
+    };
+
     try {
       onProgress({
         status: 'pending',
         progress: 0,
-        message: '准备导出...'
+        message: effectiveMessages.preparing
       });
 
       // 初始化 FFmpeg
@@ -88,7 +113,7 @@ export class VideoExporter {
       onProgress({
         status: 'encoding',
         progress: 20,
-        message: '正在合成视频...'
+        message: effectiveMessages.encoding
       });
 
       // 生成 FFmpeg 命令
@@ -100,7 +125,7 @@ export class VideoExporter {
       onProgress({
         status: 'encoding',
         progress: 80,
-        message: '正在编码...'
+        message: effectiveMessages.finalizing
       });
 
       // 读取输出文件
@@ -113,7 +138,7 @@ export class VideoExporter {
       onProgress({
         status: 'completed',
         progress: 100,
-        message: '导出完成!',
+        message: effectiveMessages.completed,
         outputUrl: url
       });
 

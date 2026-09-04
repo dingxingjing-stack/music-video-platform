@@ -13,7 +13,20 @@
     "preview": "Pré-visualizar",
     "error": "Erro",
     "clearConfirm": "Tem a certeza de que quer limpar todo o histórico?",
-    "helloWorld": "Olá, mundo"
+    "helloWorld": "Olá, mundo",
+    "trackNum": "Faixa {n}",
+    "localeNames": {
+      "zh": "Chinês",
+      "en": "Inglês",
+      "ja": "Japonês",
+      "ko": "Coreano",
+      "es": "Espanhol",
+      "fr": "Francês",
+      "pt": "Português",
+      "ru": "Russo",
+      "de": "Alemão"
+    },
+    "cancelled": "Cancelado"
   },
   "paths": {
     "pathA": "Criacao Rapida IA",
@@ -23,7 +36,8 @@
     "pathC": "Caminho C — Separação de stems / Remix",
     "pathCDesc": "Enviar áudio → Demucs stems → Obter stems",
     "pathD": "Caminho D — Criação original",
-    "pathDDesc": "Multifaixa do zero, piano roll + MIDI"
+    "pathDDesc": "Multifaixa do zero, piano roll + MIDI",
+    "pathB.ttsDefault": "O tempo está ótimo hoje, ensolarado e brilhante"
   },
   "ui": {
     "musicPrompt": "Prompt musical",
@@ -108,7 +122,9 @@
     "batchNotSupported": "Caminho C (Remix) não suporta modo lote",
     "midiProjectRequired": "Projeto MIDI necessário",
     "unknownError": "Erro desconhecido",
-    "rateLimited": "Muitas solicitações. Você atingiu o limite do plano gratuito. Tente novamente mais tarde."
+    "rateLimited": "Muitas solicitações. Você atingiu o limite do plano gratuito. Tente novamente mais tarde.",
+    "ageFetchFailed": "Falha ao buscar idade: {msg}",
+    "queryFailed": "Falha ao consultar tarefa ({status})"
   },
   "nav": {
     "workbench": "Área de trabalho",
@@ -178,7 +194,14 @@
       "sample5": "Música ambiente sonhadora com vocais etéreos, texturas atmosféricas e pulsos lentos"
     },
     "title": "Rota A — Criação rápida com IA",
-    "generating": "Gerando..."
+    "generating": "Gerando...",
+    "randomPrompts": [
+      "Música pop animada com piano, calorosa e curativa",
+      "Orquestra épica, estilo trilha sonora de filme, grandiosa e impactante",
+      "Batida lo-fi hip hop, relaxante, boa para estudar",
+      "Música eletrônica de dança, batida forte, vibe de balada",
+      "Solo de violão clássico, estilo espanhol, romântico e elegante"
+    ]
   },
   "legal": {
     "links": {
@@ -188,7 +211,17 @@
       "voiceCloning": "Política de clonagem de voz",
       "creditsRefund": "Créditos e reembolsos",
       "aup": "Política de uso aceitável"
-    }
+    },
+    "titleAiCopyright": "Política de direitos autorais de música IA",
+    "titleAup": "Política de uso aceitável",
+    "titleCredits": "Política de Credits e reembolsos",
+    "titlePrivacy": "Política de privacidade",
+    "titleTerms": "Termos de Serviço",
+    "titleVoice": "Política de clonagem de voz",
+    "updated": "Última atualização: agosto de 2026",
+    "effective": "Vigência: agosto de 2026",
+    "version": "Versão: v2.0 edição comercial",
+    "rights": "© 2026 Zyvexo. Todos os direitos reservados."
   },
   "home": {
     "badge": "Estúdio Musical IA · Plataforma Moderna",
@@ -581,7 +614,35 @@
     "all": "Todos",
     "justNow": "agora mesmo",
     "hoursAgo": "há {n}h",
-    "daysAgo": "há {n}d"
+    "daysAgo": "há {n}d",
+    "mock1": {
+      "title": "Brisa de Verão",
+      "artist": "Artista A",
+      "tag1": "Pop",
+      "tag2": "Verão",
+      "tag3": "Relaxante"
+    },
+    "mock2": {
+      "title": "Código da Meia-Noite",
+      "artist": "Artista B",
+      "tag1": "Eletrônica",
+      "tag2": "Foco",
+      "tag3": "Ambient"
+    },
+    "mock3": {
+      "title": "Ritmo da Manhã",
+      "artist": "Artista C",
+      "tag1": "Rock",
+      "tag2": "Treino",
+      "tag3": "Energia"
+    },
+    "mock4": {
+      "title": "Café na Chuva",
+      "artist": "Artista D",
+      "tag1": "Jazz",
+      "tag2": "Relaxante",
+      "tag3": "Chuvoso"
+    }
   },
   "stockLibrary": {
     "title": "Biblioteca de Stock Gratuita",
@@ -1705,7 +1766,11 @@
     "tabTemplates": "Modelos",
     "tabTransitions": "Transições",
     "tabContinue": "Continuar",
-    "trackName": "Trilha de vídeo {n}"
+    "trackName": "Trilha de vídeo {n}",
+    "exportPreparing": "Preparando exportação...",
+    "exportEncoding": "Codificando vídeo...",
+    "exportFinalizing": "Finalizando...",
+    "exportCompleted": "Exportação concluída!"
   },
   "vtl": {
     "addTrack": "Adicionar trilha"
@@ -1813,7 +1878,17 @@
     "generating": "Gerando...",
     "continue": "Continuar com IA",
     "apply": "Aplicar",
-    "ignore": "Ignorar"
+    "ignore": "Ignorar",
+    "style": {
+      "pop": "Pop",
+      "rock": "Rock",
+      "rnb": "R&B",
+      "hiphop": "Hip-Hop",
+      "electronic": "Eletrônica",
+      "folk": "Folk",
+      "classical": "Clássica",
+      "jazz": "Jazz"
+    }
   },
   "ailyr.style": {
     "pop": "Pop",
@@ -1920,5 +1995,15 @@
     "pan": "Pan",
     "addClip": "Adicionar clipe",
     "fadeIn": "Fade in"
+  },
+  "aiTask": {
+    "queryFailed": "Falha ao consultar status ({status})",
+    "networkErrorRetrying": "Erro de rede, tentando novamente...",
+    "submitFailed": "Falha no envio ({status})",
+    "submitFailedNetwork": "Erro de rede, envio falhou",
+    "retryFailed": "Falha na repetição ({status})",
+    "retryFailedNetwork": "Erro de rede, repetição falhou",
+    "taskNotFound": "Tarefa não encontrada",
+    "downloadFailed": "Falha no download ({status})"
   }
 }

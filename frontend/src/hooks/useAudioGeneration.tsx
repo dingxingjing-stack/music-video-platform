@@ -30,6 +30,7 @@ export function useAudioGeneration(opts?: UseAudioGenOptions) {
   const [status, setStatus] = useState('');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const generate = useCallback(async (endpoint: string, body: Record<string, unknown>) => {
     setLoading(true);
@@ -66,31 +67,31 @@ export function useAudioGeneration(opts?: UseAudioGenOptions) {
       for (;;) {
         await new Promise(r => setTimeout(r, POLL_INTERVAL));
         const r = await fetch(`${API}/ai/task/${taskId}`, { headers });
-        if (!r.ok) throw new Error(`查询任务失败 (${r.status})`);
-        const t = await r.json();
-        setStatus(t.state || '');
-        setProgress(t.progress ?? 0);
+        if (!r.ok) throw new Error(t('errors.queryFailed', { status: r.status }));
+        const tData = await r.json();
+        setStatus(tData.state || '');
+        setProgress(tData.progress ?? 0);
 
-        if (t.state === 'completed') {
-          const url = t.audio_url || t.url;
+        if (tData.state === 'completed') {
+          const url = tData.audio_url || tData.url;
           setProgress(100);
           if (url) opts?.onSuccess?.(url);
           return (url as string) || null;
         }
-        if (t.state === 'failed' || t.state === 'cancelled') {
-          const msg = t.error || (t.state === 'cancelled' ? '已取消' : '生成失败');
+        if (tData.state === 'failed' || tData.state === 'cancelled') {
+          const msg = tData.error || (tData.state === 'cancelled' ? t('common.cancelled') : t('errors.generationFailed'));
           setError(msg);
           throw new Error(msg);
         }
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '生成失败';
+      const msg = e instanceof Error ? e.message : t('errors.generationFailed');
       setError(msg);
       return null;
     } finally {
       setLoading(false);
     }
-  }, [opts]);
+  }, [opts, t]);
 
   return { loading, generate, rateLimited, setRateLimited, status, progress, error };
 }

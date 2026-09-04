@@ -725,7 +725,7 @@ export function TrackStudio() {
       setSelectedPath(path);
       const def = PATHS.find((p) => p.id === path)!;
       setPrompt(def.prompt || '');
-      setTtsText(def.ttsDefault || '');
+      setTtsText(def.ttsDefault ? t(def.ttsDefault) : '');
       setUploadedFile(null);
       setUploadError(null);
       setBatchMode(false);

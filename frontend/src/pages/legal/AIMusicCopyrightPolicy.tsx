@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../../i18n/useTranslation';
 
 export function AIMusicCopyrightPolicy() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -10,10 +12,10 @@ export function AIMusicCopyrightPolicy() {
           onClick={() => navigate(-1)}
           className="text-sm text-[#666666] hover:text-white transition mb-4 inline-block"
         >
-          ← 返回
+          ← {t('common.back')}
         </button>
-        <h1 className="text-3xl font-bold text-white mb-2">AI 音乐版权政策</h1>
-        <p className="text-sm text-[#888888]">最后更新：2026年8月</p>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('legal.titleAiCopyright')}</h1>
+        <p className="text-sm text-[#888888]">{t('legal.updated')}</p>
       </div>
 
       <div className="space-y-6 text-[#cccccc] leading-relaxed">

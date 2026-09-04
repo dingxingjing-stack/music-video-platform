@@ -14,6 +14,9 @@ import {
   STAGE_LABEL,
   STEM_NAMES,
   AiStems,
+  TaskError,
+  resolveTaskError,
+  getThrownTaskError,
 } from '../../hooks/useAiMusicTask';
 import { useTranslation } from '../../i18n/useTranslation';
 
@@ -84,7 +87,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
   const [sections, setSections] = useState<SongSection[]>(DEFAULT_SECTIONS);
   const [showStructure, setShowStructure] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | TaskError | null>(null);
 
   const { task, loading, submit, retryStems, download } = useAiMusicTask();
   const onGeneratedRef = useRef(onGenerated);
@@ -142,7 +145,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
     });
     if (!taskId) {
       // submit 失败时 hook 已写入 task.error
-      setError(task.error || t('aiGen.submitFailed'));
+      setError(task.error ?? t('aiGen.submitFailed'));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, style, duration, lyrics, showLyricsEditor, showStructure, sections, submit]);
@@ -173,7 +176,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
       a.click();
       a.remove();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('aiGen.downloadFailed'));
+      setError(getThrownTaskError(e) ?? (e instanceof Error ? e.message : t('aiGen.downloadFailed')));
     }
   }, [download]);
 
@@ -472,7 +475,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
 
           {/* 错误 */}
           {error && (
-            <div className="p-3 bg-[#ef4444]/20 border border-[#ef4444]/30 rounded text-sm text-[#ef4444]">{error}</div>
+            <div className="p-3 bg-[#ef4444]/20 border border-[#ef4444]/30 rounded text-sm text-[#ef4444]">{resolveTaskError(t, error)}</div>
           )}
         </div>
 

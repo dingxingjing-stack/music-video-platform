@@ -13,7 +13,20 @@
     "preview": "Aperçu",
     "error": "Erreur",
     "clearConfirm": "Voulez-vous vraiment effacer tout l'historique ?",
-    "helloWorld": "Bonjour, le monde"
+    "helloWorld": "Bonjour, le monde",
+    "trackNum": "Piste {n}",
+    "localeNames": {
+      "zh": "Chinois",
+      "en": "Anglais",
+      "ja": "Japonais",
+      "ko": "Coréen",
+      "es": "Espagnol",
+      "fr": "Français",
+      "pt": "Portugais",
+      "ru": "Russe",
+      "de": "Allemand"
+    },
+    "cancelled": "Annulé"
   },
   "paths": {
     "pathA": "Creation Rapide IA",
@@ -23,7 +36,8 @@
     "pathC": "Chemin C — Séparation stems / Remix",
     "pathCDesc": "Upload audio → Demucs stems → Obtenir stems",
     "pathD": "Chemin D — Création originale",
-    "pathDDesc": "Multipiste depuis zéro, piano roll + MIDI"
+    "pathDDesc": "Multipiste depuis zéro, piano roll + MIDI",
+    "pathB.ttsDefault": "Il fait beau aujourd'hui, le soleil brille"
   },
   "ui": {
     "musicPrompt": "Prompt musical",
@@ -108,7 +122,9 @@
     "batchNotSupported": "Chemin C (Remix) ne supporte pas le mode batch",
     "midiProjectRequired": "Projet MIDI requis",
     "unknownError": "Erreur inconnue",
-    "rateLimited": "Trop de requêtes. Vous avez atteint la limite du plan gratuit. Veuillez réessayer plus tard."
+    "rateLimited": "Trop de requêtes. Vous avez atteint la limite du plan gratuit. Veuillez réessayer plus tard.",
+    "ageFetchFailed": "Échec de la récupération de l'âge : {msg}",
+    "queryFailed": "Échec de la requête de tâche ({status})"
   },
   "nav": {
     "workbench": "Espace de travail",
@@ -178,7 +194,14 @@
       "sample5": "Une musique ambient rêveuse avec voix éthérées, textures atmosphériques et pulsations lentes"
     },
     "title": "Voie A — Création rapide par IA",
-    "generating": "Génération..."
+    "generating": "Génération...",
+    "randomPrompts": [
+      "Chanson pop entraînante au piano, chaleureuse et apaisante",
+      "Orchestre épique, style bande originale de film, grandiose et puissant",
+      "Rythme lo-fi hip hop, relaxant, idéal pour étudier",
+      "Musique électronique de danse, battement fort, ambiance boîte de nuit",
+      "Solo de guitare classique, style espagnol, romantique et élégant"
+    ]
   },
   "legal": {
     "links": {
@@ -188,7 +211,17 @@
       "voiceCloning": "Politique de clonage vocal",
       "creditsRefund": "Crédits et remboursements",
       "aup": "Politique d’utilisation acceptable"
-    }
+    },
+    "titleAiCopyright": "Politique de droit d’auteur musical IA",
+    "titleAup": "Politique d’utilisation acceptable",
+    "titleCredits": "Politique de Credits et remboursements",
+    "titlePrivacy": "Politique de confidentialité",
+    "titleTerms": "Conditions d’utilisation",
+    "titleVoice": "Politique de clonage vocal",
+    "updated": "Dernière mise à jour : août 2026",
+    "effective": "Entrée en vigueur : août 2026",
+    "version": "Version : v2.0 édition commerciale",
+    "rights": "© 2026 Zyvexo. Tous droits réservés."
   },
   "home": {
     "badge": "Studio Musical IA · Plateforme Moderne",
@@ -581,7 +614,35 @@
     "all": "Tout",
     "justNow": "à l instant",
     "hoursAgo": "il y a {n}h",
-    "daysAgo": "il y a {n}j"
+    "daysAgo": "il y a {n}j",
+    "mock1": {
+      "title": "Brise d'Été",
+      "artist": "Artiste A",
+      "tag1": "Pop",
+      "tag2": "Été",
+      "tag3": "Détente"
+    },
+    "mock2": {
+      "title": "Code de Minuit",
+      "artist": "Artiste B",
+      "tag1": "Électronique",
+      "tag2": "Focus",
+      "tag3": "Ambiant"
+    },
+    "mock3": {
+      "title": "Rythme du Matin",
+      "artist": "Artiste C",
+      "tag1": "Rock",
+      "tag2": "Sport",
+      "tag3": "Énergie"
+    },
+    "mock4": {
+      "title": "Café Pluvieux",
+      "artist": "Artiste D",
+      "tag1": "Jazz",
+      "tag2": "Détente",
+      "tag3": "Pluvieux"
+    }
   },
   "stockLibrary": {
     "title": "Bibliothèque de Stock Gratuite",
@@ -1705,7 +1766,11 @@
     "tabTemplates": "Modèles",
     "tabTransitions": "Transitions",
     "tabContinue": "Continuer",
-    "trackName": "Piste vidéo {n}"
+    "trackName": "Piste vidéo {n}",
+    "exportPreparing": "Préparation de l'exportation...",
+    "exportEncoding": "Encodage de la vidéo...",
+    "exportFinalizing": "Finalisation...",
+    "exportCompleted": "Exportation terminée!"
   },
   "vtl": {
     "addTrack": "Ajouter une piste"
@@ -1813,7 +1878,17 @@
     "generating": "Génération...",
     "continue": "Continuer avec l'IA",
     "apply": "Appliquer",
-    "ignore": "Ignorer"
+    "ignore": "Ignorer",
+    "style": {
+      "pop": "Pop",
+      "rock": "Rock",
+      "rnb": "R&B",
+      "hiphop": "Hip-Hop",
+      "electronic": "Électronique",
+      "folk": "Folk",
+      "classical": "Classique",
+      "jazz": "Jazz"
+    }
   },
   "ailyr.style": {
     "pop": "Pop",
@@ -1920,5 +1995,15 @@
     "pan": "Pan",
     "addClip": "Ajouter un clip",
     "fadeIn": "Fondu d’entrée"
+  },
+  "aiTask": {
+    "queryFailed": "Échec de la vérification du statut ({status})",
+    "networkErrorRetrying": "Erreur réseau, nouvelle tentative...",
+    "submitFailed": "Échec de l'envoi ({status})",
+    "submitFailedNetwork": "Erreur réseau, envoi impossible",
+    "retryFailed": "Nouvel essai échoué ({status})",
+    "retryFailedNetwork": "Erreur réseau, nouvel essai impossible",
+    "taskNotFound": "Tâche introuvable",
+    "downloadFailed": "Échec du téléchargement ({status})"
   }
 }

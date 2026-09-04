@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../config/api";
 import { getUserId } from "./useAiMusicTask";
+import { useTranslation } from "../i18n/useTranslation";
 
 // ----------------------------------------
 // 1️⃣ API helper – 供外部直接调用
@@ -31,6 +32,7 @@ export const useUserAge = () => {
   const [age, setAge] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -53,10 +55,10 @@ export const useUserAge = () => {
         setLoading(false);
       })
       .catch((e) => {
-        setError(`获取年龄失败: ${e.message}`);
+        setError(t('errors.ageFetchFailed', { msg: e.message }));
         setLoading(false);
       });
-  }, []);
+  }, [t]);
 
   return { age, loading, error };
 };

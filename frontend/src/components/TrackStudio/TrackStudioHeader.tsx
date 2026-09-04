@@ -98,15 +98,7 @@ export function TrackStudioHeader({
           >
             {['zh', 'en', 'ja', 'ko', 'es', 'fr', 'pt', 'ru', 'de'].map((l) => (
               <option key={l} value={l}>
-                {l === 'zh' && '中文'}
-                {l === 'en' && 'English'}
-                {l === 'ja' && '日本語'}
-                {l === 'ko' && '한국어'}
-                {l === 'es' && 'Español'}
-                {l === 'fr' && 'Français'}
-                {l === 'pt' && 'Português'}
-                {l === 'ru' && 'Русский'}
-                {l === 'de' && 'Deutsch'}
+                {t(`common.localeNames.${l}`)}
               </option>
             ))}
           </select>
