@@ -30,7 +30,7 @@ def _get_session():
     if _is_test_override():
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        url = f"sqlite:///{_DB_PATH}"
+        url = f"sqlite:///{DB_PATH}"
         eng = create_engine(url, connect_args={"check_same_thread": False}, pool_pre_ping=True)
         try:
             from app.db.database import Base
@@ -54,8 +54,15 @@ def _get_conn():
     return conn
 
 def _init_db(conn=None):
-    from app.db.database import Base, engine
-    Base.metadata.create_all(bind=engine)
+    if _is_test_override():
+        from sqlalchemy import create_engine
+        from app.db.database import Base
+        url = f"sqlite:///{DB_PATH}"
+        eng = create_engine(url, connect_args={"check_same_thread": False}, pool_pre_ping=True)
+        Base.metadata.create_all(bind=eng)
+    else:
+        from app.db.database import Base, engine
+        Base.metadata.create_all(bind=engine)
 
 async def create_or_load(user_id: str) -> dict[str, Any]:
     sess = _get_session()
@@ -74,22 +81,41 @@ async def create_or_load(user_id: str) -> dict[str, Any]:
 
 async def check_gray_status(user_id: str) -> dict[str, Any]:
     r = await create_or_load(user_id)
-    return {"user_id": user_id, "is_gray": bool(r.get("is_gray", 0)), "daily_credits_used": r.get("daily_credits_used", 0), "daily_credits_limit": r.get("daily_credits_limit", DAILY_LIMIT_NORMAL), "total_generations": r.get("total_generations", 0), "activity_score": r.get("activity_score", 0), "can_apply": not r.get("is_gray") and r["activity_score"] >= GRAY_THRESHOLD_SCORE and r["total_generations"] >= GRAY_THRESHOLD_GENS}
+    # Use .get() with defaults to safely handle NULL values from database
+    is_gray = bool(r.get("is_gray") or 0)
+    daily_credits_used = r.get("daily_credits_used") or 0
+    daily_credits_limit = r.get("daily_credits_limit") or DAILY_LIMIT_NORMAL
+    total_generations = r.get("total_generations") or 0
+    activity_score = r.get("activity_score") or 0
+    return {
+        "user_id": user_id,
+        "is_gray": is_gray,
+        "daily_credits_used": daily_credits_used,
+        "daily_credits_limit": daily_credits_limit,
+        "total_generations": total_generations,
+        "activity_score": activity_score,
+        "can_apply": (not is_gray) and activity_score >= GRAY_THRESHOLD_SCORE and total_generations >= GRAY_THRESHOLD_GENS,
+    }
 
 async def consume_credit(user_id: str, amount: int = 1) -> dict[str, Any]:
     r = await create_or_load(user_id)
-    used, limit = r["daily_credits_used"], r["daily_credits_limit"]
+    # Use .get() with defaults to safely handle NULL values
+    used = r.get("daily_credits_used") or 0
+    limit = r.get("daily_credits_limit") or DAILY_LIMIT_NORMAL
+    total_generations = r.get("total_generations") or 0
+    activity_score = r.get("activity_score") or 0
+    is_gray = bool(r.get("is_gray") or 0)
     if used + amount > limit:
         return {"success": False, "message": f"今日额度已用完 ({used}/{limit})"}
     sess = _get_session()
     try:
         from sqlalchemy import text
-        nu, ng, ns = used + amount, r["total_generations"] + 1, r["activity_score"] + 2
+        nu, ng, ns = used + amount, total_generations + 1, activity_score + 2
         sess.execute(text("UPDATE beta_users SET daily_credits_used=:nu, total_generations=:ng, activity_score=:ns WHERE user_id=:u"), {"nu": nu, "ng": ng, "ns": ns, "u": user_id})
         sess.commit()
     finally:
         sess.close()
-    if not r["is_gray"] and ns >= GRAY_THRESHOLD_SCORE and ng >= GRAY_THRESHOLD_GENS:
+    if not is_gray and ns >= GRAY_THRESHOLD_SCORE and ng >= GRAY_THRESHOLD_GENS:
         await auto_gray_promotion(user_id)
     return {"success": True, "used_today": nu, "limit": limit, "remaining": limit - nu}
 
