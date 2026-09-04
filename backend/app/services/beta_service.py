@@ -72,7 +72,7 @@ async def create_or_load(user_id: str) -> dict[str, Any]:
         if row:
             d = dict(row._mapping) if hasattr(row, "_mapping") else dict(row)
             return d
-        sess.execute(text("INSERT INTO beta_users (user_id, daily_credits_limit) VALUES (:u, :lim)"), {"u": user_id, "lim": DAILY_LIMIT_NORMAL})
+        sess.execute(text("INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit, total_generations, activity_score) VALUES (:u, 0, 0, :lim, 0, 0)"), {"u": user_id, "lim": DAILY_LIMIT_NORMAL})
         sess.commit()
         row = sess.execute(text("SELECT * FROM beta_users WHERE user_id=:u"), {"u": user_id}).fetchone()
         return dict(row._mapping) if hasattr(row, "_mapping") else dict(row)
