@@ -25,7 +25,7 @@ export function GrayFeatureLock({ featureKey, userId, onApply }: GrayFeatureLock
     try {
       await fetch(api.url('/api/v1/beta/apply-gray'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-ID': userId || 'beta_user' },
+        headers: { 'Content-Type': 'application/json', 'X-User-ID': userId || '' },
         body: JSON.stringify({ feature_key: featureKey, reason, contact }),
       });
     } catch { /* 公测容错 */ }
@@ -127,7 +127,7 @@ interface FeatureGateProps {
 }
 
 export function FeatureGate({ featureKey, userId, children, fallback }: FeatureGateProps & { userId?: string }) {
-  const { status } = useUserGrayStatus();
+  const { status } = useUserGrayStatus(userId);
   const feature = FEATURE_CONFIG[featureKey];
 
   if (!feature) return <>{children}</>;

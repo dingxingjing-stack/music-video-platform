@@ -1,8 +1,6 @@
-"""测试：Beta 灰度服务 NULL 值处理和核心功能。"""
+"""测试：Beta 灰度服务核心逻辑 + NULL 值处理 + consume_credit 并发原子扣额度。"""
 
 import asyncio
-import tempfile
-import os
 import sqlite3
 import pytest
 from app.services import beta_service
@@ -14,7 +12,7 @@ def isolated_db(tmp_path, monkeypatch):
     db_path = str(tmp_path / "test_beta.db")
     monkeypatch.setattr(beta_service, "DB_DIR", str(tmp_path))
     monkeypatch.setattr(beta_service, "DB_PATH", db_path)
-    # 初始化数据库 - 使用 SQLAlchemy 创建表
+    # 初始化数据库 - 使用测试覆盖路径创建表
     beta_service._init_db()
     return db_path
 
@@ -25,7 +23,6 @@ class TestBetaServiceNullHandling:
     @pytest.mark.asyncio
     async def test_check_gray_status_with_all_nulls(self, isolated_db):
         """activity_score、total_generations、daily_credits_used、daily_credits_limit、is_gray 全为 NULL"""
-        # 手动插入全 NULL 的用户
         conn = sqlite3.connect(isolated_db)
         conn.execute("""
             INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit, total_generations, activity_score)
@@ -147,7 +144,6 @@ class TestBetaServiceCoreLogic:
     async def test_new_user_defaults(self, isolated_db):
         """新用户自动获得默认值"""
         result = await beta_service.check_gray_status("new_user")
-
         assert result["is_gray"] is False
         assert result["daily_credits_used"] == 0
         assert result["daily_credits_limit"] == beta_service.DAILY_LIMIT_NORMAL
@@ -213,7 +209,6 @@ class TestBetaServiceCoreLogic:
     @pytest.mark.asyncio
     async def test_auto_gray_promotion(self, isolated_db):
         """测试自动灰度升级"""
-        # 创建接近阈值的用户
         conn = sqlite3.connect(isolated_db)
         conn.execute("""
             INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit, total_generations, activity_score)
@@ -242,9 +237,6 @@ class TestBetaServiceCoreLogic:
         assert "申请已提交" in result["message"]
 
         # 验证数据库记录 - 通过服务层验证，避免直接 SQL 读取的 schema 差异
-        # apply_gray 返回成功即表示插入成功，status 字段由数据库默认值决定
-        # (新旧版本 schema 不同：旧版 SQLite DEFAULT 'pending'，新版 SQLAlchemy default="pending" 仅在 ORM 层生效)
-        # 这里仅验证核心字段
         conn = sqlite3.connect(isolated_db)
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT user_id, reason, contact, feature_key FROM beta_gray_applications WHERE user_id=?", ("apply_user",)).fetchone()
@@ -257,8 +249,19 @@ class TestBetaServiceCoreLogic:
         assert row["feature_key"] == "mv_generate"
 
     @pytest.mark.asyncio
+    async def test_consume_credit_success(self, isolated_db):
+        """正常消费递增 used 并递增 total_generations / activity_score"""
+        result = await beta_service.consume_credit("consume_ok", amount=1)
+        assert result["success"] is True
+        assert result["used_today"] == 1
+        assert result["limit"] == beta_service.DAILY_LIMIT_NORMAL
+        status = await beta_service.check_gray_status("consume_ok")
+        assert status["total_generations"] == 1
+        assert status["activity_score"] == 2
+
+    @pytest.mark.asyncio
     async def test_consume_credit_over_limit(self, isolated_db):
-        """测试额度耗尽时的拒绝"""
+        """额度耗尽时原子更新拒绝"""
         conn = sqlite3.connect(isolated_db)
         conn.execute("""
             INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit)
@@ -268,7 +271,6 @@ class TestBetaServiceCoreLogic:
         conn.close()
 
         result = await beta_service.consume_credit("limit_user", amount=1)
-
         assert result["success"] is False
         assert "今日额度已用完" in result["message"]
 
@@ -290,6 +292,48 @@ class TestBetaServiceCoreLogic:
         assert result["limit"] == 30
         assert result["used_today"] == 30
         assert result["remaining"] == 0
+
+
+class TestBetaServiceConsumeAtomicity:
+    """测试 consume_credit 的原子条件更新行为"""
+
+    @pytest.mark.asyncio
+    async def test_consume_does_not_exceed_limit_concurrently(self, isolated_db):
+        """高并发下累计消费不能超过 limit（原子条件更新 + rowcount 判定）"""
+        conn = sqlite3.connect(isolated_db)
+        conn.execute("""
+            INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit, total_generations, activity_score)
+            VALUES (?, 0, 0, 3, 0, 0)
+        """, ("atomic_user",))
+        conn.commit()
+        conn.close()
+
+        results = await asyncio.gather(
+            *[beta_service.consume_credit("atomic_user", amount=1) for _ in range(5)]
+        )
+        successes = [r for r in results if r.get("success")]
+        # limit=3，最多成功 3 次，第 4、5 次必须被原子条件拒绝
+        assert len(successes) == 3
+        final = await beta_service.check_gray_status("atomic_user")
+        assert final["daily_credits_used"] == 3
+
+    @pytest.mark.asyncio
+    async def test_consume_does_not_go_negative_or_rollback(self, isolated_db):
+        """并发超额消费不会导致 used 超过 limit，也不会因竞态回退"""
+        conn = sqlite3.connect(isolated_db)
+        conn.execute("""
+            INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit)
+            VALUES (?, 0, 0, 1)
+        """, ("atomic_one",))
+        conn.commit()
+        conn.close()
+        results = await asyncio.gather(
+            *[beta_service.consume_credit("atomic_one", amount=1) for _ in range(4)]
+        )
+        assert len([r for r in results if r.get("success")]) == 1
+        final = await beta_service.check_gray_status("atomic_one")
+        assert final["daily_credits_used"] == 1
+        assert final["daily_credits_used"] <= final["daily_credits_limit"]
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.services.beta_service import (
     check_gray_status,
@@ -26,7 +26,8 @@ class ApplyGrayRequest(BaseModel):
 
 
 class ConsumeRequest(BaseModel):
-    amount: int = 1
+    # 严格正整数，拒绝负数 / 0；上限 10 与单次消费粒度匹配
+    amount: int = Field(default=1, gt=0, le=10)
 
 
 @router.get("/status")
@@ -44,8 +45,10 @@ async def apply_gray_route(req: ApplyGrayRequest, x_user_id: str = Header("beta_
 
 
 @router.post("/consume-credit")
-async def consume_credit_route(req: ConsumeRequest, x_user_id: str = Header("beta_user", alias="X-User-ID")):
-    """消费每日免费额度"""
+async def consume_credit_route(req: ConsumeRequest, x_user_id: str = Header(None, alias="X-User-ID")):
+    """消费每日免费额度（要求 X-User-ID，未提供则拒绝，避免误扣共享额度）"""
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=400, detail="缺少用户标识（X-User-ID）")
     return await consume_credit(x_user_id, req.amount)
 
 

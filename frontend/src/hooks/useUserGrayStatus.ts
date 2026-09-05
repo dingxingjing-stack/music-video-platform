@@ -10,107 +10,111 @@ export interface UserGrayStatus {
   canApply: boolean;
 }
 
+// 安全默认值：fail-closed。后端不可用 / 未登录时，不允许申请灰度、不默认放行。
 const DEFAULT_STATUS: UserGrayStatus = {
   isGray: false,
   dailyCredits: 10,
   usedToday: 0,
   activityScore: 0,
   totalGenerations: 0,
-  canApply: true,
+  canApply: false,
 };
 
-const STORAGE_KEY = 'beta_user_status';
 const API_BASE = api.url('/api/v1/beta');
+
+// 非权限用途的 UI 缓存 key，按 userId 隔离，避免跨用户读到彼此状态。
+const storageKey = (userId: string) => `beta_user_status:${userId}`;
 
 export function useUserGrayStatus(userId?: string) {
   const [status, setStatus] = useState<UserGrayStatus>(DEFAULT_STATUS);
   const [loading, setLoading] = useState(true);
 
   const fetchStatus = useCallback(async () => {
-    try {
-      const cached = localStorage.getItem(STORAGE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setStatus({ ...DEFAULT_STATUS, ...parsed });
-      }
+    if (!userId) {
+      // 未登录：fail-closed，不读任何缓存作为授权依据。
+      setStatus(DEFAULT_STATUS);
+      setLoading(false);
+      return;
+    }
 
-      if (userId) {
-        const res = await fetch(
-          `${API_BASE}/status`,
-          { headers: { 'X-User-ID': userId } }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          const merged = {
-            isGray: data.is_gray ?? false,
-            dailyCredits: data.daily_credits_limit ?? 10,
-            usedToday: data.daily_credits_used ?? 0,
-            activityScore: data.activity_score ?? 0,
-            totalGenerations: data.total_generations ?? 0,
-            canApply: data.can_apply ?? true,
-          };
-          setStatus(merged);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-        }
+    // 后端是唯一授权来源。localStorage 仅作非权限 UI 缓存，绝不参与授权判断。
+    try {
+      const res = await fetch(`${API_BASE}/status`, {
+        headers: { 'X-User-ID': userId },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const merged: UserGrayStatus = {
+          isGray: !!data.is_gray,
+          dailyCredits: data.daily_credits_limit ?? 10,
+          usedToday: data.daily_credits_used ?? 0,
+          activityScore: data.activity_score ?? 0,
+          totalGenerations: data.total_generations ?? 0,
+          canApply: !!data.can_apply,
+        };
+        setStatus(merged);
+        // 仅作为非权限 UI 缓存
+        try {
+          localStorage.setItem(storageKey(userId), JSON.stringify(merged));
+        } catch { /* ignore */ }
+      } else {
+        // 后端失败：fail-closed，回到安全默认，不信任任何缓存。
+        setStatus(DEFAULT_STATUS);
       }
     } catch {
-      // 后端不可用时用本地缓存
+      // 网络失败：fail-closed。
+      setStatus(DEFAULT_STATUS);
     } finally {
       setLoading(false);
     }
   }, [userId]);
 
   useEffect(() => {
+    setStatus(DEFAULT_STATUS);
+    setLoading(true);
     fetchStatus();
   }, [fetchStatus]);
 
   /**
-   * 消耗额度 — 同时调用后端 API 并更新本地状态
+   * 消耗额度 — 只信任后端结果。后端失败 / 未登录一律不本地扣减。
+   * 仅依赖 userId，不依赖 status 闭包，避免竞态。
    */
   const consumeCredit = useCallback(async (amount = 1): Promise<boolean> => {
     if (!userId) {
-      // 无 userId 时仅本地扣减
-      setStatus((prev) => {
-        const next = { ...prev, usedToday: prev.usedToday + amount };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
-      });
-      return true;
+      // 未登录：禁止消费 Beta 额度。
+      return false;
     }
 
-    // 调用后端 API
     try {
       const res = await fetch(`${API_BASE}/consume-credit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-ID': userId },
         body: JSON.stringify({ amount }),
+        cache: 'no-store',
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          // 用后端返回的最新状态更新本地
-          const updated = {
-            ...status,
-            usedToday: data.used_today ?? status.usedToday + amount,
-            dailyCredits: data.limit ?? status.dailyCredits,
-          };
-          setStatus(updated);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-          return true;
-        }
-      }
-    } catch {
-      // API 失败时回退本地扣减
-    }
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (!data.success) return false;
 
-    // 后端调用失败时本地扣减
-    setStatus((prev) => {
-      const next = { ...prev, usedToday: prev.usedToday + amount };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-    return false;
-  }, [userId, status]);
+      // 用后端返回的最新状态更新本地
+      setStatus((prev) => {
+        const next: UserGrayStatus = {
+          ...prev,
+          usedToday: data.used_today ?? prev.usedToday + amount,
+          dailyCredits: data.limit ?? prev.dailyCredits,
+        };
+        try {
+          localStorage.setItem(storageKey(userId), JSON.stringify(next));
+        } catch { /* ignore */ }
+        return next;
+      });
+      return true;
+    } catch {
+      // 后端失败：不扣额度，fail-closed。
+      return false;
+    }
+  }, [userId]);
 
   const refetch = useCallback(() => fetchStatus(), [fetchStatus]);
 

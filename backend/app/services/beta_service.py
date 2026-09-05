@@ -72,6 +72,7 @@ async def create_or_load(user_id: str) -> dict[str, Any]:
         if row:
             d = dict(row._mapping) if hasattr(row, "_mapping") else dict(row)
             return d
+        # 显式写入全部默认字段，避免依赖数据库/ORM 默认值导致新用户列为 NULL
         sess.execute(text("INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit, total_generations, activity_score) VALUES (:u, 0, 0, :lim, 0, 0)"), {"u": user_id, "lim": DAILY_LIMIT_NORMAL})
         sess.commit()
         row = sess.execute(text("SELECT * FROM beta_users WHERE user_id=:u"), {"u": user_id}).fetchone()
@@ -98,21 +99,37 @@ async def check_gray_status(user_id: str) -> dict[str, Any]:
     }
 
 async def consume_credit(user_id: str, amount: int = 1) -> dict[str, Any]:
-    r = await create_or_load(user_id)
-    # Use .get() with defaults to safely handle NULL values
-    used = r.get("daily_credits_used") or 0
-    limit = r.get("daily_credits_limit") or DAILY_LIMIT_NORMAL
-    total_generations = r.get("total_generations") or 0
-    activity_score = r.get("activity_score") or 0
-    is_gray = bool(r.get("is_gray") or 0)
-    if used + amount > limit:
-        return {"success": False, "message": f"今日额度已用完 ({used}/{limit})"}
+    # 确保行存在（幂等），随后使用数据库原子条件更新，避免 SELECT-then-UPDATE 并发竞态
+    await create_or_load(user_id)
     sess = _get_session()
     try:
         from sqlalchemy import text
-        nu, ng, ns = used + amount, total_generations + 1, activity_score + 2
-        sess.execute(text("UPDATE beta_users SET daily_credits_used=:nu, total_generations=:ng, activity_score=:ns WHERE user_id=:u"), {"nu": nu, "ng": ng, "ns": ns, "u": user_id})
+        # 原子条件更新：仅在 daily_credits_used + amount <= daily_credits_limit 时才 +amount，
+        # 并同步递增 total_generations / activity_score。rowcount==0 即额度不足/无此用户。
+        # 使用 COALESCE 兼容历史 NULL 值（NULL + n 为 NULL，条件永假会导致更新不到）。
+        cur = sess.execute(text("""
+            UPDATE beta_users
+            SET daily_credits_used = COALESCE(daily_credits_used, 0) + :amount,
+                total_generations   = COALESCE(total_generations, 0) + 1,
+                activity_score      = COALESCE(activity_score, 0) + 2,
+                updated_at          = :ts
+            WHERE user_id = :u
+              AND COALESCE(daily_credits_used, 0) + :amount <= COALESCE(daily_credits_limit, :def_limit)
+        """), {"amount": amount, "u": user_id, "ts": datetime.now(timezone.utc).isoformat(), "def_limit": DAILY_LIMIT_NORMAL})
         sess.commit()
+        if cur.rowcount == 0:
+            # 读取最新状态，判断是额度不足还是用户缺失
+            row = sess.execute(text("SELECT daily_credits_used, daily_credits_limit FROM beta_users WHERE user_id=:u"), {"u": user_id}).fetchone()
+            if row is None:
+                return {"success": False, "message": "用户不存在"}
+            used = row[0] or 0
+            limit = row[1] or DAILY_LIMIT_NORMAL
+            return {"success": False, "message": f"今日额度已用完 ({used}/{limit})"}
+        # 读取更新后的最新状态
+        row = sess.execute(text("SELECT daily_credits_used, daily_credits_limit, total_generations, activity_score, is_gray FROM beta_users WHERE user_id=:u"), {"u": user_id}).fetchone()
+        if row is None:
+            return {"success": False, "message": "用户不存在"}
+        nu, limit, ng, ns, is_gray = row[0] or 0, row[1] or DAILY_LIMIT_NORMAL, row[2] or 0, row[3] or 0, bool(row[4] or 0)
     finally:
         sess.close()
     if not is_gray and ns >= GRAY_THRESHOLD_SCORE and ng >= GRAY_THRESHOLD_GENS:

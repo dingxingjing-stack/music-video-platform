@@ -40,9 +40,9 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   if (blocked) return <Under13BlockedModal />;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { status } = useUserGrayStatus('beta_user');
-  const { muted, toggle } = useSound();
   const { isLoggedIn, user, setShowLogin, logout } = useAuth();
+  const { status } = useUserGrayStatus(user?.id);
+  const { muted, toggle } = useSound();
 
   const tr = (k: string, fallback: string) => {
     const v = t(k);
