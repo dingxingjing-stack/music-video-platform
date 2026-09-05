@@ -46,6 +46,7 @@ async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
     """Helper: run a workflow coroutine in background, handle exceptions, and refund quota on failure."""
     user_key = kwargs.pop("user_key", None)
     reserved = kwargs.pop("reserved", False)
+    duration = kwargs.pop("duration", None)
     logger.info("Workflow task starting: %s(%s, %s)", coroutine_fn.__name__, args, kwargs)
     try:
         await coroutine_fn(*args, **kwargs)
@@ -64,7 +65,7 @@ async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
             if task_id:
                 task = task_store.get(task_id)
                 if task and task.get("state") == "failed":
-                    ai_limits.refund_generation(user_key)
+                    ai_limits.refund_generation(user_key, duration, reason="provider_failed")
 
 
 # ---------------------------------------------------------------------------
@@ -84,15 +85,16 @@ async def workflow_path_a(request: Request):
     if not prompt:
         raise HTTPException(status_code=422, detail="'prompt' is required")
 
-    # Extract user_key (same as ai_music)
+    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
     x_user_id = request.headers.get("X-User-ID")
-    user_key = x_user_id or body.get("user_id") or (request.client.host if request.client else None)
-    if not user_key:
-        raise HTTPException(status_code=403, detail="Missing user identification")
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    user_key = x_user_id
 
     # Skip quota check in mock mode
+    duration = float(body.get("duration", 10.0))
     if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key)
+        reserved_result = ai_limits.reserve_generation(user_key, duration)
         if not reserved_result["success"]:
             raise HTTPException(status_code=429, detail=reserved_result["error"])
         reserved = True
@@ -103,7 +105,7 @@ async def workflow_path_a(request: Request):
     if not task_store.acquire_lock(user_key, task_id):
         task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key)
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -116,7 +118,7 @@ async def workflow_path_a(request: Request):
             engine.run_path_a,
             task_id,
             prompt=prompt,
-            duration=float(body.get("duration", 10.0)),
+            duration=duration,
             temperature=float(body.get("temperature", 0.8)),
             user_key=user_key,
             reserved=reserved,
@@ -152,15 +154,16 @@ async def workflow_path_b(request: Request):
             detail="'prompt' and 'tts_text' are required",
         )
 
-    # Extract user_key (same as ai_music)
+    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
     x_user_id = request.headers.get("X-User-ID")
-    user_key = x_user_id or body.get("user_id") or (request.client.host if request.client else None)
-    if not user_key:
-        raise HTTPException(status_code=403, detail="Missing user identification")
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    user_key = x_user_id
 
     # Skip quota check in mock mode
+    duration = float(body.get("duration", 10.0))
     if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key)
+        reserved_result = ai_limits.reserve_generation(user_key, duration)
         if not reserved_result["success"]:
             raise HTTPException(status_code=429, detail=reserved_result["error"])
         reserved = True
@@ -171,7 +174,7 @@ async def workflow_path_b(request: Request):
     if not task_store.acquire_lock(user_key, task_id):
         task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key)
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -185,7 +188,7 @@ async def workflow_path_b(request: Request):
             task_id,
             prompt=prompt,
             tts_text=tts_text,
-            duration=float(body.get("duration", 10.0)),
+            duration=duration,
             tts_language=body.get("tts_language", "zh"),
             reference_audio_b64=body.get("reference_audio"),
             user_key=user_key,
@@ -221,15 +224,16 @@ async def workflow_path_c(request: Request):
             detail="'audio_base64' is required",
         )
 
-    # Extract user_key (same as ai_music)
+    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
     x_user_id = request.headers.get("X-User-ID")
-    user_key = x_user_id or body.get("user_id") or (request.client.host if request.client else None)
-    if not user_key:
-        raise HTTPException(status_code=403, detail="Missing user identification")
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    user_key = x_user_id
 
     # Skip quota check in mock mode
+    duration = 10.0  # Path C uses fixed weight=1 for stem separation
     if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key)
+        reserved_result = ai_limits.reserve_generation(user_key, duration)
         if not reserved_result["success"]:
             raise HTTPException(status_code=429, detail=reserved_result["error"])
         reserved = True
@@ -240,7 +244,7 @@ async def workflow_path_c(request: Request):
     if not task_store.acquire_lock(user_key, task_id):
         task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key)
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -257,6 +261,7 @@ async def workflow_path_c(request: Request):
             remove_reverb=bool(body.get("remove_reverb", False)),
             user_key=user_key,
             reserved=reserved,
+            duration=duration,
         )
     )
 
@@ -288,15 +293,16 @@ async def workflow_path_d(request: Request):
             detail="'midi_project' is required",
         )
 
-    # Extract user_key (same as ai_music)
+    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
     x_user_id = request.headers.get("X-User-ID")
-    user_key = x_user_id or body.get("user_id") or (request.client.host if request.client else None)
-    if not user_key:
-        raise HTTPException(status_code=403, detail="Missing user identification")
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    user_key = x_user_id
 
     # Skip quota check in mock mode
+    duration = 10.0  # Path D uses fixed weight=1 for MIDI render
     if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key)
+        reserved_result = ai_limits.reserve_generation(user_key, duration)
         if not reserved_result["success"]:
             raise HTTPException(status_code=429, detail=reserved_result["error"])
         reserved = True
@@ -307,7 +313,7 @@ async def workflow_path_d(request: Request):
     if not task_store.acquire_lock(user_key, task_id):
         task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key)
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -324,6 +330,7 @@ async def workflow_path_d(request: Request):
             soundfont_path=body.get("soundfontPath"),
             user_key=user_key,
             reserved=reserved,
+            duration=duration,
         )
     )
 

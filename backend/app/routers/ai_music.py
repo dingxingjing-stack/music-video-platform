@@ -48,7 +48,7 @@ from app.services.ai_limits import (
     refund_generation,
     generation_usage_status,
     check_and_log_download,
-    budget_hard_stop_reached,
+    global_hard_stop_reached,
 )
 from app.services import task_store
 from app.services.cdn_uploader import cdn_uploader
@@ -191,7 +191,7 @@ class GenerateRequest(BaseModel):
     duration: Optional[int] = None
     lyrics: Optional[str] = None
     type: str = "song"
-    user_id: Optional[str] = None  # 兼容旧调用；优先使用 X-User-ID 请求头
+    user_id: Optional[str] = None  # 已废弃：仅保留 schema 兼容，绝不参与身份/授权。身份只来自 X-User-ID 请求头。
 
 
 class GenerateResponse(BaseModel):
@@ -300,7 +300,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
                 raise RuntimeError(long_result.get("error") if long_result and long_result.get("error") else "长生成失败")
             except Exception as e:
                 # 长生成失败需退款（按权重）
-                refund_generation(user_key, duration)
+                refund_generation(user_key, duration, reason="provider_failed")
                 task_store.update(task_id, state="failed", error=f"长生成失败: {type(e).__name__}: {e}")
                 return
 
@@ -356,23 +356,23 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             task_id, state="failed",
             error="音乐生成失败：ACE-Step(Modal) 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
         )
-        refund_generation(user_key, duration)
+        refund_generation(user_key, duration, reason="provider_failed")
     except QueueFullError as e:
         _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
         task_store.update(task_id, state="failed", error=str(e))
-        refund_generation(user_key, request.duration)
+        refund_generation(user_key, request.duration, reason="request_not_sent")
     except HTTPException:
         task_store.update(task_id, state="failed", error="请求参数错误")
-        refund_generation(user_key, request.duration)
+        refund_generation(user_key, request.duration, reason="validation_failed")
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key, request.duration)
+        refund_generation(user_key, request.duration, reason="timeout_unknown")
     except Exception as e:  # noqa: BLE001
         import traceback
         print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
-        refund_generation(user_key, getattr(request, 'duration', None))
+        refund_generation(user_key, getattr(request, 'duration', None), reason="provider_failed")
     finally:
         task_store.release_lock_for_task(task_id)
 
@@ -487,7 +487,7 @@ async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: st
         )
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key, request.duration)
+        refund_generation(user_key, request.duration, reason="timeout_unknown")
         task_store.release_lock_for_task(task_id)
 
 
@@ -499,13 +499,16 @@ async def generate_music(
 ):
     """提交 AI 音乐生成任务，立即返回 task_id。
 
-    用户绑定优先级：X-User-ID 请求头 > 请求体 user_id > 客户端 IP。
+    身份唯一来源：X-User-ID 请求头（缺失则 401 拒绝）。
     job 在创建时即绑定该 user_key，下载/重试均以此归属校验。
     """
     if not req.prompt or len(req.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
 
-    user_key = x_user_id or req.user_id or (request.client.host if request.client else None)
+    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    user_key = x_user_id
     if task_store.is_user_busy(user_key):
         return GenerateResponse(
             success=False,
@@ -655,8 +658,10 @@ async def retry_stems(
     if task.get("stems_state") == "ok":
         raise HTTPException(status_code=409, detail="分轨已生成，无需重试")
 
-    # GPU 预算硬停线：达到后不启动分轨（重试分轨同样消耗算力，不允许绕过预算）
-    if budget_hard_stop_reached():
+    # 全平台成本硬停线：达到后不启动分轨。
+    # 全局硬停覆盖 GLOBAL_DAILY_GENERATION_LIMIT 与 GPU 预算的较小者，
+    # 重试分轨同样消耗算力，不得绕过任何成本保护。
+    if global_hard_stop_reached():
         raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
 
     volume_files = task.get("volume_files") or {}
@@ -673,6 +678,16 @@ async def retry_stems(
             status_code=429,
             detail=f"分轨重试次数已达上限（{MAX_AUTO_RETRIES} 次），请稍后再试",
         )
+
+    # 原子抢占：把任务状态从「可重试终态」→「separating」。
+    # 数据库条件 UPDATE + rowcount 判定：20 个并发 retry 只有第一个成功，
+    # 其余 rowcount==0 → 拒绝，杜绝同时启动多个 Spleeter GPU。
+    if not task_store.try_transition_state(
+        task_id,
+        from_states=("completed", "completed_with_stems_failed"),
+        to_state="separating",
+    ):
+        raise HTTPException(status_code=429, detail="分轨重试已在进行中，请稍后再试")
 
     # 借用同一任务槽位（不重复扣额度，分轨免费）
     task_store.update(task_id, stem_retries=(task.get("stem_retries") or 0) + 1)

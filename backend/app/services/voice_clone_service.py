@@ -20,6 +20,9 @@ class VoiceSample(BaseModel):
     created_at: str
     is_private: bool = False
     owner_id: str = ""
+    # ASR 转写缓存：克隆时若已存在则复用，避免对同一参考音频重复转写
+    prompt_text: str = ""
+    prompt_language: str = ""
 
 class VoiceCloneRequest(BaseModel):
     voice_id: Optional[str] = None
@@ -73,6 +76,33 @@ class VoiceCloneService:
         public = self.presets
         private = [v for v in self._private if v.owner_id == user_id]
         return public + private
+
+    def find_voice(self, voice_id: str) -> Optional[VoiceSample]:
+        """按 voice_id 查找音色（官方预设 + 用户私有），找不到返回 None。
+
+        供 voice_clone_task._resolve_transcript 复用已缓存的 ASR 转写。
+        """
+        if not voice_id:
+            return None
+        for v in self.presets + self._private:
+            if v.id == voice_id:
+                return v
+        return None
+
+    def record_transcript(self, voice_id: str, prompt_text: str,
+                          prompt_language: str, detected_language: str = "") -> None:
+        """把 ASR 转写结果写回音色缓存（prompt_text/prompt_language）。
+
+        目的：对同一 voice_id 的后续克隆直接复用转写，避免重复 ASR。
+        容错：voice_id 不存在（如临时参考音频）时静默跳过，不影响主流程。
+        """
+        voice = self.find_voice(voice_id)
+        if voice is None:
+            return
+        # 仅在尚未缓存时写入，显式/既有转写不被覆盖
+        if not voice.prompt_text:
+            voice.prompt_text = prompt_text
+            voice.prompt_language = prompt_language or "auto"
 
     def get_quota(self, user_id: str) -> QuotaInfo:
         used = self._monthly_count(user_id)

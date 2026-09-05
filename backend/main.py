@@ -178,6 +178,11 @@ TTS_BACKEND_MODE = os.getenv("TTS_BACKEND_MODE", "mock").lower()
 # Workflow mode: "mock" uses simulated services, "real" uses HF Spaces
 WORKFLOW_MODE = os.getenv("WORKFLOW_MODE", "mock").lower()
 
+# P0-4-C: 生产 Fail-Closed —— ENVIRONMENT=production 时禁止以 mock / 缺失 WORKFLOW_MODE 启动。
+# 复用项目现有 ENVIRONMENT 机制（database.py 已定义）。production 必须显式 WORKFLOW_MODE=real。
+from app.services.workflow_mode import validate_workflow_mode_for_production
+validate_workflow_mode_for_production()
+
 from app.services.inference import (
     InferenceServiceFactory,
     PredictRequest,

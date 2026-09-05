@@ -23,6 +23,7 @@ from typing import Optional, Dict, Any
 
 from app.services.heartmula_service import get_heartmula_service, HeartMuLaRequest, HeartMuLaLocalError
 from app.services.cdn_uploader import cdn_uploader
+from app.services import ai_limits
 
 router = APIRouter(prefix="/api/v1/heartmula", tags=["heartmula"])
 
@@ -82,24 +83,32 @@ async def generate_music(
     # 验证输入
     if not req.prompt or len(req.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
-    
-    # 获取服务（自动根据 HEARTMULA_LOCAL_ENABLED 选择模式）
+
+    # 身份唯一可信来源：X-User-ID 请求头。缺失则拒绝，不得启动 GPU。
+    if not x_user_id or not x_user_id.strip():
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+
+    # 先确认服务可用（此时尚未启动 GPU），避免预留额度后因服务不可用而泄漏额度。
     service = get_heartmula_service()
     if service is None:
         raise HTTPException(
             status_code=503,
             detail="HeartMuLa 服务不可用：HEARTMULA_LOCAL_ENABLED=false 且未配置 HEARTMULA_API_KEY"
         )
-    
     if not service.local_mode:
         raise HTTPException(
             status_code=503,
             detail="当前为 API 模式，本地推理端点需要 HEARTMULA_LOCAL_ENABLED=true"
         )
-    
+
+    # 额度 gate：真实 GPU 生成前必须先原子预留额度，不足则拒绝。
+    reserved = ai_limits.reserve_generation(x_user_id, req.duration)
+    if not reserved["success"]:
+        raise HTTPException(status_code=429, detail=reserved["error"])
+
     # 任务 ID
     task_id = f"heartmula-{uuid.uuid4().hex[:8]}"
-    
+
     try:
         # 转换为内部请求格式
         internal_request = HeartMuLaRequest(
@@ -109,16 +118,18 @@ async def generate_music(
             top_k=req.topk,
             temperature=req.temperature,
         )
-        
+
         # 生成音乐
         result = await service.generate_music(internal_request)
-        
+
         if not result.get("success"):
+            # 生成失败：退还预留额度，避免错误扣减。
+            ai_limits.refund_generation(x_user_id, req.duration, reason="provider_failed")
             raise HTTPException(
                 status_code=500,
                 detail=result.get("error", "生成失败")
             )
-        
+
         return GenerateResponse(
             success=True,
             audio_url=result["audio_url"],
@@ -129,13 +140,15 @@ async def generate_music(
             task_id=result.get("task_id", task_id),
             metadata=result.get("metadata"),
         )
-        
+
     except HeartMuLaLocalError as e:
+        ai_limits.refund_generation(x_user_id, req.duration, reason="provider_failed")
         raise HTTPException(status_code=500, detail=f"本地推理错误: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        # 捕获所有未预期异常，返回 500
+        # 捕获所有未预期异常；退还额度并返回 500。
+        ai_limits.refund_generation(x_user_id, req.duration, reason="provider_failed")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"生成异常: {type(e).__name__}: {str(e)}")

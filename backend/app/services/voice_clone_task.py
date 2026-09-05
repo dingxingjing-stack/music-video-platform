@@ -155,7 +155,7 @@ async def run_voice_clone(
             voice_id, audio_bytes, prompt_text, prompt_language,
         )
 
-        task_store.update(task_id, state="processing", progress=35, prompt_text=prompt_text, prompt_language=prompt_language)
+        task_store.update(task_id, state="processing", progress=35)
         await _broadcast(task_id, TaskStatus.LOADING, 35, "参考音频识别完成，上传参考音频...", voice_id=voice_id)
 
         ref_name = await upload_ref_audio(voice_id, audio_bytes)

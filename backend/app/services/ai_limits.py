@@ -8,13 +8,16 @@
 原子性保证：
 - global_usage 使用条件自增 UPDATE ... WHERE count < cap（PG/SQLite 通用），rowcount==0 即达限，并发安全
 - generation_usage 使用 ON CONFLICT upsert + CASE 切换日期，避免 SELECT-then-UPDATE 竞态
-- 下载限流同事务内 SELECT COUNT + INSERT，PG 下由事务隔离保证（SERIALIZABLE 不必要，条件计数已在同一事务）
+- beta_users 使用条件更新 WHERE ... + amount <= limit，避免竞态
+- 统一额度预留在单一数据库事务中完成：全部成功或全部回滚，无部分消费残留
+- 下载限流同事务内 SELECT COUNT + INSERT，PG 下由事务隔离保证
 """
 from __future__ import annotations
 
 import os
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 # 保留原常量（环境变量覆盖）
@@ -28,6 +31,10 @@ MAX_TASK_RUNTIME_SECONDS = int(os.getenv("MAX_TASK_RUNTIME_SECONDS", "900"))
 DOWNLOAD_RATE_LIMIT = int(os.getenv("DOWNLOAD_RATE_LIMIT", "10"))
 DOWNLOAD_RATE_WINDOW_SECONDS = int(os.getenv("DOWNLOAD_RATE_WINDOW_SECONDS", "3600"))
 MODAL_BUDGET_DAILY = os.getenv("FAL_BUDGET_DAILY") or os.getenv("GPU_BUDGET_DAILY") or os.getenv("MODAL_BUDGET_DAILY", "")
+
+# beta_users 默认值（与 beta_service 对齐）
+DAILY_LIMIT_NORMAL = 10
+DAILY_LIMIT_GRAY = 30
 
 # ── 为测试兼容保留旧变量（测试会 monkeypatch _DB_PATH） ──
 _DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
@@ -91,6 +98,31 @@ def budget_hard_stop_reached() -> bool:
         finally:
             sess.close()
 
+def global_hard_stop_reached() -> bool:
+    """全平台成本硬停判断（只读、不扣额度）。
+
+    覆盖更全的 global 硬停线：取 min(GLOBAL_DAILY_GENERATION_LIMIT, GPU 预算)。
+    用于「不纳入用户 generation quota 但仍会消耗真实 GPU 成本」的只读口，
+    例如 retry-stems（分轨重试不计普通生成额度，但必须受全平台 cost 保护）。
+
+    返回 True 表示已达到全平台硬停，应拒绝任何新的 GPU 工作。
+    """
+    today = _today()
+    with _DB_LOCK:
+        sess = _get_session()
+        try:
+            from sqlalchemy import text
+            row = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
+            cnt = int(row[0]) if row else 0
+        finally:
+            sess.close()
+    # 上限 = 全平台每日上限 与 GPU 预算 的较小者（与 reserve_generation 的 cap 语义一致）
+    cap = GLOBAL_DAILY_GENERATION_LIMIT
+    budget_lim = budget_daily_limit()
+    if budget_lim is not None and budget_lim < cap:
+        cap = budget_lim
+    return cnt >= cap
+
 def check_and_log_download(user_id: str, job_id: str, file_type: str, ip_address: str = "") -> bool:
     if not user_id:
         return True
@@ -136,6 +168,25 @@ def get_duration_weight(duration: int | None) -> int:
     return 2 if d > 120 else 1
 
 def reserve_generation(user_id: str, duration: int | None = None) -> dict[str, Any]:
+    """
+    统一额度预留 —— 全部真实 AI 生成的唯一权威入口。
+
+    在**单一数据库事务**中原子性完成四层检查 + 四层扣减（全过才提交，任一失败整体回滚）：
+    1. beta_users 权益（每日 credits）：daily_credits_used + weight <= daily_credits_limit
+       —— 权威限额来源是 beta_users.daily_credits_limit（10 普通 / 30 灰度），
+          由 beta_service 灰度升级时写入，此处只读、不再硬编码 10/30 双份。
+    2. generation_usage 每日生成数：daily_count + weight <= DAILY_GENERATION_LIMIT
+    3. generation_usage 每月生成数：monthly_count + weight <= MONTHLY_GENERATION_LIMIT
+    4. global_usage 全平台硬停：count < min(GLOBAL_DAILY_GENERATION_LIMIT, GPU 预算)
+
+    并发安全（不依赖 Python threading.Lock，跨进程/Worker 有效）：
+    - PostgreSQL：BEGIN 后对 beta_users 用户行 `SELECT ... FOR UPDATE` 加行级锁，
+      序列化同一用户的所有预留；global_usage 用 `UPDATE ... WHERE count < cap`
+      条件自增（rowcount==0 即达限）做跨用户硬停。
+    - SQLite（开发/测试）：写事务自带库级锁；beta_users 的最终扣减是单条
+      条件 UPDATE（`WHERE used + weight <= limit`）原子判定 rowcount，杜绝
+      SELECT-then-UPDATE 竞态导致的超卖。
+    """
     if not user_id:
         return {"success": False, "error": "缺少用户标识（X-User-ID）"}
     today, mkey = _today(), _month_key()
@@ -144,85 +195,199 @@ def reserve_generation(user_id: str, duration: int | None = None) -> dict[str, A
     cap = GLOBAL_DAILY_GENERATION_LIMIT
     if budget_lim is not None and budget_lim < cap:
         cap = budget_lim
-    with _DB_LOCK:
-        sess = _get_session()
-        try:
-            from sqlalchemy import text
-            sess.execute(text("BEGIN"))
-            # 读用户计数（for update 语义：PG 下锁行，SQLite 下事务已锁）
-            try:
-                row = sess.execute(text("SELECT daily_count, month_key, monthly_count, date FROM generation_usage WHERE user_id=:u"), {"u": user_id}).fetchone()
-            except Exception:
-                row = None
-            daily = 0
-            monthly = 0
-            if row:
-                # row 可能是 tuple
-                r_date = row[3] if len(row) > 3 else None
-                r_month = row[1] if len(row) > 1 else None
-                r_daily = row[0] if len(row) > 0 else 0
-                r_monthly = row[2] if len(row) > 2 else 0
-                daily = r_daily if r_date == today else 0
-                monthly = r_monthly if r_month == mkey else 0
-            if daily + weight > DAILY_GENERATION_LIMIT:
-                sess.rollback()
-                return {"success": False, "error": f"今日生成额度已用完（{daily}/{DAILY_GENERATION_LIMIT}），300秒作品消耗 2 额度，请明天再试"}
-            if monthly + weight > MONTHLY_GENERATION_LIMIT:
-                sess.rollback()
-                return {"success": False, "error": f"本月生成额度已用完（{monthly}/{MONTHLY_GENERATION_LIMIT}）"}
-            # 原子全局计数：条件自增
-            sess.execute(text("INSERT INTO global_usage (date, count) VALUES (:d, 0) ON CONFLICT(date) DO NOTHING"), {"d": today})
-            cur = sess.execute(text("UPDATE global_usage SET count = count + 1 WHERE date=:d AND count < :cap"), {"d": today, "cap": cap})
-            if cur.rowcount == 0:
-                row2 = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
-                gcount = int(row2[0]) if row2 else 0
-                sess.rollback()
-                if budget_lim is not None and gcount >= budget_lim:
-                    return {"success": False, "error": "今日 GPU 预算已用尽，请明天再试"}
-                return {"success": False, "error": "今日全平台生成已达上限，请明天再试"}
-            row2 = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
-            gcount = int(row2[0]) if row2 else 1
-            # 原子 upsert 用户计数（按时长权重）
-            sess.execute(text("""
-                INSERT INTO generation_usage (user_id, date, daily_count, month_key, monthly_count)
-                VALUES (:u, :d, :dc, :mk, :mc)
-                ON CONFLICT(user_id) DO UPDATE SET
-                  date=excluded.date,
-                  daily_count=CASE WHEN generation_usage.date=excluded.date THEN generation_usage.daily_count+:w ELSE :w2 END,
-                  month_key=excluded.month_key,
-                  monthly_count=CASE WHEN generation_usage.month_key=excluded.month_key THEN generation_usage.monthly_count+:w ELSE :w2 END,
-                  updated_at=CURRENT_TIMESTAMP
-            """), {"u": user_id, "d": today, "dc": daily+weight, "mk": mkey, "mc": monthly+weight, "w": weight, "w2": weight})
-            sess.commit()
-            return {"success": True, "daily_used": daily+weight, "daily_limit": DAILY_GENERATION_LIMIT, "monthly_used": monthly+weight, "monthly_limit": MONTHLY_GENERATION_LIMIT, "global_used": gcount, "global_limit": GLOBAL_DAILY_GENERATION_LIMIT, "budget_daily_limit": budget_lim, "budget_daily_used": gcount, "weight": weight}
-        except Exception as e:
-            try:
-                sess.rollback()
-            except Exception:
-                pass
-            # 降级：若 PG 特有语法失败，返回错误而非突破限额
-            return {"success": False, "error": f"额度预留失败: {e}"}
-        finally:
-            sess.close()
 
-def refund_generation(user_id: str, duration: int | None = None) -> None:
+    sess = _get_session()
+    try:
+        from sqlalchemy import text
+        # 生产 PG 行级锁；SQLite 无 FOR UPDATE 语法，靠写事务 + 条件更新兜底
+        is_pg = "postgresql" in (sess.get_bind().dialect.name or "")
+        lock_clause = " FOR UPDATE" if is_pg else ""
+
+        sess.execute(text("BEGIN"))
+
+        # 1) 确保 beta_users 行存在（幂等，保留现有数据）
+        sess.execute(text("""
+            INSERT INTO beta_users (user_id, is_gray, daily_credits_used, daily_credits_limit, total_generations, activity_score, updated_at)
+            VALUES (:u, 0, 0, :lim, 0, 0, :ts)
+            ON CONFLICT(user_id) DO NOTHING
+        """), {"u": user_id, "lim": DAILY_LIMIT_NORMAL, "ts": datetime.now(timezone.utc).isoformat()})
+
+        # 2) 锁定并读取 beta_users 权益（权威限额来源 = 数据库行内 daily_credits_limit）
+        row = sess.execute(text(
+            "SELECT daily_credits_used, daily_credits_limit, is_gray "
+            "FROM beta_users WHERE user_id = :u" + lock_clause
+        ), {"u": user_id}).fetchone()
+
+        if not row:
+            sess.rollback()
+            return {"success": False, "error": "用户不存在"}
+
+        beta_used = row[0] or 0
+        beta_limit = row[1] or DAILY_LIMIT_NORMAL
+        is_gray = bool(row[2] or 0)
+
+        if beta_used + weight > beta_limit:
+            sess.rollback()
+            return {"success": False, "error": f"今日额度已用完（{beta_used}/{beta_limit}），300 秒作品消耗 2 额度，请明天再试"}
+
+        # 3) 读取 generation_usage 日/月计数（已被用户行锁串行化，PG 下无竞态）
+        gu = sess.execute(text(
+            "SELECT daily_count, monthly_count, date, month_key FROM generation_usage WHERE user_id=:u"
+        ), {"u": user_id}).fetchone()
+        daily = 0
+        monthly = 0
+        if gu:
+            r_date = gu[2] if len(gu) > 2 else None
+            r_month = gu[3] if len(gu) > 3 else None
+            daily = (gu[0] or 0) if r_date == today else 0
+            monthly = (gu[1] or 0) if r_month == mkey else 0
+
+        if daily + weight > DAILY_GENERATION_LIMIT:
+            sess.rollback()
+            return {"success": False, "error": f"今日生成额度已用完（{daily}/{DAILY_GENERATION_LIMIT}），300 秒作品消耗 2 额度，请明天再试"}
+
+        if monthly + weight > MONTHLY_GENERATION_LIMIT:
+            sess.rollback()
+            return {"success": False, "error": f"本月生成额度已用完（{monthly}/{MONTHLY_GENERATION_LIMIT}）"}
+
+        # 4) global_usage 全平台硬停：原子条件自增（跨用户，PG/SQLite 通用）
+        sess.execute(text("INSERT INTO global_usage (date, count) VALUES (:d, 0) ON CONFLICT(date) DO NOTHING"), {"d": today})
+        gcur = sess.execute(text(
+            "UPDATE global_usage SET count = count + :inc WHERE date=:d AND count < :cap"
+        ), {"d": today, "cap": cap, "inc": 1})
+        if gcur.rowcount == 0:
+            row2 = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
+            gcount = int(row2[0]) if row2 else 0
+            sess.rollback()
+            if budget_lim is not None and gcount >= budget_lim:
+                return {"success": False, "error": "今日 GPU 预算已用尽，请明天再试"}
+            return {"success": False, "error": "今日全平台生成已达上限，请明天再试"}
+
+        row2 = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
+        gcount = int(row2[0]) if row2 else 1
+
+        # 5) beta_users 条件扣减（最终守卫：单条原子 UPDATE + rowcount 判定）
+        ts = datetime.now(timezone.utc).isoformat()
+        bcur = sess.execute(text("""
+            UPDATE beta_users
+            SET daily_credits_used = COALESCE(daily_credits_used, 0) + :w,
+                total_generations   = COALESCE(total_generations, 0) + 1,
+                activity_score      = COALESCE(activity_score, 0) + 2,
+                updated_at          = :ts
+            WHERE user_id = :u
+              AND COALESCE(daily_credits_used, 0) + :w <= COALESCE(daily_credits_limit, :def_limit)
+        """), {"u": user_id, "w": weight, "ts": ts, "def_limit": DAILY_LIMIT_NORMAL})
+
+        if bcur.rowcount == 0:
+            # 并发极端情况：上面检查通过但扣减时已超限（SQLite 无行锁时的兜底）
+            sess.rollback()
+            return {"success": False, "error": "并发冲突，额度不足，请重试"}
+
+        # 6) generation_usage 日/月 upsert（同一事务内，与上面扣减一起提交/回滚）
+        sess.execute(text("""
+            INSERT INTO generation_usage (user_id, date, daily_count, month_key, monthly_count)
+            VALUES (:u, :d, :dc, :mk, :mc)
+            ON CONFLICT(user_id) DO UPDATE SET
+              date=excluded.date,
+              daily_count=CASE WHEN generation_usage.date=excluded.date THEN generation_usage.daily_count+:w ELSE :w2 END,
+              month_key=excluded.month_key,
+              monthly_count=CASE WHEN generation_usage.month_key=excluded.month_key THEN generation_usage.monthly_count+:w ELSE :w2 END,
+              updated_at=CURRENT_TIMESTAMP
+        """), {"u": user_id, "d": today, "dc": daily+weight, "mk": mkey, "mc": monthly+weight, "w": weight, "w2": weight})
+
+        # 7) 提交 —— 三表更新要么全部生效、要么全部回滚，无部分消费残留
+        sess.commit()
+
+        return {
+            "success": True,
+            "daily_used": daily+weight,
+            "daily_limit": DAILY_GENERATION_LIMIT,
+            "monthly_used": monthly+weight,
+            "monthly_limit": MONTHLY_GENERATION_LIMIT,
+            "global_used": gcount,
+            "global_limit": GLOBAL_DAILY_GENERATION_LIMIT,
+            "budget_daily_limit": budget_lim,
+            "budget_daily_used": gcount,
+            "weight": weight,
+            "beta_credits_used": beta_used + weight,
+            "beta_credits_limit": beta_limit,
+            "is_gray": is_gray,
+        }
+    except Exception as e:
+        try:
+            sess.rollback()
+        except Exception:
+            pass
+        # 降级：任何异常都回滚并失败，绝不突破限额
+        return {"success": False, "error": f"额度预留失败: {e}"}
+    finally:
+        sess.close()
+
+def refund_generation(user_id: str, duration: int | None = None, reason: str = "provider_failure") -> dict[str, Any]:
+    """
+    统一退款语义 —— 根据失败原因决定是否退还用户额度。
+    
+    Args:
+        reason: 失败原因，决定退款策略：
+            - "validation_failed"      : 验证失败，provider 请求未发送 → 无预留或立即回滚
+            - "request_not_sent"       : provider 请求确定未发送 → 回滚用户预留
+            - "provider_failed"        : provider 明确返回失败 → 回滚用户预留
+            - "timeout_unknown"        : 超时/未知结果，请求可能已发送 → **不退款**，防免费生成漏洞
+            - "persistence_failed"     : provider 成功但持久化失败 → **不退款**，可能已产生真实成本
+    
+    返回:
+        dict: {"success": bool, "refunded": bool, "weight": int, "reason": str, "error?: str"}
+    
+    注意: global_usage **永不退款**（成本保护硬停），防止 "失败→退款→重试" 空转 GPU 预算。
+    """
     if not user_id:
-        return
+        return {"success": False, "error": "缺少用户标识", "refunded": False}
+    
+    # 超时/未知结果、持久化失败 —— 不退款
+    if reason in ("timeout_unknown", "persistence_failed"):
+        return {"success": False, "error": f"不退款: {reason}", "refunded": False, "reason": reason}
+    
     weight = get_duration_weight(duration) if duration is not None else 1
     today, mkey = _today(), _month_key()
-    with _DB_LOCK:
-        sess = _get_session()
+    
+    sess = _get_session()
+    try:
+        from sqlalchemy import text
+        sess.execute(text("BEGIN"))
+        
+        # 退还 beta_users daily_credits_used（不低于 0）
+        sess.execute(text("""
+            UPDATE beta_users
+            SET daily_credits_used = CASE WHEN daily_credits_used >= :w THEN daily_credits_used - :w ELSE 0 END,
+                updated_at = :ts
+            WHERE user_id = :u
+        """), {"u": user_id, "w": weight, "ts": datetime.now(timezone.utc).isoformat()})
+        
+        # 退还 generation_usage（daily_count, monthly_count，不低于 0）。
+        # 注意：generation_usage.user_id 是主键，每用户只有一行；reserve 在跨日/跨月时会
+        # 用新 date/month_key 改写该行，因此退款必须按 user_id 单一条件扣减，
+        # 否则跨午夜 reserve/refund 不匹配旧日期行 → 出现部分退款（beta 退了、generation 漏退）。
+        sess.execute(text("""
+            UPDATE generation_usage
+            SET daily_count = CASE WHEN daily_count >= :w THEN daily_count - :w ELSE 0 END,
+                monthly_count = CASE WHEN monthly_count >= :w THEN monthly_count - :w ELSE 0 END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = :u
+        """), {"u": user_id, "w": weight})
+        
+        # global_usage 永不退款 —— 成本保护硬停
+        # 这是有意为之，防止 "失败→退款→重试" 空转 GPU 预算漏洞
+        
+        sess.commit()
+        return {"success": True, "refunded": True, "weight": weight, "reason": reason}
+    except Exception as e:
         try:
-            from sqlalchemy import text
-            sess.execute(text("UPDATE generation_usage SET daily_count = CASE WHEN daily_count>=:w THEN daily_count-:w ELSE 0 END, monthly_count = CASE WHEN monthly_count>=:w THEN monthly_count-:w ELSE 0 END, updated_at=CURRENT_TIMESTAMP WHERE user_id=:u AND date=:d AND month_key=:mk"), {"u": user_id, "d": today, "mk": mkey, "w": weight})
-            sess.commit()
+            sess.rollback()
         except Exception:
-            try:
-                sess.rollback()
-            except Exception:
-                pass
-        finally:
-            sess.close()
+            pass
+        return {"success": False, "error": f"退款失败: {e}", "refunded": False, "reason": reason}
+    finally:
+        sess.close()
 
 async def generation_usage_status(user_id: str) -> dict[str, Any]:
     today, mkey = _today(), _month_key()
@@ -249,7 +414,29 @@ async def generation_usage_status(user_id: str) -> dict[str, Any]:
                     daily = row[0]
                 if r_month == mkey:
                     monthly = row[2]
-            return {"user_id": user_id, "daily_used": daily, "daily_limit": DAILY_GENERATION_LIMIT, "monthly_used": monthly, "monthly_limit": MONTHLY_GENERATION_LIMIT, "global_daily_used": int(g[0]) if g else 0, "global_daily_limit": GLOBAL_DAILY_GENERATION_LIMIT, "budget_daily_limit": budget_daily_limit(), "budget_daily_used": int(g[0]) if g else 0}
+            # 同时返回 beta_users 状态
+            beta_row = None
+            try:
+                beta_row = sess.execute(text("SELECT daily_credits_used, daily_credits_limit, is_gray FROM beta_users WHERE user_id=:u"), {"u": user_id}).fetchone()
+            except Exception:
+                pass
+            beta_used = beta_row[0] if beta_row else 0
+            beta_limit = beta_row[1] if beta_row else DAILY_LIMIT_NORMAL
+            is_gray = bool(beta_row[2]) if beta_row else False
+            return {
+                "user_id": user_id,
+                "daily_used": daily,
+                "daily_limit": DAILY_GENERATION_LIMIT,
+                "monthly_used": monthly,
+                "monthly_limit": MONTHLY_GENERATION_LIMIT,
+                "global_daily_used": int(g[0]) if g else 0,
+                "global_daily_limit": GLOBAL_DAILY_GENERATION_LIMIT,
+                "budget_daily_limit": budget_daily_limit(),
+                "budget_daily_used": int(g[0]) if g else 0,
+                "beta_credits_used": beta_used,
+                "beta_credits_limit": beta_limit,
+                "is_gray": is_gray
+            }
         finally:
             sess.close()
 

@@ -122,6 +122,42 @@ def update(task_id: str, **kw: Any) -> None:
     finally:
         sess.close()
 
+def try_transition_state(task_id: str, from_states, to_state: str) -> bool:
+    """原子状态转换：仅当 task 当前 state 属于 from_states 时才更新为 to_state。
+
+    用数据库条件 UPDATE + rowcount 判定，跨进程/worker 安全（与 reserve_generation
+    的并发保证同构，不依赖 threading.Lock）。用于防止并发请求重复启动 GPU：
+    同一起点的多个并发请求中，只有第一个能成功把状态从「可重试终态」转换到
+    「进行中」，其余 rowcount==0 → 拒绝。
+
+    返回 True 表示本次调用成功抢占状态转换（唯一成功者）。
+    """
+    from sqlalchemy import text
+    if isinstance(from_states, str):
+        from_states = (from_states,)
+    placeholders = ", ".join(f":fs{i}" for i in range(len(from_states)))
+    params = {f"fs{i}": s for i, s in enumerate(from_states)}
+    params["tid"] = task_id
+    params["to"] = to_state
+    params["ua"] = time.time()
+    sess = _get_session()
+    try:
+        sess.execute(text("BEGIN"))
+        cur = sess.execute(text(
+            f"UPDATE ai_tasks SET state=:to, updated_at=:ua "
+            f"WHERE task_id=:tid AND state IN ({placeholders})"
+        ), params)
+        sess.commit()
+        return cur.rowcount == 1
+    except Exception:
+        try:
+            sess.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        sess.close()
+
 def get(task_id: str) -> Optional[Dict[str, Any]]:
     sess = _get_session()
     try:
