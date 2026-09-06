@@ -9,6 +9,8 @@ from typing import Optional, Dict
 from datetime import datetime
 import os
 
+from app.services.auth_identity import resolve_auth_user_id
+
 # 生产/已配置 Supabase 时优先 Supabase，否则回退 SQLite（本地/测试）
 _SUPABASE_CFG = bool(os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")))
 try:
@@ -57,11 +59,13 @@ async def register_user(user_data: UserCreate, authorization: Optional[str] = He
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header required")
-    
-    # 从 Header 中提取 user_id (实际应从 JWT 解析)
-    # 这里简化处理，实际应该用 Supabase Auth 验证 JWT
-    supabase_user_id = authorization.replace("Bearer ", "")
-    
+
+    # 正确验证 Bearer JWT（Supabase Auth），取 auth user id（UUID）；
+    # 禁止把整段 JWT 当作 user_id。验证失败 → 401。
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
     # 检查用户是否已存在
     existing_user = get_user(supabase_user_id)
     if existing_user:
@@ -95,13 +99,15 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header required")
-    
-    supabase_user_id = authorization.replace("Bearer ", "")
-    
+
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
     user = get_user(supabase_user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     return UserResponse(**user)
 
 
@@ -158,8 +164,10 @@ async def consume_user_credits(
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization required")
-    
-    supabase_user_id = authorization.replace("Bearer ", "")
+
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = get_user(supabase_user_id)
     
     if not user:
@@ -201,9 +209,9 @@ async def get_user_stats(user_id: str):
         .execute()
     
     # 获取任务数量
-    tasks_response = supabase.table("tasks")\
-        .select("id", count="exact")\
-        .eq("user_id", user_id)\
+    tasks_response = supabase.table("ai_tasks")\
+        .select("task_id", count="exact")\
+        .eq("user_key", user_id)\
         .execute()
     
     user = get_user(user_id)

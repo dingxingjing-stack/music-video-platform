@@ -1,6 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Header, status
 from pydantic import BaseModel
 from app.services.feedback_service import create_feedback, get_feedback
+from app.services.auth_identity import resolve_auth_user_id
+from app.services.supabase_service import get_user
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["feedback"])
 
@@ -17,17 +21,29 @@ class FeedbackResponse(BaseModel):
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def submit_feedback(
     feedback: FeedbackCreate,
-    # user: dict | None = Depends(get_current_user_optional)  # Optional auth
+    authorization: Optional[str] = Header(None),
 ):
-    # For guest mode, we allow submission without auth
-    # If you want to require auth, uncomment the dependency and use user info
+    """提交反馈。
+
+    真实 feedback 表要求 user_id(uuid, FK users.id) + content + text 均 NOT NULL，
+    因此必须能解析出认证用户：Bearer JWT 经 Supabase Auth 验证 → auth user id
+    → users.supabase_user_id 映射到 users.id。无法识别用户则 fail-closed 401，
+    不写入会违反约束或破坏外键的记录。
+    """
+    name = feedback.name.strip() if feedback.name and feedback.name.strip() else "匿名用户"
+    text = feedback.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Feedback text cannot be empty")
+
+    auth_user_id = resolve_auth_user_id(authorization)
+    if not auth_user_id:
+        raise HTTPException(status_code=401, detail="请先登录后再提交反馈")
+    user = get_user(auth_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     try:
-        # Use provided name or default to anonymous
-        name = feedback.name.strip() if feedback.name and feedback.name.strip() else "匿名用户"
-        text = feedback.text.strip()
-        if not text:
-            raise HTTPException(status_code=400, detail="Feedback text cannot be empty")
-        result = create_feedback(name, text)
+        result = create_feedback(name, text, user["id"])
         return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

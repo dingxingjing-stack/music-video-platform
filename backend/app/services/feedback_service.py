@@ -2,9 +2,13 @@ from app.services.supabase_service import supabase
 from postgrest.exceptions import APIError
 from typing import Dict, Any
 
-def create_feedback(name: str, text: str) -> Dict[str, Any]:
-    """Create a new feedback entry in the database."""
-    data = {"name": name, "text": text}
+def create_feedback(name: str, text: str, user_id: str) -> Dict[str, Any]:
+    """Create a new feedback entry in the database.
+
+    真实 Supabase feedback 表要求 user_id uuid NOT NULL、content text NOT NULL、
+    text NOT NULL。user_id 必须来自认证用户对应的 users.id（UUID）。
+    """
+    data = {"user_id": user_id, "name": name, "text": text, "content": text}
     try:
         response = supabase.table("feedback").insert(data).execute()
         return response.data[0]

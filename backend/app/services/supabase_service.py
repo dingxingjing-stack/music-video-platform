@@ -71,9 +71,20 @@ def create_user(email: str, supabase_user_id: str, username: Optional[str] = Non
         raise
 
 def get_user(user_id: str) -> Optional[Dict]:
-    """Get user by internal user ID."""
+    """Get user by internal ID or Supabase Auth user ID.
+
+    UUID 安全：users.id 是 uuid 列，若传入值不是合法 UUID（例如 JWT、
+    任意字符串），直接查询 users.id 会触发 PG 「invalid input syntax for type uuid」。
+    因此仅在输入确为 UUID 时才查 id；非 UUID 直接查 supabase_user_id。
+    """
+    from app.services.auth_identity import is_uuid
     try:
-        response = supabase.table("users").select("*").eq("id", user_id).execute()
+        if is_uuid(user_id):
+            response = supabase.table("users").select("*").eq("id", user_id).execute()
+            if response.data:
+                return response.data[0]
+
+        response = supabase.table("users").select("*").eq("supabase_user_id", user_id).execute()
         return response.data[0] if response.data else None
     except APIError as e:
         print(f"Error fetching user: {e}")
@@ -143,12 +154,18 @@ def get_feedback(limit: int = 50, offset: int = 0) -> List[Dict]:
         print(f"Error fetching feedback: {e}")
         return []
 
-def create_feedback(name: str, text: str) -> Dict:
-    """Create a new feedback entry."""
+def create_feedback(name: str, text: str, user_id: str) -> Dict:
+    """Create a new feedback entry（对齐真实 schema）。
+
+    生产 feedback 表要求 user_id uuid NOT NULL、content text NOT NULL、text NOT NULL。
+    三者都必须写入；user_id 必须是 users.id 的合法 UUID（由路由层从认证身份解析）。
+    """
     try:
         feedback_data = {
+            "user_id": user_id,
             "name": name,
             "text": text,
+            "content": text,
         }
         response = supabase.table("feedback").insert(feedback_data).execute()
         return response.data[0]
@@ -165,7 +182,12 @@ def get_user_songs(user_id: str, limit: int = 50, offset: int = 0) -> List[Dict]
 
 def log_activity(user_id: str, action: str, resource_type: str = "",
                  resource_id: str = "", metadata: Optional[Dict] = None) -> Any:
-    """记录活动日志（Supabase activity_logs；表/列缺失时安全降级，不抛错）。"""
+    """记录活动日志。
+
+    注意：生产 Supabase 没有 activity_logs 表，本函数刻意降级为 no-op（返回 None），
+    只打 debug 日志，绝不阻断注册/登录/下单等主流程，也不创建该表。
+    """
+    import logging
     try:
         row: Dict[str, Any] = {"user_id": user_id, "action": action}
         if resource_type:
@@ -176,7 +198,10 @@ def log_activity(user_id: str, action: str, resource_type: str = "",
             row["metadata"] = metadata
         supabase.table("activity_logs").insert(row).execute()
         return True
-    except Exception:
+    except Exception as exc:  # noqa: BLE001 —— activity_logs 缺失/写失败仅记日志
+        logging.getLogger(__name__).debug(
+            "log_activity 降级为 no-op（activity_logs 不可用）: %s", type(exc).__name__
+        )
         return None
 
 def _adjust_user_credits(user_id: str, delta: int) -> Any:

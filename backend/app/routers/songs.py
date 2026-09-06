@@ -10,22 +10,24 @@ from datetime import datetime
 import uuid
 import os
 
+from app.services.auth_identity import resolve_auth_user_id
+
 # 生产/已配置 Supabase 时优先 Supabase，否则回退 SQLite（本地/测试）
 _SUPABASE_CFG = bool(os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")))
 try:
     if _SUPABASE_CFG:
         from app.services.supabase_service import (
-            get_user, create_song, get_user_songs, log_activity
+            get_user, create_song, get_user_songs, log_activity, decrement_user_credits
         )
         DB_BACKEND = "supabase"
     else:
         from app.services.sqlite_service import (
-            get_user, create_song, get_user_songs, log_activity
+            get_user, create_song, get_user_songs, log_activity, decrement_user_credits
         )
         DB_BACKEND = "sqlite"
 except ImportError:
     from app.services.sqlite_service import (
-        get_user, create_song, get_user_songs, log_activity
+        get_user, create_song, get_user_songs, log_activity, decrement_user_credits
     )
     DB_BACKEND = "sqlite"
 
@@ -71,7 +73,9 @@ async def create_new_song(
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization required")
     
-    supabase_user_id = authorization.replace("Bearer ", "")
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = get_user(supabase_user_id)
     
     if not user:
@@ -88,18 +92,19 @@ async def create_new_song(
         # 创建歌曲记录
         song = create_song(
             user_id=user["id"],
-            title=song_data.title,
-            lyrics=song_data.lyrics,
-            style=song_data.style,
-            duration_seconds=song_data.duration_seconds,
-            is_public=song_data.is_public,
-            metadata=song_data.metadata or {}
+            song_data={
+                "title": song_data.title,
+                "lyrics": song_data.lyrics,
+                "style": song_data.style,
+                "duration_seconds": song_data.duration_seconds,
+                "is_public": song_data.is_public,
+                "metadata": song_data.metadata or {},
+            },
         )
-        
+
         # 扣除额度
-        from app.services.sqlite_service import decrement_user_credits
         decrement_user_credits(user["id"], 1)
-        
+
         # 记录日志
         log_activity(
             user_id=user["id"],
@@ -125,7 +130,9 @@ async def list_user_songs(
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization required")
     
-    supabase_user_id = authorization.replace("Bearer ", "")
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = get_user(supabase_user_id)
     
     if not user:
@@ -154,12 +161,13 @@ async def get_song(song_id: str, authorization: Optional[str] = Header(None)):
     
     song = response.data[0]
     
-    # 检查权限
+    # 检查权限（可选认证：仅当带 Authorization 时尝试识别所有者）
     if authorization:
-        supabase_user_id = authorization.replace("Bearer ", "")
-        user = get_user(supabase_user_id)
-        if user and song["user_id"] == user["id"]:
-            return SongResponse(**song)
+        supabase_user_id = resolve_auth_user_id(authorization)
+        if supabase_user_id:
+            user = get_user(supabase_user_id)
+            if user and song["user_id"] == user["id"]:
+                return SongResponse(**song)
     
     # 公开歌曲任何人都可访问
     if song["is_public"]:
@@ -182,7 +190,9 @@ async def update_song(
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization required")
     
-    supabase_user_id = authorization.replace("Bearer ", "")
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = get_user(supabase_user_id)
     
     if not user:
@@ -228,7 +238,9 @@ async def delete_song(song_id: str, authorization: Optional[str] = Header(None))
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization required")
     
-    supabase_user_id = authorization.replace("Bearer ", "")
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = get_user(supabase_user_id)
     
     if not user:
@@ -269,7 +281,9 @@ async def publish_song(song_id: str, authorization: Optional[str] = Header(None)
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization required")
     
-    supabase_user_id = authorization.replace("Bearer ", "")
+    supabase_user_id = resolve_auth_user_id(authorization)
+    if not supabase_user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = get_user(supabase_user_id)
     
     if not user:
@@ -310,3 +324,6 @@ async def get_song_stats(song_id: str):
         "play_count": song["play_count"],
         "like_count": song["like_count"]
     }
+
+
+
