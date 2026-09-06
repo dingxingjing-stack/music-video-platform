@@ -10,7 +10,7 @@ from datetime import datetime
 import uuid
 import os
 
-from app.services.auth_identity import resolve_auth_user_id
+from app.services.auth_identity import resolve_auth_user_id, is_uuid
 
 # 生产/已配置 Supabase 时优先 Supabase，否则回退 SQLite（本地/测试）
 _SUPABASE_CFG = bool(os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")))
@@ -153,7 +153,12 @@ async def get_song(song_id: str, authorization: Optional[str] = Header(None)):
     获取歌曲详情
     """
     from app.services.supabase_service import supabase
-    
+
+    # songs.id 为 uuid 类型：非 UUID 的 song_id 必然查不到任何歌曲，
+    # 直接 404，避免 PostgREST 抛 uuid 语法错误（22P02）后被未捕获 APIError 转成 500。
+    if not is_uuid(song_id):
+        raise HTTPException(status_code=404, detail="Song not found")
+
     response = supabase.table("songs").select("*").eq("id", song_id).execute()
     
     if not response.data:

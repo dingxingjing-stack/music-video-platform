@@ -181,3 +181,19 @@ def test_owner_can_publish(rec):
     assert r.status_code == 200
     # 检查对白名单后写入的 is_public 生效
     assert rec["updates"][-1]["is_public"] is True
+
+
+# ── P0-GET-500：非 UUID song_id 必须先 404，且不触达 DB ─────────────
+def test_get_song_non_uuid_returns_404_without_db(monkeypatch, rec):
+    import app.services.supabase_service as sb_svc
+
+    class _NoTable:
+        def table(self, name):  # 若被调用说明短路由失效
+            raise AssertionError("非 UUID song_id 不应触发 songs 表查询")
+
+    monkeypatch.setattr(sb_svc, "supabase", _NoTable())
+    c = _client()
+    for bad in ("1", "abc", "not-a-uuid"):
+        r = c.get(f"/api/v1/songs/{bad}")
+        assert r.status_code == 404, (bad, r.status_code, r.text)
+        assert r.json()["detail"] == "Song not found"
