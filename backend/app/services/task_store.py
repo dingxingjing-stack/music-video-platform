@@ -35,11 +35,8 @@ def _get_session():
         except Exception:
             pass
         return sessionmaker(bind=eng)()
-    from app.db.database import SessionLocal, Base, engine
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass
+    # 生产：复用全局 Engine/SessionLocal，不在此处建表（schema init 由 startup 统一完成）
+    from app.db.database import SessionLocal
     return SessionLocal()
 
 def _row_to_task(row) -> Dict[str, Any]:

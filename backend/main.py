@@ -444,18 +444,31 @@ async def _websocket_broadcast(task_id: str, result: PredictResult) -> None:
 
 @app.get("/health", tags=["operations"])
 async def health_check():
-    """Step 5: 轻量健康检查 — 不触发 fal.ai/R2/AI 推理，仅检查应用+DB 连通性"""
-    # DB 检查（Supabase PG 或 SQLite）
+    """Step 5: 轻量健康检查 — 不触发 fal.ai/R2/AI 推理，仅检查应用+DB 连通性
+
+    安全约束：绝不返回 DATABASE_URL / password / token / API key / 完整异常文本。
+    数据库失败时仅返回稳定、安全的信息（driver + 非敏感 host）。
+    """
     db_status = "ok"
     db_msg = "database connected"
     try:
-        from app.db.database import engine
+        from app.db.database import engine, IS_POSTGRES, IS_SQLITE
         from sqlalchemy import text as _t
         with engine.connect() as conn:
             conn.execute(_t("SELECT 1"))
-    except Exception as exc:
+        # 附加非敏感元信息：driver 类型
+        import app.db.database as _db
+        driver = getattr(_db, "DATABASE_URL", "").split(":")[0] if getattr(_db, "DATABASE_URL", "") else "unknown"
+        db_msg = f"database connected ({driver})"
+    except Exception:
         db_status = "degraded"
-        db_msg = f"database error: {exc}"[:200]
+        # 收敛错误：不透传原始异常（可能含 host/uri 片段）。只报 driver 类型。
+        try:
+            import app.db.database as _db
+            driver = getattr(_db, "DATABASE_URL", "").split(":")[0] if getattr(_db, "DATABASE_URL", "") else "unknown"
+        except Exception:
+            driver = "unknown"
+        db_msg = f"database error: unable to connect via {driver} driver"
 
     # 保留原 mock 服务探活作为 degraded 提示，但不作为 Koyeb 健康判定依据
     services_health: dict[str, dict[str, Any]] = {"database": {"healthy": db_status == "ok", "message": db_msg}}

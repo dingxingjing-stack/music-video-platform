@@ -46,26 +46,25 @@ def _is_test_override() -> bool:
     return _DB_PATH != _DEFAULT_DB_PATH
 
 def _get_session():
-    """返回 Session；测试覆盖时使用临时 SQLite 文件，否则使用全局 database.SessionLocal。"""
+    """返回 Session；测试覆盖时使用临时 SQLite 文件，否则使用全局 database.SessionLocal。
+
+    注意：生产 schema 初始化由 database.init_db()（应用 startup 生命周期）统一负责，
+    此处不执行 create_all——避免每个请求重复 DDL/建表查询放大连接与认证失败。
+    """
     if _is_test_override():
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
         # 测试复用/创建临时 SQLite
         url = f"sqlite:///{_DB_PATH}"
         eng = create_engine(url, connect_args={"check_same_thread": False}, pool_pre_ping=True)
-        # 确保表存在（幂等）
+        # 测试 SQLite：就地建表（生产主路径不建表）
         try:
             from app.db.database import Base
             Base.metadata.create_all(bind=eng)
         except Exception:
             pass
         return sessionmaker(bind=eng)()
-    from app.db.database import SessionLocal, Base, engine
-    # 首次确保建表（生产安全：不 DROP）
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass
+    from app.db.database import SessionLocal
     return SessionLocal()
 
 def _today() -> str:

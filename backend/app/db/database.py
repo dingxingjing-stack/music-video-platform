@@ -23,29 +23,44 @@ from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, 
 from datetime import datetime
 
 # ── 环境判定 ────────────────────────────────────────
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./music_platform.db")
+# 唯一生产数据库来源 = 环境变量 DATABASE_URL（禁止硬编码连接串/密码）。
+# ENVIRONMENT=production 时：① 缺失 DATABASE_URL 明确失败 ② 值非 PostgreSQL 明确失败
+# ③ 错误/不可用的 DATABASE_URL 绝不静默 fallback 到 SQLite。
+_raw_db_url = os.getenv("DATABASE_URL")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+if ENVIRONMENT == "production":
+    if not _raw_db_url or not _raw_db_url.strip():
+        raise RuntimeError(
+            "[database] ENVIRONMENT=production 但未设置 DATABASE_URL，"
+            "拒绝静默创建 SQLite。生产必须通过环境变量提供 Supabase PostgreSQL 连接串（DATABASE_URL）。"
+        )
+
+DATABASE_URL = (_raw_db_url or "sqlite:///./music_platform.db").strip()
 IS_POSTGRES = DATABASE_URL.startswith(("postgresql", "postgres", "postgresql+"))
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
-# 生产强制 PG
+# 生产强制 PG：DATABASE_URL 必须指向 PostgreSQL，否则立即失败（绝不回退 SQLite）
 if ENVIRONMENT == "production" and not IS_POSTGRES:
     raise RuntimeError(
-        f"[database] ENVIRONMENT=production 但 DATABASE_URL 非 PostgreSQL（当前 {DATABASE_URL!r}），"
+        "[database] ENVIRONMENT=production 但 DATABASE_URL 非 PostgreSQL（scheme 不匹配），"
         "拒绝静默创建 SQLite。生产必须配置 Supabase PostgreSQL 的 DATABASE_URL。"
     )
 
 # ── 引擎创建 ────────────────────────────────────────
+# 连接池参数收敛（适配 Render + Supabase Pooler 低连接数，避免错误凭据下放大熔断）：
+#   生产默认 pool_size=5 / max_overflow=10 / recycle=1800 / connect_timeout=10，
+#   均可通过环境变量覆盖；不做激进自动重试。
 def _build_engine():
     url = DATABASE_URL
-    # 连接池参数（仅 PG 生效）
-    pool_size = int(os.getenv("DB_POOL_SIZE", "20"))
-    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "40"))
-    pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "3600"))
+    pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
+    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+    connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
 
     if IS_POSTGRES:
         # Supabase 强制 SSL（Supavisor/connection pooler）。URL 未显式 sslmode 时默认 require。
-        connect_args: dict = {}
+        connect_args: dict = {"connect_timeout": connect_timeout}
         if "sslmode=" not in url:
             connect_args["sslmode"] = "require"
         return create_engine(
