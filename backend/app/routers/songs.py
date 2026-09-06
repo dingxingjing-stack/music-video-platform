@@ -209,22 +209,34 @@ async def update_song(
     if song["user_id"] != user["id"]:
         raise HTTPException(status_code=403, detail="Not authorized to update this song")
     
-    # 更新
-    update_data["updated_at"] = datetime.utcnow().isoformat()
-    
+    # 字段白名单：客户端仅可修改以下字段。
+    # 明确拒绝 id / user_id / status / play_count / like_count / created_at / updated_at
+    # （以及任何未知字段），防止越权篡改归属与状态。
+    ALLOWED_FIELDS = {"title", "lyrics", "style", "duration_seconds", "is_public", "metadata"}
+    rejected = [k for k in update_data if k not in ALLOWED_FIELDS]
+    if rejected:
+        raise HTTPException(
+            status_code=422,
+            detail=f"不允许修改字段: {', '.join(sorted(rejected))}",
+        )
+
+    # 安全字段集合（不会再含 user_id / status / id 等受保护字段）
+    safe_update: Dict = {k: v for k, v in update_data.items() if k in ALLOWED_FIELDS}
+    safe_update["updated_at"] = datetime.utcnow().isoformat()
+
     response = supabase.table("songs")\
-        .update(update_data)\
+        .update(safe_update)\
         .eq("id", song_id)\
         .execute()
-    
-    # 记录日志
+
+    # 记录日志（字段列表来自白名单后的 safe_update，避免泄漏受保护字段名）
     log_activity(
         user_id=user["id"],
         action="SONG_UPDATED",
         resource_id=song_id,
-        metadata={"updated_fields": list(update_data.keys())}
+        metadata={"updated_fields": [k for k in safe_update if k != "updated_at"]}
     )
-    
+
     return SongResponse(**response.data[0])
 
 
@@ -289,6 +301,13 @@ async def publish_song(song_id: str, authorization: Optional[str] = Header(None)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # 发布前必须校验所有权：只有歌曲所有者才能 publish
+    existing = supabase.table("songs").select("user_id").eq("id", song_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Song not found")
+    if existing.data[0]["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to publish this song")
+
     # 更新为公开
     response = supabase.table("songs")\
         .update({"is_public": True, "updated_at": datetime.utcnow().isoformat()})\
