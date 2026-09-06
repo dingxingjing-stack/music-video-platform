@@ -135,7 +135,7 @@ def _init_sentry():
             ],
 
             # ---------- 性能追踪阈值 ----------
-            traces_sample_rate=0.3,          # 30% 追踪采样
+            traces_sample_rate=0.1,          # 10% 追踪采样（免费额度友好）
             _experiments={
                 "max_spans": 100,             # 每条 trace 最多 100 个 span
             },
