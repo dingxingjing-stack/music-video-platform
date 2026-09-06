@@ -60,7 +60,11 @@ class TestBuildFilterAndInputs:
         tracks = [self._make_track()]
         filter_str, inputs, active = _build_filter_and_inputs(tracks, 0.0)
         assert len(active) == 1
-        assert len(inputs) == 1
+        # 生产契约：inputs 为扁平 ['-i', src] 形式 —— 每个 active 轨道占 2 个元素
+        assert len(inputs) == 2 * len(active)
+        assert inputs == ["-i", "/results/track.wav"]
+        # 每个 '-i' 与其后 path 配对
+        assert inputs[0] == "-i" and inputs[1].endswith(".wav")
         assert "aformat=channel_layouts=stereo" in filter_str
         assert "pan=stereo" in filter_str
         assert "anull[out]" in filter_str
@@ -148,7 +152,14 @@ class TestBuildFilterAndInputs:
         ]
         filter_str, inputs, active = _build_filter_and_inputs(tracks, 0.0)
         assert len(active) == 2
-        assert len(inputs) == 2
+        # 生产契约：inputs 为扁平 ['-i', src] 形式 —— 每个 active 轨道占 2 个元素，
+        # 顺序与 active 轨一致；inactive 轨道不进入 inputs
+        assert len(inputs) == 2 * len(active)
+        assert inputs == ["-i", "/results/a.wav", "-i", "/results/b.wav"]
+        # '-i' 与 path 配对正确（奇偶索引）
+        for i in range(0, len(inputs), 2):
+            assert inputs[i] == "-i"
+            assert inputs[i + 1] in ("/results/a.wav", "/results/b.wav")
         assert "amix=inputs=2" in filter_str
 
     def test_pan_clamped_to_range(self):

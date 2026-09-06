@@ -85,18 +85,14 @@ def budget_daily_limit() -> Optional[int]:
         return None
 
 def budget_hard_stop_reached() -> bool:
-    lim = budget_daily_limit()
-    if lim is None:
-        return False
-    today = _today()
-    with _DB_LOCK:
-        sess = _get_session()
-        try:
-            from sqlalchemy import text
-            row = sess.execute(text("SELECT count FROM global_usage WHERE date=:d"), {"d": today}).fetchone()
-            return bool(row and row[0] >= lim)
-        finally:
-            sess.close()
+    """全平台成本硬停（只读、不扣额度）——预测/tts/music_run 的入口。
+
+    统一语义与 global_hard_stop_reached 一致：cap = min(GLOBAL_DAILY_GENERATION_LIMIT, GPU 预算)，
+    任一有效限制达到即触发。这样即使 FAL_BUDGET_DAILY 未配置，也不会忽略
+    GLOBAL_DAILY_GENERATION_LIMIT；同时 reserve_generation 仍是最终 atomic cap，
+    本函数只提前拦截，不扣额度、不绕过、无双扣，也不改变 refund 行为。
+    """
+    return global_hard_stop_reached()
 
 def global_hard_stop_reached() -> bool:
     """全平台成本硬停判断（只读、不扣额度）。

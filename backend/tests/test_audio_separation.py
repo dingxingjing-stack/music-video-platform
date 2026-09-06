@@ -6,12 +6,23 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import pytest
 from fastapi.testclient import TestClient
 from main import app
 
 client = TestClient(app)
 
-def test_separate_audio_success():
+
+@pytest.fixture(autouse=True)
+def _quota_stub():
+    """stub ai_limits.reserve/refund，避免真实 quota 副作用。"""
+    from app.services import ai_limits
+    with patch.object(ai_limits, "reserve_generation", return_value={"success": True}) as _res, \
+         patch.object(ai_limits, "refund_generation", return_value={"success": True}) as _ref:
+        yield {"reserve": _res, "refund": _ref}
+
+
+def test_separate_audio_success(_quota_stub):
     # Mock demucs_service.separate to return fake local stems
     fake_stems = [
         os.path.join(tempfile.gettempdir(), "stem1.wav"),
@@ -40,7 +51,8 @@ def test_separate_audio_success():
         files = {"file": ("test.wav", test_file_content, "audio/wav")}
         data = {"model": "htdemucs"}
         
-        response = client.post("/api/v1/audio/separate", files=files, data=data)
+        response = client.post("/api/v1/audio/separate", files=files, data=data,
+                               headers={"X-User-ID": "u1"})
         
         assert response.status_code == 200
         json_data = response.json()
@@ -78,7 +90,8 @@ def test_separate_audio_failure():
         files = {"file": ("test.wav", test_file_content, "audio/wav")}
         data = {"model": "htdemucs"}
         
-        response = client.post("/api/v1/audio/separate", files=files, data=data)
+        response = client.post("/api/v1/audio/separate", files=files, data=data,
+                               headers={"X-User-ID": "u1"})
         
         assert response.status_code == 200  # endpoint returns 200 with success=False
         json_data = response.json()
@@ -109,7 +122,8 @@ def test_separate_audio_upload_failure():
         files = {"file": ("test.wav", test_file_content, "audio/wav")}
         data = {"model": "htdemucs"}
         
-        response = client.post("/api/v1/audio/separate", files=files, data=data)
+        response = client.post("/api/v1/audio/separate", files=files, data=data,
+                               headers={"X-User-ID": "u1"})
         
         # Should return 500 error
         assert response.status_code == 500

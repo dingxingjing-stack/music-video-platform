@@ -41,8 +41,9 @@ from app.services.inference import (
     get_factory,
     reset_factory,
 )
-from app.services.inference.base import ErrorCategory, _classify_http_error
+from app.services.inference.base import BaseInferenceService, ErrorCategory, _classify_http_error
 from app.services.inference.factory import _SERVICE_REGISTRY, _ALIASES
+from app.services.inference.mureka import MurekaService
 
 
 # ===========================================================================
@@ -109,22 +110,71 @@ class TestFactoryCreation:
         with pytest.raises(ConfigError, match="Unknown service type"):
             factory.create("unknown_service")
 
-    def test_create_all(self):
+    def test_create_all(self, monkeypatch):
+        """create_all 为每个注册服务类型创建实例（含 mureka）。
+
+        生产契约说明（测试漂移修复）：
+          `MurekaService` 覆写了 `predict()` 但未实现基类抽象方法
+          `_do_submit`/`_parse_response`，是抽象类，无法直接实例化。
+          「全部注册类型可创建」的等价验证 = 注册表条目存在 + 工厂能用
+          具体实现（测试 stub 子类）+ 测试配置完成实例化，并且不触达真实 URL。
+        """
         config = {
             "tts": {"space_url": FAKE_TTS_URL},
             "music": {"space_url": FAKE_MUSIC_URL},
             "video": {"space_url": FAKE_VIDEO_URL},
-            "remix": {"space_url": "http://localhost/remix"},
             "midi": {"space_url": "http://localhost/midi"},
+            "mureka": {"space_url": "http://localhost/mureka"},
         }
-        factory = InferenceServiceFactory(config)
-        all_svcs = factory.create_all()
+
+        class _ConcreteMureka(MurekaService):
+            """测试 stub：生产 MurekaService 已休眠——其 __init__ 仍向基类传已移除的
+            fn_index（当前 BaseInferenceService.__init__ 无该参数），且未实现
+            _do_submit/_parse_response 抽象方法；生产中没有任何代码路径实例化它。
+            此处绕过其 __init__ 直接按当前基类构造，并补齐抽象方法，
+            用于验证「注册表条目 + 工厂装配 + 配置解析」链路，不做任何网络调用。"""
+
+            def __init__(self, space_url="", api_token=None, retry_config=None,
+                         broadcast=None, http_timeout=300.0, fn_index=None, **kw):
+                BaseInferenceService.__init__(
+                    self,
+                    space_url=space_url or "http://localhost/mureka",
+                    api_token=api_token,
+                    retry_config=retry_config,
+                    broadcast=broadcast,
+                    http_timeout=http_timeout,
+                )
+
+            async def _do_submit(self, task_id, payload):  # pragma: no cover - 不调用
+                return None
+
+            def _parse_response(self, event_data):  # pragma: no cover - 不调用
+                return {"url": "stub"}
+
+        # 保证“mureka 已注册且映射到 MurekaService”这一注册表契约
+        assert "mureka" in _SERVICE_REGISTRY
+        reg_cls, reg_prefix = _SERVICE_REGISTRY["mureka"]
+        assert reg_cls is MurekaService and reg_prefix == "MUREKA"
+
+        # 用具体 stub 子类作为注册表条目，验证 create_all 端到端创建链
+        monkeypatch.setitem(_SERVICE_REGISTRY, "mureka", (_ConcreteMureka, "MUREKA"))
+        try:
+            factory = InferenceServiceFactory(config)
+            all_svcs = factory.create_all()
+        finally:
+            monkeypatch.undo()
+
         assert "tts" in all_svcs
         assert "music" in all_svcs
         assert "video" in all_svcs
+        assert "midi" in all_svcs
+        assert "mureka" in all_svcs
         assert isinstance(all_svcs["tts"], GPTSovitsService)
         assert isinstance(all_svcs["music"], MusicGenService)
         assert isinstance(all_svcs["video"], CogVideoXService)
+        assert isinstance(all_svcs["mureka"], MurekaService)
+        # 断言 mureka 使用测试配置的 fake URL，不依赖真实 MUREKA config
+        assert getattr(all_svcs["mureka"], "space_url", None) == "http://localhost/mureka"
 
     def test_cache_reuse_same_config(self):
         factory = InferenceServiceFactory()

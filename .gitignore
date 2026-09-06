@@ -86,6 +86,7 @@ playwright-report/
 vst-plugins/
 
 workers/.wrangler/
+.wrangler/
 
 # MVP model weights (never commit binary weights)
 models/
@@ -100,3 +101,10 @@ heartmula_env/
 
 
 tmp_heartlib/
+
+# 排查 scratch / 临时审计文件（不入库，避免误提交）
+/backend/check_supabase_*.py
+/backend/find_db_usage.py
+/backend/inspect_*.py
+/update_locales*.py
+/how --stat --oneline 2fc0e7b

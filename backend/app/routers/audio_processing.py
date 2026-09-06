@@ -4,7 +4,7 @@
 - 母带处理
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional, List
 import os
@@ -14,6 +14,7 @@ from pathlib import Path
 from app.services.audio_separation_service import demucs_service
 from app.services.mastering_service import mastering_service
 from app.services.cdn_uploader import cdn_uploader
+from app.services.auth_identity import resolve_x_user_id
 
 router = APIRouter()
 
@@ -102,13 +103,31 @@ async def master_audio(
 @router.post("/separate", response_model=SeparateResponse)
 async def separate_audio(
     file: UploadFile = File(...),
-    model: str = Form("htdemucs")
+    model: str = Form("htdemucs"),
+    x_user_id: str = Header(None, alias="X-User-ID"),
 ):
     """
     音频分离 (vocals/drums/bass/other)
-    
+
     上传音频文件，返回 4 轨分离后的文件 URL
+
+    安全：
+      - 身份唯一可信来源 = X-User-ID；缺失/空白 → 401。
+        绝不接受 body.user_id / client.host / IP / anonymous 作为身份。
+      - 实际执行 separation（含 mock）前必须先 reserve_generation(user_key)；
+        quota 不足 → 429，阻止后续 provider/inference。
     """
+    # 1) 身份认证（必选）
+    user_key = resolve_x_user_id(x_user_id)
+    if not user_key:
+        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+
+    # 2) Quota 预留：必须在任何 separation/inference 之前
+    from app.services.ai_limits import reserve_generation, refund_generation
+    reserved = reserve_generation(user_key)
+    if not reserved["success"]:
+        raise HTTPException(status_code=429, detail=reserved["error"])
+
     # 保存上传文件
     temp_dir = Path(tempfile.gettempdir()) / "audio_uploads"
     temp_dir.mkdir(parents=True, exist_ok=True)
@@ -119,6 +138,7 @@ async def separate_audio(
             content = await file.read()
             f.write(content)
     except Exception as e:
+        refund_generation(user_key, reason="validation_failed")
         raise HTTPException(status_code=400, detail=f"保存文件失败: {e}")
     
     # 执行分离（使用现有的 demucs_service，实际上是 Modal Spleeter）
@@ -135,7 +155,7 @@ async def separate_audio(
         pass
     
     if not result["success"]:
-        # 分离失败，返回错误
+        refund_generation(user_key, reason="provider_failed")
         return SeparateResponse(
             success=False,
             stems=[],
@@ -158,6 +178,7 @@ async def separate_audio(
                 Path(stem_path).unlink(missing_ok=True)
             except:
                 pass
+        refund_generation(user_key, reason="persistence_failed")
         raise HTTPException(status_code=500, detail=f"CDN 上传失败: {e}")
     finally:
         # 清理本地 stem 文件（无论成功失败）

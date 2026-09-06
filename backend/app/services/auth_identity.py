@@ -29,6 +29,19 @@ def is_uuid(value: str) -> bool:
     return bool(value) and bool(_UUID_RE.match(value))
 
 
+def resolve_x_user_id(x_user_id: Optional[str]) -> Optional[str]:
+    """从 X-User-ID 头解析权威用户标识（唯一可信身份来源）。
+
+    - 仅接受 X-User-ID（去空白后非空），缺失/空白返回 None。
+    - 绝不接受 body.user_id / client.host 作为替代身份（防伪造）。
+    调用方应把 None 视为 401（缺少用户标识）。
+    """
+    if not x_user_id:
+        return None
+    v = x_user_id.strip()
+    return v or None
+
+
 def extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
     """从 Authorization 头提取 Bearer token；非 Bearer 头返回 None。"""
     if not authorization:

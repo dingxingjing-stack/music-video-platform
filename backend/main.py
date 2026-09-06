@@ -687,9 +687,13 @@ async def predict(
     # P0: Quota protection for non-mock predict (GPU cost)
     if service_type.lower() != "mock":
         from app.services.ai_limits import reserve_generation, refund_generation, budget_hard_stop_reached
+        from app.services.auth_identity import resolve_x_user_id
         if budget_hard_stop_reached():
             raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
-        user_key = request.headers.get("X-User-ID") or body.get("user_id") or (request.client.host if request.client else "anonymous")
+        # 身份唯一可信来源 = X-User-ID；缺失即 401，绝不接受 body.user_id / client.host
+        user_key = resolve_x_user_id(request.headers.get("X-User-ID"))
+        if not user_key:
+            raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
         reserved = reserve_generation(user_key)
         if not reserved["success"]:
             raise HTTPException(status_code=429, detail=reserved["error"])
@@ -925,9 +929,13 @@ async def tts_run(request: Request):
     _tts_reserved = False
     if TTS_BACKEND_MODE != "mock":
         from app.services.ai_limits import reserve_generation, budget_hard_stop_reached
+        from app.services.auth_identity import resolve_x_user_id
         if budget_hard_stop_reached():
             raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
-        _tts_user_key = request.headers.get("X-User-ID") or body.get("user_id") or (request.client.host if request.client else "anonymous")
+        # 身份唯一可信来源 = X-User-ID；缺失即 401，绝不接受 body.user_id / client.host
+        _tts_user_key = resolve_x_user_id(request.headers.get("X-User-ID"))
+        if not _tts_user_key:
+            raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
         _tts_res = reserve_generation(_tts_user_key)
         if not _tts_res["success"]:
             raise HTTPException(status_code=429, detail=_tts_res["error"])
@@ -1010,74 +1018,18 @@ async def music_run(request: Request, x_user_id: str = Header(None, alias="X-Use
     """
     Start a MusicGen music generation task in the background.
 
-    Body::
-        {
-            "task_id": "abc123",
-            "prompt": "upbeat electronic dance music with synth lead",
-            "duration": 10.0,
-            "temperature": 0.8
-        }
-
-    Returns::
-        {
-            "task_id": "abc123",
-            "status": "started",
-            "websocket": "/ws/progress/abc123"
-        }
+    **已废弃（Gone）**：此端点不再执行任何推理。请改用官方入口
+    POST /api/v1/ai/generate（ai_music 路由），其经 reserve_generation 统一 quota。
+    本端点无论 WORKFLOW_MODE 为 mock 或 real，一律返回 HTTP 410，
+    不调用 reserve_generation、不创建任务、不触发任何 provider/GPU。
     """
-    # DEPRECATED: 此端点已废弃，请使用 /api/v1/ai/generate
-    # 保留仅为兼容性，但强制要求 quota
-    if WORKFLOW_MODE == "mock":
-        raise HTTPException(
-            status_code=410, 
-            detail="MusicGen endpoint deprecated. Use /api/v1/ai/generate with real ACE-Step provider."
-        )
-    
-    # Quota check for real mode
-    from app.services.ai_limits import reserve_generation, refund_generation, budget_hard_stop_reached
-    if budget_hard_stop_reached():
-        raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
-    
-    user_key = x_user_id or (request.client.host if request.client else "anonymous")
-    reserved = reserve_generation(user_key)
-    if not reserved["success"]:
-        raise HTTPException(status_code=429, detail=reserved["error"])
-    
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    prompt = body.get("prompt", "")
-    duration = float(body.get("duration", 10.0))
-    temperature = float(body.get("temperature", 0.8))
-
-    if not prompt:
-        refund_generation(user_key)
-        raise HTTPException(status_code=422, detail="'prompt' is required")
-
-    try:
-        svc = factory.create("music", broadcast=_websocket_broadcast)
-    except Exception as exc:
-        logger.error("Failed to create MusicGenService: %s", exc)
-        refund_generation(user_key)
-        raise HTTPException(
-            status_code=503,
-            detail=f"Music service unavailable: {exc}",
-        )
-
-    asyncio.create_task(run_musicgen_and_save(
-        svc=svc, task_id=task_id, prompt=prompt,
-        duration=duration, temperature=temperature,
-        results_dir=RESULTS_DIR,
-    ))
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-    }
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "MusicGen endpoint deprecated and disabled. "
+            "Use POST /api/v1/ai/generate with real ACE-Step provider."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
