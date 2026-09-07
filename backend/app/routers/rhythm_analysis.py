@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 import os
 import tempfile
-import librosa
 
 from app.services.beat_detector import BeatDetector, detect_beats
 
@@ -121,6 +120,7 @@ async def detect_beat_endpoint(
         result = detect_beats(temp_path)
         
         # 3. 加载音频获取时长
+        import librosa  # 懒加载：避免冷启动 import main 拖慢（Render port scan timeout）
         audio, sr = librosa.load(temp_path, sr=None, duration=30)  # 只加载 30s 用于估计
         result['duration'] = float(len(audio) / sr)
         
@@ -185,6 +185,7 @@ async def generate_rhythm_grid(
                 f.write(response.content)
         
         # 2. 加载音频
+        import librosa  # 懒加载：避免冷启动 import main 拖慢
         audio, sr = librosa.load(temp_path, sr=None)
         
         # 3. 创建检测器
@@ -246,6 +247,7 @@ async def analyze_tempo_curve(audio_url: str):
                 f.write(response.content)
         
         # 2. 加载音频
+        import librosa  # 懒加载：避免冷启动 import main 拖慢
         audio, sr = librosa.load(temp_path, sr=None)
         
         # 3. 创建检测器
