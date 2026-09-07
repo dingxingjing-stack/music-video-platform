@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import './sentry'; // Sentry：仅在生产 + 已配置 VITE_SENTRY_DSN 时启用
 import App from './App';
 import { SoundProvider } from './context/SoundContext';
 import { AuthProvider } from './context/AuthContext';
