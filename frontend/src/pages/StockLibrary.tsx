@@ -19,31 +19,32 @@ import { StockVideo, StockCategory } from '../types/video-sync';
 import { useTranslation } from '../i18n/useTranslation';
 
 // Mock 数据 (实际应从 API 获取)
+// 注意：分类名为 i18n key（stockLibrary.cat.<id>），不在数据里内嵌展示文案
 const MOCK_CATEGORIES: StockCategory[] = [
-  { id: 'nature', name: '自然风景', icon: '🌲', count: 10 },
-  { id: 'city', name: '城市建筑', icon: '🏙️', count: 10 },
-  { id: 'people', name: '人物活动', icon: '👥', count: 10 },
-  { id: 'technology', name: '科技数码', icon: '💻', count: 10 },
-  { id: 'abstract', name: '抽象艺术', icon: '🎨', count: 10 },
-  { id: 'music', name: '音乐演出', icon: '🎵', count: 10 },
-  { id: 'sports', name: '运动健身', icon: '⚽', count: 10 },
-  { id: 'food', name: '美食餐饮', icon: '🍔', count: 10 },
-  { id: 'travel', name: '旅行度假', icon: '✈️', count: 10 },
-  { id: 'emotions', name: '情绪氛围', icon: '❤️', count: 10 }
+  { id: 'nature', name: 'nature', icon: '🌲', count: 10 },
+  { id: 'city', name: 'city', icon: '🏙️', count: 10 },
+  { id: 'people', name: 'people', icon: '👥', count: 10 },
+  { id: 'technology', name: 'technology', icon: '💻', count: 10 },
+  { id: 'abstract', name: 'abstract', icon: '🎨', count: 10 },
+  { id: 'music', name: 'music', icon: '🎵', count: 10 },
+  { id: 'sports', name: 'sports', icon: '⚽', count: 10 },
+  { id: 'food', name: 'food', icon: '🍔', count: 10 },
+  { id: 'travel', name: 'travel', icon: '✈️', count: 10 },
+  { id: 'emotions', name: 'emotions', icon: '❤️', count: 10 }
 ];
 
 const MOCK_VIDEOS: StockVideo[] = Array.from({ length: 100 }, (_, i) => {
   const category = MOCK_CATEGORIES[i % MOCK_CATEGORIES.length];
   return {
     id: `stock-${i}`,
-    title: `${category.name} 素材 ${i + 1}`,
+    title: `${category.id}|${i + 1}`,
     category: category.id,
     thumbnail: `/assets/stock/${category.id}/thumb_${i}.jpg`,
     previewUrl: `/assets/stock/${category.id}/video_${i}.mp4`,
     duration: Math.floor(Math.random() * 30) + 5,
     width: 1920,
     height: 1080,
-    tags: [category.name, 'free', 'hd'],
+    tags: [`cat:${category.id}`, 'free', 'hd'],
     source: i % 2 === 0 ? 'pexels' : 'pixabay',
     license: 'Free'
   };
@@ -53,6 +54,13 @@ interface StockLibraryProps {
   onUseVideo?: (video: StockVideo) => void;
 }
 
+// ── i18n 显示辅助（所有用户可见文本经 t() 解析，随语言实时切换）──
+const categoryLabel = (t: any, id: string) => t(`stockLibrary.cat.${id}`);
+const videoTitle = (t: any, video: StockVideo) =>
+  t('stockLibrary.itemTitle', { category: categoryLabel(t, video.category), n: parseInt(video.id.split('-')[1], 10) + 1 });
+const tagLabel = (t: any, tag: string) =>
+  tag.startsWith('cat:') ? categoryLabel(t, tag.slice(4)) : tag;
+
 export default function StockLibrary({ onUseVideo }: StockLibraryProps) {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
@@ -60,16 +68,16 @@ export default function StockLibrary({ onUseVideo }: StockLibraryProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  // 过滤素材
+  // 过滤素材（按当前语言的展示文本匹配）
   const filteredVideos = useMemo(() => {
     return MOCK_VIDEOS.filter(video => {
       const matchCategory = selectedCategory === 'all' || video.category === selectedCategory;
-      const matchSearch = !searchQuery || 
-        video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        video.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchSearch = !searchQuery ||
+        videoTitle(t, video).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.tags.some(tag => tagLabel(t, tag).toLowerCase().includes(searchQuery.toLowerCase()));
       return matchCategory && matchSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, t]);
 
   // 收藏切换
   const toggleFavorite = (videoId: string) => {
@@ -89,7 +97,7 @@ export default function StockLibrary({ onUseVideo }: StockLibraryProps) {
     if (onUseVideo) {
       onUseVideo(video);
     } else {
-      alert(t('stockLibrary.selected', { title: video.title }));
+      alert(t('stockLibrary.selected', { title: videoTitle(t, video) }));
     }
   };
 
@@ -149,7 +157,7 @@ return (
                block={false}
                icon={<TagOutlined />}
              >
-               {cat.name} ({cat.count})
+                               {categoryLabel(t, cat.id)} ({cat.count})
              </Button>
            ))}
          </div>
@@ -167,7 +175,7 @@ return (
                    <div className="relative aspect-video bg-gray-800">
                      <img
                        src={video.thumbnail}
-                       alt={video.title}
+                       alt={videoTitle(t, video)}
                        className="w-full h-full object-cover"
                        onError={(e) => {
                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=Preview';
@@ -233,7 +241,7 @@ return (
                <Card
                  key={video.id}
                  hoverable
-                 cover={<img src={video.thumbnail} alt={video.title} className="h-48 w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=Preview'; }} />}
+                 cover={<img src={video.thumbnail} alt={videoTitle(t, video)} className="h-48 w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=Preview'; }} />}
                  actions={[
                    <div key="1" className="flex items-center gap-2">
                      <Tooltip title={t('stockLibrary.favorite')}>
@@ -269,11 +277,11 @@ return (
                  }
                >
                  <div className="p-4">
-                   <div className="mb-2 font-semibold">{video.title}</div>
+                   <div className="mb-2 font-semibold">{videoTitle(t, video)}</div>
                    <div className="flex flex-wrap gap-2 mb-2">
                      {video.tags.slice(0, 3).map(tag => (
-                       <Tag key={tag} color="blue">
-                         {tag}
+                       <Tag key={tagLabel(t, tag)} color="blue">
+                         {tagLabel(t, tag)}
                        </Tag>
                      ))}
                    </div>
@@ -312,7 +320,7 @@ function VideoCard({ video, isFavorite, onToggleFavorite, onUseVideo }: VideoCar
       <div className="relative aspect-video bg-gray-800">
         <img
           src={video.thumbnail}
-          alt={video.title}
+          alt={videoTitle(t, video)}
           className="w-full h-full object-cover"
           onError={(e) => {
             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=Preview';
@@ -348,7 +356,7 @@ function VideoCard({ video, isFavorite, onToggleFavorite, onUseVideo }: VideoCar
 
       {/* 信息 */}
       <div className="p-3">
-        <h3 className="text-sm font-medium truncate mb-1">{video.title}</h3>
+        <h3 className="text-sm font-medium truncate mb-1">{videoTitle(t, video)}</h3>
         <div className="flex items-center justify-between text-xs text-gray-400">
           <span>{video.width}x{video.height}</span>
           <span className="capitalize">{video.source}</span>
@@ -375,7 +383,7 @@ function VideoListItem({ video, isFavorite, onToggleFavorite, onUseVideo }: Vide
       <div className="relative w-40 aspect-video bg-gray-800 rounded overflow-hidden flex-shrink-0">
         <img
           src={video.thumbnail}
-          alt={video.title}
+          alt={videoTitle(t, video)}
           className="w-full h-full object-cover"
           onError={(e) => {
             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/160x90?text=Preview';
@@ -388,15 +396,15 @@ function VideoListItem({ video, isFavorite, onToggleFavorite, onUseVideo }: Vide
 
       {/* 信息 */}
       <div className="flex-1 min-w-0">
-        <h3 className="text-base font-medium truncate mb-1">{video.title}</h3>
+        <h3 className="text-base font-medium truncate mb-1">{videoTitle(t, video)}</h3>
         <div className="flex items-center gap-4 text-sm text-gray-400">
           <span>{video.width}x{video.height}</span>
           <span>{video.duration}s</span>
           <span className="capitalize">{video.source}</span>
           <div className="flex gap-1">
             {video.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="px-2 py-0.5 bg-gray-700 rounded text-xs">
-                {tag}
+              <span key={tagLabel(t, tag)} className="px-2 py-0.5 bg-gray-700 rounded text-xs">
+                {tagLabel(t, tag)}
               </span>
             ))}
           </div>

@@ -179,7 +179,12 @@
     "feedbackSubmit": "フィードバックを送信",
     "feedbackToastOk": "フィードバックありがとうございます！",
     "feedbackToastFail": "送信に失敗しました",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "フィードバックを共有",
+    "feedbackNamePlaceholder": "ニックネーム（任意）",
+    "feedbackTextPlaceholder": "使ってみた感想を教えてください…",
+    "feedbackSample1": "公開ベータは最高です。生成が速く、スタジオの使い勝手も快適です。",
+    "feedbackSample2": "ボイスクローンのUIが分かりやすく、オーディオツールの統合も良好です。"
   },
   "pathA": {
     "tagline": "プロンプト → Agnes AI → フル楽曲生成（無料）",
@@ -655,7 +660,20 @@
     "favorite": "お気に入り",
     "selected": "選択：{title}",
     "source": "出典: {source} | ライセンス: {license}",
-    "showing": "{shown} / {total} 件の素材を表示"
+    "showing": "{shown} / {total} 件の素材を表示",
+    "itemTitle": "{category} 素材 {n}",
+    "cat": {
+      "nature": "自然風景",
+      "city": "都市",
+      "people": "人物",
+      "technology": "テクノロジー",
+      "abstract": "抽象",
+      "music": "音楽",
+      "sports": "スポーツ",
+      "food": "グルメ",
+      "travel": "旅行",
+      "emotions": "ムード"
+    }
   },
   "lyricGen": {
     "title": "AI 作詞アシスタント",
@@ -1296,7 +1314,9 @@
     "exportMp3": "MP3 を書き出し",
     "publishing": "公開中...",
     "publish": "コミュニティに公開",
-    "hint": "まず MIDI エディターで音符を追加し、音声を生成してください"
+    "hint": "まず MIDI エディターで音符を追加し、音声を生成してください",
+    "trackNamePlaceholder": "トラック 1",
+    "defaultTrackName": "MIDI トラック 1"
   },
   "scoreedit": {
     "toolSelect": "選択",

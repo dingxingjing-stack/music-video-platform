@@ -33,6 +33,7 @@ interface CopyrightReport {
 }
 
 export default function CopyrightCheckPanel() {
+  const { t } = useTranslation();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [report, setReport] = useState<CopyrightReport | null>(null);
   const [error, setError] = useState<string | null>(null);

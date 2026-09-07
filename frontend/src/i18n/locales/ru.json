@@ -179,7 +179,12 @@
     "feedbackSubmit": "Отправить отзыв",
     "feedbackToastOk": "Спасибо за ваш отзыв!",
     "feedbackToastFail": "Не удалось отправить",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "Поделитесь впечатлениями",
+    "feedbackNamePlaceholder": "Ник (необязательно)",
+    "feedbackTextPlaceholder": "Расскажите о своём опыте…",
+    "feedbackSample1": "Отличная открытая бета — быстрая генерация и удобная студия.",
+    "feedbackSample2": "Интерфейс Voice Clone понятен, а аудиоинструменты хорошо интегрированы."
   },
   "pathA": {
     "tagline": "Промпт → Agnes AI → Создание полной композиции (бесплатно)",
@@ -655,7 +660,20 @@
     "favorite": "Избранное",
     "selected": "Выбрано: {title}",
     "source": "Источник: {source} | Лицензия: {license}",
-    "showing": "Показано {shown} / {total} материалов"
+    "showing": "Показано {shown} / {total} материалов",
+    "itemTitle": "Материал «{category}» {n}",
+    "cat": {
+      "nature": "Природа",
+      "city": "Город",
+      "people": "Люди",
+      "technology": "Технологии",
+      "abstract": "Абстракция",
+      "music": "Музыка",
+      "sports": "Спорт",
+      "food": "Еда",
+      "travel": "Путешествия",
+      "emotions": "Настроение"
+    }
   },
   "lyricGen": {
     "title": "ИИ-помощник для текстов",
@@ -1296,7 +1314,9 @@
     "exportMp3": "Экспорт MP3",
     "publishing": "Публикация...",
     "publish": "Опубликовать в сообществе",
-    "hint": "Сначала добавьте ноты в MIDI-редакторе, затем сгенерируйте аудио"
+    "hint": "Сначала добавьте ноты в MIDI-редакторе, затем сгенерируйте аудио",
+    "trackNamePlaceholder": "Дорожка 1",
+    "defaultTrackName": "MIDI-дорожка 1"
   },
   "scoreedit": {
     "toolSelect": "Выбрать",

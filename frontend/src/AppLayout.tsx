@@ -54,7 +54,7 @@ export function AppLayout() {
       <BetaConsentModal />
 
       {/* 移动端汉堡 */}
-      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-3 left-3 z-50 p-2.5 bg-[#141414]/90 backdrop-blur rounded-xl border border-[#262626] text-white shadow-lg" aria-label="Open menu">
+      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-3 left-3 z-50 p-2.5 bg-[#141414]/90 backdrop-blur rounded-xl border border-[#262626] text-white shadow-lg" aria-label={t('nav.openMenu')}>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
@@ -64,7 +64,7 @@ export function AppLayout() {
       <aside className={`${sidebarCollapsed ? 'w-[68px]' : 'w-[264px]'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-auto flex flex-col border-r border-[#1f1f1f] bg-[#0f0f0f]/95 backdrop-blur-xl transition-all duration-300`}>
         {/* Logo */}
         <div className="h-[56px] flex items-center px-3 gap-2 border-b border-[#1f1f1f] shrink-0">
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#888888] hover:text-white flex items-center justify-center transition" title={sidebarCollapsed ? 'Expand' : 'Collapse'}>
+          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#888888] hover:text-white flex items-center justify-center transition" title={sidebarCollapsed ? t('nav.expand') : t('nav.collapse')}>
             <span className="text-[11px] font-bold tracking-widest">{sidebarCollapsed ? '››' : '‹‹'}</span>
           </button>
           {!sidebarCollapsed && (

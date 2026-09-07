@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useTranslation } from '../i18n/useTranslation';
-import { WaveformEditor } from './Audio/WaveformEditor';
+import { useTranslation } from '../../i18n/useTranslation';
+import { WaveformEditor } from './WaveformEditor';
 
 interface SongContinuePanelProps {
   /** 当前播放的音频 URL */

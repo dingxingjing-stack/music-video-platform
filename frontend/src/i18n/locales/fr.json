@@ -179,7 +179,12 @@
     "feedbackSubmit": "Envoyer un avis",
     "feedbackToastOk": "Merci pour votre retour !",
     "feedbackToastFail": "Échec de l’envoi",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "Partagez votre avis",
+    "feedbackNamePlaceholder": "Pseudo (facultatif)",
+    "feedbackTextPlaceholder": "Racontez-nous votre expérience…",
+    "feedbackSample1": "Super bêta publique — génération rapide et studio agréable.",
+    "feedbackSample2": "L'interface de clonage vocal est claire et les outils audio sont bien intégrés."
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Génération de chansons complètes (gratuite)",
@@ -655,7 +660,20 @@
     "favorite": "Favori",
     "selected": "Sélectionné : {title}",
     "source": "Source : {source} | Licence : {license}",
-    "showing": "Affichage de {shown} / {total} clips"
+    "showing": "Affichage de {shown} / {total} clips",
+    "itemTitle": "Exemple {category} {n}",
+    "cat": {
+      "nature": "Paysages",
+      "city": "Ville",
+      "people": "Personnes",
+      "technology": "Technologie",
+      "abstract": "Abstrait",
+      "music": "Musique",
+      "sports": "Sport",
+      "food": "Gastronomie",
+      "travel": "Voyages",
+      "emotions": "Ambiances"
+    }
   },
   "lyricGen": {
     "title": "Assistant de Paroles IA",
@@ -1296,7 +1314,9 @@
     "exportMp3": "Exporter en MP3",
     "publishing": "Publication...",
     "publish": "Publier dans la communauté",
-    "hint": "Ajoutez d abord des notes dans l éditeur MIDI, puis générez l audio"
+    "hint": "Ajoutez d abord des notes dans l éditeur MIDI, puis générez l audio",
+    "trackNamePlaceholder": "Piste 1",
+    "defaultTrackName": "Piste MIDI 1"
   },
   "scoreedit": {
     "toolSelect": "Sélectionner",

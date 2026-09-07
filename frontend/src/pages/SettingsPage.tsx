@@ -20,7 +20,7 @@ export function SettingsPage() {
           </div>
           <div className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-6">
             <h3 className="text-sm font-semibold text-white">{t('settings.about')}</h3>
-            <p className="mt-1 text-sm text-[#8a8a8a]">{t('settings.aboutText')}<br/>© 2026 Zyvexo. All rights reserved.</p>
+            <p className="mt-1 text-sm text-[#8a8a8a]">{t('settings.aboutText')}<br/>{t('landing.footerCopyright')}</p>
             <div className="mt-3 flex flex-wrap gap-3 text-xs">
               <a href="/legal/terms" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.terms')}</a>
               <a href="/legal/privacy" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.privacy')}</a>

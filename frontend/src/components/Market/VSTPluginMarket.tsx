@@ -327,6 +327,7 @@ const PluginGrid: React.FC<{
   onInstall: (plugin: VSTPlugin) => void;
   renderStars: (rating: number, count: number) => React.ReactNode;
 }> = ({ plugins, onInstall, renderStars }) => {
+  const { t } = useTranslation();
   if (plugins.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
@@ -359,6 +360,7 @@ const PluginCard: React.FC<{
   onInstall: (plugin: VSTPlugin) => void;
   renderStars: (rating: number, count: number) => React.ReactNode;
 }> = ({ plugin, onInstall, renderStars }) => {
+  const { t } = useTranslation();
   return (
     <Card
       hoverable

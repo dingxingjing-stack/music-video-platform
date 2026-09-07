@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { AppLayout } from './AppLayout';
 import { ConsentGuard, GrayRoute } from './components/RouteGuards';
 import { PageTransition } from './components/PageTransition';
+import { useTranslation } from './i18n/useTranslation';
 
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
@@ -32,11 +33,14 @@ const P2AudioSeparationPage = lazy(() => import('./pages/P2AudioSeparationPage')
 const P2AudioMasteringPage = lazy(() => import('./pages/P2AudioMasteringPage').then(m => ({ default: m.P2AudioMasteringPage })));
 const P2LyricPage = lazy(() => import('./pages/P2LyricPage').then(m => ({ default: m.P2LyricPage })));
 
-const Loading = () => (
-  <div className="flex items-center justify-center h-screen bg-[#0a0a0a]">
-    <div className="text-[#555555] animate-pulse text-sm">Loading...</div>
-  </div>
-);
+const Loading = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center h-screen bg-[#0a0a0a]">
+      <div className="text-[#555555] animate-pulse text-sm">{t('common.loading')}</div>
+    </div>
+  );
+};
 
 export default function App() {
   return (

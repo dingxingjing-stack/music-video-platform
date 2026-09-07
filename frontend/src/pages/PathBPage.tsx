@@ -17,7 +17,7 @@ export function PathBPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-3 mb-2">
-        <button onClick={() => navigate('/')} className="text-sm text-[var(--text-secondary)] hover:text-white transition">&larr; {t('common.back') || '返回'}</button>
+        <button onClick={() => navigate('/')} className="text-sm text-[var(--text-secondary)] hover:text-white transition">&larr; {t('common.back')}</button>
         <h1 className="text-2xl font-display font-bold gradient-text">{t('paths.pathB')}</h1>
       </div>
       <p className="text-sm text-[var(--text-muted)]">{t('pathB.subtitle')}</p>

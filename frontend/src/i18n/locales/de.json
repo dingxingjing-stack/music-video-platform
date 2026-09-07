@@ -179,7 +179,12 @@
     "feedbackSubmit": "Feedback senden",
     "feedbackToastOk": "Vielen Dank für Ihr Feedback!",
     "feedbackToastFail": "Übermittlung fehlgeschlagen",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "Teile deine Erfahrung",
+    "feedbackNamePlaceholder": "Spitzname (optional)",
+    "feedbackTextPlaceholder": "Teile deine Erfahrung…",
+    "feedbackSample1": "Tolle offene Beta – schnelle Generierung und klare Studio-Oberfläche.",
+    "feedbackSample2": "Die Voice-Clone-Oberfläche ist übersichtlich und die Audio-Tools sind gut integriert."
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Vollständige Songerstellung (kostenlos)",
@@ -655,7 +660,20 @@
     "favorite": "Favorit",
     "selected": "Ausgewählt: {title}",
     "source": "Quelle: {source} | Lizenz: {license}",
-    "showing": "Zeige {shown} / {total} Clips"
+    "showing": "Zeige {shown} / {total} Clips",
+    "itemTitle": "{category}-Beispiel {n}",
+    "cat": {
+      "nature": "Natur",
+      "city": "Stadt",
+      "people": "Menschen",
+      "technology": "Technik",
+      "abstract": "Abstrakt",
+      "music": "Musik",
+      "sports": "Sport",
+      "food": "Kulinarik",
+      "travel": "Reisen",
+      "emotions": "Stimmung"
+    }
   },
   "lyricGen": {
     "title": "KI-Textassistent",
@@ -1296,7 +1314,9 @@
     "exportMp3": "MP3 exportieren",
     "publishing": "Veröffentliche...",
     "publish": "In Community veröffentlichen",
-    "hint": "Fügen Sie zuerst Noten im MIDI-Editor hinzu und erzeugen Sie dann Audio"
+    "hint": "Fügen Sie zuerst Noten im MIDI-Editor hinzu und erzeugen Sie dann Audio",
+    "trackNamePlaceholder": "Spur 1",
+    "defaultTrackName": "MIDI-Spur 1"
   },
   "scoreedit": {
     "toolSelect": "Auswählen",

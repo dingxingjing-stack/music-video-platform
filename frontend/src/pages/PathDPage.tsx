@@ -21,7 +21,7 @@ export function PathDPage() {
   // MIDI Track 状态
   const [midiTrack, setMidiTrack] = useState<MidiTrack>({
     id: generateTrackId(),
-    name: 'MIDI Track 1',
+    name: t('pathd.defaultTrackName'),
     instrument: 0, // Acoustic Grand Piano
     channel: 0,
     notes: [],
@@ -119,7 +119,7 @@ export function PathDPage() {
               value={midiTrack.name}
               onChange={(e) => setMidiTrack({ ...midiTrack, name: e.target.value })}
               className="w-full rounded-lg bg-[#2a2a2a] border border-[#3a3a3a] px-3 py-2 text-sm text-[#e0e0e0]"
-              placeholder="Track 1"
+              placeholder={t('pathd.trackNamePlaceholder')}
             />
           </div>
           <div className="space-y-2">

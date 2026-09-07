@@ -45,8 +45,8 @@ export function Landing() {
         setFeedbacks(data.map((f: any) => ({ name: f.name, text: f.text })));
       } catch {
         setFeedbacks([
-          { name: tr('landing.anonymousUser', 'Anonymous'), text: 'Great public beta — fast generation and clean studio feel.' },
-          { name: tr('landing.anonymousUser', 'Anonymous'), text: 'Voice Clone UI is clear and the audio tools are well integrated.' },
+          { name: tr('landing.anonymousUser', 'Anonymous'), text: tr('landing.feedbackSample1', 'Great public beta — fast generation and clean studio feel.') },
+          { name: tr('landing.anonymousUser', 'Anonymous'), text: tr('landing.feedbackSample2', 'Voice Clone UI is crystal clear, and the audio tools are well integrated.') },
         ]);
       } finally { setLoading(false); }
     };
@@ -122,7 +122,7 @@ export function Landing() {
               <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center text-lg">{f.icon}</div>
               <h3 className="text-base font-semibold text-white mt-4">{f.title}</h3>
               <p className="text-sm text-[#8a8a8a] mt-1 leading-relaxed">{f.desc}</p>
-              <div className="mt-3 text-xs font-medium text-white/60">Open →</div>
+              <div className="mt-3 text-xs font-medium text-white/60">{tr('landing.cardCta', 'Open →')}</div>
             </motion.div>
           ))}
         </div>
@@ -152,7 +152,7 @@ export function Landing() {
           <h2 className="text-xl font-black text-white">{tr('landing.feedbackTitle','User Feedback')}</h2>
           <p className="text-sm text-[#6a6a6a]">{tr('landing.feedbackSub','Real feedback from public beta users.')}</p>
         </motion.div>
-        {loading ? <div className="text-center text-sm text-[#555555] py-8">Loading...</div> : (
+        {loading ? <div className="text-center text-sm text-[#555555] py-8">{tr('common.loading', 'Loading...')}</div> : (
           <div className="space-y-3">
             {feedbacks.map((f, i) => (
               <motion.div key={i} {...fadeIn(i * 0.04)} className="rounded-xl p-4 bg-[#141414] border border-[#1f1f1f]">
@@ -166,22 +166,22 @@ export function Landing() {
           </div>
         )}
         <motion.div {...fadeIn(0.1)} className="mt-6 rounded-2xl p-5 bg-[#141414] border border-[#1f1f1f]">
-          <h3 className="text-sm font-semibold text-white mb-3">Leave your feedback</h3>
-          <input type="text" value={feedbackName} onChange={e=> setFeedbackName(e.target.value)} placeholder="Nickname (optional)" className="w-full mb-3 px-3.5 py-2.5 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20" />
-          <textarea value={feedbackText} onChange={e=> setFeedbackText(e.target.value)} placeholder="Share your experience..." rows={3} className="w-full mb-3 px-3.5 py-2.5 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
-          <button onClick={submitFeedback} disabled={!feedbackText.trim()} className="px-5 py-2.5 rounded-xl bg-white text-[#0a0a0a] text-sm font-semibold disabled:opacity-40 hover:bg-[#ededed] transition">Submit Feedback</button>
+          <h3 className="text-sm font-semibold text-white mb-3">{tr('landing.feedbackFormTitle', 'Leave your feedback')}</h3>
+          <input type="text" value={feedbackName} onChange={e=> setFeedbackName(e.target.value)} placeholder={tr('landing.feedbackNamePlaceholder', 'Nickname (optional)')} className="w-full mb-3 px-3.5 py-2.5 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20" />
+          <textarea value={feedbackText} onChange={e=> setFeedbackText(e.target.value)} placeholder={tr('landing.feedbackTextPlaceholder', 'Share your experience...')} rows={3} className="w-full mb-3 px-3.5 py-2.5 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl text-white text-sm placeholder:text-[#555555] focus:outline-none focus:border-white/20 resize-none" />
+          <button onClick={submitFeedback} disabled={!feedbackText.trim()} className="px-5 py-2.5 rounded-xl bg-white text-[#0a0a0a] text-sm font-semibold disabled:opacity-40 hover:bg-[#ededed] transition">{tr('landing.feedbackSubmit', 'Submit Feedback')}</button>
         </motion.div>
       </section>
 
       <footer className="relative z-10 border-t border-[#1f1f1f] py-8 px-6 text-center">
         <div className="max-w-[1120px] mx-auto">
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4 text-xs text-[#6a6a6a]">
-            <a href="/legal/terms" className="hover:text-white">Terms</a>
-            <a href="/legal/privacy" className="hover:text-white">Privacy</a>
-            <a href="/legal/aimusic-copyright" className="hover:text-white">AI Copyright</a>
-            <a href="/legal/voice-cloning" className="hover:text-white">Voice Clone Policy</a>
+            <a href="/legal/terms" className="hover:text-white">{tr('legal.links.terms', 'Terms')}</a>
+            <a href="/legal/privacy" className="hover:text-white">{tr('legal.links.privacy', 'Privacy')}</a>
+            <a href="/legal/aimusic-copyright" className="hover:text-white">{tr('legal.links.aiCopyright', 'AI Copyright')}</a>
+            <a href="/legal/voice-cloning" className="hover:text-white">{tr('legal.links.voiceCloning', 'Voice Clone Policy')}</a>
           </div>
-          <p className="text-xs text-[#4a4a4a]">© 2026 Zyvexo · AI Music Studio</p>
+          <p className="text-xs text-[#4a4a4a]">{tr('landing.footerCopyright', '© 2026 Zyvexo. All rights reserved.')}</p>
         </div>
       </footer>
 

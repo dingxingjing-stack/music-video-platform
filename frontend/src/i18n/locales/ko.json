@@ -179,7 +179,12 @@
     "feedbackSubmit": "피드백 제출",
     "feedbackToastOk": "피드백 감사합니다!",
     "feedbackToastFail": "제출에 실패했습니다",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "사용 경험 공유하기",
+    "feedbackNamePlaceholder": "닉네임 (선택 사항)",
+    "feedbackTextPlaceholder": "사용 경험을 들려주세요…",
+    "feedbackSample1": "공개 베타 경험이 아주 좋아요 — 생성 속도가 빠르고 스튜디오도 깔끔해요.",
+    "feedbackSample2": "보이스 클론 UI가 명확하고 오디오 도구도 잘 통합되어 있어요."
   },
   "pathA": {
     "tagline": "프롬프트 → Agnes AI → 전체 곡 생성 (무료)",
@@ -655,7 +660,20 @@
     "favorite": "즐겨찾기",
     "selected": "선택됨: {title}",
     "source": "출처: {source} | 라이선스: {license}",
-    "showing": "소재 {shown} / {total}개 표시"
+    "showing": "소재 {shown} / {total}개 표시",
+    "itemTitle": "{category} 소재 {n}",
+    "cat": {
+      "nature": "자연 풍경",
+      "city": "도시 풍경",
+      "people": "인물·활동",
+      "technology": "테크",
+      "abstract": "추상 예술",
+      "music": "음악",
+      "sports": "스포츠",
+      "food": "음식",
+      "travel": "여행",
+      "emotions": "분위기"
+    }
   },
   "lyricGen": {
     "title": "AI 작사 도우미",
@@ -1296,7 +1314,9 @@
     "exportMp3": "MP3 내보내기",
     "publishing": "게시 중...",
     "publish": "커뮤니티에 게시",
-    "hint": "먼저 MIDI 편집기에서 음표를 추가한 후 오디오를 생성하세요"
+    "hint": "먼저 MIDI 편집기에서 음표를 추가한 후 오디오를 생성하세요",
+    "trackNamePlaceholder": "트랙 1",
+    "defaultTrackName": "MIDI 트랙 1"
   },
   "scoreedit": {
     "toolSelect": "선택",

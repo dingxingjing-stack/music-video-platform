@@ -179,7 +179,12 @@
     "feedbackSubmit": "Submit Feedback",
     "feedbackToastOk": "Thank you for your feedback!",
     "feedbackToastFail": "Submission failed",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "Share your feedback",
+    "feedbackNamePlaceholder": "Nickname (optional)",
+    "feedbackTextPlaceholder": "Share your experience...",
+    "feedbackSample1": "Great public beta — fast generation and clean studio feel.",
+    "feedbackSample2": "Voice Clone UI is clear and the audio tools are well integrated."
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Full-song generation (free)",
@@ -655,7 +660,20 @@
     "favorite": "Favorite",
     "selected": "Selected: {title}",
     "source": "Source: {source} | License: {license}",
-    "showing": "Showing {shown} / {total} clips"
+    "showing": "Showing {shown} / {total} clips",
+    "itemTitle": "{category} sample {n}",
+    "cat": {
+      "nature": "Nature",
+      "city": "Urban",
+      "people": "People",
+      "technology": "Tech",
+      "abstract": "Abstract",
+      "music": "Music",
+      "sports": "Sports",
+      "food": "Food",
+      "travel": "Travel",
+      "emotions": "Mood"
+    }
   },
   "lyricGen": {
     "title": "AI Lyric Assistant",
@@ -1296,7 +1314,9 @@
     "exportMp3": "Export MP3",
     "publishing": "Publishing...",
     "publish": "Publish to Community",
-    "hint": "Add notes in the MIDI editor first, then generate audio"
+    "hint": "Add notes in the MIDI editor first, then generate audio",
+    "trackNamePlaceholder": "Track 1",
+    "defaultTrackName": "MIDI Track 1"
   },
   "scoreedit": {
     "toolSelect": "Select",

@@ -140,7 +140,7 @@ export function CloneConsentModal({ onAgree, onDismiss }: { onAgree: () => void;
             <p key={i} className="text-xs text-zinc-400 leading-relaxed">{i + 1}. {line}</p>
           ))}
         </div>
-        <p className="text-xs text-red-400 mb-4">⚠️ {t.fullLegalLiability}</p>
+        <p className="text-xs text-red-400 mb-4">⚠️ {t.legalLiability}</p>
         <label className="flex items-start gap-3 cursor-pointer mb-4 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
           <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} className="mt-1 accent-orange-400 w-4 h-4" />
           <span className="text-sm text-zinc-300">{t.checkbox}</span>

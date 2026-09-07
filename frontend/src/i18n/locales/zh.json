@@ -25,7 +25,8 @@
       "pt": "Português",
       "ru": "Русский",
       "de": "Deutsch"
-    }
+    },
+    "cancelled": "已取消"
   },
   "paths": {
     "pathA": "AI 快速创作",
@@ -125,35 +126,6 @@
     "ageFetchFailed": "获取年龄失败: {msg}",
     "queryFailed": "查询任务失败 ({status})"
   },
-  "common": {
-    "loading": "加载中...",
-    "logout": "退出登录",
-    "login": "登录",
-    "dismiss": "关闭",
-    "appName": "Zyvexo",
-    "back": "返回",
-    "cancel": "取消",
-    "save": "保存",
-    "reset": "重置",
-    "settings": "设置",
-    "preview": "预览",
-    "error": "错误",
-    "clearConfirm": "确定要清空所有历史记录吗？",
-    "helloWorld": "你好，世界",
-    "trackNum": "音轨{n}",
-    "localeNames": {
-      "zh": "中文",
-      "en": "English",
-      "ja": "日本語",
-      "ko": "한국어",
-      "es": "Español",
-      "fr": "Français",
-      "pt": "Português",
-      "ru": "Русский",
-      "de": "Deutsch"
-    },
-    "cancelled": "已取消"
-  },
   "nav": {
     "workbench": "工作台",
     "aiCompose": "AI 作曲",
@@ -207,7 +179,12 @@
     "feedbackSubmit": "提交反馈",
     "feedbackToastOk": "感谢反馈！",
     "feedbackToastFail": "提交失败",
-    "footerCopyright": "© 2026 Zyvexo. All rights reserved."
+    "footerCopyright": "© 2026 Zyvexo. All rights reserved.",
+    "feedbackFormTitle": "分享你的使用体验",
+    "feedbackNamePlaceholder": "昵称（可选）",
+    "feedbackTextPlaceholder": "分享一下你的感受…",
+    "feedbackSample1": "公测体验很棒 —— 生成速度快，工作台用起来很顺手。",
+    "feedbackSample2": "声音克隆界面清晰，音频工具集成得很顺手。"
   },
   "pathA": {
     "tagline": "提示词 → Agnes AI → 全曲生成（免费）",
@@ -683,7 +660,20 @@
     "favorite": "收藏",
     "selected": "已选择：{title}",
     "source": "来源: {source} | 许可证: {license}",
-    "showing": "显示 {shown} / {total} 个素材"
+    "showing": "显示 {shown} / {total} 个素材",
+    "itemTitle": "{category}素材 {n}",
+    "cat": {
+      "nature": "自然风景",
+      "city": "城市建筑",
+      "people": "人物活动",
+      "technology": "科技数码",
+      "abstract": "抽象艺术",
+      "music": "音乐演出",
+      "sports": "运动健身",
+      "food": "美食餐饮",
+      "travel": "旅行度假",
+      "emotions": "情绪氛围"
+    }
   },
   "lyricGen": {
     "title": "AI 作词助手",
@@ -1324,7 +1314,9 @@
     "exportMp3": "导出 MP3",
     "publishing": "发布中...",
     "publish": "发布到社区",
-    "hint": "先在 MIDI 编辑器中添加音符，然后生成音频"
+    "hint": "先在 MIDI 编辑器中添加音符，然后生成音频",
+    "trackNamePlaceholder": "轨道 1",
+    "defaultTrackName": "MIDI 轨道 1"
   },
   "scoreedit": {
     "toolSelect": "选择",
@@ -1775,7 +1767,7 @@
     "features.deepCopyrightDb.name": "深度版权比对库",
     "features.deepCopyrightDb.desc": "公测暂不开放"
   },
-"vsync": {
+  "vsync": {
     "title": "视频同步工作室",
     "subtitle": "打造专业 MV",
     "projectNameLabel": "项目名称",
