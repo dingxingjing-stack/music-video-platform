@@ -1627,14 +1627,25 @@ async def get_task_status(task_id: str):
 
 @app.on_event("startup")
 async def on_startup():
-    """Step 5: 生产启动时幂等建表（不 DROP），并打印服务注册"""
-    # 生产 PG 初始化（幂等，Koyeb 无状态，首次部署自动建表）
-    try:
-        from app.db.database import init_db
-        init_db()
-        logger.info("Database init_db completed (env=%s)", os.getenv("ENVIRONMENT", "development"))
-    except Exception as exc:
-        logger.warning("Database init_db failed (may be expected in tests): %s", exc)
+    """Step 5: 生产启动时幂等建表（不 DROP），并打印服务注册。
+
+    P0 修复（Render "No open ports detected"）：init_db() 期间首次连接 Supabase
+    PostgreSQL 可能因实例冷启动/恢复长时间阻塞；startup hook 若同步等待它，
+    uvicorn 就不会 bind 端口，Render 判定失败。改为一次性 daemon 后台线程执行，
+    startup 立即返回；线程只允许在这个 hook 触发一次（uvicorn 单进程单 startup）。
+    """
+    import threading
+
+    def _init_db_background():
+        try:
+            from app.db.database import init_db
+            init_db()
+            logger.info("Database init_db completed (env=%s)", os.getenv("ENVIRONMENT", "development"))
+        except Exception as exc:
+            logger.warning("Database init_db failed (may be expected in tests): %s", exc)
+
+    threading.Thread(target=_init_db_background, daemon=True).start()
+    logger.info("Database init_db started in background thread (non-blocking startup)")
     logger.info("Inference Service API starting up")
     logger.info("Registered service types: %s", list(_SERVICE_REGISTRY.keys()))
     logger.info("OpenAPI docs available at: /docs")
