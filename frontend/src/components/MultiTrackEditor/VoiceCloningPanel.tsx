@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../../config/api';
+import { authFetch } from '../../api/http';
 import { useTranslation } from '../../i18n/useTranslation';
 
 interface VoiceProfile {
@@ -38,9 +39,8 @@ export function VoiceCloningPanel({ onClose }: Props) {
   // 加载声音库
   useEffect(() => {
     if (activeTab === 'library') {
-      fetch(api.url('/api/v1/voice/voices?limit=20'))
-        .then(r => r.json())
-        .then(data => {
+      authFetch(api.url('/api/v1/voice/voices?limit=20'))
+        .then((data: any) => {
           if (data.success) {
             setVoices(data.voices);
           }

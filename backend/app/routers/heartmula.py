@@ -17,12 +17,13 @@ HeartMuLa 本地推理路由 - Hugging Face Spaces / RunPod / Kaggle T4 部署�
 
 import os
 import uuid
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 
 from app.services.heartmula_service import get_heartmula_service, HeartMuLaRequest, HeartMuLaLocalError
 from app.services.cdn_uploader import cdn_uploader
+from app.services.auth_identity import get_verified_user_id
 from app.services import ai_limits
 
 router = APIRouter(prefix="/api/v1/heartmula", tags=["heartmula"])
@@ -70,11 +71,11 @@ class HealthResponse(BaseModel):
 async def generate_music(
     request: Request,
     req: GenerateRequest,
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """
     本地 GPU 生成音乐
-    
+
     - 使用 HeartMuLa-oss-3B-happy-new-year + HeartCodec-oss-20260123
     - T4 16GB: lazy_load=True 自动管理显存
     - 生成音频上传 Cloudflare R2，返回预签名下载 URL
@@ -84,9 +85,8 @@ async def generate_music(
     if not req.prompt or len(req.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
 
-    # 身份唯一可信来源：X-User-ID 请求头。缺失则拒绝，不得启动 GPU。
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
+    # 禁止 X-User-ID / anonymous fallback。缺 JWT 时依赖已 401，不进入 GPU。
 
     # 先确认服务可用（此时尚未启动 GPU），避免预留额度后因服务不可用而泄漏额度。
     service = get_heartmula_service()
@@ -101,8 +101,9 @@ async def generate_music(
             detail="当前为 API 模式，本地推理端点需要 HEARTMULA_LOCAL_ENABLED=true"
         )
 
+    user_key = user_id
     # 额度 gate：真实 GPU 生成前必须先原子预留额度，不足则拒绝。
-    reserved = ai_limits.reserve_generation(x_user_id, req.duration)
+    reserved = ai_limits.reserve_generation(user_key, req.duration)
     if not reserved["success"]:
         raise HTTPException(status_code=429, detail=reserved["error"])
 
@@ -124,7 +125,7 @@ async def generate_music(
 
         if not result.get("success"):
             # 生成失败：退还预留额度，避免错误扣减。
-            ai_limits.refund_generation(x_user_id, req.duration, reason="provider_failed")
+            ai_limits.refund_generation(user_key, req.duration, reason="provider_failed")
             raise HTTPException(
                 status_code=500,
                 detail=result.get("error", "生成失败")
@@ -142,13 +143,13 @@ async def generate_music(
         )
 
     except HeartMuLaLocalError as e:
-        ai_limits.refund_generation(x_user_id, req.duration, reason="provider_failed")
+        ai_limits.refund_generation(user_key, req.duration, reason="provider_failed")
         raise HTTPException(status_code=500, detail=f"本地推理错误: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
         # 捕获所有未预期异常；退还额度并返回 500。
-        ai_limits.refund_generation(x_user_id, req.duration, reason="provider_failed")
+        ai_limits.refund_generation(user_key, req.duration, reason="provider_failed")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"生成异常: {type(e).__name__}: {str(e)}")

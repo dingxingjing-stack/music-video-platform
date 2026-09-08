@@ -9,6 +9,8 @@ import { useParams } from 'react-router-dom';
 import { SocialSystem } from '../components/SocialSystem';
 import { User, Music, Heart, Star, Play } from 'lucide-react';
 import { api } from '../config/api';
+import { useAuth } from '../context/AuthContext';
+import { authFetch, authFetchOptional } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface UserProfile {
@@ -33,32 +35,19 @@ interface Work {
 
 const API_BASE = api.url('/api/v1/social');
 
-const getCurrentUserId = (): string => {
-  let userId = localStorage.getItem('user_id');
-  if (!userId) {
-    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('user_id', userId);
-  }
-  return userId;
-};
-
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'X-User-ID': getCurrentUserId(),
-});
-
 type TabType = 'works' | 'favorites';
 
 export function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [works, setWorks] = useState<Work[]>([]);
   const [favorites, setFavorites] = useState<Work[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('works');
   const [loading, setLoading] = useState(true);
 
-  const currentUserId = getCurrentUserId();
+  const currentUserId = user?.id ?? '';
   const targetUserId = userId || currentUserId;
   const isOwnProfile = targetUserId === currentUserId;
 
@@ -69,32 +58,16 @@ export function Profile() {
 
   const loadProfile = async () => {
     try {
-      const response = await fetch(`${API_BASE}/user/${targetUserId}/stats`, {
-        headers: getHeaders(),
+      const data = await authFetchOptional<any>(`${API_BASE}/user/${targetUserId}/stats`);
+      setProfile({
+        user_id: targetUserId,
+        username: t('profile.user', { id: targetUserId.slice(-6) }),
+        avatar: undefined,
+        bio: t('profile.bioDefault'),
+        followers: data.followers || 0,
+        following: data.following || 0,
+        is_following: data.is_following || false,
       });
-      if (response.ok) {
-        const data = await response.json();
-        setProfile({
-          user_id: targetUserId,
-          username: t('profile.user', { id: targetUserId.slice(-6) }),
-          avatar: undefined,
-          bio: t('profile.bioDefault'),
-          followers: data.followers || 0,
-          following: data.following || 0,
-          is_following: data.is_following || false,
-        });
-      } else {
-        // Mock 数据
-        setProfile({
-          user_id: targetUserId,
-          username: t('profile.user', { id: targetUserId.slice(-6) }),
-          avatar: undefined,
-          bio: t('profile.bioDefault'),
-          followers: Math.floor(Math.random() * 1000),
-          following: Math.floor(Math.random() * 100),
-          is_following: false,
-        });
-      }
     } catch (error) {
       console.error('Failed to load profile:', error);
       setProfile({
@@ -140,18 +113,15 @@ export function Profile() {
     if (!profile || isOwnProfile) return;
     try {
       const endpoint = profile.is_following ? 'unfollow' : 'follow';
-      const response = await fetch(`${API_BASE}/${endpoint}`, {
+      await authFetch<any>(`${API_BASE}/${endpoint}`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ user_id: targetUserId }),
+        body: { user_id: targetUserId },
       });
-      if (response.ok) {
-        setProfile(prev => prev ? {
-          ...prev,
-          is_following: !prev.is_following,
-          followers: prev.is_following ? Math.max(0, prev.followers - 1) : prev.followers + 1,
-        } : null);
-      }
+      setProfile(prev => prev ? {
+        ...prev,
+        is_following: !prev.is_following,
+        followers: prev.is_following ? Math.max(0, prev.followers - 1) : prev.followers + 1,
+      } : null);
     } catch (error) {
       console.error('Follow action failed:', error);
     }

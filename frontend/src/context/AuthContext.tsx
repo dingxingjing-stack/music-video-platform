@@ -1,58 +1,80 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
-interface UserInfo { id: string; email: string; username: string; }
 interface AuthCtx {
-  user: UserInfo | null;
+  user: User | null;
+  session: Session | null;
   isLoggedIn: boolean;
+  loading: boolean;
   login: (email: string, pwd: string) => Promise<void>;
-  logout: () => void;
+  register: (email: string, pwd: string) => Promise<void>;
+  logout: () => Promise<void>;
   showLogin: boolean;
   setShowLogin: (v: boolean) => void;
 }
 
 const Ctx = createContext<AuthCtx>(null!);
-const USER_KEY = 'zyvexo_user';
-
-function readUser(): UserInfo | null {
-  try {
-    const s = localStorage.getItem(USER_KEY);
-    return s ? JSON.parse(s) as UserInfo : null;
-  } catch {
-    return null;
-  }
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserInfo | null>(readUser);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true); // 初始 getSession 完成前为 true
   const [showLogin, setShowLogin] = useState(false);
 
-  // 多标签同步：其他标签改了 localStorage 后本标签也跟着更新
+  // 初始恢复 session + 订阅 auth 状态变化（含 TOKEN_REFRESHED / SIGNED_IN / SIGNED_OUT）
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === USER_KEY) setUser(readUser());
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setLoading(false);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession ?? null);
+      setUser(newSession?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
     };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const login = useCallback(async (email: string, _pwd: string) => {
-    const id = 'user_' + Date.now().toString(36);
-    const u: UserInfo = { id, email, username: email.split('@')[0] || 'user' };
-    localStorage.setItem(USER_KEY, JSON.stringify(u));
-    setUser(u);
+  const login = useCallback(async (email: string, pwd: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+    if (error) throw error;
     setShowLogin(false);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(USER_KEY);
-    setUser(null);
+  const register = useCallback(async (email: string, pwd: string) => {
+    const { error } = await supabase.auth.signUp({ email, password: pwd });
+    if (error) throw error;
   }, []);
 
-  return (
-    <Ctx.Provider value={{ user, isLoggedIn: !!user, login, logout, showLogin, setShowLogin }}>
-      {children}
-    </Ctx.Provider>
-  );
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setShowLogin(false);
+  }, []);
+
+  const value: AuthCtx = {
+    user,
+    session,
+    isLoggedIn: !!session?.user,
+    loading,
+    login,
+    register,
+    logout,
+    showLogin,
+    setShowLogin,
+  };
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-export function useAuth() { return useContext(Ctx); }
+export function useAuth() {
+  return useContext(Ctx);
+}

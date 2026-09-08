@@ -6,12 +6,13 @@
  * - 已移除 SoundHelix mock 兜底（真实音频才可商用），失败即返回 null 并暴露 error。
  * - 429（限流）走 onRateLimited 回调。
  * - 暴露 status/progress/error 供页面展示阶段状态。
- * - 所有请求携带 X-User-ID（当前公测安全限制下的身份绑定）。
+ * - 所有请求携带 Authorization: Bearer <Supabase access_token>（不再使用 X-User-ID）。
  */
 
 import { useState, useCallback } from 'react';
-import { getUserId } from './useAiMusicTask';
 import { api } from '../config/api';
+import { supabase } from '../lib/supabase';
+import { AuthenticationError } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 const API = api.base;
@@ -23,6 +24,13 @@ interface UseAudioGenOptions {
 
 const POLL_INTERVAL = 1500;
 const TERMINAL = ['completed', 'failed', 'cancelled'];
+
+async function authHeadersRaw(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) throw new AuthenticationError();
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+}
 
 export function useAudioGeneration(opts?: UseAudioGenOptions) {
   const [loading, setLoading] = useState(false);
@@ -38,9 +46,7 @@ export function useAudioGeneration(opts?: UseAudioGenOptions) {
     setStatus('submitting');
     setProgress(0);
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      const uid = getUserId();
-      if (uid) headers['X-User-ID'] = uid;
+      const headers = await authHeadersRaw();
 
       const res = await fetch(`${API}${endpoint}`, {
         method: 'POST',

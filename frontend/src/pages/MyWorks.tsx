@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { api } from '../config/api';
+import { authFetch, AuthenticationError } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface TaskSummary {
@@ -16,37 +16,25 @@ interface TaskSummary {
 
 export default function MyWorks() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
-  const getUserId = (): string | undefined => user?.id || undefined;
-
   const fetchTasks = async () => {
-    const uid = getUserId();
-    if (!uid) {
-      setLoading(false);
-      setTasks([]);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(api.url('/api/v1/ai/tasks'), {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-ID': uid,
-        },
-      });
-      if (!res.ok) throw new Error(t('myCreations.loadFailed'));
-      const data: any = await res.json();
+      const data: any = await authFetch(api.url('/api/v1/ai/tasks'));
       setTasks(data.tasks || []);
     } catch (e: any) {
-      setError(e?.message || t('myCreations.loadFailed'));
-      setTasks([]);
+      if (e instanceof AuthenticationError) {
+        setTasks([]);
+      } else {
+        setError(e?.message || t('myCreations.loadFailed'));
+        setTasks([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,8 +50,17 @@ export default function MyWorks() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleDownload = (taskId: string, file: string, fmt = 'mp3') => {
-    window.open(api.url(`/api/v1/ai/task/${taskId}/download?file=${file}&fmt=${fmt}`), '_blank');
+  const handleDownload = async (taskId: string, file: string, fmt = 'mp3') => {
+    // 授权下载：先经 authFetch 携带 Bearer 换取预签名 URL，再打开（token 不进 URL）。
+    if (deleting.has(taskId)) return;
+    try {
+      const data = await authFetch<{ url: string }>(
+        api.url(`/api/v1/ai/task/${taskId}/download?file=${file}&fmt=${fmt}`),
+      );
+      if (data.url) window.open(data.url, '_blank');
+    } catch (e: any) {
+      setError(e?.message || t('myCreations.deleteFailed'));
+    }
   };
 
   const handlePlay = (audioUrl: string | null) => {
@@ -79,19 +76,8 @@ export default function MyWorks() {
     }
     setDeleting(prev => new Set([...prev, taskId]));
     try {
-      const res = await fetch(api.url(`/api/v1/ai/task/${taskId}/delete`), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-ID': getUserId() || '',
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTasks(prev => prev.filter(tt => tt.task_id !== taskId));
-      } else {
-        setError(data.detail || t('myCreations.deleteFailed'));
-      }
+      await authFetch(api.url(`/api/v1/ai/task/${taskId}/delete`));
+      setTasks(prev => prev.filter(tt => tt.task_id !== taskId));
     } catch (e: any) {
       setError(e?.message || t('myCreations.deleteError'));
     } finally {

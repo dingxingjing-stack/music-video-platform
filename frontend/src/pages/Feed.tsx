@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { SocialSystem } from '../components/SocialSystem';
 import { Play, Music, Heart, Star } from 'lucide-react';
 import { api } from '../config/api';
+import { authFetchOptional } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface FeedItem {
@@ -29,21 +30,6 @@ interface FeedResponse {
 
 const API_BASE = api.url('/api/v1/social');
 
-// 获取当前用户 ID
-const getCurrentUserId = (): string => {
-  let userId = localStorage.getItem('user_id');
-  if (!userId) {
-    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('user_id', userId);
-  }
-  return userId;
-};
-
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'X-User-ID': getCurrentUserId(),
-});
-
 export function Feed() {
   const { t } = useTranslation();
   const [items, setItems] = useState<FeedItem[]>([]);
@@ -57,24 +43,16 @@ export function Feed() {
   const loadFeed = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/feed?limit=20`, {
-        headers: getHeaders(),
-      });
-      if (response.ok) {
-        const data: FeedResponse = await response.json();
-        // Mock 数据补充 (因为后端返回的是 mock 数据)
-        const enrichedItems = data.items.map((item, index) => ({
-          ...item,
-          title: t('feed.recommended', { n: index + 1 }),
-          cover_url: `/covers/default_${(index % 5) + 1}.jpg`,
-          audio_url: `/audio/demo_${(index % 3) + 1}.mp3`,
-          duration: 180 + index * 10,
-        }));
-        setItems(enrichedItems);
-      } else {
-        // 使用 mock 数据
-        setItems(generateMockFeed(t));
-      }
+      const data = await authFetchOptional<FeedResponse>(`${API_BASE}/feed?limit=20`);
+      // Mock 数据补充 (因为后端返回的是 mock 数据)
+      const enrichedItems = data.items.map((item, index) => ({
+        ...item,
+        title: t('feed.recommended', { n: index + 1 }),
+        cover_url: `/covers/default_${(index % 5) + 1}.jpg`,
+        audio_url: `/audio/demo_${(index % 3) + 1}.mp3`,
+        duration: 180 + index * 10,
+      }));
+      setItems(enrichedItems);
     } catch (error) {
       console.error('Failed to load feed:', error);
       setItems(generateMockFeed(t));

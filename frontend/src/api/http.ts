@@ -1,5 +1,6 @@
-// 简易 fetch 包装，提供 get、post 方法
-// 采用 ES2020+（tsconfig 已配置 lib: ['ES2020', 'DOM'])
+// 统一请求层：apiFetch（普通，可匿名）+ authFetch（要求 JWT 身份）
+// authFetch 每次从 Supabase Auth getSession() 取最新 access_token，不缓存旧 token。
+import { supabase } from '../lib/supabase';
 
 export interface RequestOptions {
   method?: string;
@@ -7,33 +8,69 @@ export interface RequestOptions {
   body?: any;
 }
 
+/** 无 session 时抛出的明确未认证错误（UI 可据此打开 LoginModal）。 */
+export class AuthenticationError extends Error {
+  constructor(message = 'Authentication required') {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
 const defaultHeaders = {
   'Content-Type': 'application/json',
 };
 
-export async function request<T>(url: string, opts: RequestOptions = {}): Promise<T> {
+async function rawFetch(url: string, opts: RequestOptions = {}): Promise<Response> {
   const { method = 'GET', headers = {}, body } = opts;
   const init: RequestInit = {
     method,
     headers: { ...defaultHeaders, ...headers },
-    credentials: 'same-origin', // 发送 cookie，保持会话
+    credentials: 'same-origin',
   };
   if (body !== undefined) {
-    init.body = JSON.stringify(body);
+    init.body = typeof body === 'string' ? body : JSON.stringify(body);
   }
-  const resp = await fetch(url, init);
+  return fetch(url, init);
+}
+
+/** 普通请求（可匿名）：直接 fetch，无身份注入。 */
+export async function apiFetch<T = unknown>(url: string, opts: RequestOptions = {}): Promise<T> {
+  const resp = await rawFetch(url, opts);
   if (!resp.ok) {
-    const txt = await resp.text();
+    const txt = await resp.text().catch(() => '');
     throw new Error(`HTTP ${resp.status}: ${txt}`);
   }
-  // 204 No Content 返回空对象
-  if (resp.status === 204) return {} as T;
+  if (resp.status === 204) return undefined as T;
   return (await resp.json()) as T;
 }
 
-export const get = <T>(url: string) => request<T>(url, { method: 'GET' });
-export const post = <T>(url: string, data: any) => request<T>(url, { method: 'POST', body: data });
+/** 受保护请求：自动附加 Authorization: Bearer <最新 access_token>；无 session 则抛 AuthenticationError。 */
+export async function authFetch<T = unknown>(url: string, opts: RequestOptions = {}): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) {
+    // 不发送 X-User-ID、不伪造 user_id、不回退 localStorage —— 直接声明未登录
+    throw new AuthenticationError();
+  }
+  const headers = { ...(opts.headers || {}), Authorization: `Bearer ${token}` };
+  return apiFetch<T>(url, { ...opts, headers });
+}
 
-// 兼容默认导入的写法（常见于老代码）
-const http = { get, post };
-export default http;
+/** 可选登录请求：有 session 就附加 Bearer，无 session 则以匿名身份请求（不抛错）。 */
+export async function authFetchOptional<T = unknown>(url: string, opts: RequestOptions = {}): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  const headers = token ? { ...(opts.headers || {}), Authorization: `Bearer ${token}` } : { ...(opts.headers || {}) };
+  return apiFetch<T>(url, { ...opts, headers });
+}
+
+export const api = {
+  get: <T = unknown>(url: string) => apiFetch<T>(url, { method: 'GET' }),
+  post: <T = unknown>(url: string, data?: any) => apiFetch<T>(url, { method: 'POST', body: data }),
+  auth: {
+    get: <T = unknown>(url: string) => authFetch<T>(url, { method: 'GET' }),
+    post: <T = unknown>(url: string, data?: any) => authFetch<T>(url, { method: 'POST', body: data }),
+  },
+};
+
+export default api;

@@ -16,6 +16,8 @@ import os
 import re
 from typing import Optional
 
+from fastapi import Header, HTTPException
+
 logger = logging.getLogger(__name__)
 
 # RFC 4122 UUID（大小写不敏感）
@@ -97,3 +99,32 @@ def resolve_auth_user_id(authorization: Optional[str]) -> Optional[str]:
     if supabase_configured():
         return verify_bearer_jwt(token)
     return token
+
+
+async def get_verified_user_id(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> str:
+    """FastAPI 身份依赖：唯一可信用户标识 = verified `auth.users.id`（UUID 字符串）。
+
+    - 唯一来源：`Authorization: Bearer <Supabase access_token>` → `resolve_auth_user_id()`。
+    - 解析失败 / 缺失 / 无效 token → HTTPException 401（fail-closed）。
+    - 绝不回退 X-User-ID / body.user_id / query / form / client.host / anonymous / 自造 id。
+    """
+    user_id = resolve_auth_user_id(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or missing Authorization token")
+    return user_id
+
+
+async def get_verified_user_id_optional(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> Optional[str]:
+    """FastAPI 可选身份依赖：有有效 Bearer JWT → verified `auth.users.id`；无 Authorization → None。
+
+    - 有 Authorization 但 token 无效 → 按既有语义返回 None（invalid == 未认证），
+      不把无效 token 当合法身份、也不抛出（供“登录可选”的读端点使用）。
+    - 仍复用 resolve_auth_user_id()（Supabase Auth 验签），不复制验证逻辑。
+    """
+    if not authorization:
+        return None
+    return resolve_auth_user_id(authorization)

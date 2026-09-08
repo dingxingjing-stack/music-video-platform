@@ -15,10 +15,22 @@ from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 
 import main as main_mod
-from app.services import ai_limits
+from app.services import ai_limits, auth_identity
 
 
 WAV = b"fake wav content"
+
+
+# Phase 3B-4A：身份改为 Authorization Bearer JWT。测试环境打桩 resolve_auth_user_id，
+# 使 "Bearer <token>" 映射为 token 本身，且缺失/空返回 None（等价 401）。
+@pytest.fixture(autouse=True)
+def _jwt_stub(monkeypatch):
+    def _resolve(auth):
+        if isinstance(auth, str) and auth.startswith("Bearer "):
+            token = auth[len("Bearer "):]
+            return token or None
+        return None
+    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
 
 
 @pytest.fixture(autouse=True)
@@ -60,7 +72,8 @@ def test_no_x_user_id_401(client, _quota_and_sep):
 
 
 def test_blank_x_user_id_401(client, _quota_and_sep):
-    r = _post(client, headers={"X-User-ID": "   "})
+    # 空 Bearer token → 401
+    r = _post(client, headers={"Authorization": "Bearer "})
     assert r.status_code == 401
     assert _quota_and_sep["reserve"] == []
 
@@ -79,7 +92,7 @@ def test_quota_rejected_blocks_separation(client, _quota_and_sep, monkeypatch):
     monkeypatch.setattr(ai_limits, "reserve_generation",
                         lambda uid, duration=None: {"success": False, "error": "额度不足"})
     with patch("app.services.audio_separation_service.demucs_service.separate") as m:
-        r = _post(client, headers={"X-User-ID": "u1"})
+        r = _post(client, headers={"Authorization": "Bearer u1", "X-User-ID": "spoof"})
     assert r.status_code == 429
     m.assert_not_called()  # 关键：quota 拒绝后从未进入 separation provider
     assert _quota_and_sep["separate"] == []
@@ -93,10 +106,10 @@ def test_quota_passed_then_separation_called(client, _quota_and_sep):
     }) as m, \
          patch("app.services.cdn_uploader.cdn_uploader.upload_audio", new_callable=AsyncMock,
                side_effect=lambda *a, **k: "https://cdn.example.com/x"):
-        r = _post(client, headers={"X-User-ID": "u1"})
+        r = _post(client, headers={"Authorization": "Bearer u1"})
     assert r.status_code == 200
     m.assert_called_once()
-    # reserve 已用 header 身份调用
+    # reserve 已用 JWT 身份调用
     assert "u1" in _quota_and_sep["reserve"]
 
 

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FEATURE_CONFIG } from '../config/features';
 import { useUserGrayStatus } from '../hooks/useUserGrayStatus';
 import { api } from '../config/api';
+import { authFetch } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface GrayFeatureLockProps {
@@ -23,10 +24,9 @@ export function GrayFeatureLock({ featureKey, userId, onApply }: GrayFeatureLock
 
   const handleSubmit = async () => {
     try {
-      await fetch(api.url('/api/v1/beta/apply-gray'), {
+      await authFetch(api.url('/api/v1/beta/apply-gray'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-ID': userId || '' },
-        body: JSON.stringify({ feature_key: featureKey, reason, contact }),
+        body: { feature_key: featureKey, reason, contact },
       });
     } catch { /* 公测容错 */ }
     setSubmitted(true);

@@ -1,21 +1,22 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
+import { authFetch } from '../../api/http';
 import { WaveformEditor } from './WaveformEditor';
 
 interface SongContinuePanelProps {
-  /** 当前播放的音频 URL */
+  /** 褰撳墠鎾斁鐨勯煶棰?URL */
   audioUrl: string | null;
-  /** 当前任务 ID（用于续写） */
+  /** 褰撳墠浠诲姟 ID锛堢敤浜庣画鍐欙級 */
   taskId: string | null;
-  /** 当前歌曲时长（秒） */
+  /** 褰撳墠姝屾洸鏃堕暱锛堢锛?*/
   currentDuration: number;
-  /** 回调：请求续写 */
+  /** 鍥炶皟锛氳姹傜画鍐?*/
   onContinue: (request: ContinueRequest) => Promise<void>;
-  /** 回调：取消续写面板 */
+  /** 鍥炶皟锛氬彇娑堢画鍐欓潰鏉?*/
   onClose?: () => void;
-  /** 是否显示面板 */
+  /** 鏄惁鏄剧ず闈㈡澘 */
   isOpen: boolean;
-  /** 用户 ID（用于 API 调用） */
+  /** 鐢ㄦ埛 ID锛堢敤浜?API 璋冪敤锛?*/
   userId: string;
 }
 
@@ -105,7 +106,7 @@ export function SongContinuePanel({
   userId,
 }: SongContinuePanelProps) {
   const { t } = useTranslation();
-  
+
   const [mode, setMode] = useState<'auto' | 'keep_style' | 'new_style' | 'variation' | 'bridge' | 'outro_extend'>('auto');
   const [style, setStyle] = useState<string>('pop');
   const [duration, setDuration] = useState<string | number>('auto');
@@ -122,7 +123,7 @@ export function SongContinuePanel({
   const remainingTime = maxDuration - currentDuration;
   const canContinue = remainingTime >= 10 && taskId && audioUrl;
 
-  // 计算建议的续写时长
+  // 璁＄畻寤鸿鐨勭画鍐欐椂闀?
   const suggestedDuration = useCallback(() => {
     if (currentDuration < 60) return 60;
     if (currentDuration < 120) return 60;
@@ -132,28 +133,23 @@ export function SongContinuePanel({
     return Math.max(10, remainingTime);
   }, [currentDuration, remainingTime]);
 
-  // 轮询续写任务状态
+  // 杞缁啓浠诲姟鐘舵€?
   useEffect(() => {
     if (!polling || !continuationTaskId) return;
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/v1/ai/task/${continuationTaskId}`, {
-          headers: { 'X-User-ID': userId },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setContinuationStatus(data);
-          
-          if (data.status === 'completed' && data.result?.audio_url) {
-            setPolling(false);
-            // 续写完成，可以在这里触发回调通知父组件更新音频
-            // 父组件会通过轮询原任务或其他方式获取新音频
-          } else if (data.status === 'failed') {
-            setPolling(false);
-            setError(data.error || t('continue.continueFailed'));
-            setLoading(false);
-          }
+        const data = await authFetch<any>(`/api/v1/ai/task/${continuationTaskId}`);
+        setContinuationStatus(data);
+
+        if (data.status === 'completed' && data.result?.audio_url) {
+          setPolling(false);
+          // 缁啓瀹屾垚锛屽彲浠ュ湪杩欓噷瑙﹀彂鍥炶皟閫氱煡鐖剁粍浠舵洿鏂伴煶棰?
+          // 鐖剁粍浠朵細閫氳繃杞鍘熶换鍔℃垨鍏朵粬鏂瑰紡鑾峰彇鏂伴煶棰?
+        } else if (data.status === 'failed') {
+          setPolling(false);
+          setError(data.error || t('continue.continueFailed'));
+          setLoading(false);
         }
       } catch (e) {
         console.error('Poll error:', e);
@@ -161,16 +157,16 @@ export function SongContinuePanel({
     };
 
     const interval = setInterval(poll, 2000);
-    poll(); // 立即执行一次
+    poll(); // 绔嬪嵆鎵ц涓€娆?
     return () => clearInterval(interval);
   }, [polling, continuationTaskId, userId]);
 
   const handleContinue = async () => {
     if (!taskId || !canContinue) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const request: ContinueRequest = {
         source_task_id: taskId,
@@ -180,12 +176,12 @@ export function SongContinuePanel({
         prompt,
         lyrics,
       };
-      
+
       await onContinue(request);
-      
-      // 续写任务已提交，开始轮询
-      // 注意：onContinue 应该返回新的任务 ID
-      // 这里简化处理，实际需要从 onContinue 返回值获取
+
+      // 缁啓浠诲姟宸叉彁浜わ紝寮€濮嬭疆璇?
+      // 娉ㄦ剰锛歰nContinue 搴旇杩斿洖鏂扮殑浠诲姟 ID
+      // 杩欓噷绠€鍖栧鐞嗭紝瀹為檯闇€瑕佷粠 onContinue 杩斿洖鍊艰幏鍙?
     } catch (e: any) {
       setError(e.message || t('continue.requestFailed'));
       setLoading(false);
@@ -196,38 +192,38 @@ export function SongContinuePanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* 背景遮罩 */}
-      <div 
+      {/* 鑳屾櫙閬僵 */}
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      
-      {/* 面板 */}
+
+      {/* 闈㈡澘 */}
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] shadow-2xl animate-slide-up">
-        {/* 头部 */}
+        {/* 澶撮儴 */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-          <h2 className="text-lg font-display font-semibold">🎵 {t('continue.songContinue') || '歌曲续写'}</h2>
+          <h2 className="text-lg font-display font-semibold">馃幍 {t('continue.songContinue') || '姝屾洸缁啓'}</h2>
           <button
             onClick={onClose}
             disabled={loading || polling}
             className="p-2 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-secondary)] transition disabled:opacity-40"
           >
-            ✕
+            鉁?
           </button>
         </div>
 
-        {/* 内容 */}
+        {/* 鍐呭 */}
         <div className="p-4 space-y-4">
-          {/* 当前歌曲信息 */}
+          {/* 褰撳墠姝屾洸淇℃伅 */}
           <div className="rounded-xl bg-[var(--bg-elevated)] p-3 border border-[var(--border)]">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">{t('continue.currentDuration') || '当前时长'}</span>
+              <span className="text-[var(--text-secondary)]">{t('continue.currentDuration') || '褰撳墠鏃堕暱'}</span>
               <span className="font-mono font-semibold">
                 {Math.floor(currentDuration / 60)}:{String(Math.floor(currentDuration % 60)).padStart(2, '0')}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-[var(--text-secondary)]">{t('continue.remainingTime') || '剩余可续写'}</span>
+              <span className="text-[var(--text-secondary)]">{t('continue.remainingTime') || '鍓╀綑鍙画鍐?}</span>
               <span className="font-mono font-semibold text-[var(--accent-gradient-start)]">
                 {Math.floor(remainingTime / 60)}:{String(Math.floor(remainingTime % 60)).padStart(2, '0')}
                 {' '}
@@ -235,31 +231,31 @@ export function SongContinuePanel({
               </span>
             </div>
             <div className="h-2 bg-[var(--bg-card)] rounded-full overflow-hidden mt-2">
-              <div 
+              <div
                 className="h-full bg-gradient-to-r from-[var(--accent-gradient-start)] to-[var(--accent-gradient-end)] transition-all duration-300"
                 style={{ width: `${(currentDuration / maxDuration) * 100}%` }}
               />
             </div>
             {!canContinue && (
               <p className="text-xs text-[var(--text-muted)] mt-2">
-                {remainingTime < 10 
-                  ? (t('continue.maxDurationReached') || '已达到最大时长 5:30，无法继续')
-                  : (t('continue.noAudio') || '请先生成歌曲')}
+                {remainingTime < 10
+                  ? (t('continue.maxDurationReached') || '宸茶揪鍒版渶澶ф椂闀?5:30锛屾棤娉曠户缁?)
+                  : (t('continue.noAudio') || '璇峰厛鐢熸垚姝屾洸')}
               </p>
             )}
           </div>
 
-          {/* 错误提示 */}
+          {/* 閿欒鎻愮ず */}
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-red-400 text-sm flex items-center gap-2">
-              ⚠️ {error}
+              鈿狅笍 {error}
             </div>
           )}
 
-          {/* 续写模式选择 */}
+          {/* 缁啓妯″紡閫夋嫨 */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--text-secondary)]">
-              {t('continue.mode') || '续写模式'}
+              {t('continue.mode') || '缁啓妯″紡'}
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {MODE_OPTIONS.map((opt) => (
@@ -280,11 +276,11 @@ export function SongContinuePanel({
             </div>
           </div>
 
-          {/* 风格选择（new_style 模式时显示） */}
+          {/* 椋庢牸閫夋嫨锛坣ew_style 妯″紡鏃舵樉绀猴級 */}
           {(mode === 'new_style') && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-[var(--text-secondary)]">
-                {t('continue.newStyle') || '新风格'}
+                {t('continue.newStyle') || '鏂伴鏍?}
               </label>
               <select
                 value={style}
@@ -299,10 +295,10 @@ export function SongContinuePanel({
             </div>
           )}
 
-          {/* 时长选择 */}
+          {/* 鏃堕暱閫夋嫨 */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--text-secondary)]">
-              {t('continue.duration') || '续写时长'}
+              {t('continue.duration') || '缁啓鏃堕暱'}
             </label>
             <div className="flex flex-wrap gap-2">
               {DURATION_OPTIONS.map((opt) => (
@@ -322,37 +318,37 @@ export function SongContinuePanel({
             </div>
             {duration === 'auto' && (
               <p className="text-xs text-[var(--text-muted)]">
-                {t('continue.aiWillDecide') || `AI 将根据歌曲结构自动决定（建议约 ${suggestedDuration()} 秒）`}
+                {t('continue.aiWillDecide') || `AI 灏嗘牴鎹瓕鏇茬粨鏋勮嚜鍔ㄥ喅瀹氾紙寤鸿绾?${suggestedDuration()} 绉掞級`}
               </p>
             )}
           </div>
 
-          {/* 高级选项 */}
+          {/* 楂樼骇閫夐」 */}
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="text-sm text-[var(--accent-gradient-start)] hover:underline flex items-center gap-1"
           >
-            {showAdvanced ? '▼' : '▶'} {t('continue.advancedOptions') || '高级选项'}
+            {showAdvanced ? '鈻? : '鈻?} {t('continue.advancedOptions') || '楂樼骇閫夐」'}
           </button>
 
           {showAdvanced && (
             <div className="space-y-3 border-t border-[var(--border)] pt-4 animate-fade-in">
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1">
-                  {t('continue.additionalPrompt') || '额外提示词'}
+                  {t('continue.additionalPrompt') || '棰濆鎻愮ず璇?}
                 </label>
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder={t('continue.promptPlaceholder') || '例如：增加弦乐编排，情感更加饱满...'}
+                  placeholder={t('continue.promptPlaceholder') || '渚嬪锛氬鍔犲鸡涔愮紪鎺掞紝鎯呮劅鏇村姞楗辨弧...'}
                   className="w-full h-20 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-3 text-sm resize-none focus:outline-none focus:border-[var(--accent-gradient-start)]"
                 />
               </div>
-              
+
               <div>
                 <label className="text-sm font-medium text-[var(--text-secondary)] block mb-1">
-                  {t('continue.customLyrics') || '自定义续写歌词（可选）'}
+                  {t('continue.customLyrics') || '鑷畾涔夌画鍐欐瓕璇嶏紙鍙€夛級'}
                 </label>
                 <textarea
                   value={lyrics}
@@ -364,7 +360,7 @@ export function SongContinuePanel({
             </div>
           )}
 
-          {/* 进度显示（续写进行中） */}
+          {/* 杩涘害鏄剧ず锛堢画鍐欒繘琛屼腑锛?*/}
           {polling && continuationStatus && (
             <div className="space-y-2 border-t border-[var(--border)] pt-4 animate-fade-in">
               <div className="flex items-center justify-between text-sm">
@@ -379,21 +375,21 @@ export function SongContinuePanel({
               </div>
               {continuationStatus.progress.segment_name && (
                 <p className="text-xs text-[var(--text-muted)]">
-                  {t('continue.generatingSegment') || '正在生成'}: {continuationStatus.progress.segment_name}
+                  {t('continue.generatingSegment') || '姝ｅ湪鐢熸垚'}: {continuationStatus.progress.segment_name}
                   ({continuationStatus.progress.current_segment}/{continuationStatus.progress.total_segments})
                 </p>
               )}
             </div>
           )}
 
-          {/* 操作按钮 */}
+          {/* 鎿嶄綔鎸夐挳 */}
           <div className="flex gap-3 pt-2 border-t border-[var(--border)]">
             <button
               onClick={onClose}
               disabled={loading || polling}
               className="flex-1 btn-secondary disabled:opacity-40"
             >
-              {t('common.cancel') || '取消'}
+              {t('common.cancel') || '鍙栨秷'}
             </button>
             <button
               onClick={handleContinue}
@@ -403,15 +399,15 @@ export function SongContinuePanel({
               {loading ? (
                 <>
                   <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-                  {t('continue.submitting') || '提交中...'}
+                  {t('continue.submitting') || '鎻愪氦涓?..'}
                 </>
               ) : polling ? (
                 <>
                   <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-                  {t('continue.generating') || '生成中...'}
+                  {t('continue.generating') || '鐢熸垚涓?..'}
                 </>
               ) : (
-                t('continue.startContinue') || '开始续写'
+                t('continue.startContinue') || '寮€濮嬬画鍐?
               )}
             </button>
           </div>

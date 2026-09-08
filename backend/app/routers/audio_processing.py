@@ -4,7 +4,7 @@
 - 母带处理
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Header
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 import os
@@ -14,7 +14,7 @@ from pathlib import Path
 from app.services.audio_separation_service import demucs_service
 from app.services.mastering_service import mastering_service
 from app.services.cdn_uploader import cdn_uploader
-from app.services.auth_identity import resolve_x_user_id
+from app.services.auth_identity import get_verified_user_id
 
 router = APIRouter()
 
@@ -104,7 +104,7 @@ async def master_audio(
 async def separate_audio(
     file: UploadFile = File(...),
     model: str = Form("htdemucs"),
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """
     音频分离 (vocals/drums/bass/other)
@@ -112,15 +112,13 @@ async def separate_audio(
     上传音频文件，返回 4 轨分离后的文件 URL
 
     安全：
-      - 身份唯一可信来源 = X-User-ID；缺失/空白 → 401。
-        绝不接受 body.user_id / client.host / IP / anonymous 作为身份。
+      - 身份唯一可信来源 = Authorization Bearer JWT → verified auth.users.id（缺 JWT 自动 401）。
+        绝不接受 X-User-ID / body.user_id / client.host / IP / anonymous 作为身份。
       - 实际执行 separation（含 mock）前必须先 reserve_generation(user_key)；
         quota 不足 → 429，阻止后续 provider/inference。
     """
-    # 1) 身份认证（必选）
-    user_key = resolve_x_user_id(x_user_id)
-    if not user_key:
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+    # 1) 身份认证（依赖层已强制 JWT；user_key = verified auth.users.id）
+    user_key = user_id
 
     # 2) Quota 预留：必须在任何 separation/inference 之前
     from app.services.ai_limits import reserve_generation, refund_generation

@@ -9,10 +9,11 @@ import logging
 import os
 from typing import Any, Optional
 
-from fastapi import HTTPException, Request, APIRouter
+from fastapi import HTTPException, Request, APIRouter, Depends
 router = APIRouter()
 
 from app.services.workflow import WorkflowEngine
+from app.services.auth_identity import get_verified_user_id
 from . import ai_limits
 from . import task_store
 
@@ -74,7 +75,7 @@ async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
 
 
 @router.post("/a", tags=["workflows"])
-async def workflow_path_a(request: Request):
+async def workflow_path_a(request: Request, user_id: str = Depends(get_verified_user_id)):
     """Path A: Suno-style �?one-click music generation."""
     try:
         body = await request.json()
@@ -85,11 +86,8 @@ async def workflow_path_a(request: Request):
     if not prompt:
         raise HTTPException(status_code=422, detail="'prompt' is required")
 
-    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
-    x_user_id = request.headers.get("X-User-ID")
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
-    user_key = x_user_id
+    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。禁止 X-User-ID / body.user_id / IP fallback。
+    user_key = str(user_id)
 
     # Skip quota check in mock mode
     duration = float(body.get("duration", 10.0))
@@ -139,7 +137,7 @@ async def workflow_path_a(request: Request):
 
 
 @router.post("/b", tags=["workflows"])
-async def workflow_path_b(request: Request):
+async def workflow_path_b(request: Request, user_id: str = Depends(get_verified_user_id)):
     """Path B: Hybrid �?MusicGen background + TTS vocals."""
     try:
         body = await request.json()
@@ -154,11 +152,8 @@ async def workflow_path_b(request: Request):
             detail="'prompt' and 'tts_text' are required",
         )
 
-    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
-    x_user_id = request.headers.get("X-User-ID")
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
-    user_key = x_user_id
+    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
+    user_key = str(user_id)
 
     # Skip quota check in mock mode
     duration = float(body.get("duration", 10.0))
@@ -210,7 +205,7 @@ async def workflow_path_b(request: Request):
 
 
 @router.post("/c", tags=["workflows"])
-async def workflow_path_c(request: Request):
+async def workflow_path_c(request: Request, user_id: str = Depends(get_verified_user_id)):
     """Path C: Remix �?upload audio -> Demucs stem separation."""
     try:
         body = await request.json()
@@ -224,11 +219,8 @@ async def workflow_path_c(request: Request):
             detail="'audio_base64' is required",
         )
 
-    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
-    x_user_id = request.headers.get("X-User-ID")
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
-    user_key = x_user_id
+    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
+    user_key = str(user_id)
 
     # Skip quota check in mock mode
     duration = 10.0  # Path C uses fixed weight=1 for stem separation
@@ -279,7 +271,7 @@ async def workflow_path_c(request: Request):
 
 
 @router.post("/d", tags=["workflows"])
-async def workflow_path_d(request: Request):
+async def workflow_path_d(request: Request, user_id: str = Depends(get_verified_user_id)):
     """Path D: Original Creation �?MIDI project -> render to audio."""
     try:
         body = await request.json()
@@ -293,11 +285,8 @@ async def workflow_path_d(request: Request):
             detail="'midi_project' is required",
         )
 
-    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
-    x_user_id = request.headers.get("X-User-ID")
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
-    user_key = x_user_id
+    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
+    user_key = str(user_id)
 
     # Skip quota check in mock mode
     duration = 10.0  # Path D uses fixed weight=1 for MIDI render

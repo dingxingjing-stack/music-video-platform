@@ -8,9 +8,10 @@
  *         -> completed | failed | cancelled
  *   completed 时返回：audio_url（完整歌，预签名）、stems{4轨，预签名}、stems_state
  *   POST /api/v1/ai/task/{id}/retry-stems -> 分轨失败重试（不扣生成额度，受 MAX_AUTO_RETRIES 限制）
- *   GET  /api/v1/ai/task/{id}/download    -> 授权下载预签名 URL（X-User-ID 归属校验）
+ *   GET  /api/v1/ai/task/{id}/download    -> 授权下载预签名 URL（owner 归属校验）
  *
- * 安全：所有请求携带 X-User-ID（当前公测安全限制下的身份绑定，见交付说明）。
+ * 安全：所有请求携带 Authorization: Bearer <Supabase access_token>（Phase 3B-2 后统一由 authFetch 注入，
+ * 不再使用 X-User-ID / localStorage 自造用户）。
  * 前端不接触 Modal 内部路径 / R2 密钥 / 永久 URL，仅使用后端签发的短期预签名 URL。
  */
 
@@ -18,6 +19,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../config/api';
 
 export const AI_API_BASE = api.url('/api/v1/ai');
+
+import { authFetch, AuthenticationError } from '../api/http';
 
 export type AiStage =
   | 'idle' | 'pending' | 'processing' | 'generating' | 'separating' | 'uploading'
@@ -113,17 +116,6 @@ const EMPTY: AiMusicTask = {
 
 const TERMINAL: AiStage[] = ['completed', 'failed', 'cancelled'];
 
-export function getUserId(): string | undefined {
-  try {
-    const raw = localStorage.getItem('zyvexo_user');
-    if (!raw) return undefined;
-    const u = JSON.parse(raw);
-    return u?.id || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export interface GenerateParams {
   prompt: string;
   style?: string;
@@ -135,7 +127,6 @@ export interface GenerateParams {
 export function useAiMusicTask() {
   const [task, setTask] = useState<AiMusicTask>(EMPTY);
   const [loading, setLoading] = useState(false);
-  const userId = getUserId();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
@@ -147,27 +138,11 @@ export function useAiMusicTask() {
     };
   }, []);
 
-  const authHeaders = useCallback((): Record<string, string> => {
-    const h: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (userId) h['X-User-ID'] = userId;
-    return h;
-  }, [userId]);
-
   const poll = useCallback((taskId: string) => {
     const tick = async () => {
       if (!mountedRef.current) return;
       try {
-        const res = await fetch(`${AI_API_BASE}/task/${taskId}`, {
-          headers: { 'X-User-ID': userId || '' },
-        });
-        if (!res.ok) {
-          if (mountedRef.current) {
-            setTask(t => ({ ...t, stage: 'failed', error: { key: 'aiTask.queryFailed', status: res.status } }));
-          }
-          setLoading(false);
-          return;
-        }
-        const d = await res.json();
+        const d = await authFetch<Record<string, any>>(`${AI_API_BASE}/task/${taskId}`);
         if (mountedRef.current) {
           setTask({
             taskId,
@@ -185,28 +160,34 @@ export function useAiMusicTask() {
           setLoading(false);
           return;
         }
-      } catch {
-        if (mountedRef.current) setTask(t => ({ ...t, error: { key: 'aiTask.networkErrorRetrying' } }));
+      } catch (e) {
+        if (mountedRef.current) {
+          if (e instanceof AuthenticationError) {
+            setTask(t => ({ ...t, stage: 'failed', error: { key: 'aiTask.authRequired', status: 401 } }));
+          } else {
+            setTask(t => ({ ...t, error: { key: 'aiTask.queryFailed' } }));
+          }
+        }
+        setLoading(false);
+        return;
       }
       if (mountedRef.current) timerRef.current = setTimeout(tick, 1500);
     };
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(tick, 300);
-  }, [userId]);
+  }, []);
 
   const submit = useCallback(async (params: GenerateParams): Promise<string | null> => {
     setLoading(true);
     setTask(EMPTY);
     try {
-      const res = await fetch(`${AI_API_BASE}/generate`, {
+      const d = await authFetch<{ success?: boolean; task_id?: string; error?: any }>(`${AI_API_BASE}/generate`, {
         method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ type: 'song', ...params }),
+        body: { type: 'song', ...params },
       });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok || !d.success || !d.task_id) {
+      if (!d.success || !d.task_id) {
         if (mountedRef.current) {
-          setTask({ ...EMPTY, stage: 'failed', error: d.error || { key: 'aiTask.submitFailed', status: res.status } });
+          setTask({ ...EMPTY, stage: 'failed', error: d.error || { key: 'aiTask.submitFailed' } });
         }
         setLoading(false);
         return null;
@@ -215,47 +196,52 @@ export function useAiMusicTask() {
       if (mountedRef.current) setTask({ ...EMPTY, taskId, stage: 'pending' });
       poll(taskId);
       return taskId;
-    } catch {
-      if (mountedRef.current) setTask({ ...EMPTY, stage: 'failed', error: { key: 'aiTask.submitFailedNetwork' } });
+    } catch (e) {
+      if (mountedRef.current) {
+        if (e instanceof AuthenticationError) {
+          setTask({ ...EMPTY, stage: 'failed', error: { key: 'aiTask.authRequired', status: 401 } });
+        } else {
+          setTask({ ...EMPTY, stage: 'failed', error: { key: 'aiTask.submitFailedNetwork' } });
+        }
+      }
       setLoading(false);
       return null;
     }
-  }, [authHeaders, poll]);
+  }, [poll]);
 
   const retryStems = useCallback(async () => {
     if (!task.taskId) return;
     try {
-      const res = await fetch(`${AI_API_BASE}/task/${task.taskId}/retry-stems`, {
-        method: 'POST',
-        headers: { 'X-User-ID': userId || '' },
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (mountedRef.current) setTask(t => ({ ...t, error: d.detail || { key: 'aiTask.retryFailed', status: res.status } }));
-        return;
-      }
+      await authFetch(`${AI_API_BASE}/task/${task.taskId}/retry-stems`, { method: 'POST' });
       setLoading(true);
       if (mountedRef.current) setTask(t => ({ ...t, stage: 'separating', error: null, stemRetries: t.stemRetries + 1 }));
       poll(task.taskId);
-    } catch {
-      if (mountedRef.current) setTask(t => ({ ...t, error: { key: 'aiTask.retryFailedNetwork' } }));
+    } catch (e) {
+      if (mountedRef.current) {
+        if (e instanceof AuthenticationError) {
+          setTask(t => ({ ...t, error: { key: 'aiTask.authRequired', status: 401 } }));
+        } else {
+          setTask(t => ({ ...t, error: { key: 'aiTask.retryFailedNetwork' } }));
+        }
+      }
     }
-  }, [task.taskId, userId, poll]);
+  }, [task.taskId, poll]);
 
   const download = useCallback(
     async (file: 'full' | 'vocals' | 'drums' | 'bass' | 'other', fmt = 'mp3'): Promise<string> => {
       if (!task.taskId) throwTaskError('aiTask.taskNotFound');
-      const res = await fetch(`${AI_API_BASE}/task/${task.taskId}/download?file=${file}&fmt=${fmt}`, {
-        headers: { 'X-User-ID': userId || '' },
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (d.detail) throw new Error(d.detail);
-        throwTaskError('aiTask.downloadFailed', res.status);
+      try {
+        const d = await authFetch<{ url: string }>(
+          `${AI_API_BASE}/task/${task.taskId}/download?file=${file}&fmt=${fmt}`,
+        );
+        return d.url;
+      } catch (e) {
+        if (e instanceof AuthenticationError) throw new Error('Authentication required');
+        if (e instanceof Error && e.message.startsWith('HTTP ')) throw e;
+        throwTaskError('aiTask.downloadFailed');
       }
-      return d.url as string;
     },
-    [task.taskId, userId],
+    [task.taskId],
   );
 
   const reset = useCallback(() => {

@@ -1,13 +1,8 @@
-"""B4 测试：Modal GPU 每日预算硬停线（服务端真实硬限制，非前端提示）。
-
-覆盖：
-  1. 未达到预算 → 可以创建任务
-  2. 达到预算 → 阻止新任务（明确限额错误）
-  3. 阻止时不会启动 GPU（不调用 ace_step_generate）
-  4. 重复请求不会绕过预算
-  5. 并发不会绕过预算（条件自增原子性）
-  6. retry-stems（Demucs GPU）不会绕过预算
-  7. 服务重启后预算状态不丢失（SQLite 持久化）
+"""B4 娴嬭瘯锛歁odal GPU 姣忔棩棰勭畻纭仠绾匡紙鏈嶅姟绔湡瀹炵‖闄愬埗锛岄潪鍓嶇鎻愮ず锛夈€?
+瑕嗙洊锛?  1. 鏈揪鍒伴绠?鈫?鍙互鍒涘缓浠诲姟
+  2. 杈惧埌棰勭畻 鈫?闃绘鏂颁换鍔★紙鏄庣‘闄愰閿欒锛?  3. 闃绘鏃朵笉浼氬惎鍔?GPU锛堜笉璋冪敤 ace_step_generate锛?  4. 閲嶅璇锋眰涓嶄細缁曡繃棰勭畻
+  5. 骞跺彂涓嶄細缁曡繃棰勭畻锛堟潯浠惰嚜澧炲師瀛愭€э級
+  6. retry-stems锛圖emucs GPU锛変笉浼氱粫杩囬绠?  7. 鏈嶅姟閲嶅惎鍚庨绠楃姸鎬佷笉涓㈠け锛圫QLite 鎸佷箙鍖栵級
 """
 
 import concurrent.futures
@@ -22,7 +17,7 @@ from app.services import ai_limits, task_store, provider_registry
 
 @pytest.fixture()
 def isolated_db(tmp_path, monkeypatch):
-    """独立 SQLite + 清空进程内任务/锁，避免跨测试污染。"""
+    """鐙珛 SQLite + 娓呯┖杩涚▼鍐呬换鍔?閿侊紝閬垮厤璺ㄦ祴璇曟薄鏌撱€?""
     db_path = str(tmp_path / "budget.db")
     monkeypatch.setattr(ai_limits, "_DB_DIR", str(tmp_path))
     monkeypatch.setattr(ai_limits, "_DB_PATH", db_path)
@@ -34,7 +29,7 @@ def isolated_db(tmp_path, monkeypatch):
 
 @pytest.fixture()
 def disable_bg(monkeypatch):
-    """端点后台任务替换为 no-op，避免测试驱动与后台重复执行。"""
+    """绔偣鍚庡彴浠诲姟鏇挎崲涓?no-op锛岄伩鍏嶆祴璇曢┍鍔ㄤ笌鍚庡彴閲嶅鎵ц銆?""
 
     async def _noop(*args, **kwargs):
         return None
@@ -44,7 +39,7 @@ def disable_bg(monkeypatch):
 
 @pytest.fixture()
 def fake_modal(monkeypatch):
-    """记录 GPU 调用（generate=ACE-Step, separate=Demucs），默认不真正运行。"""
+    """璁板綍 GPU 璋冪敤锛坓enerate=ACE-Step, separate=Demucs锛夛紝榛樿涓嶇湡姝ｈ繍琛屻€?""
     calls = {"generate": [], "separate": []}
 
     async def _generate(prompt=None, lyrics=None, duration=None):
@@ -72,10 +67,10 @@ def _no_user_limits(monkeypatch):
     monkeypatch.setattr(ai_limits, "GLOBAL_DAILY_GENERATION_LIMIT", 1000)
 
 
-# ────────────────────────── 预算硬停线 ──────────────────────────
+# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 棰勭畻纭仠绾?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 def test_under_budget_can_create_task(isolated_db, fake_modal, disable_bg, monkeypatch):
-    """1: 未达到预算 → 可创建任务（reserve 成功，任务入队）。"""
+    """1: 鏈揪鍒伴绠?鈫?鍙垱寤轰换鍔★紙reserve 鎴愬姛锛屼换鍔″叆闃燂級銆?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "5")
     r = ai_limits.reserve_generation("u1")
@@ -83,40 +78,40 @@ def test_under_budget_can_create_task(isolated_db, fake_modal, disable_bg, monke
     assert r["budget_daily_used"] == 1 and r["budget_daily_limit"] == 5
 
     c = _client()
-    rr = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "u2"})
+    rr = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"Authorization": "Bearer u2"})
     assert rr.status_code == 200 and rr.json()["success"] is True
-    # 任务已创建，通过 is_user_busy 验证
+    # 浠诲姟宸插垱寤猴紝閫氳繃 is_user_busy 楠岃瘉
     assert task_store.is_user_busy("u2") is True
 
 
 def test_at_budget_blocks_new_task(isolated_db, monkeypatch):
-    """2: 达到预算 → 阻止新任务，返回明确限额错误。"""
+    """2: 杈惧埌棰勭畻 鈫?闃绘鏂颁换鍔★紝杩斿洖鏄庣‘闄愰閿欒銆?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "1")
     assert ai_limits.reserve_generation("u1")["success"] is True
     r = ai_limits.reserve_generation("u2")
     assert r["success"] is False
-    assert "预算" in r["error"]
+    assert "棰勭畻" in r["error"]
 
 
 def test_blocked_does_not_start_gpu(isolated_db, fake_modal, disable_bg, monkeypatch):
-    """3: 预算用尽被拒时不会启动 GPU（不调用 ace_step_generate，不创建任务）。"""
+    """3: 棰勭畻鐢ㄥ敖琚嫆鏃朵笉浼氬惎鍔?GPU锛堜笉璋冪敤 ace_step_generate锛屼笉鍒涘缓浠诲姟锛夈€?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "1")
-    assert ai_limits.reserve_generation("u1")["success"] is True  # 预算用尽
+    assert ai_limits.reserve_generation("u1")["success"] is True  # 棰勭畻鐢ㄥ敖
 
     c = _client()
-    r = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"X-User-ID": "u2"})
-    assert r.status_code == 429  # 预算硬停线：GPU 启动前 429
+    r = c.post("/api/v1/ai/generate", json={"prompt": "a song"}, headers={"Authorization": "Bearer u2"})
+    assert r.status_code == 429  # 棰勭畻纭仠绾匡細GPU 鍚姩鍓?429
     assert r.json()["success"] is False
-    assert "预算" in r.json()["error"]
-    assert fake_modal["generate"] == []  # 未启动 ACE-Step GPU
-    # 任务未创建，is_user_busy 应为 False
+    assert "棰勭畻" in r.json()["error"]
+    assert fake_modal["generate"] == []  # 鏈惎鍔?ACE-Step GPU
+    # 浠诲姟鏈垱寤猴紝is_user_busy 搴斾负 False
     assert task_store.is_user_busy("u2") is False
 
 
 def test_repeat_requests_cannot_bypass_budget(isolated_db, monkeypatch):
-    """4: 预算用尽后连续重复请求均被拒绝。"""
+    """4: 棰勭畻鐢ㄥ敖鍚庤繛缁噸澶嶈姹傚潎琚嫆缁濄€?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "1")
     assert ai_limits.reserve_generation("u1")["success"] is True
@@ -125,7 +120,7 @@ def test_repeat_requests_cannot_bypass_budget(isolated_db, monkeypatch):
 
 
 def test_concurrency_cannot_bypass_budget(isolated_db, monkeypatch):
-    """5: 并发请求无法越过预算（条件自增原子性，恰好只成功 budget 次）。"""
+    """5: 骞跺彂璇锋眰鏃犳硶瓒婅繃棰勭畻锛堟潯浠惰嚜澧炲師瀛愭€э紝鎭板ソ鍙垚鍔?budget 娆★級銆?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "3")
 
@@ -139,10 +134,10 @@ def test_concurrency_cannot_bypass_budget(isolated_db, monkeypatch):
 
 
 def test_retry_stems_gated_by_budget(isolated_db, fake_modal, disable_bg, monkeypatch):
-    """6: 预算用尽后 retry-stems（Demucs GPU）被 429 拒绝，不启动 Demucs。"""
+    """6: 棰勭畻鐢ㄥ敖鍚?retry-stems锛圖emucs GPU锛夎 429 鎷掔粷锛屼笉鍚姩 Demucs銆?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "1")
-    assert ai_limits.reserve_generation("u1")["success"] is True  # 预算用尽
+    assert ai_limits.reserve_generation("u1")["success"] is True  # 棰勭畻鐢ㄥ敖
 
     tid = task_store.new_task(user_key="uA", task_id="budget-retry")
     task_store.update(
@@ -151,21 +146,20 @@ def test_retry_stems_gated_by_budget(isolated_db, fake_modal, disable_bg, monkey
         download={"full_mp3": "music/budget-retry/full.mp3"},
     )
     c = _client()
-    r = c.post(f"/api/v1/ai/task/{tid}/retry-stems", headers={"X-User-ID": "uA"})
+    r = c.post(f"/api/v1/ai/task/{tid}/retry-stems", headers={"Authorization": "Bearer uA"})
     assert r.status_code == 429
-    assert "预算" in r.json()["detail"]
-    assert fake_modal["separate"] == []  # 未启动 Demucs GPU
+    assert "棰勭畻" in r.json()["detail"]
+    assert fake_modal["separate"] == []  # 鏈惎鍔?Demucs GPU
 
 
 def test_budget_state_persists_across_restart(isolated_db, monkeypatch):
-    """7: 预算状态持久化在 SQLite；服务重启后依旧硬性拒绝。"""
+    """7: 棰勭畻鐘舵€佹寔涔呭寲鍦?SQLite锛涙湇鍔￠噸鍚悗渚濇棫纭€ф嫆缁濄€?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "1")
     assert ai_limits.reserve_generation("u1")["success"] is True
     assert ai_limits.budget_hard_stop_reached() is True
 
-    # 模拟服务重启：重新打开连接 + 重跑建表（数据在 SQLite 文件，不丢失）
-    conn = ai_limits._get_conn()
+    # 妯℃嫙鏈嶅姟閲嶅惎锛氶噸鏂版墦寮€杩炴帴 + 閲嶈窇寤鸿〃锛堟暟鎹湪 SQLite 鏂囦欢锛屼笉涓㈠け锛?    conn = ai_limits._get_conn()
     try:
         ai_limits._init_db(conn)
         g = conn.execute(
@@ -176,11 +170,11 @@ def test_budget_state_persists_across_restart(isolated_db, monkeypatch):
         conn.close()
 
     assert ai_limits.reserve_generation("u2")["success"] is False
-    assert "预算" in ai_limits.reserve_generation("u3")["error"]
+    assert "棰勭畻" in ai_limits.reserve_generation("u3")["error"]
 
 
 def test_budget_status_exposes_used_and_limit(isolated_db, monkeypatch):
-    """额外：/limits 返回预算使用与限额（供前端/运营查看，真实服务端数据）。"""
+    """棰濆锛?limits 杩斿洖棰勭畻浣跨敤涓庨檺棰濓紙渚涘墠绔?杩愯惀鏌ョ湅锛岀湡瀹炴湇鍔＄鏁版嵁锛夈€?""
     _no_user_limits(monkeypatch)
     monkeypatch.setattr(ai_limits, "MODAL_BUDGET_DAILY", "4")
     ai_limits.reserve_generation("u1")
@@ -189,3 +183,15 @@ def test_budget_status_exposes_used_and_limit(isolated_db, monkeypatch):
     st = asyncio.run(ai_limits.generation_usage_status("u1"))
     assert st["budget_daily_limit"] == 4
     assert st["budget_daily_used"] == 1
+
+
+# Phase 3B-1锛氳韩浠芥敼涓?Authorization Bearer JWT銆傛祴璇曠幆澧冧笉鑱旂湡瀹?Supabase Auth锛?# 鍥犳 autouse 鎵撴々 resolve_auth_user_id锛屼娇 "Bearer <token>" 鏈夋晥鏃跺彲纭畾鍦拌繑鍥?token 閮ㄥ垎锛?# 涓?"Authorization" 缂哄け/闈?Bearer 杩斿洖 None锛堢瓑浠?fail-closed 401锛夛紝涓嶄緷璧栫幆澧冨彉閲忋€?@pytest.fixture(autouse=True)
+def _jwt_identity_stub(monkeypatch):
+    from app.services import auth_identity
+
+    def _resolve(auth):
+        if isinstance(auth, str) and auth.startswith("Bearer "):
+            return auth[len("Bearer "):]
+        return None
+
+    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)

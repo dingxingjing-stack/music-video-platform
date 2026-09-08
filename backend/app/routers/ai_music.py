@@ -17,7 +17,7 @@ GET  /api/v1/ai/limits                 额度/成本保护状态
   - 每用户同时仅 1 个任务（task_store 锁），单任务超时 10 分钟
 
 下载安全（公测最小增强）：
-  - job 绑定创建者（X-User-ID 头），下载端校验 job 存在 / 归属 / 已完成 / 文件属于 job
+  - job 绑定创建者（Authorization Bearer JWT → verified auth.users.id），下载端校验 job 存在 / 归属 / 已完成 / 文件属于 job
   - IDOR 防护：A 无法通过改 job_id 下载 B 的音频
   - Modal 内部路径与对象存储公网 URL 均不暴露；下载仅返回短期预签名 URL（10 分钟）
   - 记录下载审计（user_id / job_id / file_type / 时间 / IP）+ 每用户限流
@@ -28,10 +28,12 @@ import json
 import os
 import time
 import httpx
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Header, Request, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
+
+from app.services.auth_identity import get_verified_user_id
 
 from app.services.agnes_music_service import agnes_service, AgnesSongRequest
 from app.services.ace_step_client import (
@@ -495,20 +497,18 @@ async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: st
 async def generate_music(
     request: Request,
     req: GenerateRequest,
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """提交 AI 音乐生成任务，立即返回 task_id。
 
-    身份唯一来源：X-User-ID 请求头（缺失则 401 拒绝）。
+    身份唯一来源：Authorization: Bearer JWT → verified auth.users.id（缺失/无效则 401）。
     job 在创建时即绑定该 user_key，下载/重试均以此归属校验。
     """
     if not req.prompt or len(req.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
 
-    # 身份唯一可信来源：X-User-ID 请求头。禁止 body.user_id / IP fallback。
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
-    user_key = x_user_id
+    # 身份唯一可信来源：verified auth.users.id（JWT）。禁止 X-User-ID / body.user_id / IP fallback。
+    user_key = user_id
     if task_store.is_user_busy(user_key):
         return GenerateResponse(
             success=False,
@@ -546,18 +546,18 @@ async def generate_music(
 @router.get("/task/{task_id}", response_model=TaskResponse)
 async def get_task(
     task_id: str,
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """轮询任务状态；completed 时返回可播放 URL 与分轨。
 
-    带 X-User-ID 时做归属校验；不带时保持向后兼容（公测安全限制，见 ai_limits 说明）。
+    无有效 JWT → 401；task 不属于当前用户 → 403（IDOR 防护，删除匿名放行）。
     """
     task = task_store.get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
 
     user_key = task.get("user_key")
-    if x_user_id and user_key and x_user_id != user_key:
+    if not user_key or user_key != user_id:
         raise HTTPException(status_code=403, detail="无权访问该任务")
 
     state = task["state"]
@@ -589,7 +589,7 @@ async def download_file(
     task_id: str,
     file: str = "full",
     fmt: str = "mp3",
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """授权下载：完整歌（mp3/wav）与 4 分轨。返回短期预签名 URL。
 
@@ -604,8 +604,8 @@ async def download_file(
         raise HTTPException(status_code=404, detail="任务不存在")
 
     user_key = task.get("user_key")
-    if not x_user_id or not user_key or x_user_id != user_key:
-        raise HTTPException(status_code=403, detail="无权访问该任务（需 X-User-ID 且归属匹配）")
+    if not user_key or user_key != user_id:
+        raise HTTPException(status_code=403, detail="无权访问该任务")
 
     if task["state"] not in ("completed", "completed_with_stems_failed"):
         raise HTTPException(status_code=409, detail="任务尚未完成")
@@ -642,7 +642,7 @@ async def download_file(
 @router.post("/task/{task_id}/retry-stems")
 async def retry_stems(
     task_id: str,
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """分轨失败重试：对已生成的完整 WAV 重新执行四轨分离（独立 Spleeter App）。"""
     task = task_store.get(task_id)
@@ -650,7 +650,7 @@ async def retry_stems(
         raise HTTPException(status_code=404, detail="任务不存在")
 
     user_key = task.get("user_key")
-    if not x_user_id or not user_key or x_user_id != user_key:
+    if not user_key or user_key != user_id:
         raise HTTPException(status_code=403, detail="无权访问该任务")
 
     if task["state"] not in ("completed", "completed_with_stems_failed"):
@@ -733,24 +733,21 @@ async def _run_retry_stems(task_id: str, user_key: str, full_wav: str):
 
 
 @router.get("/limits")
-async def get_limits(x_user_id: str = Header(None, alias="X-User-ID")):
+async def get_limits(user_id: str = Depends(get_verified_user_id)):
     """查询用户额度与全局成本保护状态。"""
-    return await generation_usage_status(x_user_id)
+    return await generation_usage_status(user_id)
 
 
 @router.get("/tasks")
-async def list_user_tasks_endpoint(x_user_id: str = Header(None, alias="X-User-ID")):
+async def list_user_tasks_endpoint(user_id: str = Depends(get_verified_user_id)):
     """查询当前用户的所有生成任务。
 
-    仅返回当前归属用户的任务，使用 X-User-ID 进行归属校验。
+    仅返回当前归属用户（verified auth.users.id）的任务。
     返回任务基本信息：id, state, progress, audio_url, stems_state, created_at, updated_at。
     """
     from app.services.task_store import list_user_tasks
 
-    user_key = x_user_id
-    if not user_key:
-        return {"tasks": [], "count": 0}
-
+    user_key = user_id
     tasks = list_user_tasks(user_key)
     return {"tasks": tasks, "count": len(tasks)}
 
@@ -758,7 +755,7 @@ async def list_user_tasks_endpoint(x_user_id: str = Header(None, alias="X-User-I
 @router.get("/task/{task_id}/delete")
 async def delete_user_task(
     task_id: str,
-    x_user_id: str = Header(None, alias="X-User-ID"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """删除用户的生成任务。
 
@@ -779,9 +776,9 @@ async def delete_user_task(
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    # 验证用户归属：task.user_key 必须与 X-User-ID 匹配
+    # 验证用户归属：task.user_key 必须与 verified auth.users.id 匹配
     user_key = task.get("user_key")
-    if not user_key or user_key != x_user_id:
+    if not user_key or user_key != user_id:
         raise HTTPException(status_code=403, detail="无权删除他人的任务")
 
     # Step 2: 尝试删除 R2 对象（经 r2_config 统一）

@@ -14,13 +14,14 @@ import os
 import uuid
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 
 from app.services.inference import PredictResult, TaskStatus  # type: ignore
 from app.websocket_manager import manager  # type: ignore
 from app.services.musicgen_client import download_audio, generate_music, QueueFullError
 from app.services.mv_composer import compose_slideshow_video
+from app.services.auth_identity import get_verified_user_id
 from app.services import task_store
 
 logger = logging.getLogger(__name__)
@@ -53,12 +54,14 @@ async def list_templates() -> List[TemplateInfo]:
 # Render endpoint（异步任务）
 # ═══════════════════════════════════════════════════════════════════════
 @router.post("/render")
-async def mv_render(request: Request):
+async def mv_render(request: Request, user_id: str = Depends(get_verified_user_id)):
     """提交 MV 生成任务，立即返回 task_id（后台 MusicGen 音频 → FFmpeg 拼接）。"""
     body = await request.json()
     audio_url = body.get("audio_url", "")
 
-    user_key = body.get("user_id") or (request.client.host if request.client else None)
+    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
+    # body.user_id / request.client.host 一律不作为身份（历史兼容字段被忽略）。
+    user_key = str(user_id)
     if task_store.is_user_busy(user_key):
         raise HTTPException(status_code=429, detail="您有一个生成任务正在进行中，请完成后再试")
 
@@ -150,10 +153,13 @@ async def _run_mv(task_id: str, body: Dict[str, Any], audio_url: str):
 # Status endpoint
 # ═══════════════════════════════════════════════════════════════════════
 @router.get("/status/{task_id}")
-async def get_status(task_id: str):
+async def get_status(task_id: str, user_id: str = Depends(get_verified_user_id)):
     task = task_store.get(task_id)
     if not task:
         return {"task_id": task_id, "state": "unknown", "progress": 0, "audio_url": None, "video_url": None, "error": None}
+    # ownership：仅任务归属者可见（IDOR 防护）
+    if task.get("user_key") != user_id:
+        raise HTTPException(status_code=403, detail="无权访问该任务")
     return {
         "task_id": task["task_id"],
         "state": task["state"],

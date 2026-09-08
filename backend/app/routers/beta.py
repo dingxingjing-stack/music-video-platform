@@ -1,11 +1,11 @@
 """
 公测灰度权限路由
-- 所有端点通过 X-User-ID 请求头识别用户（公测免鉴权方案）
+- 所有端点通过 Authorization Bearer JWT（verified auth.users.id）识别用户
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from app.services.beta_service import (
@@ -15,6 +15,7 @@ from app.services.beta_service import (
     get_feature_access,
     daily_reset,
 )
+from app.services.auth_identity import get_verified_user_id
 
 router = APIRouter(prefix="/api/v1/beta", tags=["beta"])
 
@@ -31,31 +32,29 @@ class ConsumeRequest(BaseModel):
 
 
 @router.get("/status")
-async def get_status(x_user_id: str = Header("beta_user", alias="X-User-ID")):
+async def get_status(user_id: str = Depends(get_verified_user_id)):
     """获取当前用户灰度状态"""
-    return await check_gray_status(x_user_id)
+    return await check_gray_status(user_id)
 
 
 @router.post("/apply-gray")
-async def apply_gray_route(req: ApplyGrayRequest, x_user_id: str = Header("beta_user", alias="X-User-ID")):
+async def apply_gray_route(req: ApplyGrayRequest, user_id: str = Depends(get_verified_user_id)):
     """申请灰度权限"""
     if not req.reason.strip():
         raise HTTPException(status_code=400, detail="请填写申请理由")
-    return await apply_gray(x_user_id, req.reason, req.contact, req.feature_key)
+    return await apply_gray(user_id, req.reason, req.contact, req.feature_key)
 
 
 @router.post("/consume-credit")
-async def consume_credit_route(req: ConsumeRequest, x_user_id: str = Header(None, alias="X-User-ID")):
-    """消费每日免费额度（要求 X-User-ID，未提供则拒绝，避免误扣共享额度）"""
-    if not x_user_id or not x_user_id.strip():
-        raise HTTPException(status_code=400, detail="缺少用户标识（X-User-ID）")
-    return await consume_credit(x_user_id, req.amount)
+async def consume_credit_route(req: ConsumeRequest, user_id: str = Depends(get_verified_user_id)):
+    """消费每日免费额度（身份来自 verified JWT，缺 JWT 自动 401）"""
+    return await consume_credit(user_id, req.amount)
 
 
 @router.get("/feature-access")
-async def feature_access_route(x_user_id: str = Header("beta_user", alias="X-User-ID")):
+async def feature_access_route(user_id: str = Depends(get_verified_user_id)):
     """获取所有功能权限列表"""
-    return await get_feature_access(x_user_id)
+    return await get_feature_access(user_id)
 
 
 @router.post("/daily-reset")

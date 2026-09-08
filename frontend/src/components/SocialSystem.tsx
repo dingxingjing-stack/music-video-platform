@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, Star, User, UserCheck } from 'lucide-react';
 import { api } from '../config/api';
+import { authFetch, authFetchOptional } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface SocialSystemProps {
@@ -30,22 +31,6 @@ export interface SocialStats {
 
 const API_BASE = api.url('/api/v1/social');
 
-// 获取当前用户 ID (从 localStorage 或生成随机 ID)
-const getCurrentUserId = (): string => {
-  let userId = localStorage.getItem('user_id');
-  if (!userId) {
-    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('user_id', userId);
-  }
-  return userId;
-};
-
-// 获取请求头
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'X-User-ID': getCurrentUserId(),
-});
-
 export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpdate }: SocialSystemProps) {
   const { t } = useTranslation();
   const [stats, setStats] = useState<SocialStats>({
@@ -65,19 +50,14 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
 
   const loadStats = async () => {
     try {
-      const response = await fetch(`${API_BASE}/stats/${workId}`, {
-        headers: getHeaders(),
+      const data = await authFetchOptional<any>(`${API_BASE}/stats/${workId}`);
+      setStats({
+        likes: data.likes,
+        favorites: data.favorites,
+        plays: data.plays,
+        isLiked: data.is_liked,
+        isFavorited: data.is_favorited,
       });
-      if (response.ok) {
-        const data = await response.json();
-        setStats({
-          likes: data.likes,
-          favorites: data.favorites,
-          plays: data.plays,
-          isLiked: data.is_liked,
-          isFavorited: data.is_favorited,
-        });
-      }
     } catch (error) {
       console.error('Failed to load social stats:', error);
     } finally {
@@ -88,20 +68,16 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   // 点赞
   const handleLike = async () => {
     try {
-      const response = await fetch(`${API_BASE}/like`, {
+      const result = await authFetch<any>(`${API_BASE}/like`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ work_id: workId }),
+        body: { work_id: workId },
       });
-      if (response.ok) {
-        const result = await response.json();
-        setStats(prev => ({
-          ...prev,
-          isLiked: true,
-          likes: result.data?.count || prev.likes + 1,
-        }));
-        onSocialUpdate?.(stats);
-      }
+      setStats(prev => ({
+        ...prev,
+        isLiked: true,
+        likes: result.data?.count || prev.likes + 1,
+      }));
+      onSocialUpdate?.(stats);
     } catch (error) {
       console.error('Like failed:', error);
     }
@@ -110,20 +86,16 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   // 取消点赞
   const handleUnlike = async () => {
     try {
-      const response = await fetch(`${API_BASE}/unlike`, {
+      const result = await authFetch<any>(`${API_BASE}/unlike`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ work_id: workId }),
+        body: { work_id: workId },
       });
-      if (response.ok) {
-        const result = await response.json();
-        setStats(prev => ({
-          ...prev,
-          isLiked: false,
-          likes: result.data?.count || Math.max(0, prev.likes - 1),
-        }));
-        onSocialUpdate?.(stats);
-      }
+      setStats(prev => ({
+        ...prev,
+        isLiked: false,
+        likes: result.data?.count || Math.max(0, prev.likes - 1),
+      }));
+      onSocialUpdate?.(stats);
     } catch (error) {
       console.error('Unlike failed:', error);
     }
@@ -132,20 +104,16 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   // 收藏
   const handleFavorite = async () => {
     try {
-      const response = await fetch(`${API_BASE}/favorite`, {
+      const result = await authFetch<any>(`${API_BASE}/favorite`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ work_id: workId }),
+        body: { work_id: workId },
       });
-      if (response.ok) {
-        const result = await response.json();
-        setStats(prev => ({
-          ...prev,
-          isFavorited: true,
-          favorites: result.data?.count || prev.favorites + 1,
-        }));
-        onSocialUpdate?.(stats);
-      }
+      setStats(prev => ({
+        ...prev,
+        isFavorited: true,
+        favorites: result.data?.count || prev.favorites + 1,
+      }));
+      onSocialUpdate?.(stats);
     } catch (error) {
       console.error('Favorite failed:', error);
     }
@@ -154,20 +122,16 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   // 取消收藏
   const handleUnfavorite = async () => {
     try {
-      const response = await fetch(`${API_BASE}/unfavorite`, {
+      const result = await authFetch<any>(`${API_BASE}/unfavorite`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ work_id: workId }),
+        body: { work_id: workId },
       });
-      if (response.ok) {
-        const result = await response.json();
-        setStats(prev => ({
-          ...prev,
-          isFavorited: false,
-          favorites: result.data?.count || Math.max(0, prev.favorites - 1),
-        }));
-        onSocialUpdate?.(stats);
-      }
+      setStats(prev => ({
+        ...prev,
+        isFavorited: false,
+        favorites: result.data?.count || Math.max(0, prev.favorites - 1),
+      }));
+      onSocialUpdate?.(stats);
     } catch (error) {
       console.error('Unfavorite failed:', error);
     }
@@ -177,17 +141,14 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   const handleFollow = async () => {
     if (!authorId) return;
     try {
-      const response = await fetch(`${API_BASE}/follow`, {
+      await authFetch<any>(`${API_BASE}/follow`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ user_id: authorId }),
+        body: { user_id: authorId },
       });
-      if (response.ok) {
-        setStats(prev => ({
-          ...prev,
-          isFollowing: true,
-        }));
-      }
+      setStats(prev => ({
+        ...prev,
+        isFollowing: true,
+      }));
     } catch (error) {
       console.error('Follow failed:', error);
     }
@@ -197,17 +158,14 @@ export function SocialSystem({ workId, authorId, showFollow = false, onSocialUpd
   const handleUnfollow = async () => {
     if (!authorId) return;
     try {
-      const response = await fetch(`${API_BASE}/unfollow`, {
+      await authFetch<any>(`${API_BASE}/unfollow`, {
         method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ user_id: authorId }),
+        body: { user_id: authorId },
       });
-      if (response.ok) {
-        setStats(prev => ({
-          ...prev,
-          isFollowing: false,
-        }));
-      }
+      setStats(prev => ({
+        ...prev,
+        isFollowing: false,
+      }));
     } catch (error) {
       console.error('Unfollow failed:', error);
     }

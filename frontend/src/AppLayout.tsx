@@ -126,7 +126,7 @@ export function AppLayout() {
             {isLoggedIn ? (
               <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#141414] border border-[#262626]">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-xs text-[#b0b0b0] truncate">{user?.username || user?.email}</span>
+                <span className="text-xs text-[#b0b0b0] truncate">{user?.email}</span>
                 <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">{t('common.logout')}</button>
               </div>
             ) : (

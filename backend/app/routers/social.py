@@ -12,11 +12,12 @@ API 端点:
 - GET /api/v1/social/feed - 个性化推荐 feed
 """
 
-from fastapi import APIRouter, HTTPException, Query, Header
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
 from app.models.social import social_storage, WorkStats
+from app.services.auth_identity import get_verified_user_id, get_verified_user_id_optional
 
 
 router = APIRouter(prefix="/api/v1/social", tags=["社交系统"])
@@ -67,12 +68,9 @@ class FeedResponse(BaseModel):
 
 # ============ Helper Functions ============
 
-def get_current_user_id(x_user_id: Optional[str] = Header(None)) -> str:
-    """
-    获取当前用户 ID
-    从请求头 X-User-ID 获取，如果没有则使用默认用户
-    """
-    return x_user_id or "user_anonymous"
+# 当前用户身份统一来自 Authorization Bearer JWT（verified auth.users.id），
+# 不再使用 X-User-ID / "user_anonymous" 缺省。写端点用 get_verified_user_id（强制 401），
+# 读端点用 get_verified_user_id_optional（匿名返回 None，用于个性化）。
 
 
 # ============ Like Endpoints ============
@@ -80,10 +78,9 @@ def get_current_user_id(x_user_id: Optional[str] = Header(None)) -> str:
 @router.post("/like", response_model=SocialResponse)
 async def like_work(
     request: LikeRequest,
-    x_user_id: Optional[str] = Header(None)
+    user_id: str = Depends(get_verified_user_id),
 ):
     """点赞作品"""
-    user_id = get_current_user_id(x_user_id)
     work_id = request.work_id
     
     success = social_storage.add_like(user_id, work_id)
@@ -106,10 +103,9 @@ async def like_work(
 @router.post("/unlike", response_model=SocialResponse)
 async def unlike_work(
     request: LikeRequest,
-    x_user_id: Optional[str] = Header(None)
+    user_id: str = Depends(get_verified_user_id),
 ):
     """取消点赞"""
-    user_id = get_current_user_id(x_user_id)
     work_id = request.work_id
     
     success = social_storage.remove_like(user_id, work_id)
@@ -126,10 +122,9 @@ async def unlike_work(
 @router.post("/favorite", response_model=SocialResponse)
 async def favorite_work(
     request: FavoriteRequest,
-    x_user_id: Optional[str] = Header(None)
+    user_id: str = Depends(get_verified_user_id),
 ):
     """收藏作品"""
-    user_id = get_current_user_id(x_user_id)
     work_id = request.work_id
     
     success = social_storage.add_favorite(user_id, work_id)
@@ -152,10 +147,9 @@ async def favorite_work(
 @router.post("/unfavorite", response_model=SocialResponse)
 async def unfavorite_work(
     request: FavoriteRequest,
-    x_user_id: Optional[str] = Header(None)
+    user_id: str = Depends(get_verified_user_id),
 ):
     """取消收藏"""
-    user_id = get_current_user_id(x_user_id)
     work_id = request.work_id
     
     success = social_storage.remove_favorite(user_id, work_id)
@@ -172,10 +166,9 @@ async def unfavorite_work(
 @router.post("/follow", response_model=SocialResponse)
 async def follow_user(
     request: FollowRequest,
-    x_user_id: Optional[str] = Header(None)
+    user_id: str = Depends(get_verified_user_id),
 ):
     """关注用户"""
-    user_id = get_current_user_id(x_user_id)
     target_user_id = request.user_id
     
     if user_id == target_user_id:
@@ -201,10 +194,9 @@ async def follow_user(
 @router.post("/unfollow", response_model=SocialResponse)
 async def unfollow_user(
     request: FollowRequest,
-    x_user_id: Optional[str] = Header(None)
+    user_id: str = Depends(get_verified_user_id),
 ):
     """取消关注"""
-    user_id = get_current_user_id(x_user_id)
     target_user_id = request.user_id
     
     success = social_storage.remove_follow(user_id, target_user_id)
@@ -221,27 +213,30 @@ async def unfollow_user(
 @router.get("/stats/{work_id}", response_model=StatsResponse)
 async def get_work_stats(
     work_id: str,
-    x_user_id: Optional[str] = Header(None)
+    user_id: Optional[str] = Depends(get_verified_user_id_optional),
 ):
-    """获取作品统计信息"""
-    user_id = get_current_user_id(x_user_id)
-    
+    """获取作品统计信息（匿名可访问；登录时个性化 is_liked/is_favorited）"""
     stats = social_storage.get_work_stats(work_id)
-    
+
+    is_liked = False
+    is_favorited = False
+    if user_id:
+        is_liked = social_storage.is_liked(user_id, work_id)
+        is_favorited = social_storage.is_favorited(user_id, work_id)
+
     return StatsResponse(
         work_id=work_id,
         likes=stats.likes,
         favorites=stats.favorites,
         plays=stats.plays,
-        is_liked=social_storage.is_liked(user_id, work_id),
-        is_favorited=social_storage.is_favorited(user_id, work_id)
+        is_liked=is_liked,
+        is_favorited=is_favorited
     )
 
 
 @router.post("/play", response_model=SocialResponse)
 async def record_play(
     request: LikeRequest,
-    x_user_id: Optional[str] = Header(None)
 ):
     """记录播放（内部使用）"""
     work_id = request.work_id
@@ -259,17 +254,15 @@ async def record_play(
 @router.get("/feed", response_model=FeedResponse)
 async def get_feed(
     limit: int = Query(default=20, ge=1, le=50),
-    x_user_id: Optional[str] = Header(None)
+    user_id: Optional[str] = Depends(get_verified_user_id_optional),
 ):
     """
-    获取个性化推荐 feed
-    
-    根据用户关注的用户和喜好推荐作品
+    获取个性化推荐 feed（匿名可访问；登录时按 verified 身份个性化）
     """
-    user_id = get_current_user_id(x_user_id)
-    
-    # 获取推荐的作品 ID 列表
-    work_ids = social_storage.get_user_feed(user_id, limit)
+    if user_id:
+        work_ids = social_storage.get_user_feed(user_id, limit)
+    else:
+        work_ids = social_storage.get_user_feed("", limit)
     
     # 构建 feed 项
     items = []

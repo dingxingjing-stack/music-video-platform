@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import os
+
+from app.services.auth_identity import get_verified_user_id
 
 router = APIRouter(prefix="/api/v1", tags=["user_age"])
 
 @router.get("/user/age")
-async def get_user_age(x_user_id: str = Header(None, alias="X-User-ID")):
+async def get_user_age(user_id: str = Depends(get_verified_user_id)):
     """
-    Return user age for age‑gating AI generation features.
+    Return user age for age-gating AI generation features.
+    身份：Authorization Bearer JWT → verified auth.users.id（缺 JWT 自动 401）。
     In production replace with real user data source.
     """
     age_str = os.getenv("USER_AGE")

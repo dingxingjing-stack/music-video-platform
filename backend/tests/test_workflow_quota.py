@@ -1,4 +1,4 @@
-﻿import os
+import os
 import time
 import pytest
 import asyncio
@@ -73,7 +73,7 @@ async def test_workflow_mock_mode_no_quota_consumption(isolated_db, monkeypatch,
     usage_before = await ai_limits.generation_usage_status(user_key)
     response = client.post(
         f'/api/v1/workflow{endpoint}',
-        headers={'X-User-ID': user_key},
+        headers={'Authorization': f'Bearer {user_key}'},
         json=ENDPOINT_PAYLOADS[endpoint]
     )
     assert response.status_code == 200, response.text
@@ -91,7 +91,7 @@ def test_workflow_real_mode_quota_failure_returns_429(isolated_db, monkeypatch, 
     assert result['success'], f'Failed to reserve generation: {result}'
     response = client.post(
         f'/api/v1/workflow{endpoint}',
-        headers={'X-User-ID': user_key},
+        headers={'Authorization': f'Bearer {user_key}'},
         json=ENDPOINT_PAYLOADS[endpoint]
     )
     assert response.status_code == 429, response.text
@@ -111,7 +111,7 @@ def test_workflow_real_mode_success_and_refund_on_failure(isolated_db, monkeypat
 
     response = client.post(
         f'/api/v1/workflow{endpoint}',
-        headers={'X-User-ID': user_key},
+        headers={'Authorization': f'Bearer {user_key}'},
         json=ENDPOINT_PAYLOADS[endpoint]
     )
     assert response.status_code == 200, response.text
@@ -180,7 +180,7 @@ def test_workflow_real_mode_lock_failure_no_stale_task(isolated_db, monkeypatch,
 
     response = client.post(
         f'/api/v1/workflow{endpoint}',
-        headers={'X-User-ID': user_key},
+        headers={'Authorization': f'Bearer {user_key}'},
         json=ENDPOINT_PAYLOADS[endpoint]
     )
     assert response.status_code == 429, response.text
@@ -191,3 +191,15 @@ def test_workflow_real_mode_lock_failure_no_stale_task(isolated_db, monkeypatch,
     # Clean up
     task_store.release_lock_for_task(existing_tid)
     task_store.delete(existing_tid)
+
+
+# Phase 3B-1锛氳韩浠芥敼涓?Authorization Bearer JWT銆傛祴璇曠幆澧冧笉鑱旂湡瀹?Supabase Auth锛?# 鍥犳 autouse 鎵撴々 resolve_auth_user_id锛屼娇 "Bearer <token>" 鏈夋晥鏃跺彲纭畾鍦拌繑鍥?token 閮ㄥ垎锛?# 涓?"Authorization" 缂哄け/闈?Bearer 杩斿洖 None锛堢瓑浠?fail-closed 401锛夛紝涓嶄緷璧栫幆澧冨彉閲忋€?@pytest.fixture(autouse=True)
+def _jwt_identity_stub(monkeypatch):
+    from app.services import auth_identity
+
+    def _resolve(auth):
+        if isinstance(auth, str) and auth.startswith("Bearer "):
+            return auth[len("Bearer "):]
+        return None
+
+    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)

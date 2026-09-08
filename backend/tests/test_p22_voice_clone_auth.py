@@ -17,9 +17,20 @@ from fastapi.testclient import TestClient
 
 import main as main_mod
 from app.services import voice_clone_service as _vcs
+from app.services import auth_identity
 
 # 完整路径（voice_clone.router 以 /api/v1 前缀挂载）
 BASE = "/api/v1/voice"
+
+
+@pytest.fixture(autouse=True)
+def _jwt_stub(monkeypatch):
+    """Phase 3B-4B：身份改为 Authorization Bearer JWT。打桩 resolve_auth_user_id。"""
+    def _resolve(auth):
+        if isinstance(auth, str) and auth.startswith("Bearer "):
+            return auth[len("Bearer "):] or None
+        return None
+    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
 
 
 @pytest.fixture(autouse=True)
@@ -70,7 +81,7 @@ def _req(client, path, method="get", headers=None):
     return client.post(BASE + path, headers=headers, json={"text": "hi"})
 
 
-# ── 无 X-User-ID → 401（用户资源接口） ────────────────────────────────
+# ── 无 Authorization → 401（用户资源接口） ─────────────────────────────
 @pytest.mark.parametrize("path", ["/voices", "/clone-quota", "/upload", "/clone"])
 def test_no_x_user_id_401(client, path):
     method = "post" if path in ("/upload", "/clone") else "get"
@@ -78,17 +89,17 @@ def test_no_x_user_id_401(client, path):
     assert r.status_code == 401, f"{path} 应 401, got {r.status_code}"
 
 
-# ── 空白 X-User-ID → 401 ──────────────────────────────────────────────
+# ── 空 Bearer token → 401 ──────────────────────────────────────────────
 @pytest.mark.parametrize("path", ["/voices", "/clone-quota", "/upload", "/clone"])
 def test_blank_x_user_id_401(client, path):
     method = "post" if path in ("/upload", "/clone") else "get"
-    r = _req(client, path, method, headers={"X-User-ID": "   "})
+    r = _req(client, path, method, headers={"Authorization": "Bearer "})
     assert r.status_code == 401
 
 
-# ── query 伪造 user_id 不能绕过（仍看 X-User-ID） ─────────────────────
+# ── query 伪造 user_id 不能绕过（仍看 JWT） ────────────────────────────
 def test_query_user_id_cannot_bypass(client):
-    # upload 带 query user_id=attacker，无 X-User-ID → 401
+    # upload 带 query user_id=attacker，无 Authorization → 401
     r = client.post(f"{BASE}/upload?user_id=attacker&audio_url=https://x/y.wav")
     assert r.status_code == 401
     # voices 带 query user_id → 401
@@ -96,30 +107,32 @@ def test_query_user_id_cannot_bypass(client):
     assert r.status_code == 401
 
 
-# ── body 伪造 user_id 不能绕过（clone 有 body） ───────────────────────
+# ── body 伪造 user_id 不能绕过（clone 有 body） ────────────────────────
 def test_body_user_id_cannot_bypass(client):
     r = client.post(f"{BASE}/clone", json={"text": "hi", "user_id": "attacker"})
     assert r.status_code == 401
 
 
-# ── 合法 X-User-ID → 进入业务逻辑，且身份即 header ────────────────────
+# ── 合法 JWT → 进入业务逻辑，且身份即 verified id ─────────────────────
 def test_valid_x_user_id_reaches_business(client, _stub_service):
-    r = client.get(f"{BASE}/voices", headers={"X-User-ID": "legit-user"})
+    h = {"Authorization": "Bearer legit-user"}
+    r = client.get(f"{BASE}/voices", headers=h)
     assert r.status_code == 200
     assert _stub_service["list"] == ["legit-user"]
 
-    r = client.get(f"{BASE}/clone-quota", headers={"X-User-ID": "legit-user"})
+    r = client.get(f"{BASE}/clone-quota", headers=h)
     assert r.status_code == 200
     assert _stub_service["quota"] == ["legit-user"]
 
-    r = client.post(f"{BASE}/upload?audio_url=https://x/a.wav", headers={"X-User-ID": "legit-user"})
+    r = client.post(f"{BASE}/upload?audio_url=https://x/a.wav", headers=h)
     assert r.status_code == 200
     assert _stub_service["upload"] == ["legit-user"]
 
 
-# ── 合法 X-User-ID 时 query user_id 不参与身份（不影响 header 身份） ────
+# ── 有 JWT 时 X-User-ID 不参与身份（JWT 优先） ─────────────────────────
 def test_header_beats_query_user_id(client, _stub_service):
-    r = client.get(f"{BASE}/voices?user_id=attacker", headers={"X-User-ID": "real"})
+    r = client.get(f"{BASE}/voices?user_id=attacker",
+                   headers={"Authorization": "Bearer real", "X-User-ID": "forged"})
     assert r.status_code == 200
     assert _stub_service["list"] == ["real"]
 

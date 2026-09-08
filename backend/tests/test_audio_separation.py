@@ -22,6 +22,18 @@ def _quota_stub():
         yield {"reserve": _res, "refund": _ref}
 
 
+@pytest.fixture(autouse=True)
+def _jwt_stub(monkeypatch):
+    """Phase 3B-4A：身份改为 Authorization Bearer JWT。打桩 resolve_auth_user_id。"""
+    from app.services import auth_identity
+
+    def _resolve(auth):
+        if isinstance(auth, str) and auth.startswith("Bearer "):
+            return auth[len("Bearer "):] or None
+        return None
+    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
+
+
 def test_separate_audio_success(_quota_stub):
     # Mock demucs_service.separate to return fake local stems
     fake_stems = [
@@ -52,7 +64,7 @@ def test_separate_audio_success(_quota_stub):
         data = {"model": "htdemucs"}
         
         response = client.post("/api/v1/audio/separate", files=files, data=data,
-                               headers={"X-User-ID": "u1"})
+                               headers={"Authorization": "Bearer u1"})
         
         assert response.status_code == 200
         json_data = response.json()
@@ -91,7 +103,7 @@ def test_separate_audio_failure():
         data = {"model": "htdemucs"}
         
         response = client.post("/api/v1/audio/separate", files=files, data=data,
-                               headers={"X-User-ID": "u1"})
+                               headers={"Authorization": "Bearer u1"})
         
         assert response.status_code == 200  # endpoint returns 200 with success=False
         json_data = response.json()
@@ -123,7 +135,7 @@ def test_separate_audio_upload_failure():
         data = {"model": "htdemucs"}
         
         response = client.post("/api/v1/audio/separate", files=files, data=data,
-                               headers={"X-User-ID": "u1"})
+                               headers={"Authorization": "Bearer u1"})
         
         # Should return 500 error
         assert response.status_code == 500
