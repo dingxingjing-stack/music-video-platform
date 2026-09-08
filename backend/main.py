@@ -31,10 +31,11 @@ except (AttributeError, OSError):
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Header
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Header, Depends
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from app.services.auth_identity import get_verified_user_id, get_verified_user_id_optional
 
 # ==============================================================================
 # 日志器初始化（必须在 Sentry 之前，Sentry 需要用到 logger）
@@ -656,6 +657,7 @@ from app.services.inference.llm_factory import MODELS
 async def predict(
     service_type: str,
     request: Request,
+    user_id: Optional[str] = Depends(get_verified_user_id_optional),
 ):
     """
     Submit a prediction request to an inference service.
@@ -700,13 +702,13 @@ async def predict(
     # P0: Quota protection for non-mock predict (GPU cost)
     if service_type.lower() != "mock":
         from app.services.ai_limits import reserve_generation, refund_generation, budget_hard_stop_reached
-        from app.services.auth_identity import resolve_x_user_id
         if budget_hard_stop_reached():
             raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
-        # 身份唯一可信来源 = X-User-ID；缺失即 401，绝不接受 body.user_id / client.host
-        user_key = resolve_x_user_id(request.headers.get("X-User-ID"))
-        if not user_key:
-            raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+        # 身份唯一可信来源 = Authorization Bearer JWT → verified auth.users.id；
+        # 绝不接受 X-User-ID / body.user_id / client.host。缺 JWT → 401。
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid or missing Authorization token")
+        user_key = user_id
         reserved = reserve_generation(user_key)
         if not reserved["success"]:
             raise HTTPException(status_code=429, detail=reserved["error"])
@@ -902,7 +904,7 @@ async def mock_run(request: Request):
 
 
 @app.post("/api/v1/tts/run", tags=["tts"])
-async def tts_run(request: Request):
+async def tts_run(request: Request, user_id: str = Depends(get_verified_user_id)):
     """
     Start a TTS synthesis task in the background and return the task_id.
 
@@ -942,13 +944,11 @@ async def tts_run(request: Request):
     _tts_reserved = False
     if TTS_BACKEND_MODE != "mock":
         from app.services.ai_limits import reserve_generation, budget_hard_stop_reached
-        from app.services.auth_identity import resolve_x_user_id
         if budget_hard_stop_reached():
             raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
-        # 身份唯一可信来源 = X-User-ID；缺失即 401，绝不接受 body.user_id / client.host
-        _tts_user_key = resolve_x_user_id(request.headers.get("X-User-ID"))
-        if not _tts_user_key:
-            raise HTTPException(status_code=401, detail="缺少用户标识（X-User-ID）")
+        # 身份唯一可信来源 = Authorization Bearer JWT → verified auth.users.id；
+        # 绝不接受 X-User-ID / body.user_id / client.host。
+        _tts_user_key = user_id
         _tts_res = reserve_generation(_tts_user_key)
         if not _tts_res["success"]:
             raise HTTPException(status_code=429, detail=_tts_res["error"])
@@ -1027,7 +1027,7 @@ from app.services.task_handlers import run_tts_and_save, run_musicgen_and_save
 
 
 @app.post("/api/v1/music/run", tags=["music"])
-async def music_run(request: Request, x_user_id: str = Header(None, alias="X-User-ID")):
+async def music_run(request: Request):
     """
     Start a MusicGen music generation task in the background.
 

@@ -1,9 +1,9 @@
-"""P1-1 修复验证：predict / tts_run 身份只能来自 X-User-ID。
+"""P1-1 修复验证：predict / tts_run 身份只能来自 Authorization Bearer JWT（verified auth.users.id）。
 
 验证：
-  1. 无 X-User-ID → 401
-  2. 有 X-User-ID + body 提供其他 user_id → 使用 header 身份（body 不参与）
-  3. 攻击者改 body.user_id → 不能获得新 quota（身份仍以 header 为准）
+  1. 无 Authorization → 401
+  2. 有 Bearer + body 提供其他 user_id → 使用 JWT 身份（body 不参与）
+  3. 攻击者改 body.user_id → 不能获得新 quota（身份仍以 JWT 为准）
   4. client.host 改变 → 不改变 quota identity
   5. 合法请求仍能进入 reserve_generation（用记录 stub 验证收到的 user_id）
 """
@@ -13,7 +13,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main as main_mod
-from app.services import ai_limits
+from app.services import ai_limits, auth_identity
+
+
+@pytest.fixture(autouse=True)
+def _jwt_stub(monkeypatch):
+    """Phase 3B：predict/tts_run 身份改为 Authorization Bearer JWT。测试环境打桩 resolve。"""
+    def _resolve(auth):
+        if isinstance(auth, str) and auth.startswith("Bearer "):
+            return auth[len("Bearer "):] or None
+        return None
+    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
 
 
 @pytest.fixture(autouse=True)
@@ -80,7 +90,7 @@ def test_tts_no_x_user_id_401(client, _patch):
 def test_predict_header_identity_used_not_body(client, _patch):
     r = client.post("/api/v1/predict/tts",
                     json={"text": "hi", "user_id": "attacker"},
-                    headers={"X-User-ID": "legit-user"})
+                    headers={"Authorization": "Bearer legit-user"})
     assert r.status_code == 200, r.text
     assert _patch["reserve"] == ["legit-user"], "必须用 header 身份，而非 body.user_id"
 
@@ -88,7 +98,7 @@ def test_predict_header_identity_used_not_body(client, _patch):
 def test_tts_header_identity_used_not_body(client, _patch):
     r = client.post("/api/v1/tts/run",
                     json={"text": "hi", "reference_audio": "AAAA", "user_id": "attacker"},
-                    headers={"X-User-ID": "legit-user"})
+                    headers={"Authorization": "Bearer legit-user"})
     assert r.status_code == 200, r.text
     assert _patch["reserve"] == ["legit-user"]
 
@@ -97,9 +107,9 @@ def test_tts_header_identity_used_not_body(client, _patch):
 def test_predict_body_user_id_cannot_reset_quota(client, _patch):
     # 同一 header 身份，连续两次请求，body.user_id 每次不同
     r1 = client.post("/api/v1/predict/tts", json={"text": "hi", "user_id": "fake-1"},
-                     headers={"X-User-ID": "victim"})
+                     headers={"Authorization": "Bearer victim"})
     r2 = client.post("/api/v1/predict/tts", json={"text": "hi", "user_id": "fake-2"},
-                     headers={"X-User-ID": "victim"})
+                     headers={"Authorization": "Bearer victim"})
     assert r1.status_code == 200 and r2.status_code == 200
     # 两次 reserve 用的都是 header 身份，而不是 body 里不断变化的值
     assert _patch["reserve"] == ["victim", "victim"]
@@ -116,7 +126,7 @@ def test_predict_identity_not_from_client_host(client, _patch):
 # ── 5. 合法请求进入 reserve_generation ─────────────────────────────
 def test_predict_legal_reaches_reserve(client, _patch):
     r = client.post("/api/v1/predict/tts", json={"text": "hi"},
-                    headers={"X-User-ID": "ok-user"})
+                    headers={"Authorization": "Bearer ok-user"})
     assert r.status_code == 200
     assert _patch["reserve"] == ["ok-user"]
     assert _patch["create"] == ["tts"]  # 正常走到 factory.create
@@ -124,5 +134,5 @@ def test_predict_legal_reaches_reserve(client, _patch):
 
 def test_tts_blank_header_401(client, _patch):
     r = client.post("/api/v1/tts/run", json={"text": "hi", "reference_audio": "AAAA"},
-                    headers={"X-User-ID": "   "})
+                    headers={"Authorization": "Bearer "})
     assert r.status_code == 401
