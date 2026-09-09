@@ -236,7 +236,7 @@ class LLMFactory:
         stream: bool,
         **kwargs,
     ):
-        client = self.clients[provider]
+        client = self._clients[provider]
         conf = MODELS[provider]
         model_name = model or conf["model_default"]
         payload = self._build_payload(provider, messages, model_name, temperature, max_tokens, stream, **kwargs)
