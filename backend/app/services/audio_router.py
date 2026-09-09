@@ -62,6 +62,8 @@ async def _split_stems_ffmpeg(audio_path: str, output_dir: str) -> dict[str, str
         "melody":   ["-af", "highpass=f=500"],
     }
 
+    import subprocess as _subprocess
+
     for name, af_args in band_configs.items():
         out_path = os.path.join(output_dir, f"{name}.wav")
         cmd = [
@@ -70,16 +72,18 @@ async def _split_stems_ffmpeg(audio_path: str, output_dir: str) -> dict[str, str
             "-c:a", "pcm_s16le",
             out_path,
         ]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        # 用 asyncio.to_thread 跑同步 subprocess.run，避免 asyncio.create_subprocess_exec
+        # 在非"子进程能力"的 event loop（如 TestClient 的 anyio 线程 loop / Windows）上抛
+        # NotImplementedError（BaseEventLoop._make_subprocess_transport 需要平台专属 loop）。
+        # 生产/开发行为不变：仍真实调用 ffmpeg，返回相同的 {name: path} 映射。
+        proc = await asyncio.to_thread(
+            lambda c=cmd: _subprocess.run(c, capture_output=True, timeout=60)
         )
-        _, stderr = await proc.communicate()
         if proc.returncode == 0 and os.path.exists(out_path):
             stems[name] = out_path
         else:
-            logger.warning("Stem %s extraction failed: %s", name, stderr.decode()[:200])
+            stderr_text = (proc.stderr or b"").decode(errors="replace")[:200]
+            logger.warning("Stem %s extraction failed: %s", name, stderr_text)
 
     return stems
 
