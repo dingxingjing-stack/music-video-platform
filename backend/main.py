@@ -424,6 +424,10 @@ app.include_router(songs_app)
 from app.routers.beta import router as beta_router
 app.include_router(beta_router)
 
+# ---------- 音潮连通性测试端点（临时，ENABLE_YINCHAO_TEST=true + token 才启用） ----------
+from app.routers.yinchao_test import router as yinchao_test_router
+app.include_router(yinchao_test_router)
+
 
 # ---------------------------------------------------------------------------
 # WebSocket broadcast callback
