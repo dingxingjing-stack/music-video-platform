@@ -6,6 +6,7 @@ import { PageTransition } from './components/PageTransition';
 import { useTranslation } from './i18n/useTranslation';
 
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const CreateMusicPage = lazy(() => import('./pages/CreateMusicPage').then(m => ({ default: m.CreateMusicPage })));
 const VoiceClonePage = lazy(() => import('./pages/VoiceClonePage').then(m => ({ default: m.VoiceClonePage })));
@@ -47,6 +48,8 @@ export default function App() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/landing" element={<Landing />} />
+        {/* 注册页（公开，无需登录） */}
+        <Route path="/register" element={<RegisterPage />} />
 
         <Route element={<AppLayout />}>
           {/* New primary navigation */}

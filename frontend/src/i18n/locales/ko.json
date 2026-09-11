@@ -70,8 +70,6 @@
     "downloadSnippet": "스니펫 다운로드",
     "downloadFull": "전체 다운로드",
     "detectBeats": "비트 감지",
-    "renderVideo": "오디오 내보내기",
-    "mvReady": "준비 완료",
     "waveformVisualization": "파형 시각화",
     "backgroundColor": "배경 색상",
     "resolution": "해상도",
@@ -100,7 +98,14 @@
     "historyEmpty": "아직 기록이 없습니다...",
     "close": "닫기",
     "cancel": "취소",
-    "confirm": "확인"
+    "confirm": "확인",
+    "rename": "이름 변경",
+    "toggleTrim": "트림 모드 전환",
+    "delete": "삭제",
+    "confirmDelete": "'{name}' 항목을 삭제하시겠습니까?",
+    "trimRange": "트림 범위",
+    "rangeStart": "시작",
+    "rangeEnd": "끝"
   },
   "errors": {
     "promptRequired": "프롬프트가 필요합니다",
@@ -113,7 +118,6 @@
     "remixFailed": "리믹스 실패",
     "mixFailed": "믹스 실패",
     "trimFailed": "트리밍 실패",
-    "mvFailed": "생성 실패",
     "networkError": "네트워크 오류",
     "serverError": "서버 오류",
     "unsupportedFormat": "지원되지 않는 형식",
@@ -133,7 +137,6 @@
     "originalCompose": "오리지널 편곡",
     "community": "커뮤니티",
     "myWorks": "내 작품",
-    "mvGenerate": "보이스 클론",
     "liveCollab": "실시간 협업",
     "hfModels": "HF 고급 모델",
     "subtitles": "자막 인식",
@@ -544,10 +547,25 @@
     "loginTitle": "Zyvexo 로그인",
     "loginSubtitle": "로그인하면 모든 창작 기능을 이용할 수 있습니다",
     "emailPlaceholder": "이메일 주소",
-    "passwordPlaceholder": "비밀번호 (아무거나)",
+    "passwordPlaceholder": "비밀번호",
     "betaHint": "베타 기간에는 아무 값이나 입력해 로그인합니다",
-    "loginRegister": "로그인 / 가입",
-    "continueBrowsing": "계속 둘러보기"
+    "loginRegister": "로그인",
+    "continueBrowsing": "계속 둘러보기",
+    "registerTitle": "Zyvexo 계정 만들기",
+    "registerSubtitle": "가입하고 AI 음악 창작을 시작하세요",
+    "confirmPassword": "비밀번호 확인",
+    "createAccount": "계정 만들기",
+    "alreadyHaveAccount": "이미 계정이 있으신가요? 로그인",
+    "noAccount": "계정이 없으신가요? 계정 만들기",
+    "backToLogin": "로그인으로 돌아가기",
+    "registrationSuccess": "가입이 완료되었습니다!",
+    "checkEmail": "이메일을 확인하여 계정을 인증해 주세요.",
+    "passwordMismatch": "비밀번호가 일치하지 않습니다",
+    "passwordTooShort": "비밀번호는 6자 이상이어야 합니다",
+    "invalidEmail": "유효한 이메일 주소를 입력하세요",
+    "emailExists": "이 이메일은 이미 등록되어 있습니다",
+    "genericError": "가입에 실패했습니다. 나중에 다시 시도해 주세요",
+    "networkError": "네트워크 오류입니다. 연결을 확인해 주세요"
   },
   "community": {
     "chartHot": "인기 차트",
@@ -799,7 +817,6 @@
       "2m": "2분",
       "3m": "3분",
       "short": "짧은 클립",
-      "video": "짧은 영상",
       "max": "표준(최대)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "유료 모듈 비활성화",
     "r4Text": "소재 스토어, 유료 구독, UGC 수익 출금 등의 기능은 베타 기간 중 이용할 수 없습니다",
     "r5Title": "상업적 이용 금지",
-    "r5Text": "베타 단계에서 생성된 모든 테스트 자료는 개인용으로만 사용할 수 있으며 상업적 이용은 금지됩니다"
+    "r5Text": "베타 단계에서 생성된 모든 테스트 자료는 개인용으로만 사용할 수 있으며 상업적 이용은 금지됩니다",
+    "agreementVersion": "베타 테스트 동의서 · v2.0"
   },
   "score": {
     "keySignature": "{key}키"

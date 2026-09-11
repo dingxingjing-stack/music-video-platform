@@ -70,8 +70,6 @@
     "downloadSnippet": "Télécharger extrait",
     "downloadFull": "Télécharger complet",
     "detectBeats": "Détecter les temps",
-    "renderVideo": "Exporter audio",
-    "mvReady": "Prêt",
     "waveformVisualization": "Visualisation forme d'onde",
     "backgroundColor": "Couleur fond",
     "resolution": "Résolution",
@@ -100,7 +98,14 @@
     "historyEmpty": "Aucun historique pour le moment...",
     "close": "Fermer",
     "cancel": "Annuler",
-    "confirm": "Confirmer"
+    "confirm": "Confirmer",
+    "rename": "Renommer",
+    "toggleTrim": "Activer/désactiver le rognage",
+    "delete": "Supprimer",
+    "confirmDelete": "Supprimer « {name} » ?",
+    "trimRange": "Plage de rognage",
+    "rangeStart": "Début",
+    "rangeEnd": "Fin"
   },
   "errors": {
     "promptRequired": "Prompt requis",
@@ -113,7 +118,6 @@
     "remixFailed": "Échec du remix",
     "mixFailed": "Échec du mixage",
     "trimFailed": "Échec du rognage",
-    "mvFailed": "Échec de génération",
     "networkError": "Erreur réseau",
     "serverError": "Erreur serveur",
     "unsupportedFormat": "Format non supporté",
@@ -133,7 +137,6 @@
     "originalCompose": "Arrangement original",
     "community": "Communauté",
     "myWorks": "Mes créations",
-    "mvGenerate": "Clonage Vocal",
     "liveCollab": "Collaboration en temps réel",
     "hfModels": "Modèles avancés HF",
     "subtitles": "Reconnaissance des sous-titres",
@@ -544,10 +547,25 @@
     "loginTitle": "Se connecter à Zyvexo",
     "loginSubtitle": "Connectez-vous pour débloquer toutes les fonctions",
     "emailPlaceholder": "Adresse e-mail",
-    "passwordPlaceholder": "Mot de passe (n importe quoi)",
+    "passwordPlaceholder": "Mot de passe",
     "betaHint": "Pendant la bêta, saisissez n importe quoi pour vous connecter",
-    "loginRegister": "Se connecter / S inscrire",
-    "continueBrowsing": "Continuer la navigation"
+    "loginRegister": "Se connecter",
+    "continueBrowsing": "Continuer la navigation",
+    "registerTitle": "Créez votre compte Zyvexo",
+    "registerSubtitle": "Inscrivez-vous pour créer de la musique avec l'IA",
+    "confirmPassword": "Confirmer le mot de passe",
+    "createAccount": "Créer un compte",
+    "alreadyHaveAccount": "Vous avez déjà un compte ? Connectez-vous",
+    "noAccount": "Pas de compte ? Créez-en un",
+    "backToLogin": "Retour à la connexion",
+    "registrationSuccess": "Inscription réussie !",
+    "checkEmail": "Vérifiez votre e-mail pour valider votre compte.",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+    "invalidEmail": "Saisissez une adresse e-mail valide",
+    "emailExists": "Cet e-mail est déjà enregistré",
+    "genericError": "Échec de l'inscription, réessayez",
+    "networkError": "Erreur réseau, vérifiez votre connexion"
   },
   "community": {
     "chartHot": "Classement Populaire",
@@ -799,7 +817,6 @@
       "2m": "2 min",
       "3m": "3 min",
       "short": "Clip court",
-      "video": "Vidéo courte",
       "max": "Standard (max)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "Modules payants désactivés",
     "r4Text": "Des fonctions comme la boutique d'actifs, les abonnements payants et le retrait des revenus UGC ne sont pas disponibles pendant la bêta",
     "r5Title": "Usage commercial interdit",
-    "r5Text": "Tous les actifs de test générés pendant la bêta sont réservés à un usage personnel ; tout usage commercial est interdit"
+    "r5Text": "Tous les actifs de test générés pendant la bêta sont réservés à un usage personnel ; tout usage commercial est interdit",
+    "agreementVersion": "Accord de bêta-test · v2.0"
   },
   "score": {
     "keySignature": "Tonalité {key}"

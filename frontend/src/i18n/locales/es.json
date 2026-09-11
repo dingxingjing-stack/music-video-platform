@@ -70,8 +70,6 @@
     "downloadSnippet": "Descargar fragmento",
     "downloadFull": "Descargar completo",
     "detectBeats": "Detectar beats",
-    "renderVideo": "Exportar audio",
-    "mvReady": "Listo",
     "waveformVisualization": "Visualización onda",
     "backgroundColor": "Color fondo",
     "resolution": "Resolución",
@@ -100,7 +98,14 @@
     "historyEmpty": "Aún no hay historial...",
     "close": "Cerrar",
     "cancel": "Cancelar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "rename": "Renombrar",
+    "toggleTrim": "Alternar modo de recorte",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar \"{name}\"?",
+    "trimRange": "Rango de recorte",
+    "rangeStart": "Inicio",
+    "rangeEnd": "Fin"
   },
   "errors": {
     "promptRequired": "Se requiere prompt",
@@ -113,7 +118,6 @@
     "remixFailed": "Remix fallido",
     "mixFailed": "Mezcla fallida",
     "trimFailed": "Recorte fallido",
-    "mvFailed": "Error de generación",
     "networkError": "Error de red",
     "serverError": "Error del servidor",
     "unsupportedFormat": "Formato no soportado",
@@ -133,7 +137,6 @@
     "originalCompose": "Arreglo original",
     "community": "Comunidad",
     "myWorks": "Mis obras",
-    "mvGenerate": "Clon de Voz",
     "liveCollab": "Colaboración en tiempo real",
     "hfModels": "Modelos avanzados de HF",
     "subtitles": "Reconocimiento de subtítulos",
@@ -544,10 +547,25 @@
     "loginTitle": "Iniciar sesión en Zyvexo",
     "loginSubtitle": "Inicia sesión para desbloquear todas las funciones",
     "emailPlaceholder": "Correo electrónico",
-    "passwordPlaceholder": "Contraseña (cualquiera)",
+    "passwordPlaceholder": "Contraseña",
     "betaHint": "Durante la beta, ingresa cualquier cosa para acceder",
-    "loginRegister": "Iniciar sesión / Registrarse",
-    "continueBrowsing": "Seguir explorando"
+    "loginRegister": "Iniciar sesión",
+    "continueBrowsing": "Seguir explorando",
+    "registerTitle": "Crea tu cuenta de Zyvexo",
+    "registerSubtitle": "Regístrate para empezar a crear música con IA",
+    "confirmPassword": "Confirmar contraseña",
+    "createAccount": "Crear cuenta",
+    "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión",
+    "noAccount": "¿No tienes cuenta? Crear cuenta",
+    "backToLogin": "Volver a iniciar sesión",
+    "registrationSuccess": "¡Registro completado!",
+    "checkEmail": "Revisa tu correo para verificar tu cuenta.",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
+    "invalidEmail": "Introduce una dirección de correo válida",
+    "emailExists": "Este correo ya está registrado",
+    "genericError": "Error al registrarse, inténtalo de nuevo",
+    "networkError": "Error de red, comprueba tu conexión"
   },
   "community": {
     "chartHot": "Ranking Popular",
@@ -799,7 +817,6 @@
       "2m": "2 min",
       "3m": "3 min",
       "short": "Clip corto",
-      "video": "Vídeo corto",
       "max": "Estándar (máx)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "Módulos de pago desactivados",
     "r4Text": "Funciones como la tienda de recursos, suscripciones de pago y retiro de ingresos UGC no están disponibles durante la beta",
     "r5Title": "Prohibido uso comercial",
-    "r5Text": "Todos los recursos de prueba generados durante la beta son solo para uso personal; se prohíbe el uso comercial"
+    "r5Text": "Todos los recursos de prueba generados durante la beta son solo para uso personal; se prohíbe el uso comercial",
+    "agreementVersion": "Acuerdo de prueba beta · v2.0"
   },
   "score": {
     "keySignature": "Tonalidad {key}"

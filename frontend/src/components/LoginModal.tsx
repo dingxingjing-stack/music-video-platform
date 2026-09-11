@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/useTranslation';
 
@@ -21,11 +22,10 @@ export function RequireAuth({ children, feature }: { children: React.ReactNode; 
 }
 
 export function LoginModal() {
-  const { showLogin, setShowLogin, login, register } = useAuth();
+  const { showLogin, setShowLogin, login } = useAuth();
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
-  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,13 +35,7 @@ export function LoginModal() {
     setErr(null);
     setSubmitting(true);
     try {
-      if (mode === 'register') {
-        await register(email, pwd);
-        // 注册成功后自动进入登录态（Supabase 默认 signUp 即登录；若需邮箱验证，提示用户）
-        setShowLogin(false);
-      } else {
-        await login(email, pwd);
-      }
+      await login(email, pwd);
     } catch (e: any) {
       setErr(e?.message || 'Authentication failed');
     } finally {
@@ -63,16 +57,19 @@ export function LoginModal() {
           <input type="password" placeholder={t('auth.passwordPlaceholder')} value={pwd} onChange={e => setPwd(e.target.value)} required className="w-full px-4 py-3 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-orange-400" />
           {err && <p className="text-xs text-red-400">{err}</p>}
           <button type="submit" disabled={submitting} className="w-full py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50">
-            {mode === 'register' ? t('auth.loginRegister') : t('auth.loginRegister')}
+            {t('auth.loginRegister')}
           </button>
         </form>
-        <button
-          onClick={() => setMode(m => m === 'login' ? 'register' : 'login')}
-          className="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-white transition"
-        >
-          {mode === 'login' ? t('auth.continueBrowsing') : t('auth.continueBrowsing')}
-        </button>
-        <button onClick={() => setShowLogin(false)} className="w-full mt-1 py-2 text-xs text-zinc-500 hover:text-white transition">{t('auth.continueBrowsing')}</button>
+        <div className="flex items-center justify-between mt-3">
+          <Link
+            to="/register"
+            onClick={() => setShowLogin(false)}
+            className="py-2 text-xs text-orange-400 hover:text-orange-300 transition"
+          >
+            {t('auth.noAccount')}
+          </Link>
+          <button onClick={() => setShowLogin(false)} className="py-2 text-xs text-zinc-500 hover:text-white transition">{t('auth.continueBrowsing')}</button>
+        </div>
       </div>
     </div>
   );

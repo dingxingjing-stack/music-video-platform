@@ -70,8 +70,6 @@
     "downloadSnippet": "Baixar trecho",
     "downloadFull": "Baixar completo",
     "detectBeats": "Detectar batidas",
-    "renderVideo": "Exportar audio",
-    "mvReady": "Pronto",
     "waveformVisualization": "Visualização de forma de onda",
     "backgroundColor": "Cor de fundo",
     "resolution": "Resolução",
@@ -100,7 +98,14 @@
     "historyEmpty": "Ainda não há histórico...",
     "close": "Fechar",
     "cancel": "Cancelar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "rename": "Renomear",
+    "toggleTrim": "Alternar modo de corte",
+    "delete": "Excluir",
+    "confirmDelete": "Excluir \"{name}\"?",
+    "trimRange": "Faixa de corte",
+    "rangeStart": "Início",
+    "rangeEnd": "Fim"
   },
   "errors": {
     "promptRequired": "Prompt necessário",
@@ -113,7 +118,6 @@
     "remixFailed": "Remix falhou",
     "mixFailed": "Mix falhou",
     "trimFailed": "Corte falhou",
-    "mvFailed": "Falha na geração",
     "networkError": "Erro de rede",
     "serverError": "Erro do servidor",
     "unsupportedFormat": "Formato não suportado",
@@ -133,7 +137,6 @@
     "originalCompose": "Arranjo original",
     "community": "Comunidade",
     "myWorks": "Minhas obras",
-    "mvGenerate": "Clonagem de Voz",
     "liveCollab": "Colaboração em tempo real",
     "hfModels": "Modelos avançados HF",
     "subtitles": "Reconhecimento de legendas",
@@ -544,10 +547,25 @@
     "loginTitle": "Entrar no Zyvexo",
     "loginSubtitle": "Entre para desbloquear todos os recursos",
     "emailPlaceholder": "Endereço de e-mail",
-    "passwordPlaceholder": "Senha (qualquer)",
+    "passwordPlaceholder": "Senha",
     "betaHint": "Durante o beta, digite qualquer coisa para entrar",
-    "loginRegister": "Entrar / Cadastrar",
-    "continueBrowsing": "Continuar navegando"
+    "loginRegister": "Entrar",
+    "continueBrowsing": "Continuar navegando",
+    "registerTitle": "Crie sua conta Zyvexo",
+    "registerSubtitle": "Cadastre-se para começar a criar música com IA",
+    "confirmPassword": "Confirmar senha",
+    "createAccount": "Criar conta",
+    "alreadyHaveAccount": "Já tem uma conta? Entre",
+    "noAccount": "Não tem uma conta? Crie uma",
+    "backToLogin": "Voltar ao login",
+    "registrationSuccess": "Cadastro realizado com sucesso!",
+    "checkEmail": "Verifique seu e-mail para validar sua conta.",
+    "passwordMismatch": "As senhas não coincidem",
+    "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
+    "invalidEmail": "Informe um endereço de e-mail válido",
+    "emailExists": "Este e-mail já está cadastrado",
+    "genericError": "Falha no cadastro, tente novamente",
+    "networkError": "Erro de rede, verifique sua conexão"
   },
   "community": {
     "chartHot": "Ranking Popular",
@@ -799,7 +817,6 @@
       "2m": "2 min",
       "3m": "3 min",
       "short": "Clipe curto",
-      "video": "Vídeo curto",
       "max": "Padrão (máx)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "Módulos pagos desativados",
     "r4Text": "Funcionalidades como a loja de recursos, subscrições pagas e levantamento de receitas UGC não estão disponíveis durante a beta",
     "r5Title": "Uso comercial proibido",
-    "r5Text": "Todos os recursos de teste gerados durante a beta são apenas para uso pessoal; é proibido o uso comercial"
+    "r5Text": "Todos os recursos de teste gerados durante a beta são apenas para uso pessoal; é proibido o uso comercial",
+    "agreementVersion": "Acordo de teste beta · v2.0"
   },
   "score": {
     "keySignature": "Tom {key}"

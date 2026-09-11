@@ -8,7 +8,7 @@ interface AuthCtx {
   isLoggedIn: boolean;
   loading: boolean;
   login: (email: string, pwd: string) => Promise<void>;
-  register: (email: string, pwd: string) => Promise<void>;
+  register: (email: string, pwd: string) => Promise<{ needsEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
   showLogin: boolean;
   setShowLogin: (v: boolean) => void;
@@ -51,8 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, pwd: string) => {
-    const { error } = await supabase.auth.signUp({ email, password: pwd });
+    const { data, error } = await supabase.auth.signUp({ email, password: pwd });
     if (error) throw error;
+    // 情况 A：signUp 即登录（无邮箱验证）→ session 存在；onAuthStateChange 会自动置 session/user。
+    // 情况 B：需邮箱验证 → session 为 null（不是失败）。
+    return { needsEmailConfirmation: !data.session };
   }, []);
 
   const logout = useCallback(async () => {

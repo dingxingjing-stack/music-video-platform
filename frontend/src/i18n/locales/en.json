@@ -70,8 +70,6 @@
     "downloadSnippet": "Download Snippet",
     "downloadFull": "Download Full",
     "detectBeats": "Detect Beats",
-    "renderVideo": "Export Audio",
-    "mvReady": "Ready",
     "waveformVisualization": "Waveform Visualization",
     "backgroundColor": "Background Color",
     "resolution": "Resolution",
@@ -100,7 +98,14 @@
     "historyEmpty": "No history yet...",
     "close": "Close",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "rename": "Rename",
+    "toggleTrim": "Toggle trim mode",
+    "delete": "Delete",
+    "confirmDelete": "Delete \"{name}\"?",
+    "trimRange": "Trim Range",
+    "rangeStart": "Start",
+    "rangeEnd": "End"
   },
   "errors": {
     "promptRequired": "Prompt is required",
@@ -113,7 +118,6 @@
     "remixFailed": "Remix failed",
     "mixFailed": "Mix failed",
     "trimFailed": "Trim failed",
-    "mvFailed": "Generation failed",
     "networkError": "Network error",
     "serverError": "Server error",
     "unsupportedFormat": "Unsupported format",
@@ -133,7 +137,6 @@
     "originalCompose": "Original Arrangement",
     "community": "Community",
     "myWorks": "My Works",
-    "mvGenerate": "Voice Clone",
     "liveCollab": "Live Collaboration",
     "hfModels": "HF Advanced Models",
     "subtitles": "Subtitle Recognition",
@@ -544,10 +547,25 @@
     "loginTitle": "Log in to Zyvexo",
     "loginSubtitle": "Log in to unlock all creation features",
     "emailPlaceholder": "Email address",
-    "passwordPlaceholder": "Password (any input)",
+    "passwordPlaceholder": "Password",
     "betaHint": "During beta, enter anything to log in",
-    "loginRegister": "Log in / Sign up",
-    "continueBrowsing": "Continue browsing"
+    "loginRegister": "Log in",
+    "continueBrowsing": "Continue browsing",
+    "registerTitle": "Create your Zyvexo account",
+    "registerSubtitle": "Sign up to start creating AI music",
+    "confirmPassword": "Confirm Password",
+    "createAccount": "Create account",
+    "alreadyHaveAccount": "Already have an account? Log in",
+    "noAccount": "Don't have an account? Create account",
+    "backToLogin": "Back to login",
+    "registrationSuccess": "Registration successful!",
+    "checkEmail": "Please check your email to verify your account.",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "invalidEmail": "Please enter a valid email address",
+    "emailExists": "This email is already registered",
+    "genericError": "Registration failed, please try again",
+    "networkError": "Network error, please check your connection"
   },
   "community": {
     "chartHot": "Hot Chart",
@@ -799,7 +817,6 @@
       "2m": "2 min",
       "3m": "3 min",
       "short": "Short clip",
-      "video": "Short video",
       "max": "Standard (max)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "Paid Modules Disabled",
     "r4Text": "Features such as the asset store, paid subscriptions, and UGC earnings withdrawal are unavailable during beta",
     "r5Title": "No Commercial Use",
-    "r5Text": "All test assets generated during beta are for personal use only; commercial use is prohibited"
+    "r5Text": "All test assets generated during beta are for personal use only; commercial use is prohibited",
+    "agreementVersion": "Beta Test Agreement · v2.0"
   },
   "score": {
     "keySignature": "{key} key"

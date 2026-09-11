@@ -70,8 +70,6 @@
     "downloadSnippet": "Ausschnitt herunterladen",
     "downloadFull": "Vollständig herunterladen",
     "detectBeats": "Beats erkennen",
-    "renderVideo": "Audio exportieren",
-    "mvReady": "Fertig",
     "waveformVisualization": "Wellenform-Visualisierung",
     "backgroundColor": "Hintergrundfarbe",
     "resolution": "Auflösung",
@@ -100,7 +98,14 @@
     "historyEmpty": "Noch kein Verlauf...",
     "close": "Schließen",
     "cancel": "Abbrechen",
-    "confirm": "Bestätigen"
+    "confirm": "Bestätigen",
+    "rename": "Umbenennen",
+    "toggleTrim": "Zuschneidemodus umschalten",
+    "delete": "Löschen",
+    "confirmDelete": "„{name}\" löschen?",
+    "trimRange": "Zuschneidebereich",
+    "rangeStart": "Start",
+    "rangeEnd": "Ende"
   },
   "errors": {
     "promptRequired": "Prompt erforderlich",
@@ -113,7 +118,6 @@
     "remixFailed": "Remix fehlgeschlagen",
     "mixFailed": "Mix fehlgeschlagen",
     "trimFailed": "Schneiden fehlgeschlagen",
-    "mvFailed": "Generierung fehlgeschlagen",
     "networkError": "Netzwerkfehler",
     "serverError": "Serverfehler",
     "unsupportedFormat": "Nicht unterstütztes Format",
@@ -133,7 +137,6 @@
     "originalCompose": "Originales Arrangement",
     "community": "Community",
     "myWorks": "Meine Werke",
-    "mvGenerate": "Voice Clone",
     "liveCollab": "Echtzeit-Zusammenarbeit",
     "hfModels": "Erweiterte HF-Modelle",
     "subtitles": "Untertitelerkennung",
@@ -544,10 +547,25 @@
     "loginTitle": "Bei Zyvexo anmelden",
     "loginSubtitle": "Melden Sie sich an, um alle Funktionen freizuschalten",
     "emailPlaceholder": "E-Mail-Adresse",
-    "passwordPlaceholder": "Passwort (beliebig)",
+    "passwordPlaceholder": "Passwort",
     "betaHint": "In der Beta können Sie sich mit einer beliebigen Eingabe anmelden",
-    "loginRegister": "Anmelden / Registrieren",
-    "continueBrowsing": "Weiter surfen"
+    "loginRegister": "Anmelden",
+    "continueBrowsing": "Weiter surfen",
+    "registerTitle": "Erstelle dein Zyvexo-Konto",
+    "registerSubtitle": "Registriere dich, um KI-Musik zu erstellen",
+    "confirmPassword": "Passwort bestätigen",
+    "createAccount": "Konto erstellen",
+    "alreadyHaveAccount": "Schon ein Konto? Anmelden",
+    "noAccount": "Noch kein Konto? Konto erstellen",
+    "backToLogin": "Zurück zur Anmeldung",
+    "registrationSuccess": "Registrierung erfolgreich!",
+    "checkEmail": "Bitte prüfe deine E-Mail, um dein Konto zu bestätigen.",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein",
+    "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen haben",
+    "invalidEmail": "Bitte eine gültige E-Mail-Adresse eingeben",
+    "emailExists": "Diese E-Mail ist bereits registriert",
+    "genericError": "Registrierung fehlgeschlagen, bitte erneut versuchen",
+    "networkError": "Netzwerkfehler, bitte Verbindung prüfen"
   },
   "community": {
     "chartHot": "Beliebte Charts",
@@ -799,7 +817,6 @@
       "2m": "2 Min.",
       "3m": "3 Min.",
       "short": "Kurzer Clip",
-      "video": "Kurzes Video",
       "max": "Standard (max.)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "Bezahlmodule deaktiviert",
     "r4Text": "Funktionen wie der Asset-Store, kostenpflichtige Abos und UGC-Auszahlungen sind während der Beta nicht verfügbar",
     "r5Title": "Keine kommerzielle Nutzung",
-    "r5Text": "Alle während der Beta generierten Test-Assets dienen nur der persönlichen Nutzung; eine kommerzielle Verwendung ist untersagt"
+    "r5Text": "Alle während der Beta generierten Test-Assets dienen nur der persönlichen Nutzung; eine kommerzielle Verwendung ist untersagt",
+    "agreementVersion": "Beta-Test-Vereinbarung · v2.0"
   },
   "score": {
     "keySignature": "Tonart {key}"

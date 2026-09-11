@@ -70,8 +70,6 @@
     "downloadSnippet": "スニペットダウンロード",
     "downloadFull": "完全版ダウンロード",
     "detectBeats": "ビート検出",
-    "renderVideo": "音声を書き出す",
-    "mvReady": "準備完了",
     "waveformVisualization": "波形表示",
     "backgroundColor": "背景色",
     "resolution": "解像度",
@@ -100,7 +98,14 @@
     "historyEmpty": "履歴はまだありません…",
     "close": "閉じる",
     "cancel": "キャンセル",
-    "confirm": "確認"
+    "confirm": "確認",
+    "rename": "名前を変更",
+    "toggleTrim": "トリム切替",
+    "delete": "削除",
+    "confirmDelete": "「{name}」を削除しますか？",
+    "trimRange": "トリム範囲",
+    "rangeStart": "開始",
+    "rangeEnd": "終了"
   },
   "errors": {
     "promptRequired": "プロンプトが必要です",
@@ -113,7 +118,6 @@
     "remixFailed": "リミックス失敗",
     "mixFailed": "ミックス失敗",
     "trimFailed": "トリミング失敗",
-    "mvFailed": "生成に失敗しました",
     "networkError": "ネットワークエラー",
     "serverError": "サーバーエラー",
     "unsupportedFormat": "非対応形式",
@@ -133,7 +137,6 @@
     "originalCompose": "オリジナル編曲",
     "community": "コミュニティ",
     "myWorks": "マイ作品",
-    "mvGenerate": "ボイスクローン",
     "liveCollab": "リアルタイム共同編集",
     "hfModels": "HF高度モデル",
     "subtitles": "字幕認識",
@@ -544,10 +547,25 @@
     "loginTitle": "Zyvexo にログイン",
     "loginSubtitle": "ログインするとすべての制作機能を解放",
     "emailPlaceholder": "メールアドレス",
-    "passwordPlaceholder": "パスワード（任意）",
+    "passwordPlaceholder": "パスワード",
     "betaHint": "ベータ期間中は任意入力でログインできます",
-    "loginRegister": "ログイン / 登録",
-    "continueBrowsing": "閲覧を続ける"
+    "loginRegister": "ログイン",
+    "continueBrowsing": "閲覧を続ける",
+    "registerTitle": "Zyvexo アカウントを作成",
+    "registerSubtitle": "登録して AI 音楽制作を始めましょう",
+    "confirmPassword": "パスワードを確認",
+    "createAccount": "アカウントを作成",
+    "alreadyHaveAccount": "すでにアカウントをお持ちですか？ログイン",
+    "noAccount": "アカウントをお持ちでないですか？作成",
+    "backToLogin": "ログインに戻る",
+    "registrationSuccess": "登録が完了しました！",
+    "checkEmail": "メールを確認してアカウントを認証してください。",
+    "passwordMismatch": "パスワードが一致しません",
+    "passwordTooShort": "パスワードは6文字以上必要です",
+    "invalidEmail": "有効なメールアドレスを入力してください",
+    "emailExists": "このメールアドレスは既に登録されています",
+    "genericError": "登録に失敗しました。後でもう一度お試しください",
+    "networkError": "ネットワークエラーです。接続を確認してください"
   },
   "community": {
     "chartHot": "人気チャート",
@@ -799,7 +817,6 @@
       "2m": "2分",
       "3m": "3分",
       "short": "短い",
-      "video": "短い動画",
       "max": "標準(上限)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "有料モジュール停止",
     "r4Text": "素材ストア、有料サブスクリプション、UGC収益の引き出しなどの機能はベータ期間中は利用できません",
     "r5Title": "商用利用禁止",
-    "r5Text": "ベータ段階で生成されたすべてのテスト素材は個人利用のみに限られ、商業用途は禁止されています"
+    "r5Text": "ベータ段階で生成されたすべてのテスト素材は個人利用のみに限られ、商業用途は禁止されています",
+    "agreementVersion": "ベータテスト規約 · v2.0"
   },
   "score": {
     "keySignature": "{key}調"

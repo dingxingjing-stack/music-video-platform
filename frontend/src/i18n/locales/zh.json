@@ -70,8 +70,6 @@
     "downloadSnippet": "下载片段",
     "downloadFull": "下载完整",
     "detectBeats": "检测节拍",
-    "renderVideo": "导出音频",
-    "mvReady": "已就绪",
     "waveformVisualization": "波形可视化",
     "backgroundColor": "背景颜色",
     "resolution": "分辨率",
@@ -100,7 +98,14 @@
     "historyEmpty": "暂无历史记录...",
     "close": "关闭",
     "cancel": "取消",
-    "confirm": "确认"
+    "confirm": "确认",
+    "rename": "重命名",
+    "toggleTrim": "切换裁剪模式",
+    "delete": "删除",
+    "confirmDelete": "删除「{name}」？",
+    "trimRange": "裁剪范围",
+    "rangeStart": "开始",
+    "rangeEnd": "结束"
   },
   "errors": {
     "promptRequired": "需要提示词",
@@ -113,7 +118,6 @@
     "remixFailed": "Remix 失败",
     "mixFailed": "混音失败",
     "trimFailed": "裁剪失败",
-    "mvFailed": "生成失败",
     "networkError": "网络错误",
     "serverError": "服务器错误",
     "unsupportedFormat": "不支持的格式。请使用 WAV、MP3、FLAC、OGG、M4A 或 AAC。",
@@ -133,7 +137,6 @@
     "originalCompose": "原创编曲",
     "community": "社区排行榜",
     "myWorks": "我的作品",
-    "mvGenerate": "声音克隆",
     "liveCollab": "实时协作",
     "hfModels": "HF 高级模型",
     "subtitles": "字幕识别",
@@ -544,10 +547,25 @@
     "loginTitle": "登录 Zyvexo",
     "loginSubtitle": "登录后解锁全部创作功能",
     "emailPlaceholder": "邮箱地址",
-    "passwordPlaceholder": "密码（任意输入）",
+    "passwordPlaceholder": "密码",
     "betaHint": "公测期间任意输入即可登录",
-    "loginRegister": "登录 / 注册",
-    "continueBrowsing": "继续浏览"
+    "loginRegister": "登录",
+    "continueBrowsing": "继续浏览",
+    "registerTitle": "创建你的 Zyvexo 账号",
+    "registerSubtitle": "注册后即可开启 AI 音乐创作",
+    "confirmPassword": "确认密码",
+    "createAccount": "创建账号",
+    "alreadyHaveAccount": "已经有账号？登录",
+    "noAccount": "还没有账号？创建账号",
+    "backToLogin": "返回登录",
+    "registrationSuccess": "注册成功！",
+    "checkEmail": "请查收邮件并验证你的邮箱地址。",
+    "passwordMismatch": "两次输入的密码不一致",
+    "passwordTooShort": "密码至少需要 6 个字符",
+    "invalidEmail": "请输入有效的邮箱地址",
+    "emailExists": "该邮箱已被注册",
+    "genericError": "注册失败，请稍后重试",
+    "networkError": "网络错误，请检查网络连接"
   },
   "community": {
     "chartHot": "热门榜",
@@ -799,7 +817,6 @@
       "2m": "2 分钟",
       "3m": "3 分钟",
       "short": "短片段",
-      "video": "短视频",
       "max": "标准(上限)"
     },
     "style": {
@@ -1983,7 +2000,8 @@
     "r4Title": "付费模块关闭",
     "r4Text": "素材商城、付费订阅、UGC 收益提现等功能公测期间暂不开放",
     "r5Title": "禁止商用",
-    "r5Text": "公测阶段所有生成的测试素材仅限个人使用，禁止商业用途"
+    "r5Text": "公测阶段所有生成的测试素材仅限个人使用，禁止商业用途",
+    "agreementVersion": "Beta 测试协议 · v2.0"
   },
   "score": {
     "keySignature": "{key}调"
