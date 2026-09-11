@@ -393,6 +393,39 @@ class ProviderRegistry:
         assert self._default is not None, "ProviderRegistry 至少需要一个 production provider"
         return self._providers[self._default]
 
+    def fallback_chain(self, name: Optional[str] = None) -> list:
+        """返回有序 Provider fallback 链（复用现有 select() 语义，不另起一套）。
+
+        生产目标顺序：
+            yinchao（若已注册）→ mureka（若已注册）→ runpod
+        - runpod 内部已含 Fal fallback（RunPodProvider.generate 生产环境回退 Fal），
+          不在本链中重复展开。
+        - HF 由 router 层 _try_hf_ace_step_fallback 负责，不在本链。
+        - 某 Provider 尚未注册时，跳过它，保持剩余顺序。
+
+        非生产/测试：保持现有 select() 行为（默认 fal_stable_audio），返回单元素链，
+        不破坏存量测试与开发环境。
+
+        始终返回 BaseProvider 实例列表（可空则回退到 select() 的单元素链）。
+        """
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        is_prod = env == "production"
+
+        if not is_prod:
+            return [self.select(name)]
+
+        # 生产：yinchao → mureka → runpod（按 name 显式取，未注册则跳过）
+        chain: list = []
+        for pname in ("yinchao", "mureka", "runpod"):
+            p = self._providers.get(pname)
+            if p is not None:
+                chain.append(p)
+
+        # 安全兜底：若链为空（三家都未注册），退回 select() 默认单元素链
+        if not chain:
+            return [self.select(name)]
+        return chain
+
 
 _registry: Optional[ProviderRegistry] = None
 
@@ -402,10 +435,27 @@ def get_provider_registry() -> ProviderRegistry:
     global _registry
     if _registry is None:
         _registry = ProviderRegistry()
+        # 注意：MurekaProvider 惰性导入（mureka_provider 反向 import 本模块的 BaseProvider，
+        # 顶层 import 会循环依赖）。注册放在最后，避免其 production=True 抢占 _default
+        # （register() 以首个 production provider 为默认值；若 Mureka 先注册会改变
+        # development/test 的 select()/fallback_chain() 默认，破坏存量测试）。
+        # fallback_chain() 按 name 显式取 mureka→runpod，与注册顺序无关。
         _registry.register(FalStableAudioProvider())
         _registry.register(RunPodProvider())
         _registry.register(ModalACEStepProvider())
         _registry.register(KaggleMusicGenSmallProvider())
         _registry.register(KaggleCosyVoice2Provider())
+        try:
+            from app.services.mureka_provider import MurekaProvider
+            _registry.register(MurekaProvider())
+        except Exception as exc:  # noqa: BLE001
+            # Mureka 注册失败（缺依赖等）不能阻断启动：生产仍可回退 RunPod。
+            print(f"[Provider] MurekaProvider 注册失败（不影响 RunPod/Fal 兜底）: {exc}")
+        try:
+            from app.services.yinchao_provider import YinchaoProvider
+            _registry.register(YinchaoProvider())
+        except Exception as exc:  # noqa: BLE001
+            # Yinchao 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Mureka/RunPod。
+            print(f"[Provider] YinchaoProvider 注册失败（不影响 Mureka/RunPod 兜底）: {exc}")
         print("[Provider] Registry initialized:", list(_registry._providers.keys()))
     return _registry
