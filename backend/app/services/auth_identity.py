@@ -77,7 +77,16 @@ def verify_bearer_jwt(token: str) -> Optional[str]:
         user = getattr(resp, "user", None)
         uid = getattr(user, "id", None)
         if uid and is_uuid(str(uid)):
-            return str(uid)
+            uid_str = str(uid)
+            # Phase 3-2A：JWT 兜底补建 public.users（trigger 为主，此处最佳努力、不阻断认证）。
+            email = getattr(user, "email", None)
+            if email:
+                try:
+                    from app.services.supabase_service import ensure_user
+                    ensure_user(uid_str, email)
+                except Exception:  # noqa: BLE001 —— 补建失败不影响身份验证
+                    pass
+            return uid_str
         logger.warning("Supabase Auth 验证未返回有效 user id")
         return None
     except Exception as exc:  # noqa: BLE001 —— 任何验证失败都按未认证处理

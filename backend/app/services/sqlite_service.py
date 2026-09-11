@@ -196,6 +196,15 @@ def create_user(email: str, supabase_user_id: str, username: Optional[str] = Non
     return get_user(supabase_user_id)
 
 
+def ensure_user(supabase_user_id: str, email: str) -> Dict:
+    """本地/SQLite 路径的幂等 ensure_user（Phase 3-2A）：
+    已存在则返回既有行，否则创建。仅用于本地测试路径，不影响生产 Supabase。"""
+    existing = get_user(supabase_user_id)
+    if existing:
+        return existing
+    return create_user(email=email, supabase_user_id=supabase_user_id)
+
+
 def increment_user_credits(user_id: str, amount: int) -> int:
     """增加用户额度"""
     conn = get_connection()

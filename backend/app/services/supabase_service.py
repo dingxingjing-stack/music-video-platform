@@ -53,22 +53,47 @@ def get_user_by_supabase_id(supabase_user_id: str) -> Optional[Dict]:
 
 def create_user(email: str, supabase_user_id: str, username: Optional[str] = None, 
                 avatar_url: Optional[str] = None, age: Optional[int] = None) -> Dict:
-    """Create a new user."""
+    """Create a new user（Phase 3-2A：id = supabase_user_id，消除双 UUID）。
+
+    - id 与 supabase_user_id 统一为 Supabase Auth UUID，不再生成独立 business UUID。
+    - 幂等：以 supabase_user_id 唯一冲突为据，重复创建不产生第二行。
+    """
     try:
         user_data = {
-            "email": email,
+            "id": supabase_user_id,
             "supabase_user_id": supabase_user_id,
+            "email": email,
             "username": username,
             "avatar_url": avatar_url,
             "age": age,
         }
-        # Remove None values
-        user_data = {k: v for k, v in user_data.items() if v is not None}
-        response = supabase.table("users").insert(user_data).execute()
-        return response.data[0]
+        # Remove None values（但不允许移除 id / supabase_user_id / email）
+        for k in ("username", "avatar_url", "age"):
+            if user_data.get(k) is None:
+                user_data.pop(k, None)
+        response = supabase.table("users").upsert(
+            user_data, on_conflict="supabase_user_id", ignore_duplicates=True
+        ).execute()
+        return response.data[0] if response.data else get_user_by_supabase_id(supabase_user_id) or {}
     except APIError as e:
         print(f"Error creating user: {e}")
         raise
+
+
+def ensure_user(supabase_user_id: str, email: str) -> Optional[Dict]:
+    """幂等确保 public.users 存在（Phase 3-2A 后端兜底）。
+
+    - 已存在（按 supabase_user_id 唯一）→ 返回既有行，不重复插入。
+    - 不存在 → 插入，且 id = supabase_user_id（auth UUID）。
+    - 仅处理 public.users 本体；不初始化 credits/quota/statistics/songs 等。
+    """
+    existing = get_user_by_supabase_id(supabase_user_id)
+    if existing:
+        return existing
+    try:
+        return create_user(email=email, supabase_user_id=supabase_user_id)
+    except APIError:
+        return get_user_by_supabase_id(supabase_user_id)
 
 def get_user(user_id: str) -> Optional[Dict]:
     """Get user by internal ID or Supabase Auth user ID.

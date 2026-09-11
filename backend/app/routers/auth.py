@@ -16,18 +16,18 @@ _SUPABASE_CFG = bool(os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SERVICE_
 try:
     if _SUPABASE_CFG:
         from app.services.supabase_service import (
-            get_user, create_user, log_activity,
+            get_user, create_user, ensure_user, log_activity,
             increment_user_credits, decrement_user_credits,
         )
         DB_BACKEND = "supabase"
     else:
         from app.services.sqlite_service import (
-            get_user, create_user, log_activity, increment_user_credits, decrement_user_credits
+            get_user, create_user, ensure_user, log_activity, increment_user_credits, decrement_user_credits
         )
         DB_BACKEND = "sqlite"
 except ImportError:
     from app.services.sqlite_service import (
-        get_user, create_user, log_activity, increment_user_credits, decrement_user_credits
+        get_user, create_user, ensure_user, log_activity, increment_user_credits, decrement_user_credits
     )
     DB_BACKEND = "sqlite"
 
@@ -53,9 +53,9 @@ class UserResponse(BaseModel):
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate, authorization: Optional[str] = Header(None)):
     """
-    注册新用户
+    注册新用户（Phase 3-2A：幂等 ensure_user）
     
-    需要 Supabase Auth 的 Bearer Token
+    需要 Supabase Auth 的 Bearer Token。幂等：同一 auth UUID 重复调用不产生第二个用户。
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header required")
@@ -66,27 +66,17 @@ async def register_user(user_data: UserCreate, authorization: Optional[str] = He
     if not supabase_user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    # 检查用户是否已存在
-    existing_user = get_user(supabase_user_id)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    # 创建用户
+    # 幂等确保 public.users 存在（已存在返回既有，不报 400）
     try:
-        user = create_user(
-            email=user_data.email,
-            supabase_user_id=supabase_user_id,
-            username=user_data.username,
-            age=user_data.age
-        )
-        
+        user = ensure_user(supabase_user_id, user_data.email)
+
         # 记录活动日志
         log_activity(
             user_id=user["id"],
             action="USER_REGISTERED",
             metadata={"email": user_data.email}
         )
-        
+
         return UserResponse(**user)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
