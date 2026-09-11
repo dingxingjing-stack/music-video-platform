@@ -68,7 +68,7 @@ async def yinchao_connectivity_test(x_yinchao_test_token: str | None = Header(de
     payload = {
         "model": "v4.0",
         "task_type": "normal",
-        "prompt": "一首轻快的流行歌曲，主题是夏日海边的回忆",
+        "prompt": "一首轻快的中文流行歌曲，主题是夏日海边的回忆，女声演唱，现代流行音乐风格",
         "n": 1,
     }
 
