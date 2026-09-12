@@ -9,6 +9,7 @@ interface AuthCtx {
   loading: boolean;
   login: (email: string, pwd: string) => Promise<void>;
   register: (email: string, pwd: string) => Promise<{ needsEmailConfirmation: boolean }>;
+  resendVerification: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   showLogin: boolean;
   setShowLogin: (v: boolean) => void;
@@ -58,6 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { needsEmailConfirmation: !data.session };
   }, []);
 
+  const resendVerification = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) throw error;
+  }, []);
+
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setShowLogin(false);
@@ -70,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     login,
     register,
+    resendVerification,
     logout,
     showLogin,
     setShowLogin,
