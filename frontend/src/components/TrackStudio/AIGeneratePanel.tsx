@@ -19,6 +19,7 @@ import {
   getThrownTaskError,
 } from '../../hooks/useAiMusicTask';
 import { useTranslation } from '../../i18n/useTranslation';
+import { SONG_LANGUAGES } from '../../config/songLanguages';
 
 interface Props {
   onGenerated: (audioUrl: string, title: string) => void;
@@ -82,6 +83,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
   const [styleStrength, setStyleStrength] = useState(0.7);
   const [duration, setDuration] = useState(180);
   const [lyrics, setLyrics] = useState('');
+  const [songLanguage, setSongLanguage] = useState('');
   const [showLyricsEditor, setShowLyricsEditor] = useState(false);
   const [generatedLyrics, setGeneratedLyrics] = useState('');
   const [sections, setSections] = useState<SongSection[]>(DEFAULT_SECTIONS);
@@ -142,6 +144,7 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
       duration,
       lyrics: lyricsVal,
       type: 'song',
+      song_language: songLanguage || undefined,
     });
     if (!taskId) {
       // submit 失败时 hook 已写入 task.error
@@ -364,6 +367,21 @@ export function AIGeneratePanel({ onGenerated, onClose }: Props) {
                     {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
                   </span>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-[#777777] mb-1 block">{t('createMusic.songLanguage')}</label>
+                <select
+                  value={songLanguage}
+                  onChange={(e) => setSongLanguage(e.target.value)}
+                  disabled={inProgress || loading}
+                  className="w-full bg-[#2a2a2a] border border-[#3a3a3a] rounded-lg px-3 py-2 text-sm text-[#e0e0e0] focus:border-orange-500/50"
+                >
+                  <option value="">{t('createMusic.songLanguageAuto')}</option>
+                  {SONG_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>{l.nativeName}</option>
+                  ))}
+                </select>
               </div>
             </>
           )}

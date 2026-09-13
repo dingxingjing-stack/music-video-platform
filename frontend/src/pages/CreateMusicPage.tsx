@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAudioGeneration } from '../hooks/useAudioGeneration';
 import { WaveformEditor } from '../components/Audio/WaveformEditor';
+import { SONG_LANGUAGES } from '../config/songLanguages';
+import { authFetch } from '../api/http';
+import { api } from '../config/api';
 
 export function CreateMusicPage() {
   const { t } = useTranslation();
@@ -10,7 +13,9 @@ export function CreateMusicPage() {
   const [genre, setGenre] = useState('');
   const [mood, setMood] = useState('');
   const [vocal, setVocal] = useState('');
+  const [songLanguage, setSongLanguage] = useState('');
   const [duration, setDuration] = useState('30');
+  const [saving, setSaving] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<{id:string, url:string, prompt:string, time:string}[]>(()=> {
     try{ const r=localStorage.getItem('zyvexo_create_history'); return r?JSON.parse(r):[] }catch{return []}
@@ -34,6 +39,7 @@ export function CreateMusicPage() {
       mood: mood || undefined,
       vocal: vocal || undefined,
       duration: parseInt(duration)||30,
+      song_language: songLanguage || undefined,
     };
     generate('/ai/generate', payload);
   };
@@ -43,6 +49,30 @@ export function CreateMusicPage() {
     setHistory(next);
     localStorage.setItem('zyvexo_create_history', JSON.stringify(next));
     if (history.find(h=>h.id===id)?.url===audioUrl) setAudioUrl(null);
+  };
+
+  // 保存作品到作品库：调真实后端 POST /api/v1/songs（含 song_language），
+  // 取代旧的 localStorage mock（zyvexo_last_save）。
+  const handleSave = async () => {
+    if (!audioUrl) return;
+    setSaving(true);
+    try {
+      await authFetch<{ id?: string }>(api.url('/api/v1/songs'), {
+        method: 'POST',
+        body: {
+          title: description.trim().slice(0, 80) || 'Untitled',
+          lyrics: lyrics.trim() || null,
+          style: genre || 'pop',
+          duration_seconds: parseInt(duration) || 30,
+          song_language: songLanguage || null,
+        },
+      });
+      alert(t('createMusic.saved'));
+    } catch (e) {
+      alert(t('createMusic.saveFailed'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -112,6 +142,15 @@ export function CreateMusicPage() {
                 </select>
                 {duration === '300' && <p className="mt-1 text-[11px] text-[#8a8a8a]">{t('createMusic.extendedHint')}</p>}
               </div>
+              <div>
+                <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.songLanguage')}</label>
+                <select value={songLanguage} onChange={e=> setSongLanguage(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
+                  <option value="">{t('createMusic.songLanguageAuto')}</option>
+                  {SONG_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>{l.nativeName}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <button onClick={handleGenerate} disabled={loading || !description.trim()} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">
               {loading ? <><span className="w-4 h-4 border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] rounded-full animate-spin" /> {t('createMusic.generating')}</> : t('createMusic.generate')}
@@ -139,7 +178,7 @@ export function CreateMusicPage() {
                   <audio controls src={audioUrl} className="w-full" />
                   <div className="flex flex-wrap gap-2">
                     <button onClick={()=> { const a=document.createElement('a'); a.href=audioUrl; a.download='zyvexo-track.wav'; a.click(); }} className="px-4 py-2 rounded-xl bg-white text-[#0a0a0a] text-sm font-medium hover:bg-[#ededed]">{t('createMusic.download')}</button>
-                    <button onClick={()=> { localStorage.setItem('zyvexo_last_save', audioUrl); alert(t('createMusic.saved')); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{t('createMusic.save')}</button>
+                    <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222] disabled:opacity-50">{t('createMusic.save')}</button>
                     <button onClick={()=> setAudioUrl(null)} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-[#ff6b6b] text-sm hover:bg-[#1f1a1a]">{t('createMusic.delete')}</button>
                     <button onClick={()=> { setDescription(''); setLyrics(''); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{t('createMusic.createAgain')}</button>
                   </div>

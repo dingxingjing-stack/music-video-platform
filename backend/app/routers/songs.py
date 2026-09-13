@@ -41,6 +41,8 @@ class SongCreate(BaseModel):
     duration_seconds: Optional[int] = None
     is_public: bool = False
     metadata: Optional[Dict] = {}
+    project_id: Optional[str] = None
+    song_language: Optional[str] = None  # 歌曲生成语言（独立于 UI locale）
 
 
 class SongResponse(BaseModel):
@@ -60,6 +62,8 @@ class SongResponse(BaseModel):
     metadata: Dict = {}
     created_at: str
     updated_at: str
+    project_id: Optional[str] = None
+    song_language: Optional[str] = None
 
 
 @router.post("/", response_model=SongResponse)
@@ -99,7 +103,9 @@ async def create_new_song(
                 "duration_seconds": song_data.duration_seconds,
                 "is_public": song_data.is_public,
                 "metadata": song_data.metadata or {},
+                "song_language": song_data.song_language,
             },
+            project_id=song_data.project_id,
         )
 
         # 扣除额度

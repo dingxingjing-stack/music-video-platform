@@ -329,7 +329,10 @@
     },
     "rateLimited": "リクエストが多すぎます。上限に達しました。",
     "dismiss": "閉じる",
-    "extendedHint": "5分は拡張生成（150s + 150s）を使用"
+    "extendedHint": "5分は拡張生成（150s + 150s）を使用",
+    "songLanguage": "曲の言語",
+    "songLanguageAuto": "自動（歌詞・プロンプトに従う）",
+    "saveFailed": "保存に失敗しました。もう一度お試しください"
   },
   "voiceClone": {
     "uploadTab": "サンプルをアップロード",
@@ -583,7 +586,10 @@
     "continueToZyvexo": "Zyvexo へ進む",
     "skip": "スキップ",
     "termsOfService": "利用規約",
-    "privacyPolicy": "プライバシーポリシー"
+    "privacyPolicy": "プライバシーポリシー",
+    "loginFailed": "ログインに失敗しました。もう一度お試しください",
+    "invalidCredentials": "メールアドレスまたはパスワードが間違っています",
+    "emailNotConfirmed": "メールが確認されていません。先にメールを確認してください"
   },
   "community": {
     "chartHot": "人気チャート",
@@ -1139,7 +1145,7 @@
     "composed": "最良セグメント {n} 個を連結"
   },
   "remix": {
-    "title": "AI リミックスエンジン",
+    "title": "リミックス",
     "subtitle": "スタイル変換 · リズム再構築 · 自動 DJ Mix",
     "close": "閉じる",
     "selectTarget": "ターゲットスタイルを選択",
@@ -1173,7 +1179,11 @@
     "rhythmMode": "{style} のリズムスタイルに変更",
     "intensity": "Remix強度: {intensity}",
     "addDropSection": "ドロップ部分を追加しました",
-    "addBuildupSection": "ビルドアップ部分を追加しました"
+    "addBuildupSection": "ビルドアップ部分を追加しました",
+    "wsError": "WebSocket 接続エラー",
+    "remixFailed": "リミックスに失敗しました",
+    "unknownError": "不明なリミックスエラー",
+    "toggleHint": "このトラックをリミックス"
   },
   "timestretch": {
     "title": "タイムストレッチ",
@@ -1325,7 +1335,8 @@
     "days": "{n} 日",
     "hours": "時間",
     "minutes": "分",
-    "seconds": "秒"
+    "seconds": "秒",
+    "copyright": "© 2026 Zyvexo. 無断複写・転載を禁じます。"
   },
   "pathd": {
     "publishSuccess": "作品をコミュニティに公開しました!",
@@ -2061,5 +2072,64 @@
     "retryFailedNetwork": "ネットワークエラー、再試行できませんでした",
     "taskNotFound": "タスクが見つかりません",
     "downloadFailed": "ダウンロードに失敗しました ({status})"
+  },
+  "watermark": {
+    "title": "著作権ウォーターマーク",
+    "ownerId": "所有者 ID",
+    "projectId": "プロジェクト ID",
+    "apply": "適用",
+    "detect": "検出",
+    "fingerprinting": "指紋抽出中…",
+    "embedding": "ウォーターマーク埋め込み中…",
+    "extracting": "ウォーターマーク抽出中…",
+    "fingerprint": "指紋",
+    "compositeId": "複合 ID:",
+    "centroid": "重心",
+    "bandwidth": "帯域幅",
+    "duration": "長さ",
+    "found": "✅ ウォーターマーク検出",
+    "none": "❌ ウォーターマークなし",
+    "embedded": "🔒 ウォーターマーク埋め込み済み",
+    "owner": "所有者",
+    "project": "プロジェクト",
+    "rights": "権利",
+    "ts": "タイムスタンプ",
+    "sig": "署名",
+    "download": "ウォーターマーク付きをダウンロード",
+    "back": "← 戻る"
+  },
+  "audioPlayer": {
+    "trimTooShort": "トリミング範囲が短すぎます。0.5秒以上選択してください。",
+    "ffmpegRequired": "音声トリミングにはサーバーへの ffmpeg のインストールが必要です。\n\nffmpeg をインストールしてバックエンドを再起動してください。\nダウンロード: https://ffmpeg.org/download.html",
+    "downloadFailed": "ダウンロード失敗: {msg}"
+  },
+  "trackList": {
+    "noAudioUrl": "オーディオ URL がありません",
+    "activeSessions": "アクティブなセッション",
+    "statusLoading": "🔄 モデル読み込み中…",
+    "statusRunning": "🎵 生成中…",
+    "statusPending": "⏳ 待機中…",
+    "statusCompleted": "✅ 完了！",
+    "statusFailed": "❌ 失敗",
+    "statusStarting": "⏳ 開始中…",
+    "elapsed": "経過:",
+    "live": "● ライブ",
+    "trackDetail": "トラック詳細: {name}",
+    "close": "✕ 閉じる",
+    "type": "種類:",
+    "status": "状態:",
+    "progress": "進捗:",
+    "url": "URL:"
+  },
+  "trackInput": {
+    "promptsReady": "{n} 件のプロンプト準備完了",
+    "onePerLine": "（1行に1件、任意）",
+    "lineRepeatHint": "行がプロンプトより少ない場合、最後の行が循環して繰り返されます"
+  },
+  "mixConsole": {
+    "wsError": "WebSocket 接続エラー",
+    "mixFailed": "ミックスに失敗しました",
+    "mixTimeout": "ミックスレンダリングがタイムアウトしました",
+    "unknownError": "不明なエラー"
   }
 }

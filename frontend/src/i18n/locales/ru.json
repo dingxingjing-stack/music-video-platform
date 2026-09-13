@@ -329,7 +329,10 @@
     },
     "rateLimited": "Слишком много запросов. Лимит достигнут.",
     "dismiss": "Закрыть",
-    "extendedHint": "5 мин — расширенная генерация (150с + 150с)"
+    "extendedHint": "5 мин — расширенная генерация (150с + 150с)",
+    "songLanguage": "Язык песни",
+    "songLanguageAuto": "Авто (по тексту/промпту)",
+    "saveFailed": "Не удалось сохранить, попробуйте ещё раз"
   },
   "voiceClone": {
     "uploadTab": "Загрузить образец",
@@ -583,7 +586,10 @@
     "continueToZyvexo": "Перейти в Zyvexo",
     "skip": "Пропустить",
     "termsOfService": "Условия использования",
-    "privacyPolicy": "Политика конфиденциальности"
+    "privacyPolicy": "Политика конфиденциальности",
+    "loginFailed": "Не удалось войти, попробуйте ещё раз",
+    "invalidCredentials": "Неверный email или пароль",
+    "emailNotConfirmed": "Email не подтверждён, сначала подтвердите email"
   },
   "community": {
     "chartHot": "Популярный чарт",
@@ -1139,7 +1145,7 @@
     "composed": "Собрано лучших фрагментов: {n}"
   },
   "remix": {
-    "title": "Движок ИИ-ремикса",
+    "title": "Ремикс",
     "subtitle": "Смена стиля · Перестройка ритма · Авто DJ Mix",
     "close": "Закрыть",
     "selectTarget": "Выберите целевой стиль",
@@ -1173,7 +1179,11 @@
     "rhythmMode": "Переключено на ритмический стиль {style}",
     "intensity": "Интенсивность ремикса: {intensity}",
     "addDropSection": "Добавлена секция дропа",
-    "addBuildupSection": "Добавлена секция билд-апа"
+    "addBuildupSection": "Добавлена секция билд-апа",
+    "wsError": "Ошибка подключения WebSocket",
+    "remixFailed": "Ошибка ремикса",
+    "unknownError": "Неизвестная ошибка ремикса",
+    "toggleHint": "Сделать ремикс этого трека"
   },
   "timestretch": {
     "title": "Растяжение времени",
@@ -1325,7 +1335,8 @@
     "days": "{n} дня",
     "hours": "ч",
     "minutes": "мин",
-    "seconds": "с"
+    "seconds": "с",
+    "copyright": "© 2026 Zyvexo. Все права защищены."
   },
   "pathd": {
     "publishSuccess": "Работа опубликована в сообществе!",
@@ -2061,5 +2072,64 @@
     "retryFailedNetwork": "Ошибка сети, повтор невозможен",
     "taskNotFound": "Задача не найдена",
     "downloadFailed": "Ошибка загрузки ({status})"
+  },
+  "watermark": {
+    "title": "Водяной знак авторства",
+    "ownerId": "ID владельца",
+    "projectId": "ID проекта",
+    "apply": "Применить",
+    "detect": "Обнаружить",
+    "fingerprinting": "Извлечение отпечатка…",
+    "embedding": "Внедрение водяного знака…",
+    "extracting": "Извлечение водяного знака…",
+    "fingerprint": "Отпечаток",
+    "compositeId": "Составной ID:",
+    "centroid": "Центроид",
+    "bandwidth": "Ширина полосы",
+    "duration": "Длительность",
+    "found": "✅ Водяной знак найден",
+    "none": "❌ Водяного знака нет",
+    "embedded": "🔒 Водяной знак внедрён",
+    "owner": "Владелец",
+    "project": "Проект",
+    "rights": "Права",
+    "ts": "Метка времени",
+    "sig": "Подпись",
+    "download": "Скачать версию со знаком",
+    "back": "← Назад"
+  },
+  "audioPlayer": {
+    "trimTooShort": "Диапазон обрезки слишком короткий. Выберите не менее 0,5 секунды.",
+    "ffmpegRequired": "Для обрезки аудио требуется установленный на сервере ffmpeg.\n\nУстановите ffmpeg и перезапустите бэкенд.\nСкачать: https://ffmpeg.org/download.html",
+    "downloadFailed": "Ошибка скачивания: {msg}"
+  },
+  "trackList": {
+    "noAudioUrl": "Нет URL аудио",
+    "activeSessions": "Активные сессии",
+    "statusLoading": "🔄 Загрузка модели…",
+    "statusRunning": "🎵 Генерация…",
+    "statusPending": "⏳ В очереди…",
+    "statusCompleted": "✅ Готово!",
+    "statusFailed": "❌ Ошибка",
+    "statusStarting": "⏳ Запуск…",
+    "elapsed": "Прошло:",
+    "live": "● LIVE",
+    "trackDetail": "Детали трека: {name}",
+    "close": "✕ Закрыть",
+    "type": "Тип:",
+    "status": "Статус:",
+    "progress": "Прогресс:",
+    "url": "URL:"
+  },
+  "trackInput": {
+    "promptsReady": "{n} подсказок готово",
+    "onePerLine": "(по одной в строке, необязательно)",
+    "lineRepeatHint": "Если строк меньше, чем подсказок, последняя строка повторяется циклически"
+  },
+  "mixConsole": {
+    "wsError": "Ошибка подключения WebSocket",
+    "mixFailed": "Ошибка микширования",
+    "mixTimeout": "Таймаут рендеринга микса",
+    "unknownError": "Неизвестная ошибка"
   }
 }

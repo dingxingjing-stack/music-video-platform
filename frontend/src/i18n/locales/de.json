@@ -329,7 +329,10 @@
     },
     "rateLimited": "Zu viele Anfragen. Limit erreicht.",
     "dismiss": "Schließen",
-    "extendedHint": "5 Min nutzt erweiterte Generierung (150s + 150s)"
+    "extendedHint": "5 Min nutzt erweiterte Generierung (150s + 150s)",
+    "songLanguage": "Songsprache",
+    "songLanguageAuto": "Auto (folgt Text/Prompt)",
+    "saveFailed": "Speichern fehlgeschlagen, bitte erneut versuchen"
   },
   "voiceClone": {
     "uploadTab": "Probe hochladen",
@@ -583,7 +586,10 @@
     "continueToZyvexo": "Weiter zu Zyvexo",
     "skip": "Überspringen",
     "termsOfService": "Nutzungsbedingungen",
-    "privacyPolicy": "Datenschutzrichtlinie"
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "loginFailed": "Anmeldung fehlgeschlagen, bitte erneut versuchen",
+    "invalidCredentials": "E-Mail oder Passwort falsch",
+    "emailNotConfirmed": "E-Mail nicht bestätigt, bitte zuerst E-Mail bestätigen"
   },
   "community": {
     "chartHot": "Beliebte Charts",
@@ -1139,7 +1145,7 @@
     "composed": "{n} beste Segmente kompiliert"
   },
   "remix": {
-    "title": "KI-Remix-Engine",
+    "title": "Remix",
     "subtitle": "Stiltransfer · Rhythmus-Neuaufbau · Auto-DJ-Mix",
     "close": "Schließen",
     "selectTarget": "Zielstil wählen",
@@ -1173,7 +1179,11 @@
     "rhythmMode": "Auf {style}-Rhythmusstil umgestellt",
     "intensity": "Remix-Intensität: {intensity}",
     "addDropSection": "Drop-Abschnitt hinzugefügt",
-    "addBuildupSection": "Buildup-Abschnitt hinzugefügt"
+    "addBuildupSection": "Buildup-Abschnitt hinzugefügt",
+    "wsError": "WebSocket-Verbindungsfehler",
+    "remixFailed": "Remix fehlgeschlagen",
+    "unknownError": "Unbekannter Remix-Fehler",
+    "toggleHint": "Diesen Track remixen"
   },
   "timestretch": {
     "title": "Zeitdehnung",
@@ -1325,7 +1335,8 @@
     "days": "{n} Tage",
     "hours": "h",
     "minutes": "Min.",
-    "seconds": "Sek."
+    "seconds": "Sek.",
+    "copyright": "© 2026 Zyvexo. Alle Rechte vorbehalten."
   },
   "pathd": {
     "publishSuccess": "Werk in der Community veröffentlicht!",
@@ -2061,5 +2072,64 @@
     "retryFailedNetwork": "Netzwerkfehler, Wiederholung fehlgeschlagen",
     "taskNotFound": "Aufgabe nicht gefunden",
     "downloadFailed": "Download fehlgeschlagen ({status})"
+  },
+  "watermark": {
+    "title": "Urheberrechts-Wasserzeichen",
+    "ownerId": "Eigentümer-ID",
+    "projectId": "Projekt-ID",
+    "apply": "Anwenden",
+    "detect": "Erkennen",
+    "fingerprinting": "Fingerabdruck wird erstellt…",
+    "embedding": "Wasserzeichen wird eingebettet…",
+    "extracting": "Wasserzeichen wird extrahiert…",
+    "fingerprint": "Fingerabdruck",
+    "compositeId": "Zusammengesetzte ID:",
+    "centroid": "Schwerpunkt",
+    "bandwidth": "Bandbreite",
+    "duration": "Dauer",
+    "found": "✅ Wasserzeichen gefunden",
+    "none": "❌ Kein Wasserzeichen",
+    "embedded": "🔒 Wasserzeichen eingebettet",
+    "owner": "Eigentümer",
+    "project": "Projekt",
+    "rights": "Rechte",
+    "ts": "Zeitstempel",
+    "sig": "Signatur",
+    "download": "Wassergezeichnete Version herunterladen",
+    "back": "← Zurück"
+  },
+  "audioPlayer": {
+    "trimTooShort": "Der Trimmbereich ist zu kurz. Wählen Sie mindestens 0,5 Sekunden.",
+    "ffmpegRequired": "Zum Trimmen von Audio muss ffmpeg auf dem Server installiert sein.\n\nInstallieren Sie ffmpeg und starten Sie das Backend neu.\nDownload: https://ffmpeg.org/download.html",
+    "downloadFailed": "Download fehlgeschlagen: {msg}"
+  },
+  "trackList": {
+    "noAudioUrl": "Keine Audio-URL",
+    "activeSessions": "Aktive Sitzungen",
+    "statusLoading": "🔄 Modell wird geladen…",
+    "statusRunning": "🎵 Wird generiert…",
+    "statusPending": "⏳ In Warteschlange…",
+    "statusCompleted": "✅ Fertig!",
+    "statusFailed": "❌ Fehlgeschlagen",
+    "statusStarting": "⏳ Wird gestartet…",
+    "elapsed": "Verstrichen:",
+    "live": "● LIVE",
+    "trackDetail": "Spurdetails: {name}",
+    "close": "✕ Schließen",
+    "type": "Typ:",
+    "status": "Status:",
+    "progress": "Fortschritt:",
+    "url": "URL:"
+  },
+  "trackInput": {
+    "promptsReady": "{n} Prompt(s) bereit",
+    "onePerLine": "(eine pro Zeile, optional)",
+    "lineRepeatHint": "Wenn weniger Zeilen als Prompts vorhanden sind, wiederholt sich die letzte Zeile zyklisch"
+  },
+  "mixConsole": {
+    "wsError": "WebSocket-Verbindungsfehler",
+    "mixFailed": "Mix fehlgeschlagen",
+    "mixTimeout": "Zeitüberschreitung beim Mix-Rendering",
+    "unknownError": "Unbekannter Fehler"
   }
 }

@@ -34,6 +34,7 @@ create table if not exists public.songs (
   is_public boolean default false,
   play_count integer default 0,
   like_count integer default 0,
+  song_language text,
   metadata jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now()

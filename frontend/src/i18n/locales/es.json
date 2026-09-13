@@ -329,7 +329,10 @@
     },
     "rateLimited": "Demasiadas solicitudes. Límite alcanzado.",
     "dismiss": "Cerrar",
-    "extendedHint": "5 min usa generación extendida (150s + 150s)"
+    "extendedHint": "5 min usa generación extendida (150s + 150s)",
+    "songLanguage": "Idioma de la canción",
+    "songLanguageAuto": "Auto (según letra/prompt)",
+    "saveFailed": "Error al guardar, inténtalo de nuevo"
   },
   "voiceClone": {
     "uploadTab": "Subir muestra",
@@ -583,7 +586,10 @@
     "continueToZyvexo": "Continuar a Zyvexo",
     "skip": "Omitir",
     "termsOfService": "Términos del servicio",
-    "privacyPolicy": "Política de privacidad"
+    "privacyPolicy": "Política de privacidad",
+    "loginFailed": "Error al iniciar sesión, inténtalo de nuevo",
+    "invalidCredentials": "Correo o contraseña incorrectos",
+    "emailNotConfirmed": "Correo no confirmado, verifica tu correo primero"
   },
   "community": {
     "chartHot": "Ranking Popular",
@@ -1139,7 +1145,7 @@
     "composed": "{n} mejores segmentos compilados"
   },
   "remix": {
-    "title": "Motor de Remix IA",
+    "title": "Remix",
     "subtitle": "Transferencia de estilo · Reestructuración · DJ Mix auto",
     "close": "Cerrar",
     "selectTarget": "Seleccionar estilo objetivo",
@@ -1173,7 +1179,11 @@
     "rhythmMode": "Cambiado al estilo rítmico {style}",
     "intensity": "Intensidad del remix: {intensity}",
     "addDropSection": "Se ha añadido la sección de drop",
-    "addBuildupSection": "Se ha añadido la sección de buildup"
+    "addBuildupSection": "Se ha añadido la sección de buildup",
+    "wsError": "Error de conexión WebSocket",
+    "remixFailed": "Error en el remix",
+    "unknownError": "Error de remix desconocido",
+    "toggleHint": "Remezclar esta pista"
   },
   "timestretch": {
     "title": "Estiramiento de Tiempo",
@@ -1325,7 +1335,8 @@
     "days": "{n} días",
     "hours": "h",
     "minutes": "min",
-    "seconds": "s"
+    "seconds": "s",
+    "copyright": "© 2026 Zyvexo. Todos los derechos reservados."
   },
   "pathd": {
     "publishSuccess": "¡Obra publicada en la comunidad!",
@@ -2061,5 +2072,64 @@
     "retryFailedNetwork": "Error de red, reintento fallido",
     "taskNotFound": "Tarea no encontrada",
     "downloadFailed": "Fallo al descargar ({status})"
+  },
+  "watermark": {
+    "title": "Marca de agua de copyright",
+    "ownerId": "ID del propietario",
+    "projectId": "ID del proyecto",
+    "apply": "Aplicar",
+    "detect": "Detectar",
+    "fingerprinting": "Extrayendo huella…",
+    "embedding": "Incrustando marca de agua…",
+    "extracting": "Extrayendo marca de agua…",
+    "fingerprint": "Huella",
+    "compositeId": "ID compuesto:",
+    "centroid": "Centroide",
+    "bandwidth": "Ancho de banda",
+    "duration": "Duración",
+    "found": "✅ Marca de agua encontrada",
+    "none": "❌ Sin marca de agua",
+    "embedded": "🔒 Marca de agua incrustada",
+    "owner": "Propietario",
+    "project": "Proyecto",
+    "rights": "Derechos",
+    "ts": "TS",
+    "sig": "Firma",
+    "download": "Descargar versión con marca",
+    "back": "← Volver"
+  },
+  "audioPlayer": {
+    "trimTooShort": "El rango de recorte es demasiado corto. Selecciona al menos 0.5 segundos.",
+    "ffmpegRequired": "El recorte de audio requiere ffmpeg instalado en el servidor.\n\nInstala ffmpeg y reinicia el backend.\nDescarga: https://ffmpeg.org/download.html",
+    "downloadFailed": "Error de descarga: {msg}"
+  },
+  "trackList": {
+    "noAudioUrl": "Sin URL de audio",
+    "activeSessions": "Sesiones activas",
+    "statusLoading": "🔄 Cargando modelo…",
+    "statusRunning": "🎵 Generando…",
+    "statusPending": "⏳ En cola…",
+    "statusCompleted": "✅ ¡Listo!",
+    "statusFailed": "❌ Falló",
+    "statusStarting": "⏳ Iniciando…",
+    "elapsed": "Transcurrido:",
+    "live": "● EN VIVO",
+    "trackDetail": "Detalle de pista: {name}",
+    "close": "✕ Cerrar",
+    "type": "Tipo:",
+    "status": "Estado:",
+    "progress": "Progreso:",
+    "url": "URL:"
+  },
+  "trackInput": {
+    "promptsReady": "{n} indicaciones listas",
+    "onePerLine": "(una por línea, opcional)",
+    "lineRepeatHint": "Si hay menos líneas que indicaciones, la última línea se repite cíclicamente"
+  },
+  "mixConsole": {
+    "wsError": "Error de conexión WebSocket",
+    "mixFailed": "Error al mezclar",
+    "mixTimeout": "Tiempo de renderizado de mezcla agotado",
+    "unknownError": "Error desconocido"
   }
 }

@@ -194,6 +194,7 @@ class GenerateRequest(BaseModel):
     lyrics: Optional[str] = None
     type: str = "song"
     user_id: Optional[str] = None  # 已废弃：仅保留 schema 兼容，绝不参与身份/授权。身份只来自 X-User-ID 请求头。
+    song_language: Optional[str] = None  # 歌曲生成语言（独立于 UI locale），如 zh/en/es/...；不影响身份/额度
 
 
 class GenerateResponse(BaseModel):
@@ -302,49 +303,58 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
                 raise RuntimeError(long_result.get("error") if long_result and long_result.get("error") else "长生成失败")
             except Exception as e:
                 # 长生成失败需退款（按权重）
-                refund_generation(user_key, duration, reason="provider_failed")
+                refund_generation(user_key, duration, reason="provider_failed", task_id=task_id)
                 task_store.update(task_id, state="failed", error=f"长生成失败: {type(e).__name__}: {e}")
                 return
 
         # ── 常规单段分支（≤180）──
         task_store.update(task_id, state="generating", progress=40)
-        provider = get_provider_registry().select()
+        chain = get_provider_registry().fallback_chain()
         volume_result: Optional[dict] = None
         retries_used = 0
         total_duration_ms = 0
-        for attempt in range(1 + MAX_AUTO_RETRIES):
-            retries_used = attempt
-            t0 = time.monotonic()
-            try:
-                gen_result = await provider.generate(
-                    {
-                        "prompt": final_prompt,
-                        "lyrics": lyrics,
-                        "duration": duration,
-                        "reference_audio": None,
-                        "enable_audio2audio": False,
-                        "reference_strength": 0.7,
-                    },
-                )
-                total_duration_ms += int((time.monotonic() - t0) * 1000)
-            except QueueFullError:
-                total_duration_ms += int((time.monotonic() - t0) * 1000)
-                raise
-            volume_result = gen_result.get("volume_files") if gen_result and gen_result.get("success") else None
+        last_provider = None
+        for provider in chain:
+            # 每个 Provider 按现有 MAX_AUTO_RETRIES 重试策略（共 1+MAX_AUTO_RETRIES 次），
+            # 仍失败才切换链中下一个 Provider，避免「Mureka×N → RunPod×N → ...」的指数重试。
+            for attempt in range(1 + MAX_AUTO_RETRIES):
+                last_provider = provider
+                t0 = time.monotonic()
+                try:
+                    gen_result = await provider.generate(
+                        {
+                            "prompt": final_prompt,
+                            "lyrics": lyrics,
+                            "duration": duration,
+                            "reference_audio": None,
+                            "enable_audio2audio": False,
+                            "reference_strength": 0.7,
+                            "song_language": request.song_language,
+                        },
+                    )
+                    total_duration_ms += int((time.monotonic() - t0) * 1000)
+                except QueueFullError:
+                    total_duration_ms += int((time.monotonic() - t0) * 1000)
+                    raise
+                volume_result = gen_result.get("volume_files") if gen_result and gen_result.get("success") else None
+                if volume_result:
+                    break
+                retries_used = attempt
+                task_store.update(task_id, retries=retries_used, error=f"{provider.name} 第 {attempt + 1} 次尝试失败，自动重试")
             if volume_result:
                 break
-            task_store.update(task_id, retries=attempt, error=f"ACE-Step 第 {attempt} 次尝试失败，自动重试")
 
         if volume_result:
             task_store.update(
                 task_id, state="uploading", progress=75,
-                volume_files=volume_result, ai_provider=f"{ai_provider}+acestep",
+                volume_files=volume_result, ai_provider=f"{ai_provider}+{last_provider.name if last_provider else 'provider'}",
             )
-            _log_generation_cost(task_id, user_key, provider, "success", total_duration_ms, retries_used)
+            _log_generation_cost(task_id, user_key, last_provider, "success", total_duration_ms, retries_used)
             await _upload_and_finalize(task_id, volume_result)
             return
 
-        _log_generation_cost(task_id, user_key, provider, "failed", total_duration_ms, retries_used)
+        # 整个 Provider 链失败（此处不退款），进入 router 层 HF 兜底；HF 也失败才退款一次。
+        _log_generation_cost(task_id, user_key, last_provider, "failed", total_duration_ms, retries_used)
         task_store.update(task_id, state="generating", progress=55)
         hf_audio = await _try_hf_ace_step_fallback(final_prompt, lyrics, duration)
         if hf_audio:
@@ -356,25 +366,25 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
 
         task_store.update(
             task_id, state="failed",
-            error="音乐生成失败：ACE-Step(Modal) 与 HF 兜底均不可用（请检查 Modal 部署 / HF_TOKEN 配置）",
+            error="音乐生成失败：所有 Provider 与 HF 兜底均不可用",
         )
-        refund_generation(user_key, duration, reason="provider_failed")
+        refund_generation(user_key, duration, reason="provider_failed", task_id=task_id)
     except QueueFullError as e:
-        _log_generation_cost(task_id, user_key, provider, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
+        _log_generation_cost(task_id, user_key, last_provider if 'last_provider' in locals() else None, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
         task_store.update(task_id, state="failed", error=str(e))
-        refund_generation(user_key, request.duration, reason="request_not_sent")
+        refund_generation(user_key, request.duration, reason="request_not_sent", task_id=task_id)
     except HTTPException:
         task_store.update(task_id, state="failed", error="请求参数错误")
-        refund_generation(user_key, request.duration, reason="validation_failed")
+        refund_generation(user_key, request.duration, reason="validation_failed", task_id=task_id)
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key, request.duration, reason="timeout_unknown")
+        refund_generation(user_key, request.duration, reason="timeout_unknown", task_id=task_id)
     except Exception as e:  # noqa: BLE001
         import traceback
         print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
-        refund_generation(user_key, getattr(request, 'duration', None), reason="provider_failed")
+        refund_generation(user_key, getattr(request, 'duration', None), reason="provider_failed", task_id=task_id)
     finally:
         task_store.release_lock_for_task(task_id)
 
@@ -489,7 +499,7 @@ async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: st
         )
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key, request.duration, reason="timeout_unknown")
+        refund_generation(user_key, request.duration, reason="timeout_unknown", task_id=task_id)
         task_store.release_lock_for_task(task_id)
 
 
@@ -528,8 +538,9 @@ async def generate_music(
 
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
+        # 先幂等退款（task 尚存在，抢占 refunded_at），再删除空 task，避免额度泄漏。
+        refund_generation(user_key, req.duration, reason="request_not_sent", task_id=task_id)
         task_store.delete(task_id)
-        refund_generation(user_key, req.duration)
         return GenerateResponse(
             success=False,
             error="您有一个生成任务正在进行中，请完成后再试",

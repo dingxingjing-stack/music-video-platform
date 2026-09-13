@@ -329,7 +329,10 @@
     },
     "rateLimited": "请求过于频繁，已达免费额度上限",
     "dismiss": "关闭",
-    "extendedHint": "5 分钟为扩展生成，基于 150s+150s 连续创作后合并"
+    "extendedHint": "5 分钟为扩展生成，基于 150s+150s 连续创作后合并",
+    "songLanguage": "歌曲语言",
+    "songLanguageAuto": "自动（跟随歌词/Prompt）",
+    "saveFailed": "保存失败，请稍后重试"
   },
   "voiceClone": {
     "uploadTab": "上传样本",
@@ -583,7 +586,10 @@
     "continueToZyvexo": "进入 Zyvexo",
     "skip": "跳过",
     "termsOfService": "服务条款",
-    "privacyPolicy": "隐私政策"
+    "privacyPolicy": "隐私政策",
+    "loginFailed": "登录失败，请重试",
+    "invalidCredentials": "邮箱或密码错误",
+    "emailNotConfirmed": "邮箱尚未验证，请先完成邮箱验证"
   },
   "community": {
     "chartHot": "热门榜",
@@ -1139,7 +1145,7 @@
     "composed": "已拼接 {n} 个最佳片段"
   },
   "remix": {
-    "title": "AI Remix 引擎",
+    "title": "Remix",
     "subtitle": "风格转换 · 节奏重组 · 自动 DJ Mix",
     "close": "关闭",
     "selectTarget": "选择目标风格",
@@ -1173,7 +1179,11 @@
     "rhythmMode": "调整为 {style} 节奏风格",
     "intensity": "Remix 强度为 {intensity}",
     "addDropSection": "已添加 Drop 段落",
-    "addBuildupSection": "已添加 Buildup 段落"
+    "addBuildupSection": "已添加 Buildup 段落",
+    "wsError": "WebSocket 连接错误",
+    "remixFailed": "Remix 失败",
+    "unknownError": "未知 Remix 错误",
+    "toggleHint": "对此轨道进行 Remix"
   },
   "timestretch": {
     "title": "时间伸缩",
@@ -1325,7 +1335,8 @@
     "days": "{n} 天",
     "hours": "小时",
     "minutes": "分钟",
-    "seconds": "秒"
+    "seconds": "秒",
+    "copyright": "© 2026 Zyvexo. 版权所有。"
   },
   "pathd": {
     "publishSuccess": "作品已发布到社区!",
@@ -2061,5 +2072,64 @@
     "retryFailedNetwork": "网络错误，重试失败",
     "taskNotFound": "任务不存在",
     "downloadFailed": "下载失败 ({status})"
+  },
+  "watermark": {
+    "title": "版权水印",
+    "ownerId": "所有者 ID",
+    "projectId": "项目 ID",
+    "apply": "应用",
+    "detect": "检测",
+    "fingerprinting": "指纹提取中…",
+    "embedding": "嵌入水印中…",
+    "extracting": "提取水印中…",
+    "fingerprint": "指纹",
+    "compositeId": "复合 ID:",
+    "centroid": "频谱质心",
+    "bandwidth": "频谱带宽",
+    "duration": "时长",
+    "found": "✅ 已检测到水印",
+    "none": "❌ 未检测到水印",
+    "embedded": "🔒 水印已嵌入",
+    "owner": "所有者",
+    "project": "项目",
+    "rights": "权利",
+    "ts": "时间戳",
+    "sig": "签名",
+    "download": "下载带水印版本",
+    "back": "← 返回"
+  },
+  "audioPlayer": {
+    "trimTooShort": "截取区间太短，请至少选择 0.5 秒。",
+    "ffmpegRequired": "音频裁剪需要在服务器上安装 ffmpeg。\n\n请安装 ffmpeg 并重启后端。\n下载地址：https://ffmpeg.org/download.html",
+    "downloadFailed": "下载失败：{msg}"
+  },
+  "trackList": {
+    "noAudioUrl": "无音频 URL",
+    "activeSessions": "活跃会话",
+    "statusLoading": "🔄 正在加载模型…",
+    "statusRunning": "🎵 正在生成…",
+    "statusPending": "⏳ 排队中…",
+    "statusCompleted": "✅ 完成！",
+    "statusFailed": "❌ 失败",
+    "statusStarting": "⏳ 启动中…",
+    "elapsed": "耗时:",
+    "live": "● 实时",
+    "trackDetail": "轨道详情: {name}",
+    "close": "✕ 关闭",
+    "type": "类型:",
+    "status": "状态:",
+    "progress": "进度:",
+    "url": "URL:"
+  },
+  "trackInput": {
+    "promptsReady": "{n} 个提示词已就绪",
+    "onePerLine": "（每行一条，可选）",
+    "lineRepeatHint": "若行数少于提示词数，最后一行循环重复"
+  },
+  "mixConsole": {
+    "wsError": "WebSocket 连接错误",
+    "mixFailed": "混音失败",
+    "mixTimeout": "混音渲染超时",
+    "unknownError": "未知错误"
   }
 }

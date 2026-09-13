@@ -122,6 +122,7 @@ export interface GenerateParams {
   duration?: number;
   lyrics?: string | null;
   type?: string;
+  song_language?: string; // 歌曲生成语言（独立于 UI locale）
 }
 
 export function useAiMusicTask() {

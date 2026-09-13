@@ -329,7 +329,10 @@
     },
     "rateLimited": "Too many requests. You have reached the free tier limit.",
     "dismiss": "Dismiss",
-    "extendedHint": "5 min uses extended generation (150s + 150s continuation)"
+    "extendedHint": "5 min uses extended generation (150s + 150s continuation)",
+    "songLanguage": "Song Language",
+    "songLanguageAuto": "Auto (follow lyrics / prompt)",
+    "saveFailed": "Failed to save, please try again"
   },
   "voiceClone": {
     "uploadTab": "Upload Sample",
@@ -583,7 +586,10 @@
     "continueToZyvexo": "Continue to Zyvexo",
     "skip": "Skip",
     "termsOfService": "Terms of Service",
-    "privacyPolicy": "Privacy Policy"
+    "privacyPolicy": "Privacy Policy",
+    "loginFailed": "Login failed, please try again",
+    "invalidCredentials": "Invalid email or password",
+    "emailNotConfirmed": "Email not confirmed, please verify your email first"
   },
   "community": {
     "chartHot": "Hot Chart",
@@ -1139,7 +1145,7 @@
     "composed": "Compiled {n} best segments"
   },
   "remix": {
-    "title": "AI Remix Engine",
+    "title": "Remix",
     "subtitle": "Style transfer · Rhythm reshape · Auto DJ Mix",
     "close": "Close",
     "selectTarget": "Select Target Style",
@@ -1173,7 +1179,11 @@
     "rhythmMode": "Switched to {style} rhythm style",
     "intensity": "Remix intensity: {intensity}",
     "addDropSection": "Drop section added",
-    "addBuildupSection": "Buildup section added"
+    "addBuildupSection": "Buildup section added",
+    "wsError": "WebSocket connection error",
+    "remixFailed": "Remix failed",
+    "unknownError": "Unknown remix error",
+    "toggleHint": "Remix this track"
   },
   "timestretch": {
     "title": "Time Stretch",
@@ -1325,7 +1335,8 @@
     "days": "{n} days",
     "hours": "h",
     "minutes": "min",
-    "seconds": "s"
+    "seconds": "s",
+    "copyright": "© 2026 Zyvexo. All rights reserved."
   },
   "pathd": {
     "publishSuccess": "Work published to the community!",
@@ -2061,5 +2072,64 @@
     "retryFailedNetwork": "Network error, retry failed",
     "taskNotFound": "Task not found",
     "downloadFailed": "Download failed ({status})"
+  },
+  "watermark": {
+    "title": "Copyright Watermark",
+    "ownerId": "Owner ID",
+    "projectId": "Project ID",
+    "apply": "Apply",
+    "detect": "Detect",
+    "fingerprinting": "Fingerprinting...",
+    "embedding": "Embedding watermark...",
+    "extracting": "Extracting watermark...",
+    "fingerprint": "Fingerprint",
+    "compositeId": "Composite ID:",
+    "centroid": "Centroid",
+    "bandwidth": "Bandwidth",
+    "duration": "Duration",
+    "found": "✅ Watermark Found",
+    "none": "❌ No Watermark",
+    "embedded": "🔒 Watermark Embedded",
+    "owner": "Owner",
+    "project": "Project",
+    "rights": "Rights",
+    "ts": "TS",
+    "sig": "Sig",
+    "download": "Download Watermarked",
+    "back": "← Back"
+  },
+  "audioPlayer": {
+    "trimTooShort": "Trim range too short. Select at least 0.5 seconds.",
+    "ffmpegRequired": "Audio trimming requires ffmpeg to be installed on the server.\n\nPlease install ffmpeg and restart the backend.\nDownload: https://ffmpeg.org/download.html",
+    "downloadFailed": "Download failed: {msg}"
+  },
+  "trackList": {
+    "noAudioUrl": "No audio URL",
+    "activeSessions": "Active Sessions",
+    "statusLoading": "🔄 Loading model...",
+    "statusRunning": "🎵 Generating...",
+    "statusPending": "⏳ Queued...",
+    "statusCompleted": "✅ Done!",
+    "statusFailed": "❌ Failed",
+    "statusStarting": "⏳ Starting...",
+    "elapsed": "Elapsed:",
+    "live": "● LIVE",
+    "trackDetail": "Track Detail: {name}",
+    "close": "✕ Close",
+    "type": "Type:",
+    "status": "Status:",
+    "progress": "Progress:",
+    "url": "URL:"
+  },
+  "trackInput": {
+    "promptsReady": "{n} prompt(s) ready",
+    "onePerLine": "(one per line, optional)",
+    "lineRepeatHint": "If fewer lines than prompts, last line repeats cyclically"
+  },
+  "mixConsole": {
+    "wsError": "WebSocket connection error",
+    "mixFailed": "Mix failed",
+    "mixTimeout": "Mix render timed out",
+    "unknownError": "Unknown error"
   }
 }
