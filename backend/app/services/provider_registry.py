@@ -457,5 +457,11 @@ def get_provider_registry() -> ProviderRegistry:
         except Exception as exc:  # noqa: BLE001
             # Yinchao 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Mureka/RunPod。
             print(f"[Provider] YinchaoProvider 注册失败（不影响 Mureka/RunPod 兜底）: {exc}")
+        try:
+            from app.services.tempolor_provider import TempolorProvider
+            _registry.register(TempolorProvider())
+        except Exception as exc:  # noqa: BLE001
+            # Tempolor 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Yinchao/Mureka/RunPod。
+            print(f"[Provider] TempolorProvider 注册失败（不影响 Yinchao/Mureka/RunPod 兜底）: {exc}")
         print("[Provider] Registry initialized:", list(_registry._providers.keys()))
     return _registry
