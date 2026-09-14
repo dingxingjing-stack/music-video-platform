@@ -318,38 +318,61 @@ def reserve_generation(user_id: str, duration: int | None = None) -> dict[str, A
     finally:
         sess.close()
 
-def refund_generation(user_id: str, duration: int | None = None, reason: str = "provider_failure") -> dict[str, Any]:
+def refund_generation(user_id: str, duration: int | None = None, reason: str = "provider_failure", task_id: str | None = None) -> dict[str, Any]:
     """
     统一退款语义 —— 根据失败原因决定是否退还用户额度。
-    
+
+    Phase API-2A 新增幂等：当提供 task_id 时，先在同一数据库事务内原子抢占
+    ai_tasks.refunded_at（UPDATE ... WHERE task_id=:tid AND refunded_at IS NULL，
+    rowcount==1 才继续退款），实现「同一个 generation task 最多退款一次」，
+    基于数据库持久状态，并发/多进程/重启安全（非内存状态）。
+
     Args:
+        user_id: 用户标识
+        duration: 时长（决定 weight）
         reason: 失败原因，决定退款策略：
             - "validation_failed"      : 验证失败，provider 请求未发送 → 无预留或立即回滚
             - "request_not_sent"       : provider 请求确定未发送 → 回滚用户预留
             - "provider_failed"        : provider 明确返回失败 → 回滚用户预留
             - "timeout_unknown"        : 超时/未知结果，请求可能已发送 → **不退款**，防免费生成漏洞
             - "persistence_failed"     : provider 成功但持久化失败 → **不退款**，可能已产生真实成本
-    
+        task_id: generation task 的唯一退款身份（对应 ai_tasks.task_id）。
+            None 时保持旧行为（无条件退款），向后兼容无 task_id 的调用方。
+
     返回:
-        dict: {"success": bool, "refunded": bool, "weight": int, "reason": str, "error?: str"}
-    
+        dict: {"success": bool, "refunded": bool, "already_refunded": bool,
+               "weight": int, "reason": str, "error?: str"}
+
     注意: global_usage **永不退款**（成本保护硬停），防止 "失败→退款→重试" 空转 GPU 预算。
     """
     if not user_id:
         return {"success": False, "error": "缺少用户标识", "refunded": False}
-    
+
     # 超时/未知结果、持久化失败 —— 不退款
     if reason in ("timeout_unknown", "persistence_failed"):
         return {"success": False, "error": f"不退款: {reason}", "refunded": False, "reason": reason}
-    
+
     weight = get_duration_weight(duration) if duration is not None else 1
     today, mkey = _today(), _month_key()
-    
+
     sess = _get_session()
     try:
         from sqlalchemy import text
         sess.execute(text("BEGIN"))
-        
+
+        # Phase API-2A 幂等抢占：提供 task_id 时，先原子抢占退款标记。
+        # rowcount==0 表示 task 不存在或已退款 —— 二者都禁止再次改额度。
+        if task_id:
+            claim = sess.execute(text(
+                "UPDATE ai_tasks SET refunded_at = :now WHERE task_id = :tid AND refunded_at IS NULL"
+            ), {"now": datetime.now(timezone.utc), "tid": task_id})
+            if claim.rowcount == 0:
+                sess.rollback()
+                exists = sess.execute(text("SELECT 1 FROM ai_tasks WHERE task_id = :tid"), {"tid": task_id}).fetchone()
+                if exists is None:
+                    return {"success": False, "error": f"退款失败：task {task_id} 不存在", "refunded": False, "reason": reason, "already_refunded": False}
+                return {"success": True, "error": None, "refunded": False, "reason": reason, "already_refunded": True}
+
         # 退还 beta_users daily_credits_used（不低于 0）
         sess.execute(text("""
             UPDATE beta_users
@@ -374,7 +397,7 @@ def refund_generation(user_id: str, duration: int | None = None, reason: str = "
         # 这是有意为之，防止 "失败→退款→重试" 空转 GPU 预算漏洞
         
         sess.commit()
-        return {"success": True, "refunded": True, "weight": weight, "reason": reason}
+        return {"success": True, "refunded": True, "already_refunded": False, "weight": weight, "reason": reason}
     except Exception as e:
         try:
             sess.rollback()

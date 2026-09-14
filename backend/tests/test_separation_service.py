@@ -35,6 +35,7 @@ from app.services.separation.base import (  # noqa: E402
     SeparationResult,
 )
 from app.services.separation.audio_separator_service import AudioSeparatorService  # noqa: E402
+from app.services.audio_separation_service import DemucsService  # Add this line
 from app.services.separation.mdx_separator import MdxSeparator  # noqa: E402
 from app.services.separation.spleeter_separator import SpleeterSeparator  # noqa: E402
 
@@ -399,3 +400,73 @@ def test_license_audit_record_exists_and_complete():
     assert demucs["decision"].startswith("C")
     musdb = next(m for m in data["models"] if "MUSDB18HQ" in m["model_name"])
     assert musdb["decision"].startswith("C")
+
+
+# ---------------------------------------------------------------------------
+# 11. 生产环境防伪加固测试（Stage 4-2）
+# ---------------------------------------------------------------------------
+
+def test_audio_separation_service_production_blocks_mock(wav_file, tmp_path, monkeypatch):
+    """生产环境下，音频分离服务必须禁止返回 Mock 结果，必须明确失败。"""
+    # 设置生产环境
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    
+    svc = DemucsService()
+    # 调用分离服务
+    res = svc.separate(str(wav_file))
+    
+    # 在生产环境中必须返回失败，不能是 mock 成功
+    assert res["success"] is False, "生产环境不得返回 success=True 的 mock 结果"
+    assert res["stems"] == [], "生产环境不得返回任何 stems"
+    assert "Production environment" in res["message"], "错误消息必须明确指出生产环境限制"
+    assert res["duration"] == 0
+
+def test_audio_separation_service_development_allows_mock(wav_file, tmp_path, monkeypatch):
+    """开发/测试环境下，为了向后兼容，音频分离服务仍应允许 Mock 结果。"""
+    # 设置开发环境
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    
+    svc = DemucsService()
+    # 调用分离服务（由于没有 modal SDK，应该会走 mock）
+    res = svc.separate(str(wav_file))
+    
+    # 在开发环境中允许 mock 返回（保持现有行为用于开发/测试）
+    # 注意：这个测试在没有 modal SDK 的环境中会走 mock 路径
+    # 我们只验证它不会因为我们的生产检查而被错误地阻断
+    assert "stems" in res, "响应应包含 stems 字段"
+    assert "success" in res, "响应应包含 success 字段"
+    assert "message" in res, "响应应包含 message 字段"
+
+def test_audio_separation_service_get_available_models_production_empty(monkeypatch):
+    """生产环境下，get_available_models() 不应返回 mock 模型。"""
+    # 设置生产环境
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    
+    svc = DemucsService()
+    models = svc.get_available_models()
+    
+    # 生产环境不应返回 mock
+    assert "mock" not in models, "生产环境不得暴露 mock 作为可用模型"
+    # 实际应用中可能返回空列表（因为没有可用的真实 provider）
+    assert isinstance(models, list), "应返回模型列表"
+
+def test_audio_separation_service_get_available_models_development_behavior(monkeypatch):
+    """开发环境下，get_available_models() 应该返回真实模型(如果modal可用)或mock(如果modal不可用)，但不应被错误阻断。"""
+    # 设置开发环境
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    
+    svc = DemucsService()
+    models = svc.get_available_models()
+    
+    # 在开发环境中，我们应该得到一个合理的模型列表
+    assert isinstance(models, list), "应返回模型列表"
+    assert len(models) > 0, "开发环境不应返回空模型列表"
+    
+    # 关键断言：不应包含我们在生产中禁止的特殊标记
+    # 我们的生产保护是防止在生产中返回mock，但在开发中这是允许的
+    # 实际上，我们不应该在开发中阻断任何正常的模型返回行为
+    
+    # 更具体地说，让我们验证我们没有错误地应用生产限制
+    # 如果模态SDK不可用，我们应该能得到mock
+    # 如果模态SDK可用，我们应该得到真实模型
+    # 两种情况都是可以接受的

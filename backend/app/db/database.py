@@ -130,6 +130,10 @@ class AiTask(Base):
     stem_retries = Column(Integer, default=0)
     created_at = Column(Float, nullable=False)
     updated_at = Column(Float, nullable=False)
+    # Phase API-2A：退款幂等标记。NULL=未退款，非 NULL=已退款。
+    # 生产 Supabase 需人工执行 ALTER TABLE（见 docs/MUREKA_API_CONTRACT_AUDIT.md 的 DDL），
+    # create_all 仅为新库/测试库建此列，不对已存在表加列。
+    refunded_at = Column(DateTime(timezone=True), nullable=True)
 
 class TaskLock(Base):
     __tablename__ = "task_locks"

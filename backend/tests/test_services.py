@@ -505,3 +505,50 @@ class TestBlindWatermarkService:
     def test_carrier_band_in_ultrasonic(self):
         assert BlindWatermarkService.CARRIER_BAND_LOW >= 18000
         assert BlindWatermarkService.CARRIER_BAND_HIGH <= 20000
+
+
+# ---------------------------------------------------------------------------
+# 生产环境防伪加固测试：stems_export_service（Stage 4-2）
+# ---------------------------------------------------------------------------
+
+def test_stems_export_service_production_blocks_soundhelix_mock(monkeypatch):
+    """生产环境下，stems 导出服务必须禁止返回 SoundHelix mock 数据，必须明确失败。"""
+    # 设置生产环境
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    
+    from app.services.stems_export_service import StemsExportService
+    import asyncio
+    
+    svc = StemsExportService()
+    # 调用导出服务
+    result = asyncio.run(svc.export_stems("http://example.com/test.wav"))
+    
+    # 在生产环境中必须返回失败，不能是 mock 成功
+    assert result.success is False, "生产环境不得返回 success=True 的 SoundHelix mock 结果"
+    assert result.stems == [], "生产环境不得返回任何 stems"
+    assert result.error is not None and "Production environment" in result.error, "错误消息必须明确指出生产环境限制"
+    assert result.duration == 0
+    assert result.original_url == "http://example.com/test.wav"  # 应该保留原始 URL
+
+def test_stems_export_service_development_allows_mock(monkeypatch):
+    """开发/测试环境下，为了向后兼容，stems 导出服务仍应允许 Mock 数据。"""
+    # 设置开发环境
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    
+    from app.services.stems_export_service import StemsExportService
+    import asyncio
+    
+    svc = StemsExportService()
+    # 调用导出服务
+    result = asyncio.run(svc.export_stems("http://example.com/test.wav"))
+    
+    # 在开发环境中允许 mock 返回（保持现有行为用于开发/测试）
+    assert result.success is True, "开发环境应允许返回 mock 结果以保持向后兼容"
+    assert len(result.stems) == 4, "应返回 4 个 stem 轨道"
+    assert result.original_url == "http://example.com/test.wav"
+    assert result.duration == 180  # Mock 时长
+    
+    # 验证返回的确是 SoundHelix URLs（这是现有 mock 行为）
+    expected_domains = ["soundhelix.com"]
+    for stem in result.stems:
+        assert any(domain in stem.url for domain in expected_domains), f"Stem URL {stem.url} 应该是 SoundHelix 示例 URL"

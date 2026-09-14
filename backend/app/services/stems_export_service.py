@@ -61,6 +61,16 @@ class StemsExportService:
         - Demucs (Meta): 质量更好，支持 5 轨
         - Moises.ai API: 商业服务，质量最佳
         """
+        # Production environment:禁止返回 SoundHelix mock 作为真实 stems
+        if os.getenv("ENVIRONMENT", "development").lower() == "production":
+            return StemsExportResponse(
+                success=False,
+                stems=[],
+                original_url=audio_url,
+                duration=0,
+                error="Production environment: Stem export unavailable (no real stem provider configured)"
+            )
+        
         try:
             # TODO: 集成真实 AI 音源分离
             # 1. 下载原始音频

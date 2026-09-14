@@ -66,7 +66,7 @@ async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
             if task_id:
                 task = task_store.get(task_id)
                 if task and task.get("state") == "failed":
-                    ai_limits.refund_generation(user_key, duration, reason="provider_failed")
+                    ai_limits.refund_generation(user_key, duration, reason="provider_failed", task_id=task_id)
 
 
 # ---------------------------------------------------------------------------
@@ -101,9 +101,9 @@ async def workflow_path_a(request: Request, user_id: str = Depends(get_verified_
 
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
-        task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
+        task_store.delete(task_id)
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -167,9 +167,9 @@ async def workflow_path_b(request: Request, user_id: str = Depends(get_verified_
 
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
-        task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
+        task_store.delete(task_id)
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -234,9 +234,9 @@ async def workflow_path_c(request: Request, user_id: str = Depends(get_verified_
 
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
-        task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
+        task_store.delete(task_id)
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",
@@ -300,9 +300,9 @@ async def workflow_path_d(request: Request, user_id: str = Depends(get_verified_
 
     task_id = task_store.new_task(user_key=user_key)
     if not task_store.acquire_lock(user_key, task_id):
-        task_store.delete(task_id)
         if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent")
+            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
+        task_store.delete(task_id)
         raise HTTPException(
             status_code=429,
             detail="您有一个生成任务正在进行中，请完成后再试",

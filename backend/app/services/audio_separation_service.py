@@ -106,6 +106,15 @@ class DemucsService:
         """
         # 懒加载检查：首次调用时才检查 modal SDK 是否可用
         if not _check_spleeter_available():
+            # 生产环境禁止 Mock 返回，必须明确失败
+            if os.getenv("ENVIRONMENT", "development").lower() == "production":
+                return {
+                    "success": False,
+                    "stems": [],
+                    "duration": 0,
+                    "message": "Production environment: Stem separation unavailable (Modal Spleeter disabled)"
+                }
+            # 非生产环境允许 Mock 用于开发/测试
             return self._mock_separate(input_path, progress_callback)
         
         input_path = Path(input_path)
@@ -198,6 +207,9 @@ class DemucsService:
         """获取可用模型列表（懒加载检查）"""
         if _check_spleeter_available():
             return list(self.MODELS.keys())
+        # 生产环境不暴露 mock 模型
+        if os.getenv("ENVIRONMENT", "development").lower() == "production":
+            return []
         return ["mock"]
 
 

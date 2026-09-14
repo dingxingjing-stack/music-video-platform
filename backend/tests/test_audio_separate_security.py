@@ -118,3 +118,67 @@ def test_header_identity_not_client_ip(client, _quota_and_sep):
     r = _post(client)
     assert r.status_code == 401
     assert _quota_and_sep["reserve"] == []
+
+
+# ---------------------------------------------------------------------------
+# 生产环境防伪加固测试：audio_router /stems 端点（Stage 4-2）
+# ---------------------------------------------------------------------------
+
+def test_audio_router_stems_endpoint_production_blocks_ffmpeg_pseudo_stems(monkeypatch):
+    """生产环境下，/api/v1/audio/stems 端点必须禁止使用 ffmpeg 频段滤波作为真实 stem 分离。"""
+    # 设置生产环境
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    
+    from fastapi.testclient import TestClient
+    import main as main_mod
+    
+    client = TestClient(main_mod.app)
+    
+    # 创建一个简单的 WAV 文件用于测试
+    import tempfile
+    import os
+    wav_content = b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x40\x1f\x00\x00\x40\x1f\x00\x01\x02\x00\x00data\x00\x00\x00\x00"
+    
+    # 测试 /stems 端点
+    response = client.post(
+        "/api/v1/audio/stems",
+        json={"audio_url": "data:audio/wav;base64," + wav_content.hex(), "track_name": "test"}
+    )
+    
+    # 在生产环境中应返回服务不可用 (503) 或类似的明确错误，而不是尝试 ffmpeg 分离
+    assert response.status_code == 503, "生产环境应返回 503 Service Unavailable 而非尝试 ffmpeg 分离"
+    # 可以选择性地检查响应内容表明这是由于生产环境限制
+    # 注意：由于我们返回的是 StreamingResponse，具体内容可能需要根据实现调整
+
+def test_audio_router_stems_endpoint_development_allows_ffmpeg(monkeypatch):
+    """开发/测试环境下，/api/v1/audio/stems 端点应允许使用 ffmpeg（用于开发/实验）。"""
+    # 设置开发环境
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    
+    from fastapi.testclient import TestClient
+    import main as main_mod
+    import tempfile
+    import os
+    
+    client = TestClient(main_mod.app)
+    
+    # 创建一个临时 WAV 文件用于测试
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_wav:
+        wav_content = b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x40\x1f\x00\x00\x40\x1f\x00\x01\x02\x00\x00data\x00\x00\x00\x00"
+        tmp_wav.write(wav_content)
+        tmp_wav_path = tmp_wav.name
+    
+    try:
+        # 测试 /stems 端点
+        response = client.post(
+            "/api/v1/audio/stems",
+            json={"audio_url": tmp_wav_path, "track_name": "test"}
+        )
+        
+        # 在开发环境中应允许请求继续（即使 ffmpeg 不可用，也应返回某个响应而不是被我们的生产限制阻断）
+        # 实际返回码可能是 200（如果 ffmpeg 可用）或其他非 503 错误（如果 ffmpeg 不可用但有其他处理），但不应是我们的生产限制 503
+        assert response.status_code != 503, "开发环境不应返回 503 Service Unavailable 由于生产环境限制"
+    finally:
+        # 清理临时文件
+        if os.path.exists(tmp_wav_path):
+            os.unlink(tmp_wav_path)

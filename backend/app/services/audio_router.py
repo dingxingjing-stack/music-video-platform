@@ -94,6 +94,16 @@ async def export_stems(req: StemExportRequest):
     Split audio into stems and return ZIP.
     Falls back to a mock ZIP with the original audio if ffmpeg unavailable.
     """
+    # Production environment:禁止使用伪分轨（频段滤波）作为真实 stem 返回
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        logger.warning("Production environment: Stem separation via ffmpeg pseudo-stems disabled")
+        return StreamingResponse(
+            io.BytesIO(b""),
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{req.track_name}_stems.zip"'},
+            status_code=503,  # Service Unavailable - no real stem provider in production
+        )
+
     if not _is_ffmpeg_available():
         logger.warning("ffmpeg not available — returning mock ZIP")
         buf = io.BytesIO()
