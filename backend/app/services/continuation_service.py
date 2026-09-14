@@ -615,22 +615,39 @@ class ContinuationService:
         second_dur = target - first_dur
 
         task_store.update(task_id, state="processing", progress=5)
-        provider = None
-        from app.services.provider_registry import get_provider_registry
-        provider = get_provider_registry().select()  # RunPod (300) / fallback
+        from app.services.provider_registry import get_provider_registry, PROVIDER_ENV
+        registry = get_provider_registry()
+        # 首段 Provider fallback（production 自动模式）：Yinchao → TemPolor。
+        # 显式 AI_GENERATION_PROVIDER 保持单 provider 语义（Commit 4 contract），
+        # 失败不自动切换；非生产 fallback_chain() 本身即单元素链，不改变既有行为。
+        if (os.getenv(PROVIDER_ENV) or "").strip():
+            first_chain = [registry.select()]
+        else:
+            first_chain = registry.fallback_chain()
 
-        # ── 第一段 150s (真实 provider, 不重试绕过首段) ──
-        task_store.update(task_id, state="generating", progress=10)
-        first_result = await self._generate_single_segment(
-            provider=provider,
-            prompt=prompt,
-            lyrics=lyrics or "",
-            duration=first_dur,
-            reference_b64=None,
-            enable_a2a=False,
-        )
+        # ── 第一段 150s (真实 provider, 首段失败才按链换家；不退款，交外层统一 refund) ──
+        provider = None
+        first_result = None
+        first_err = "unknown"
+        for candidate in first_chain:
+            provider = candidate
+            task_store.update(task_id, state="generating", progress=10)
+            first_result = await self._generate_single_segment(
+                provider=provider,
+                prompt=prompt,
+                lyrics=lyrics or "",
+                duration=first_dur,
+                reference_b64=None,
+                enable_a2a=False,
+            )
+            if first_result and first_result.get("success"):
+                break
+            first_err = first_result.get("error") if first_result else "unknown"
+            task_store.update(task_id, error=f"首段 {provider.name} 失败，尝试链中下一个 Provider: {first_err}")
+        if provider is None:
+            raise RuntimeError("首段 150s 无可用 Provider")
         if not first_result or not first_result.get("success"):
-            raise RuntimeError(f"首段 150s 生成失败: {first_result.get('error') if first_result else 'unknown'}")
+            raise RuntimeError(f"首段 150s 生成失败: {first_err}")
 
         first_files = first_result.get("volume_files") or {}
         first_local = self._resolve_local_path(first_files)
