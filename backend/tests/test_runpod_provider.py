@@ -1,4 +1,7 @@
-"""RunPod Provider 测试：验证 RunPod 作为生产主力、Fal 回退、Modal 禁止。"""
+"""RunPod Provider 测试：验证 RunPodProvider 自身行为（RunPod→Fal 内部回退）与生产禁选。
+
+生产策略（Yinchao + TemPolor only）：生产默认 provider 为 yinchao，
+runpod 保留代码但禁止在生产被显式选择、不进入生产 fallback 链。"""
 
 import pytest
 import asyncio
@@ -19,8 +22,8 @@ def isolated_env(monkeypatch):
     monkeypatch.delenv("AI_GENERATION_PROVIDER", raising=False)
 
 
-def test_runpod_is_default_production_provider(isolated_env):
-    """生产环境默认 provider 为 runpod。"""
+def test_production_default_is_yinchao_per_strategy(isolated_env):
+    """生产环境默认 provider 为 yinchao（Yinchao + TemPolor only）；runpod 保留注册但不再是默认。"""
     os.environ["ENVIRONMENT"] = "production"
     os.environ["RUNPOD_API_KEY"] = "test_key"
     os.environ["RUNPOD_ENDPOINT_ID"] = "test_endpoint"
@@ -30,12 +33,14 @@ def test_runpod_is_default_production_provider(isolated_env):
     pr._registry = None
     reg = pr.get_provider_registry()
 
-    assert reg.select().name == "runpod"
+    assert reg.select().name == "yinchao"
     assert reg.select().production is True
+    # RunPod 历史代码保留，仅注册不断言默认
+    assert reg.get("runpod") is not None
 
 
-def test_runpod_blocks_fal_and_modal_in_production(isolated_env):
-    """生产环境禁止显式选择 Fal 和 Modal。"""
+def test_runpod_blocks_non_strategy_providers_in_production(isolated_env):
+    """生产环境禁止显式选择非策略 Provider（mureka/runpod/fal/modal/musicgen/cosyvoice）。"""
     os.environ["ENVIRONMENT"] = "production"
     os.environ["RUNPOD_API_KEY"] = "test_key"
     os.environ["RUNPOD_ENDPOINT_ID"] = "test_endpoint"
@@ -49,6 +54,12 @@ def test_runpod_blocks_fal_and_modal_in_production(isolated_env):
 
     with pytest.raises(RuntimeError, match="禁止选择.*modal_ace_step"):
         reg.select("modal_ace_step")
+
+    with pytest.raises(RuntimeError, match="禁止选择.*runpod"):
+        reg.select("runpod")
+
+    with pytest.raises(RuntimeError, match="禁止选择.*mureka"):
+        reg.select("mureka")
 
 
 def test_development_allows_fallback(isolated_env):
@@ -94,7 +105,8 @@ async def test_runpod_fallback_to_fal_in_production(isolated_env, monkeypatch):
 
     pr._registry = None
     reg = pr.get_provider_registry()
-    provider = reg.select()
+    # RunPodProvider 自身行为：经显式获取，不走生产 select() 默认
+    provider = reg.get("runpod")
 
     assert provider.name == "runpod"
 
@@ -128,7 +140,7 @@ async def test_runpod_fails_without_fallback_when_fal_unavailable(isolated_env, 
 
     pr._registry = None
     reg = pr.get_provider_registry()
-    provider = reg.select()
+    provider = reg.get("runpod")
 
     result = await provider.generate({"prompt": "test", "duration": 10})
     assert result["success"] is False
@@ -150,7 +162,7 @@ async def test_runpod_provider_direct_call(isolated_env, monkeypatch):
     import app.services.provider_registry as pr
     pr._registry = None
     reg = pr.get_provider_registry()
-    provider = reg.select()
+    provider = reg.get("runpod")
 
     result = await provider.generate({"prompt": "test song", "duration": 30})
     assert result["success"] is True

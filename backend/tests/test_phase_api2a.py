@@ -149,27 +149,38 @@ def isolated_env(monkeypatch):
     pr._registry = None
 
 
-def test_fallback_chain_production_without_mureka(isolated_env):
-    """生产环境且 Mureka 未注册 → 跳过 mureka，保留 [yinchao, runpod]（验证缺席跳过分支）。
+def test_fallback_chain_production_without_tempolor(isolated_env):
+    """生产环境且 Tempolor 未注册 → 跳过 tempolor，保留 [yinchao]（验证缺席跳过分支）。
 
-    API-2B 后 registry 默认注册 yinchao/mureka（真实 Provider），
-    故此处临时移除 mureka 以覆盖「mureka 不可用」的降级路径。
+    registry 默认注册 yinchao/tempolor（真实 Provider），
+    故此处临时移除 tempolor 以覆盖「tempolor 不可用」的降级路径。
     """
     os.environ["ENVIRONMENT"] = "production"
     import app.services.provider_registry as pr
     reg = pr.get_provider_registry()
-    reg._providers.pop("mureka", None)
+    reg._providers.pop("tempolor", None)
     chain = reg.fallback_chain()
-    assert [p.name for p in chain] == ["yinchao", "runpod"]
+    assert [p.name for p in chain] == ["yinchao"]
 
 
-def test_fallback_chain_production_with_mureka(isolated_env):
+def test_fallback_chain_production_yinchao_tempolor(isolated_env):
+    """生产 fallback_chain 顺序 = [yinchao, tempolor]（Yinchao + TemPolor only）。"""
     os.environ["ENVIRONMENT"] = "production"
     import app.services.provider_registry as pr
 
     reg = pr.get_provider_registry()
     chain = reg.fallback_chain()
-    assert [p.name for p in chain] == ["yinchao", "mureka", "runpod"]
+    assert [p.name for p in chain] == ["yinchao", "tempolor"]
+
+
+def test_production_provider_contract_yinchao_tempolor(isolated_env):
+    """生产 Provider 契约：默认 select() = yinchao，链 = [yinchao, tempolor]。"""
+    os.environ["ENVIRONMENT"] = "production"
+    import app.services.provider_registry as pr
+
+    reg = pr.get_provider_registry()
+    assert reg.select().name == "yinchao"
+    assert [p.name for p in reg.fallback_chain()] == ["yinchao", "tempolor"]
 
 
 def test_fallback_chain_development_keeps_fal(isolated_env):

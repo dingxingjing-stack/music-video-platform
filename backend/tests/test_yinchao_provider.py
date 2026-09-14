@@ -221,17 +221,15 @@ def test_registration_present():
 
 
 def test_fallback_chain_production_order():
-    """生产 fallback_chain 顺序 = [yinchao, mureka, runpod]。"""
+    """生产 fallback_chain 顺序 = [yinchao, tempolor]（Yinchao + TemPolor only）。"""
     os.environ["ENVIRONMENT"] = "production"
     try:
         import app.services.provider_registry as pr
         pr._registry = None
         reg = pr.get_provider_registry()
         names = [p.name for p in reg.fallback_chain()]
-        # yinchao / mureka 已注册 → 依次在前，runpod 兜底
-        assert names[0] == "yinchao"
-        assert names[1] == "mureka"
-        assert names[2] == "runpod"
+        # yinchao 第一、tempolor 第二；链中不再含 mureka / runpod
+        assert names == ["yinchao", "tempolor"]
     finally:
         os.environ.pop("ENVIRONMENT", None)
         import app.services.provider_registry as pr

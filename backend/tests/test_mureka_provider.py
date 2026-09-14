@@ -110,7 +110,7 @@ def _succeeded_poll(audio_url="https://cdn.example/song.wav"):
 # ═══════════════════════════════════════════════════════════════
 
 def test_1_provider_registers():
-    """MurekaProvider 正常注册进 registry（生产 fallback_chain 含 mureka）。"""
+    """MurekaProvider 正常注册进 registry（历史代码保留；生产 fallback_chain 不再含 mureka）。"""
     import app.services.provider_registry as pr
     pr._registry = None
     reg = pr.get_provider_registry()
@@ -254,15 +254,16 @@ async def test_14_succeeded_no_audio_url_fails(have_key, monkeypatch):
 # fallback_chain 集成（验证 API-2A 行为仍成立）
 # ═══════════════════════════════════════════════════════════════
 
-def test_15_fallback_chain_production_order_has_mureka():
-    """生产 fallback_chain 顺序 = [yinchao, mureka, runpod]。"""
+def test_15_fallback_chain_production_excludes_mureka():
+    """生产 fallback_chain 顺序 = [yinchao, tempolor]，不含 mureka（Yinchao + TemPolor only）。"""
     os.environ["ENVIRONMENT"] = "production"
     try:
         import app.services.provider_registry as pr
         pr._registry = None
         reg = pr.get_provider_registry()
         chain = reg.fallback_chain()
-        assert [p.name for p in chain] == ["yinchao", "mureka", "runpod"]
+        assert [p.name for p in chain] == ["yinchao", "tempolor"]
+        assert "mureka" not in [p.name for p in chain]
     finally:
         os.environ.pop("ENVIRONMENT", None)
         import app.services.provider_registry as pr
