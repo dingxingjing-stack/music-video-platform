@@ -406,10 +406,10 @@ class ProviderRegistry:
     def fallback_chain(self, name: Optional[str] = None) -> list:
         """返回有序 Provider fallback 链（复用现有 select() 语义，不另起一套）。
 
-        生产目标顺序：
-            yinchao（若已注册）→ mureka（若已注册）→ runpod
-        - runpod 内部已含 Fal fallback（RunPodProvider.generate 生产环境回退 Fal），
-          不在本链中重复展开。
+        生产目标顺序（Production generation strategy: Yinchao + TemPolor only）：
+            yinchao（若已注册）→ tempolor（若已注册）
+        - 本链仅承载 Yinchao + TemPolor；历史 Provider（Mureka / RunPod / Fal 等）
+          保留代码但不进入生产链，不在本链中展开。
         - HF 由 router 层 _try_hf_ace_step_fallback 负责，不在本链。
         - 某 Provider 尚未注册时，跳过它，保持剩余顺序。
 
@@ -424,14 +424,14 @@ class ProviderRegistry:
         if not is_prod:
             return [self.select(name)]
 
-        # 生产：yinchao → mureka → runpod（按 name 显式取，未注册则跳过）
+        # 生产：yinchao → tempolor（按 name 显式取，未注册则跳过）
         chain: list = []
-        for pname in ("yinchao", "mureka", "runpod"):
+        for pname in ("yinchao", "tempolor"):
             p = self._providers.get(pname)
             if p is not None:
                 chain.append(p)
 
-        # 安全兜底：若链为空（三家都未注册），退回 select() 默认单元素链
+        # 安全兜底：若链为空（两家都未注册），退回 select() 默认单元素链
         if not chain:
             return [self.select(name)]
         return chain
