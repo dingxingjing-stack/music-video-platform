@@ -93,6 +93,11 @@ async def _try_hf_ace_step_fallback(
     - reference_audio_b64: base64 编码的参考音频
     - reference_strength: 参考音频强度 (0.0-1.0)
     """
+    # 生产策略（Yinchao + TemPolor only）：production 永不走 HF 兜底。
+    # 函数内动态读取 ENVIRONMENT，保证测试可 monkeypatch；现有 HF_FALLBACK
+    # flag 与 HF_TOKEN 逻辑保持不变，仅 development/test 可达 HF。
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        return None
     if not HF_FALLBACK_ENABLED:
         return None
 
