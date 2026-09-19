@@ -176,6 +176,7 @@ export function Landing() {
             <a href="/legal/terms" className="hover:text-white">{tr('legal.links.terms', 'Terms')}</a>
             <a href="/legal/privacy" className="hover:text-white">{tr('legal.links.privacy', 'Privacy')}</a>
             <a href="/legal/aimusic-copyright" className="hover:text-white">{tr('legal.links.aiCopyright', 'AI Copyright')}</a>
+            <a href={`mailto:${tr('legal.privacy.contactEmail', 'zezhending@gmail.com')}`} className="hover:text-white">{tr('legal.links.contact', 'Contact')}</a>
           </div>
           <p className="text-xs text-[#4a4a4a]">{tr('landing.footerCopyright', '© 2026 Zyvexo. All rights reserved.')}</p>
         </div>
