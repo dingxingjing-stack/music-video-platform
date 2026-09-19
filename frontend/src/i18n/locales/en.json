@@ -26,7 +26,8 @@
       "ru": "Russian",
       "de": "German"
     },
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "aiGenerated": "AI Generated"
   },
   "paths": {
     "pathA": "AI Quick Create",
@@ -526,25 +527,6 @@
     "genericError": "Registration failed, please try again",
     "networkError": "Network error, please check your connection",
     "continueEmail": "Continue with Email",
-    "continuePhone": "Continue with Phone",
-    "phoneNotConfigured": "Phone verification is not configured yet. Please use email.",
-    "phoneLabel": "Phone number",
-    "phoneCountryCode": "Country/region code",
-    "phoneNumberPlaceholder": "Phone number",
-    "phoneOtpHint": "We will send an SMS verification code to this number.",
-    "sendVerificationCode": "Send verification code",
-    "sendingCode": "Sending…",
-    "verificationCode": "Verification code",
-    "verificationSentTo": "Verification code sent to",
-    "verifyAndLogin": "Verify and log in",
-    "verifyAndContinue": "Verify and continue",
-    "verifyingCode": "Verifying…",
-    "resendCode": "Resend code",
-    "changePhoneNumber": "Change phone number",
-    "invalidPhone": "Please enter a valid phone number",
-    "otpFailed": "Verification code action failed. Please try again.",
-    "otpInvalid": "The verification code is incorrect",
-    "otpExpired": "The verification code has expired. Send a new one.",
     "emailLabel": "Email address",
     "continueButton": "Continue",
     "showPassword": "Show",
@@ -562,7 +544,9 @@
     "privacyPolicy": "Privacy Policy",
     "loginFailed": "Login failed, please try again",
     "invalidCredentials": "Invalid email or password",
-    "emailNotConfirmed": "Email not confirmed, please verify your email first"
+    "emailNotConfirmed": "Email not confirmed, please verify your email first",
+    "continueWithGoogle": "Continue with Google",
+    "or": "or"
   },
   "community": {
     "chartHot": "Hot Chart",

@@ -26,7 +26,8 @@
       "ru": "Russisch",
       "de": "Deutsch"
     },
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "aiGenerated": "KI-generiert"
   },
   "paths": {
     "pathA": "AI Schnell-Erstellung",
@@ -526,25 +527,6 @@
     "genericError": "Registrierung fehlgeschlagen, bitte erneut versuchen",
     "networkError": "Netzwerkfehler, bitte Verbindung prüfen",
     "continueEmail": "Mit E-Mail fortfahren",
-    "continuePhone": "Mit Telefonnummer fortfahren",
-    "phoneNotConfigured": "Telefonverifizierung ist noch nicht konfiguriert. Bitte E-Mail verwenden.",
-    "phoneLabel": "Telefonnummer",
-    "phoneCountryCode": "Länder-/Regionscode",
-    "phoneNumberPlaceholder": "Telefonnummer",
-    "phoneOtpHint": "Wir senden einen SMS-Bestätigungscode an diese Nummer.",
-    "sendVerificationCode": "Bestätigungscode senden",
-    "sendingCode": "Wird gesendet…",
-    "verificationCode": "Bestätigungscode",
-    "verificationSentTo": "Bestätigungscode gesendet an",
-    "verifyAndLogin": "Bestätigen und einloggen",
-    "verifyAndContinue": "Bestätigen und fortfahren",
-    "verifyingCode": "Wird überprüft…",
-    "resendCode": "Code erneut senden",
-    "changePhoneNumber": "Nummer ändern",
-    "invalidPhone": "Bitte eine gültige Telefonnummer eingeben",
-    "otpFailed": "Verarbeitung des Codes fehlgeschlagen. Bitte erneut versuchen.",
-    "otpInvalid": "Der Bestätigungscode ist falsch",
-    "otpExpired": "Der Code ist abgelaufen. Bitte einen neuen senden.",
     "emailLabel": "E-Mail-Adresse",
     "continueButton": "Weiter",
     "showPassword": "Anzeigen",
@@ -562,7 +544,9 @@
     "privacyPolicy": "Datenschutzrichtlinie",
     "loginFailed": "Anmeldung fehlgeschlagen, bitte erneut versuchen",
     "invalidCredentials": "E-Mail oder Passwort falsch",
-    "emailNotConfirmed": "E-Mail nicht bestätigt, bitte zuerst E-Mail bestätigen"
+    "emailNotConfirmed": "E-Mail nicht bestätigt, bitte zuerst E-Mail bestätigen",
+    "continueWithGoogle": "Mit Google fortfahren",
+    "or": "oder"
   },
   "community": {
     "chartHot": "Beliebte Charts",

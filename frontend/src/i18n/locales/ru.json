@@ -26,7 +26,8 @@
       "ru": "Русский",
       "de": "Deutsch"
     },
-    "cancelled": "Отменено"
+    "cancelled": "Отменено",
+    "aiGenerated": "Сгенерировано ИИ"
   },
   "paths": {
     "pathA": "Быстрое создание ИИ",
@@ -526,25 +527,6 @@
     "genericError": "Не удалось зарегистрироваться, попробуйте ещё раз",
     "networkError": "Ошибка сети, проверьте подключение",
     "continueEmail": "Продолжить с email",
-    "continuePhone": "Продолжить с номером телефона",
-    "phoneNotConfigured": "Проверка по телефону ещё не настроена. Используйте email.",
-    "phoneLabel": "Номер телефона",
-    "phoneCountryCode": "Код страны/региона",
-    "phoneNumberPlaceholder": "Номер телефона",
-    "phoneOtpHint": "Мы отправим SMS-код подтверждения на этот номер.",
-    "sendVerificationCode": "Отправить код подтверждения",
-    "sendingCode": "Отправка…",
-    "verificationCode": "Код подтверждения",
-    "verificationSentTo": "Код отправлен на",
-    "verifyAndLogin": "Подтвердить и войти",
-    "verifyAndContinue": "Подтвердить и продолжить",
-    "verifyingCode": "Проверка…",
-    "resendCode": "Отправить код повторно",
-    "changePhoneNumber": "Изменить номер",
-    "invalidPhone": "Введите корректный номер телефона",
-    "otpFailed": "Не удалось обработать код. Повторите попытку.",
-    "otpInvalid": "Код подтверждения неверный",
-    "otpExpired": "Срок действия кода истёк. Отправьте новый.",
     "emailLabel": "Адрес электронной почты",
     "continueButton": "Продолжить",
     "showPassword": "Показать",
@@ -562,7 +544,9 @@
     "privacyPolicy": "Политика конфиденциальности",
     "loginFailed": "Не удалось войти, попробуйте ещё раз",
     "invalidCredentials": "Неверный email или пароль",
-    "emailNotConfirmed": "Email не подтверждён, сначала подтвердите email"
+    "emailNotConfirmed": "Email не подтверждён, сначала подтвердите email",
+    "continueWithGoogle": "Продолжить через Google",
+    "or": "или"
   },
   "community": {
     "chartHot": "Популярный чарт",

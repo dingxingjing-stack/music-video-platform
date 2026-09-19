@@ -26,7 +26,8 @@
       "ru": "ロシア語",
       "de": "ドイツ語"
     },
-    "cancelled": "キャンセル済み"
+    "cancelled": "キャンセル済み",
+    "aiGenerated": "AI 生成"
   },
   "paths": {
     "pathA": "AIクイック作成",
@@ -526,25 +527,6 @@
     "genericError": "登録に失敗しました。後でもう一度お試しください",
     "networkError": "ネットワークエラーです。接続を確認してください",
     "continueEmail": "メールで続ける",
-    "continuePhone": "電話番号で続ける",
-    "phoneNotConfigured": "電話番号認証は未設定です。メールをご利用ください。",
-    "phoneLabel": "電話番号",
-    "phoneCountryCode": "国/地域コード",
-    "phoneNumberPlaceholder": "電話番号",
-    "phoneOtpHint": "この電話番号にSMS認証コードを送信します。",
-    "sendVerificationCode": "認証コードを送信",
-    "sendingCode": "送信中…",
-    "verificationCode": "認証コード",
-    "verificationSentTo": "認証コードの送信先",
-    "verifyAndLogin": "認証してログイン",
-    "verifyAndContinue": "認証して続行",
-    "verifyingCode": "認証中…",
-    "resendCode": "コードを再送",
-    "changePhoneNumber": "電話番号を変更",
-    "invalidPhone": "有効な電話番号を入力してください",
-    "otpFailed": "認証コードの処理に失敗しました。もう一度お試しください。",
-    "otpInvalid": "認証コードが正しくありません",
-    "otpExpired": "認証コードの有効期限が切れています。再送してください。",
     "emailLabel": "メールアドレス",
     "continueButton": "続ける",
     "showPassword": "表示",
@@ -562,7 +544,9 @@
     "privacyPolicy": "プライバシーポリシー",
     "loginFailed": "ログインに失敗しました。もう一度お試しください",
     "invalidCredentials": "メールアドレスまたはパスワードが間違っています",
-    "emailNotConfirmed": "メールが確認されていません。先にメールを確認してください"
+    "emailNotConfirmed": "メールが確認されていません。先にメールを確認してください",
+    "continueWithGoogle": "Google で続行",
+    "or": "または"
   },
   "community": {
     "chartHot": "人気チャート",

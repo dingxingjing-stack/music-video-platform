@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, isGoogleLoginEnabled } from '../lib/supabase';
 
 interface AuthCtx {
   user: User | null;
@@ -10,8 +10,8 @@ interface AuthCtx {
   login: (email: string, pwd: string) => Promise<void>;
   register: (email: string, pwd: string) => Promise<{ needsEmailConfirmation: boolean }>;
   resendVerification: (email: string) => Promise<void>;
-  sendPhoneOtp: (phone: string) => Promise<void>;
-  verifyPhoneOtp: (phone: string, otp: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  googleLoginEnabled: boolean;
   logout: () => Promise<void>;
   showLogin: boolean;
   setShowLogin: (v: boolean) => void;
@@ -24,6 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true); // 初始 getSession 完成前为 true
   const [showLogin, setShowLogin] = useState(false);
+  const [googleLoginEnabled, setGoogleLoginEnabled] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    isGoogleLoginEnabled().then((ok) => { if (alive) setGoogleLoginEnabled(ok); });
+    return () => { alive = false; };
+  }, []);
 
   // 初始恢复 session + 订阅 auth 状态变化（含 TOKEN_REFRESHED / SIGNED_IN / SIGNED_OUT）
   useEffect(() => {
@@ -66,17 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
-  const sendPhoneOtp = useCallback(async (phone: string) => {
-    // Supabase Phone Auth 负责创建/复用 Auth 用户；signup/signin 由同一个 OTP 流程完成。
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+  // Google OAuth：是否可用由 Supabase 实际配置决定（见 lib/supabase.isGoogleLoginEnabled）。
+  // 未完成外部 provider 配置时 googleLoginEnabled=false → UI 不渲染 Google 按钮（不出现假入口）。
+  const loginWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
     if (error) throw error;
-  }, []);
-
-  const verifyPhoneOtp = useCallback(async (phone: string, otp: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' });
-    if (error) throw error;
-    if (!data.session) throw new Error('Phone verification did not create a session');
-    setShowLogin(false);
   }, []);
 
   const logout = useCallback(async () => {
@@ -92,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     resendVerification,
-    sendPhoneOtp,
-    verifyPhoneOtp,
+    loginWithGoogle,
+    googleLoginEnabled,
     logout,
     showLogin,
     setShowLogin,

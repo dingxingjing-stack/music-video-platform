@@ -2,23 +2,22 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../i18n/useTranslation';
-import { PHONE_COUNTRIES } from '../config/phoneCountries';
 
 /**
- * 产品级注册页面（Email + Supabase Phone OTP）
+ * 产品级注册页面（Email + Password + 邮箱验证；Google 仅在 Supabase 已启用时出现）
  * 流程：
- *   选择方式（Email / Phone）
+ *   选择方式（Email / Google）
  *   → Email 分步：Email → Password(+confirm) → signUp
- *   → Phone 分步：国家区号+手机号 → Supabase SMS OTP → verifyOtp
  *   → 情况 A（有 session）→ onboarding → 首页
- *   → 邮箱情况 B（需邮箱验证）→ Check your email（resend / back to login）
+ *   → 情况 B（需邮箱验证）→ Check your email（resend / back to login）
  * 身份唯一来源 = Supabase Auth；前端绝不 INSERT public.users / 不伪造 user_id。
+ * 手机 / SMS OTP 注册已下线（零短信费用目标），Supabase 侧 phone provider 亦保持关闭。
  */
 
-type Step = 'method' | 'email' | 'password' | 'phone' | 'phoneOtp' | 'verify' | 'onboarding';
+type Step = 'method' | 'email' | 'password' | 'verify' | 'onboarding';
 
 export function RegisterPage() {
-  const { register, resendVerification, sendPhoneOtp, verifyPhoneOtp } = useAuth();
+  const { register, resendVerification, loginWithGoogle, googleLoginEnabled } = useAuth();
   const { t, locale, changeLocale, localeNames } = useTranslation();
   const navigate = useNavigate();
 
@@ -27,9 +26,6 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [countryCode, setCountryCode] = useState('CN');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [preferredLang, setPreferredLang] = useState<string>(locale);
   const [err, setErr] = useState<string | null>(null);
@@ -46,28 +42,9 @@ export function RegisterPage() {
     return t('auth.genericError');
   };
 
-  const mapOtpError = (e: any): string => {
-    const msg: string = e?.message || '';
-    const low = msg.toLowerCase();
-    if (low.includes('expired')) return t('auth.otpExpired');
-    if (low.includes('invalid') || low.includes('token') || low.includes('otp')) return t('auth.otpInvalid');
-    if (low.includes('phone')) return t('auth.invalidPhone');
-    if (low.includes('network') || low.includes('fetch') || low.includes('timeout')) return t('auth.networkError');
-    return t('auth.otpFailed');
-  };
-
-  const selectedCountry = PHONE_COUNTRIES.find((country) => country.code === countryCode) ?? PHONE_COUNTRIES.find((country) => country.code === 'CN')!;
-  const dialCode = selectedCountry.dialCode;
-  const getFullPhone = () => `${dialCode}${phoneNumber.replace(/\D/g, '')}`;
-
   const goEmail = () => {
     setErr(null);
     setStep('email');
-  };
-
-  const goPhone = () => {
-    setErr(null);
-    setStep('phone');
   };
 
   const goPassword = () => {
@@ -110,35 +87,13 @@ export function RegisterPage() {
     }
   };
 
-  const submitPhone = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErr(null);
-    if (!/^\d{5,14}$/.test(phoneNumber.replace(/\D/g, ''))) {
-      setErr(t('auth.invalidPhone'));
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await sendPhoneOtp(getFullPhone());
-      setStep('phoneOtp');
-    } catch (e: any) {
-      setErr(mapOtpError(e));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp.trim()) return;
+  const submitGoogle = async () => {
     setErr(null);
     setSubmitting(true);
     try {
-      await verifyPhoneOtp(getFullPhone(), otp.trim());
-      setStep('onboarding');
+      await loginWithGoogle();
     } catch (e: any) {
-      setErr(mapOtpError(e));
-    } finally {
+      setErr(mapError(e));
       setSubmitting(false);
     }
   };
@@ -158,6 +113,7 @@ export function RegisterPage() {
 
   const inputCls = 'w-full px-4 py-3 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-orange-400';
   const primaryBtn = 'w-full py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50';
+  const secondaryBtn = 'w-full py-3 bg-[#1e1e1e] border border-[#2a2a2a] text-white font-semibold rounded-lg hover:bg-[#262626] transition disabled:opacity-50';
 
   // ── Step: method ──
   if (step === 'method') {
@@ -172,9 +128,11 @@ export function RegisterPage() {
 
           <div className="space-y-3">
             <button onClick={goEmail} className={primaryBtn}>{t('auth.continueEmail')}</button>
-            <button onClick={goPhone} className="w-full py-3 bg-[#1e1e1e] border border-[#2a2a2a] text-white font-semibold rounded-lg hover:bg-[#262626] transition">
-              {t('auth.continuePhone')}
-            </button>
+            {googleLoginEnabled && (
+              <button onClick={submitGoogle} disabled={submitting} className={secondaryBtn}>
+                {t('auth.continueWithGoogle')}
+              </button>
+            )}
             {err && <p className="text-xs text-amber-400 text-center">{err}</p>}
           </div>
 
@@ -201,6 +159,16 @@ export function RegisterPage() {
             <input type="email" placeholder={t('auth.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className={inputCls} />
             {err && <p className="text-xs text-red-400">{err}</p>}
             <button type="submit" className={primaryBtn}>{t('auth.continueButton')}</button>
+            {googleLoginEnabled && (
+              <>
+                <div className="flex items-center gap-3 text-[10px] text-zinc-600">
+                  <span className="h-px flex-1 bg-[#2a2a2a]" />{t('auth.or')}<span className="h-px flex-1 bg-[#2a2a2a]" />
+                </div>
+                <button type="button" onClick={submitGoogle} disabled={submitting} className={secondaryBtn}>
+                  {t('auth.continueWithGoogle')}
+                </button>
+              </>
+            )}
           </form>
           <button onClick={() => setStep('method')} className="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-white transition">{t('auth.backToLogin')}</button>
         </div>
@@ -232,56 +200,6 @@ export function RegisterPage() {
     );
   }
 
-  // ── Step: phone ──
-  if (step === 'phone') {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-8">
-          <h2 className="text-xl font-semibold text-white mb-2">{t('auth.phoneLabel')}</h2>
-          <p className="text-xs text-zinc-500 mb-6">{t('auth.phoneOtpHint')}</p>
-          <form onSubmit={submitPhone} className="space-y-4">
-            <div className="flex gap-2">
-              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-48 px-3 py-3 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-orange-400" aria-label={t('auth.phoneCountryCode')}>
-                {PHONE_COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.name} {country.dialCode}</option>)}
-              </select>
-              <input inputMode="numeric" autoComplete="tel-national" placeholder={t('auth.phoneNumberPlaceholder')} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="min-w-0 flex-1 px-4 py-3 bg-[#0e0e0e] border border-[#2a2a2a] rounded-lg text-white text-sm focus:outline-none focus:border-orange-400" />
-            </div>
-            {err && <p className="text-xs text-red-400">{err}</p>}
-            <button type="submit" disabled={submitting} className={primaryBtn}>
-              {submitting ? t('auth.sendingCode') : t('auth.sendVerificationCode')}
-            </button>
-          </form>
-          <button onClick={() => setStep('method')} className="w-full mt-3 py-2 text-xs text-zinc-500 hover:text-white transition">{t('auth.backToLogin')}</button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Step: phoneOtp ──
-  if (step === 'phoneOtp') {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-8">
-          <h2 className="text-xl font-semibold text-white mb-2">{t('auth.verificationCode')}</h2>
-          <p className="text-xs text-zinc-500 mb-6">{t('auth.verificationSentTo')}: {getFullPhone()}</p>
-          <form onSubmit={submitPhoneOtp} className="space-y-4">
-            <input inputMode="numeric" autoComplete="one-time-code" placeholder={t('auth.verificationCode')} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))} required className={inputCls} />
-            {err && <p className="text-xs text-red-400">{err}</p>}
-            <button type="submit" disabled={submitting} className={primaryBtn}>
-              {submitting ? t('auth.verifyingCode') : t('auth.verifyAndContinue')}
-            </button>
-          </form>
-          <div className="flex items-center justify-between text-xs mt-3">
-            <button type="button" onClick={() => { setStep('phone'); setOtp(''); setErr(null); }} className="py-2 text-zinc-500 hover:text-white transition">{t('auth.changePhoneNumber')}</button>
-            <button type="button" disabled={submitting} onClick={async () => { setErr(null); setSubmitting(true); try { await sendPhoneOtp(getFullPhone()); } catch (e: any) { setErr(mapOtpError(e)); } finally { setSubmitting(false); } }} className="py-2 text-orange-400 hover:text-orange-300 transition">
-              {t('auth.resendCode')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // ── Step: verify (邮箱情况 B) ──
   if (step === 'verify') {
     return (
@@ -303,7 +221,7 @@ export function RegisterPage() {
     );
   }
 
-  // ── Step: onboarding (邮箱情况 A / Phone OTP 验证后) ──
+  // ── Step: onboarding (邮箱情况 A) ──
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#e0e0e0] flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-8">

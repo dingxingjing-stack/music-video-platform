@@ -26,7 +26,8 @@
       "ru": "Ruso",
       "de": "Alemán"
     },
-    "cancelled": "Cancelado"
+    "cancelled": "Cancelado",
+    "aiGenerated": "Generado con IA"
   },
   "paths": {
     "pathA": "Creacion Rapida IA",
@@ -526,25 +527,6 @@
     "genericError": "Error al registrarse, inténtalo de nuevo",
     "networkError": "Error de red, comprueba tu conexión",
     "continueEmail": "Continuar con correo",
-    "continuePhone": "Continuar con teléfono",
-    "phoneNotConfigured": "La verificación por teléfono aún no está configurada. Usa el correo.",
-    "phoneLabel": "Número de teléfono",
-    "phoneCountryCode": "Código de país/región",
-    "phoneNumberPlaceholder": "Número de teléfono",
-    "phoneOtpHint": "Enviaremos un código de verificación por SMS a este número.",
-    "sendVerificationCode": "Enviar código de verificación",
-    "sendingCode": "Enviando…",
-    "verificationCode": "Código de verificación",
-    "verificationSentTo": "Código de verificación enviado a",
-    "verifyAndLogin": "Verificar e iniciar sesión",
-    "verifyAndContinue": "Verificar y continuar",
-    "verifyingCode": "Verificando…",
-    "resendCode": "Reenviar código",
-    "changePhoneNumber": "Cambiar número",
-    "invalidPhone": "Introduce un número de teléfono válido",
-    "otpFailed": "No se pudo procesar el código. Inténtalo de nuevo.",
-    "otpInvalid": "El código de verificación es incorrecto",
-    "otpExpired": "El código ha caducado. Envía uno nuevo.",
     "emailLabel": "Correo electrónico",
     "continueButton": "Continuar",
     "showPassword": "Mostrar",
@@ -562,7 +544,9 @@
     "privacyPolicy": "Política de privacidad",
     "loginFailed": "Error al iniciar sesión, inténtalo de nuevo",
     "invalidCredentials": "Correo o contraseña incorrectos",
-    "emailNotConfirmed": "Correo no confirmado, verifica tu correo primero"
+    "emailNotConfirmed": "Correo no confirmado, verifica tu correo primero",
+    "continueWithGoogle": "Continuar con Google",
+    "or": "o"
   },
   "community": {
     "chartHot": "Ranking Popular",

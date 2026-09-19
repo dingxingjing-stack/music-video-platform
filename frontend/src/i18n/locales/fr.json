@@ -26,7 +26,8 @@
       "ru": "Russe",
       "de": "Allemand"
     },
-    "cancelled": "Annulé"
+    "cancelled": "Annulé",
+    "aiGenerated": "Généré par IA"
   },
   "paths": {
     "pathA": "Creation Rapide IA",
@@ -526,25 +527,6 @@
     "genericError": "Échec de l'inscription, réessayez",
     "networkError": "Erreur réseau, vérifiez votre connexion",
     "continueEmail": "Continuer avec l'e-mail",
-    "continuePhone": "Continuer avec le téléphone",
-    "phoneNotConfigured": "La vérification par téléphone n'est pas encore configurée. Utilisez l'e-mail.",
-    "phoneLabel": "Numéro de téléphone",
-    "phoneCountryCode": "Indicatif pays/région",
-    "phoneNumberPlaceholder": "Numéro de téléphone",
-    "phoneOtpHint": "Nous enverrons un code de vérification par SMS à ce numéro.",
-    "sendVerificationCode": "Envoyer le code de vérification",
-    "sendingCode": "Envoi en cours…",
-    "verificationCode": "Code de vérification",
-    "verificationSentTo": "Code envoyé à",
-    "verifyAndLogin": "Vérifier et se connecter",
-    "verifyAndContinue": "Vérifier et continuer",
-    "verifyingCode": "Vérification…",
-    "resendCode": "Renvoyer le code",
-    "changePhoneNumber": "Changer de numéro",
-    "invalidPhone": "Veuillez saisir un numéro de téléphone valide",
-    "otpFailed": "Échec du code de vérification. Veuillez réessayer.",
-    "otpInvalid": "Le code de vérification est incorrect",
-    "otpExpired": "Le code a expiré. Veuillez en envoyer un nouveau.",
     "emailLabel": "Adresse e-mail",
     "continueButton": "Continuer",
     "showPassword": "Afficher",
@@ -562,7 +544,9 @@
     "privacyPolicy": "Politique de confidentialité",
     "loginFailed": "Échec de la connexion, réessayez",
     "invalidCredentials": "E-mail ou mot de passe incorrect",
-    "emailNotConfirmed": "E-mail non confirmé, veuillez vérifier votre e-mail"
+    "emailNotConfirmed": "E-mail non confirmé, veuillez vérifier votre e-mail",
+    "continueWithGoogle": "Continuer avec Google",
+    "or": "ou"
   },
   "community": {
     "chartHot": "Classement Populaire",

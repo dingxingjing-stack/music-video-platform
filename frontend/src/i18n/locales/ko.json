@@ -26,7 +26,8 @@
       "ru": "러시아어",
       "de": "독일어"
     },
-    "cancelled": "취소됨"
+    "cancelled": "취소됨",
+    "aiGenerated": "AI 생성"
   },
   "paths": {
     "pathA": "AI 빠른 생성",
@@ -526,25 +527,6 @@
     "genericError": "가입에 실패했습니다. 나중에 다시 시도해 주세요",
     "networkError": "네트워크 오류입니다. 연결을 확인해 주세요",
     "continueEmail": "이메일로 계속하기",
-    "continuePhone": "전화번호로 계속하기",
-    "phoneNotConfigured": "전화번호 인증이 아직 설정되지 않았습니다. 이메일을 이용해 주세요.",
-    "phoneLabel": "전화번호",
-    "phoneCountryCode": "국가/지역 코드",
-    "phoneNumberPlaceholder": "휴대폰 번호",
-    "phoneOtpHint": "이 번호로 SMS 인증 코드를 보내드립니다.",
-    "sendVerificationCode": "인증 코드 보내기",
-    "sendingCode": "전송 중…",
-    "verificationCode": "인증 코드",
-    "verificationSentTo": "인증 코드 발송 대상",
-    "verifyAndLogin": "인증 후 로그인",
-    "verifyAndContinue": "인증하고 계속",
-    "verifyingCode": "인증 중…",
-    "resendCode": "인증 코드 다시 보내기",
-    "changePhoneNumber": "전화번호 변경",
-    "invalidPhone": "유효한 전화번호를 입력하세요",
-    "otpFailed": "인증 코드 처리에 실패했습니다. 다시 시도해 주세요.",
-    "otpInvalid": "인증 코드가 올바르지 않습니다",
-    "otpExpired": "인증 코드가 만료되었습니다. 다시 보내 주세요.",
     "emailLabel": "이메일 주소",
     "continueButton": "계속",
     "showPassword": "보기",
@@ -562,7 +544,9 @@
     "privacyPolicy": "개인정보 처리방침",
     "loginFailed": "로그인에 실패했습니다. 다시 시도해 주세요",
     "invalidCredentials": "이메일 또는 비밀번호가 잘못되었습니다",
-    "emailNotConfirmed": "이메일이 확인되지 않았습니다. 이메일을 먼저 확인해 주세요"
+    "emailNotConfirmed": "이메일이 확인되지 않았습니다. 이메일을 먼저 확인해 주세요",
+    "continueWithGoogle": "Google로 계속하기",
+    "or": "또는"
   },
   "community": {
     "chartHot": "인기 차트",

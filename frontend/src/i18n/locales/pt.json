@@ -26,7 +26,8 @@
       "ru": "Russo",
       "de": "Alemão"
     },
-    "cancelled": "Cancelado"
+    "cancelled": "Cancelado",
+    "aiGenerated": "Gerado por IA"
   },
   "paths": {
     "pathA": "Criacao Rapida IA",
@@ -526,25 +527,6 @@
     "genericError": "Falha no cadastro, tente novamente",
     "networkError": "Erro de rede, verifique sua conexão",
     "continueEmail": "Continuar com e-mail",
-    "continuePhone": "Continuar com telefone",
-    "phoneNotConfigured": "A verificação por telefone ainda não está configurada. Use o e-mail.",
-    "phoneLabel": "Número de telefone",
-    "phoneCountryCode": "Código do país/região",
-    "phoneNumberPlaceholder": "Número de telefone",
-    "phoneOtpHint": "Enviaremos um código de verificação por SMS para este número.",
-    "sendVerificationCode": "Enviar código de verificação",
-    "sendingCode": "Enviando…",
-    "verificationCode": "Código de verificação",
-    "verificationSentTo": "Código de verificação enviado para",
-    "verifyAndLogin": "Verificar e entrar",
-    "verifyAndContinue": "Verificar e continuar",
-    "verifyingCode": "Verificando…",
-    "resendCode": "Reenviar código",
-    "changePhoneNumber": "Alterar número",
-    "invalidPhone": "Informe um número de telefone válido",
-    "otpFailed": "Falha ao processar o código. Tente novamente.",
-    "otpInvalid": "O código de verificação está incorreto",
-    "otpExpired": "O código expirou. Envie um novo.",
     "emailLabel": "Endereço de e-mail",
     "continueButton": "Continuar",
     "showPassword": "Mostrar",
@@ -562,7 +544,9 @@
     "privacyPolicy": "Política de privacidade",
     "loginFailed": "Falha no login, tente novamente",
     "invalidCredentials": "E-mail ou senha incorretos",
-    "emailNotConfirmed": "E-mail não confirmado, verifique seu e-mail primeiro"
+    "emailNotConfirmed": "E-mail não confirmado, verifique seu e-mail primeiro",
+    "continueWithGoogle": "Continuar com o Google",
+    "or": "ou"
   },
   "community": {
     "chartHot": "Ranking Popular",
