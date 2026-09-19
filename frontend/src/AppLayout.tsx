@@ -32,7 +32,7 @@ export function AppLayout() {
   }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isLoggedIn, setShowLogin, logout } = useAuth();
+  const { user, isLoggedIn, setShowLogin, logout } = useAuth();
   const credits = useCreditsBalance(isLoggedIn);
   const { muted, toggle } = useSound();
   // React Hooks 顺序纪律：所有 hooks 必须先于任何条件 return（修复此前的 hook-order 违规）
