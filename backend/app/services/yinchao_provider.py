@@ -239,4 +239,8 @@ class YinchaoProvider(BaseProvider):
             err = "Yinchao 引擎过载（503）"
         # 不把完整 body 写日志（可能含敏感内容），只记录状态码
         logger.warning("[yinchao] submit 失败 http=%s", resp.status_code)
-        return {"success": False, "error": err, "provider": self.name}
+        result = {"success": False, "error": err, "provider": self.name}
+        if resp.status_code == 400:
+            # 参数类错误：不得 fallback 到其他 Provider（同错必现、徒耗其额度）
+            result["non_retryable"] = True
+        return result

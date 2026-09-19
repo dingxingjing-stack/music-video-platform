@@ -1,4 +1,4 @@
-import os
+﻿import os
 import time
 import pytest
 import asyncio
@@ -193,7 +193,9 @@ def test_workflow_real_mode_lock_failure_no_stale_task(isolated_db, monkeypatch,
     task_store.delete(existing_tid)
 
 
-# Phase 3B-1锛氳韩浠芥敼涓?Authorization Bearer JWT銆傛祴璇曠幆澧冧笉鑱旂湡瀹?Supabase Auth锛?# 鍥犳 autouse 鎵撴々 resolve_auth_user_id锛屼娇 "Bearer <token>" 鏈夋晥鏃跺彲纭畾鍦拌繑鍥?token 閮ㄥ垎锛?# 涓?"Authorization" 缂哄け/闈?Bearer 杩斿洖 None锛堢瓑浠?fail-closed 401锛夛紝涓嶄緷璧栫幆澧冨彉閲忋€?@pytest.fixture(autouse=True)
+# Phase 3B-1：身份改为 Authorization Bearer JWT。测试环境不联真实 Supabase Auth，
+# 因此 autouse 打桩 resolve_auth_user_id，使 "Bearer <token>" 有效时确定地返回 token 部分。
+@pytest.fixture(autouse=True)
 def _jwt_identity_stub(monkeypatch):
     from app.services import auth_identity
 
@@ -203,3 +205,4 @@ def _jwt_identity_stub(monkeypatch):
         return None
 
     monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
+

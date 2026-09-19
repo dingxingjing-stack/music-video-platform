@@ -51,24 +51,29 @@ def get_user_by_supabase_id(supabase_user_id: str) -> Optional[Dict]:
         print(f"Error fetching user: {e}")
         return None
 
-def create_user(email: str, supabase_user_id: str, username: Optional[str] = None, 
-                avatar_url: Optional[str] = None, age: Optional[int] = None) -> Dict:
+def create_user(email: Optional[str], supabase_user_id: str, username: Optional[str] = None,
+                avatar_url: Optional[str] = None, age: Optional[int] = None,
+                phone: Optional[str] = None) -> Dict:
     """Create a new user（Phase 3-2A：id = supabase_user_id，消除双 UUID）。
 
     - id 与 supabase_user_id 统一为 Supabase Auth UUID，不再生成独立 business UUID。
+    - email 和 phone 至少需要一个（支持 email-only / phone-only / email+phone）。
     - 幂等：以 supabase_user_id 唯一冲突为据，重复创建不产生第二行。
     """
+    if not email and not phone:
+        raise ValueError("email and phone cannot both be empty")
     try:
         user_data = {
             "id": supabase_user_id,
             "supabase_user_id": supabase_user_id,
             "email": email,
+            "phone": phone,
             "username": username,
             "avatar_url": avatar_url,
             "age": age,
         }
-        # Remove None values（但不允许移除 id / supabase_user_id / email）
-        for k in ("username", "avatar_url", "age"):
+        # Remove None values（但不允许移除 id / supabase_user_id）
+        for k in ("email", "phone", "username", "avatar_url", "age"):
             if user_data.get(k) is None:
                 user_data.pop(k, None)
         response = supabase.table("users").upsert(
@@ -80,18 +85,22 @@ def create_user(email: str, supabase_user_id: str, username: Optional[str] = Non
         raise
 
 
-def ensure_user(supabase_user_id: str, email: str) -> Optional[Dict]:
+def ensure_user(supabase_user_id: str, email: Optional[str] = None,
+                phone: Optional[str] = None) -> Optional[Dict]:
     """幂等确保 public.users 存在（Phase 3-2A 后端兜底）。
 
     - 已存在（按 supabase_user_id 唯一）→ 返回既有行，不重复插入。
     - 不存在 → 插入，且 id = supabase_user_id（auth UUID）。
+    - email 和 phone 至少需要一个；支持 email-only / phone-only / email+phone。
     - 仅处理 public.users 本体；不初始化 credits/quota/statistics/songs 等。
     """
+    if not email and not phone:
+        raise ValueError("email and phone cannot both be empty")
     existing = get_user_by_supabase_id(supabase_user_id)
     if existing:
         return existing
     try:
-        return create_user(email=email, supabase_user_id=supabase_user_id)
+        return create_user(email=email, supabase_user_id=supabase_user_id, phone=phone)
     except APIError:
         return get_user_by_supabase_id(supabase_user_id)
 
@@ -142,10 +151,39 @@ def get_song_by_id(song_id: str) -> Optional[Dict]:
         print(f"Error fetching song: {e}")
         return None
 
-def create_song(user_id: str, song_data: Dict) -> Dict:
-    """Create a new song."""
+
+def get_songs_by_project(project_id: str, user_id: str, limit: int = 100, offset: int = 0) -> List[Dict]:
+    """Get songs in a project, filtered by BOTH project_id AND user_id（双重归属校验）。
+
+    用于 Projects 只读查询：即使 project_id 命中，也必须同时匹配 user_id，
+    避免返回其他用户的 Song。
+    """
     try:
+        response = supabase.table("songs").select("*")\
+            .eq("project_id", project_id)\
+            .eq("user_id", user_id)\
+            .order("created_at", desc=True)\
+            .limit(limit).offset(offset).execute()
+        return response.data
+    except APIError as e:
+        print(f"Error fetching project songs: {e}")
+        return []
+
+
+def create_song(user_id: str, song_data: Dict, project_id: Optional[str] = None) -> Dict:
+    """Create a new song.
+
+    project_id 可选：None 时保持旧行为（不写入 project_id，兼容历史调用）；
+    非 None 时才写入 payload，关联到对应 project。
+    """
+    try:
+        song_data = dict(song_data or {})
         song_data["user_id"] = user_id
+        # 支持可选 project_id（来自 SongCreate.project_id）；None 时不注入，保持旧 payload 一致
+        if project_id is not None:
+            song_data["project_id"] = project_id
+        elif "project_id" in song_data and song_data["project_id"] is None:
+            song_data.pop("project_id", None)
         response = supabase.table("songs").insert(song_data).execute()
         return response.data[0]
     except APIError as e:
@@ -160,6 +198,24 @@ def update_song(song_id: str, updates: Dict) -> Optional[Dict]:
     except APIError as e:
         print(f"Error updating song: {e}")
         return None
+
+
+def detach_songs_from_project(project_id: str, user_id: str) -> bool:
+    """把「属于当前用户且 project_id=project_id」的 Songs 的 project_id 置空（NULL）。
+
+    用于 Project 删除：保留 Song，仅解除关联；不删除任何 Song。
+    双重过滤（project_id + user_id）确保不触碰其他用户的 Songs。
+    """
+    try:
+        supabase.table("songs")\
+            .update({"project_id": None})\
+            .eq("project_id", project_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        return True
+    except APIError as e:
+        print(f"Error detaching songs from project: {e}")
+        return False
 
 def delete_song(song_id: str) -> bool:
     """Delete song by ID."""

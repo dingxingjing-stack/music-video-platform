@@ -144,8 +144,6 @@ export interface RemixParameters {
   seed?: number;
 }
 
-// ── MV Generator ────────────────────────────────────────────────────────────
-
 // ── MIDI / Piano Roll (Path D) ────────────────────────────────────────────────
 
 export type MidiNoteName = 'C' | 'C#' | 'D' | 'D#' | 'E' | 'F' | 'F#' | 'G' | 'G#' | 'A' | 'A#' | 'B';

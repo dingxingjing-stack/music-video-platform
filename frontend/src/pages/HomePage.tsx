@@ -15,14 +15,6 @@ export function HomePage() {
       accent: 'from-[#ff6a10] to-[#ee0979]',
     },
     {
-      key: 'voiceClone',
-      title: t('home.cards.voiceClone.title'),
-      desc: t('home.cards.voiceClone.desc'),
-      icon: '◐',
-      to: '/voice-clone',
-      accent: 'from-[#38bdf8] to-[#6366f1]',
-    },
-    {
       key: 'audioTools',
       title: t('home.cards.audioTools.title'),
       desc: t('home.cards.audioTools.desc'),
@@ -57,7 +49,7 @@ export function HomePage() {
           <button onClick={() => navigate('/create')} className="px-6 py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm hover:bg-[#ededed] transition">
             {t('home.ctaPrimary')} →
           </button>
-          <button onClick={() => navigate('/community')} className="px-6 py-3 rounded-xl bg-[#141414] border border-[#262626] text-white text-sm hover:bg-[#1a1a1a] transition">
+          <button onClick={() => navigate('/my-works')} className="px-6 py-3 rounded-xl bg-[#141414] border border-[#262626] text-white text-sm hover:bg-[#1a1a1a] transition">
             {t('home.ctaSecondary')}
           </button>
         </div>
@@ -82,21 +74,17 @@ export function HomePage() {
       </div>
 
       <div className="max-w-[1120px] mx-auto px-6 pb-12">
-        <div className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
           <div>
             <div className="text-white font-medium mb-1">{t('home.info.workflowTitle')}</div>
             <div className="text-[#8a8a8a] leading-relaxed">{t('home.info.workflowDesc')}</div>
-          </div>
-          <div>
-            <div className="text-white font-medium mb-1">{t('home.info.voiceTitle')}</div>
-            <div className="text-[#8a8a8a] leading-relaxed">{t('home.info.voiceDesc')}</div>
           </div>
           <div>
             <div className="text-white font-medium mb-1">{t('home.info.worksTitle')}</div>
             <div className="text-[#8a8a8a] leading-relaxed">{t('home.info.worksDesc')}</div>
           </div>
         </div>
-        <p className="mt-6 text-center text-xs text-[#4a4a4a]">© 2026 Zyvexo · AI Music Studio · {t('nav.betaTag')}</p>
+        <p className="mt-6 text-center text-xs text-[#4a4a4a]">© 2026 Zyvexo · AI Music Studio</p>
       </div>
     </div>
   );

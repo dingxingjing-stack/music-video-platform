@@ -25,7 +25,6 @@ export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   basic_copyright:    { key: 'basic_copyright',    name: 'features.basicCopyright.name',  level: 'open',  description: 'features.basicCopyright.desc', icon: '🔒' },
 
   // ===== 灰度锁定（仅资深测试用户）=====
-  voice_clone:        { key: 'voice_clone',        name: 'features.voiceClone.name',      level: 'open',  description: 'features.voiceClone.desc', icon: '🎙️' },
   ws_collab:          { key: 'ws_collab',          name: 'features.wsCollab.name',        level: 'gray',  description: 'features.wsCollab.desc', icon: '🤝' },
   hf_models:          { key: 'hf_models',          name: 'features.hfModels.name',        level: 'gray',  description: 'features.hfModels.desc', icon: '🧠' },
   subtitle:           { key: 'subtitle',           name: 'features.subtitle.name',        level: 'gray',  description: 'features.subtitle.desc', icon: '📝' },

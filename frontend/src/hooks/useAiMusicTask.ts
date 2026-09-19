@@ -123,6 +123,7 @@ export interface GenerateParams {
   lyrics?: string | null;
   type?: string;
   song_language?: string; // 歌曲生成语言（独立于 UI locale）
+  instrumental?: boolean; // 纯音乐（无人声）
 }
 
 export function useAiMusicTask() {

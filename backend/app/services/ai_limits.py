@@ -21,10 +21,12 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 # 保留原常量（环境变量覆盖）
-DAILY_GENERATION_LIMIT = int(os.getenv("DAILY_GENERATION_LIMIT", "1"))
+# 默认 2：长歌（>120s）单次消耗权重 2，默认值必须 ≥2，否则 181-300s 歌曲永远被拒
+DAILY_GENERATION_LIMIT = int(os.getenv("DAILY_GENERATION_LIMIT", "2"))
 MONTHLY_GENERATION_LIMIT = int(os.getenv("MONTHLY_GENERATION_LIMIT", "15"))
 GLOBAL_DAILY_GENERATION_LIMIT = int(os.getenv("GLOBAL_DAILY_GENERATION_LIMIT", "30"))
-MAX_AUDIO_DURATION_SECONDS = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "300"))
+# 第一版产品统一硬上限 270s（4分30秒）；环境变量可覆盖，恢复 300s 能力时改 env 即可
+MAX_AUDIO_DURATION_SECONDS = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "270"))
 MAX_CONCURRENT_JOBS_PER_USER = int(os.getenv("MAX_CONCURRENT_JOBS_PER_USER", "1"))
 MAX_AUTO_RETRIES = int(os.getenv("MAX_AUTO_RETRIES", "1"))
 MAX_TASK_RUNTIME_SECONDS = int(os.getenv("MAX_TASK_RUNTIME_SECONDS", "900"))

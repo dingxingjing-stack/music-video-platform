@@ -109,9 +109,9 @@ export function MixConsole({ history }: Props) {
               ws.close();
               resolve();
             } else if (msg.status === 'failed') {
-              setRenderError((msg.error as string) ?? 'Mix failed');
+              setRenderError((msg.error as string) ?? t('mixConsole.mixFailed'));
               ws.close();
-              reject(new Error((msg.error as string) ?? 'Mix failed'));
+              reject(new Error((msg.error as string) ?? t('mixConsole.mixFailed')));
             } else if (typeof msg.progress === 'number') {
               setProgress(msg.progress);
             }
@@ -120,17 +120,17 @@ export function MixConsole({ history }: Props) {
           }
         };
         ws.onerror = () => {
-          setRenderError('WebSocket connection error');
+          setRenderError(t('mixConsole.wsError'));
           ws.close();
-          reject(new Error('WebSocket error'));
+          reject(new Error(t('mixConsole.wsError')));
         };
         setTimeout(() => {
           ws.close();
-          reject(new Error('Mix render timed out'));
+          reject(new Error(t('mixConsole.mixTimeout')));
         }, 300000);
       });
     } catch (err) {
-      setRenderError(err instanceof Error ? err.message : 'Unknown error');
+      setRenderError(err instanceof Error && err.message ? err.message : t('mixConsole.unknownError'));
     } finally {
       setRendering(false);
     }

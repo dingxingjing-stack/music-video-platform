@@ -21,6 +21,10 @@ export default function MyWorks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
+  const [stemRetrying, setStemRetrying] = useState<Set<string>>(new Set());
+
+  // completed_with_stems_failed 也是可播放/可下载的完成态（仅缺分轨）
+  const isDone = (s: string) => s === 'completed' || s === 'completed_with_stems_failed';
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -63,6 +67,31 @@ export default function MyWorks() {
     }
   };
 
+  const handleRetryStems = async (taskId: string) => {
+    if (stemRetrying.has(taskId)) return;
+    setStemRetrying(prev => new Set([...prev, taskId]));
+    try {
+      await authFetch(api.url(`/api/v1/ai/task/${taskId}/retry-stems`), { method: 'POST' });
+      setTasks(prev => prev.map(tt => tt.task_id === taskId ? { ...tt, state: 'separating', stems_state: null } : tt));
+      // 轮询该任务直至回到终态（GET /task/{id} 对外终态含 completed）
+      const timer = setInterval(async () => {
+        try {
+          const d = await authFetch<Record<string, any>>(api.url(`/api/v1/ai/task/${taskId}`));
+          if (d.state === 'completed' || d.state === 'failed' || d.state === 'cancelled') {
+            clearInterval(timer);
+            setStemRetrying(prev => { const n = new Set(prev); n.delete(taskId); return n; });
+            setTasks(prev => prev.map(tt => tt.task_id === taskId
+              ? { ...tt, state: d.state, stems_state: d.stems_state ?? null, audio_url: d.audio_url ?? tt.audio_url }
+              : tt));
+          }
+        } catch { /* 单次查询失败忽略，等待下一轮 */ }
+      }, 2000);
+    } catch (e: any) {
+      setStemRetrying(prev => { const n = new Set(prev); n.delete(taskId); return n; });
+      setError(e?.message || t('aiTask.retryFailed'));
+    }
+  };
+
   const handlePlay = (audioUrl: string | null) => {
     if (!audioUrl) return;
     const audio = new Audio(audioUrl);
@@ -76,7 +105,7 @@ export default function MyWorks() {
     }
     setDeleting(prev => new Set([...prev, taskId]));
     try {
-      await authFetch(api.url(`/api/v1/ai/task/${taskId}/delete`));
+      await authFetch(api.url(`/api/v1/ai/task/${taskId}`), { method: 'DELETE' });
       setTasks(prev => prev.filter(tt => tt.task_id !== taskId));
     } catch (e: any) {
       setError(e?.message || t('myCreations.deleteError'));
@@ -139,7 +168,7 @@ export default function MyWorks() {
             className="rounded-2xl bg-[#141414] border border-[#1f1f1f] p-4 flex items-center gap-4 group"
           >
             <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center text-lg shrink-0">
-              {task.state === 'completed' ? '♪' : task.state === 'generating' ? '◐' : '✕'}
+              {isDone(task.state) || task.state === 'separating' ? '♪' : task.state === 'failed' ? '✕' : '◐'}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-white text-sm font-medium truncate">
@@ -148,6 +177,29 @@ export default function MyWorks() {
               <p className="text-xs text-[#6a6a6a]">
                 {task.state} · {formatTime(task.progress)} · {new Date(task.created_at * 1000).toLocaleDateString()}
               </p>
+              {isDone(task.state) && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {task.stems_state === 'ok' && (['vocals', 'drums', 'bass', 'other'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleDownload(task.task_id, s)}
+                      className="px-2 py-0.5 rounded-lg bg-[#0f0f0f] border border-[#262626] text-[#b0b0b0] text-[11px] hover:text-white"
+                    >
+                      {t(`aiStem.${s}`)} ↓
+                    </button>
+                  ))}
+                  {task.stems_state === 'failed' && (
+                    <button
+                      onClick={() => handleRetryStems(task.task_id)}
+                      disabled={stemRetrying.has(task.task_id)}
+                      title={t('aiGen.stemsFailedHint')}
+                      className="px-2 py-0.5 rounded-lg bg-[#0f0f0f] border border-[#262626] text-[#b0b0b0] text-[11px] hover:text-white disabled:opacity-40"
+                    >
+                      {stemRetrying.has(task.task_id) ? t('aiGen.statusSeparating') : t('aiGen.retryStems')}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex gap-2 shrink-0">
               {task.audio_url && (
@@ -164,7 +216,7 @@ export default function MyWorks() {
               </button>
               <button
                 className="px-3 py-1.5 bg-[#1a1a1a] border border-[#262626] text-[#ff6b6b] rounded-xl text-xs hover:bg-[#1f1a1a] disabled:opacity-40"
-                disabled={task.state !== 'completed' && !deleting.has(task.task_id)}
+                disabled={!isDone(task.state) && !deleting.has(task.task_id) && task.state !== 'separating'}
                 onClick={() => handleDelete(task.task_id)}
               >
                 {deleting.has(task.task_id) ? t('myCreations.deleting') : t('myCreations.delete')}

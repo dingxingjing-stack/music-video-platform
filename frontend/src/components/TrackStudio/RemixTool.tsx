@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Track, RemixParameters } from '../../types/trackStudio';
+import { useTranslation } from '../../i18n/useTranslation';
 
 type TimbrePreset = RemixParameters['timbreTransform'];
 
@@ -19,6 +20,7 @@ interface Props {
 const TIMBRE_PRESETS: NonNullable<RemixParameters['timbreTransform']>[] = ['warm', 'bright', 'dark', 'thin', 'heavy'];
 
 export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }: Props) {
+  const { t } = useTranslation();
   const [pitch, setPitch] = useState(0);
   const [tempo, setTempo] = useState(1.0);
   const [timbre, setTimbre] = useState<TimbrePreset>('warm');
@@ -81,7 +83,7 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
             setCollapsed(true);
             setSubmitting(false);
           } else if (msg.status === 'failed') {
-            const errMsg = (msg.error as string) ?? 'Remix failed';
+            const errMsg = (msg.error as string) ?? t('remix.remixFailed');
             onRemixError(errMsg);
             setSubmitting(false);
             ws.close();
@@ -91,12 +93,12 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
         }
       };
       ws.onerror = () => {
-        onRemixError('WebSocket connection error');
+        onRemixError(t('remix.wsError'));
         setSubmitting(false);
         ws.close();
       };
     } catch (err) {
-      onRemixError(err instanceof Error ? err.message : 'Unknown remix error');
+      onRemixError(err instanceof Error && err.message ? err.message : t('remix.unknownError'));
       setSubmitting(false);
     }
   }, [track, pitch, tempo, timbre, onRemixComplete, onRemixError, onRemixDone]);
@@ -116,10 +118,10 @@ export function RemixTool({ track, onRemixComplete, onRemixError, onRemixDone }:
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex items-center gap-1 text-[10px] font-medium text-[#ff6a10] hover:text-[#ff6a10] transition-colors"
-        title="Remix this track"
+        title={t('remix.toggleHint')}
       >
         <span className="text-xs">{collapsed ? '➕' : '➖'}</span>
-        <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Remix</span>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{t('remix.title')}</span>
       </button>
 
       {/* Controls panel */}

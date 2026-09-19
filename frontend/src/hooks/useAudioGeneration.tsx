@@ -15,7 +15,8 @@ import { supabase } from '../lib/supabase';
 import { AuthenticationError } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
-const API = api.base;
+// 后端路由统一挂在 /api/v1 前缀下（api.base 只有域名，缺少前缀会 404）
+const API = api.url('/api/v1');
 
 interface UseAudioGenOptions {
   onSuccess?: (url: string) => void;

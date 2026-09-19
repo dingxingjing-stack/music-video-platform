@@ -358,6 +358,7 @@ from app.routers import comping
 from app.routers import time_stretch
 from app.routers import remix_engine
 from app.routers import voice_clone
+from app.routers import poyo_voice_clone
 from app.routers import ai_lyrics
 from app.routers import audio_processing
 from app.routers import song_continuation
@@ -380,9 +381,16 @@ app.include_router(comping.router)
 app.include_router(time_stretch.router)
 app.include_router(remix_engine.router)
 app.include_router(voice_clone.router, prefix="/api/v1")
+app.include_router(poyo_voice_clone.router)  # PoYo 歌唱声音克隆 /api/v1/voice-clone（独立，不进生歌 chain）
 app.include_router(ai_lyrics.router)
 app.include_router(audio_processing.router, prefix="/api/v1/audio")
-app.include_router(song_continuation.router)
+# CREDITS-CLOSURE: 旧「歌曲续写/结构扩展」入口已停止注册（V1 政策禁 extend）。
+#   /api/v1/music/continue       —— 无身份依赖、user_key=""，且转发参数与
+#                                   continuation_service.continue_song(request, progress_callback)
+#                                   签名不匹配，调用即 TypeError → 恒 500（无真实生成能力）。
+#   /api/v1/music/extend-structure —— 只做字符串查表相加并伪造 new_song_id，无 Provider/无 task/无音频。
+# song_continuation.py 与 continuation_service.py 均保留，仅停止路由注册。
+# app.include_router(song_continuation.router)
 app.include_router(subtitle_recognition.router)
 app.include_router(one_click_publish.router)
 app.include_router(social_app)
@@ -420,13 +428,24 @@ app.include_router(auth_app)
 from app.routers.songs import router as songs_app
 app.include_router(songs_app)
 
+# ---------- Credits 商业体系路由 ----------
+from app.routers.credits import router as credits_app
+app.include_router(credits_app)
+
+# ---------- Projects 路由（Phase 3-3） ----------
+from app.routers.projects import router as projects_app
+app.include_router(projects_app)
+
 # ---------- 公测灰度权限路由 ----------
 from app.routers.beta import router as beta_router
 app.include_router(beta_router)
 
-# ---------- 音潮连通性测试端点（临时，ENABLE_YINCHAO_TEST=true + token 才启用） ----------
-from app.routers.yinchao_test import router as yinchao_test_router
-app.include_router(yinchao_test_router)
+# ---------- 音潮连通性测试端点（已关闭：CREDITS-CLOSURE） ----------
+# /api/v1/ai/test/yinchao 会用 httpx 直接提交「付费音潮整曲生成」，且无用户身份、无 ai_limits、无 Credits，
+# 只服务人工连通性验证。关闭方式＝停止路由注册；yinchao_test.py 与 YinchaoProvider 均保留，
+# 需要重新联调时按流程显式评审后再放开。
+# from app.routers.yinchao_test import router as yinchao_test_router
+# app.include_router(yinchao_test_router)
 
 
 # ---------------------------------------------------------------------------

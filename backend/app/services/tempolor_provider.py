@@ -38,6 +38,7 @@ from typing import Any, Optional
 import httpx
 
 from app.services.provider_registry import BaseProvider
+from app.services.model_registry import NoValidModelError, select_music_model
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,9 @@ TEMPOLOR_BASE_URL = (os.getenv("TEMPOLOR_BASE_URL") or "https://api.tianpuyue.cn
 TEMPOLOR_MODEL = os.getenv("TEMPOLOR_MODEL", "tempolor-latest")
 TEMPOLOR_TIMEOUT_SECONDS = float(os.getenv("TEMPOLOR_TIMEOUT_SECONDS", "360"))
 TEMPOLOR_POLL_INTERVAL_SECONDS = float(os.getenv("TEMPOLOR_POLL_INTERVAL_SECONDS", "3"))
-# callback_url 官方必填；轮询兜底时用环境变量提供，缺省为空（若官方校验非空则提交报错，由上层映射）。
+# callback_url 官方强制非空（2026-09-18 中国站实测：空串被 HTTP 200 + 业务码 400003
+# "callback_url not blank" 拒绝）。未配置时 generate() 直接返回明确配置缺失错误，
+# 零 HTTP 提交、绝不发送占位假 URL。
 TEMPOLOR_CALLBACK_URL = (os.getenv("TEMPOLOR_CALLBACK_URL") or "").strip()
 
 # 官方歌词/提示词上限（超出安全截断）
@@ -124,7 +127,7 @@ class TempolorProvider(BaseProvider):
 
     name = "tempolor"
     provider_type = "api"
-    capabilities = ["text_to_music", "lyrics_to_music"]
+    capabilities = ["text_to_music", "lyrics_to_music", "instrumental"]
     # 官方最新模型对 prompt 生歌最长 5 分钟；但单次实际长度由歌词结构决定，
     # max_duration 仅作能力上界声明，不参与计价/截断。
     max_duration = 300
@@ -160,6 +163,12 @@ class TempolorProvider(BaseProvider):
         if not prompt:
             return {"success": False, "error": "Tempolor requires prompt", "provider": self.name}
 
+        # callback_url 官方校验非空；配置缺失属于我方部署问题，明确报错、零提交、不发假 URL
+        if not TEMPOLOR_CALLBACK_URL:
+            return {"success": False, "non_retryable": True,
+                    "error": "TEMPOLOR_CALLBACK_URL 未配置：天谱乐官方要求 callback_url 非空（实测空串返回 400003）。请配置 Zyvexo 生产回调地址",
+                    "provider": self.name}
+
         # ── 歌曲语言（独立于 UI locale）：TemPolor 无 language API 参数，
         #    故把 song_language 映射为该语言英文名，拼到 prompt 作为语言指令。
         #    绝不修改/翻译用户提供的 lyrics（lyrics 是什么语言就唱什么语言）。──
@@ -174,12 +183,39 @@ class TempolorProvider(BaseProvider):
         lyrics = (request.get("lyrics") or "").strip()
         lyrics = lyrics[:LYRICS_MAX_CHARS]
 
-        model = (request.get("model") or TEMPOLOR_MODEL) or "tempolor-latest"
-
-        # 提交请求体（官方 contract；instrumental 依据上层 type 是否 music/bgm 决定）
+        # ── 模型选择（Phase 2B：Provider ≠ Model，数据驱动最低总成本路由）──
+        # 官方口径：Tempolor i 系列专门用于纯音乐生成；tempolor-latest 面向人声。
+        # 中国站无 Extend 端点：目标时长超过模型上限直接失败（NO_VALID_MODEL），
+        # 不做假续写。api model ID 未确认的模型禁止提交（不猜字符串）。
         is_instrumental = bool(request.get("is_instrumental")) or (
             str(request.get("type", "")).lower() in ("music", "bgm", "instrumental")
         )
+        model = (request.get("model") or "").strip()
+        model_cost_cny: Optional[float] = None
+        model_key: Optional[str] = None
+        if not model:
+            env_override = os.getenv("TEMPOLOR_MODEL")
+            if env_override and not is_instrumental:
+                model = env_override
+            else:
+                try:
+                    sel = select_music_model(
+                        music_type="instrumental" if is_instrumental else "vocal",
+                        target_duration=int(request.get("duration") or 180),
+                        lyrics_provided=bool(lyrics),
+                    )
+                except NoValidModelError as exc:
+                    return {"success": False, "non_retryable": True,
+                            "error": f"Tempolor {exc}", "provider": self.name}
+                if not sel.model.id_confirmed or not sel.model.api_model_id:
+                    return {"success": False, "non_retryable": True,
+                            "error": f"Tempolor model {sel.model.key} api id UNCONFIRMED（待联调确认）",
+                            "provider": self.name}
+                model = sel.model.api_model_id
+                model_key = sel.model.key
+                model_cost_cny = sel.total_cost_cny
+
+        # 提交请求体（官方 contract）
         payload: dict[str, Any] = {
             "model": model,
             "prompt": prompt,
@@ -206,6 +242,11 @@ class TempolorProvider(BaseProvider):
                     return self._map_submit_error(resp)
 
                 data = resp.json() if resp.content else {}
+                # HTTP 200 ≠ 成功：官方在响应体内返回业务码（200000=成功，4000xx=失败）。
+                # 不解析会把 400002/400003 等伪装成"提交响应缺少 item id"。
+                biz = data.get("status") if isinstance(data, dict) else None
+                if biz is not None and biz != 200000:
+                    return self._map_business_error(biz, data.get("message"))
                 item_ids = data.get("data", {}).get("item_ids") if isinstance(data.get("data"), dict) else None
                 if not item_ids:
                     item_ids = data.get("item_ids")
@@ -229,6 +270,11 @@ class TempolorProvider(BaseProvider):
                         logger.warning("[tempolor] query HTTP %s", q.status_code)
                         continue
                     qdata = q.json() if q.content else {}
+                    # 查询同样先验业务码（如 400002 Key 失效 / 400008 作品不存在），
+                    # 不解析会把终态错误拖到轮询超时才暴露
+                    qbiz = qdata.get("status") if isinstance(qdata, dict) else None
+                    if qbiz is not None and qbiz != 200000:
+                        return self._map_business_error(qbiz, qdata.get("message"))
                     songs = qdata.get("data", {}).get("songs") if isinstance(qdata.get("data"), dict) else None
                     song = songs[0] if isinstance(songs, list) and songs and isinstance(songs[0], dict) else {}
                     status = song.get("status")
@@ -250,6 +296,9 @@ class TempolorProvider(BaseProvider):
                                 "_tempolor_url": audio_url,
                                 "_item_id": item_id,
                                 "_duration": song.get("duration"),
+                                "_model": model,
+                                "_model_key": model_key,
+                                "_model_cost_cny": model_cost_cny,
                             },
                             "provider": self.name,
                         }
@@ -275,6 +324,43 @@ class TempolorProvider(BaseProvider):
             logger.warning("[tempolor] 生成异常: %s", exc)
             return {"success": False, "error": f"Tempolor generation error: {exc}", "provider": self.name}
 
+    # HTTP 200 业务错误码 → (中文语义, 是否 non_retryable/禁止切 Provider)。
+    # 码表逐字依据 platform.tianpuyue.cn/docs/8859400m0.md（2026-09-18 核验）。
+    # 400005/400006/400007 属可恢复/资源类错误：不标 non_retryable，维持既有上层
+    # retry 与 fallback 语义（本轮不改动策略）。
+    _BUSINESS_ERRORS: dict[int, tuple[str, bool]] = {
+        400002: ("API Key 校验失败", True),
+        400003: ("请求参数错误", True),
+        400004: ("内容违规，已拒绝", True),
+        400005: ("余额/创作点不足", False),
+        400006: ("服务器繁忙", False),
+        400007: ("并行任务超限", False),
+        400008: ("作品不存在", True),
+        400009: ("作品状态异常", True),
+        400010: ("当前模型不支持此功能", True),
+        400011: ("当前作品不支持续写", True),
+    }
+
+    def _map_business_error(self, code, message=None) -> dict:
+        """HTTP 200 + JSON 业务码错误的明确识别（禁止伪装成 missing item id）。"""
+        known = self._BUSINESS_ERRORS.get(code) if isinstance(code, int) else None
+        if known:
+            zh, non_retryable = known
+            err = f"Tempolor API error code={code}: {zh}"
+        else:
+            err = f"Tempolor API error code={code}"
+            non_retryable = False
+        # 不回显完整 body（与既有安全策略一致），message 仅截断透传
+        if message:
+            err += f" message={str(message)[:120]}"
+        logger.warning("[tempolor] %s", err)
+        result = {"success": False, "error": err, "provider": self.name}
+        if isinstance(code, int):
+            result["error_code"] = code
+        if non_retryable:
+            result["non_retryable"] = True
+        return result
+
     def _map_submit_error(self, resp: httpx.Response) -> dict:
         """把提交阶段 HTTP 错误映射为 provider failure（不内部无限 retry，不泄露 Secret）。"""
         err = f"Tempolor submit HTTP {resp.status_code}"
@@ -296,5 +382,9 @@ class TempolorProvider(BaseProvider):
                 err = "Tempolor 限流（429 rate limit）"
         elif resp.status_code == 503:
             err = "Tempolor 引擎过载（503）"
+        result = {"success": False, "error": err, "provider": self.name}
+        if resp.status_code == 400:
+            # 参数类错误：换 Provider 同样会被判错、徒耗其额度 → 标记不可重试/不可切换
+            result["non_retryable"] = True
         logger.warning("[tempolor] %s", err)
-        return {"success": False, "error": err, "provider": self.name}
+        return result

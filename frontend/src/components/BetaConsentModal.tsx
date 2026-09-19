@@ -52,7 +52,7 @@ export function BetaConsentModal() {
                 <span className="text-3xl">🎵</span>
                 <div>
                   <h2 className="text-xl font-bold gradient-text">{t('beta.heading')}</h2>
-                  <p className="text-xs text-[#888888] mt-0.5">Beta Test Agreement · v2.0</p>
+                  <p className="text-xs text-[#888888] mt-0.5">{t('beta.agreementVersion')}</p>
                 </div>
               </div>
             </div>

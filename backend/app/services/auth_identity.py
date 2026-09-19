@@ -79,11 +79,13 @@ def verify_bearer_jwt(token: str) -> Optional[str]:
         if uid and is_uuid(str(uid)):
             uid_str = str(uid)
             # Phase 3-2A：JWT 兜底补建 public.users（trigger 为主，此处最佳努力、不阻断认证）。
+            # email-only / phone-only / email+phone 用户均可建档；不要求手机号用户必须拥有 email。
             email = getattr(user, "email", None)
-            if email:
+            phone = getattr(user, "phone", None)
+            if email or phone:
                 try:
                     from app.services.supabase_service import ensure_user
-                    ensure_user(uid_str, email)
+                    ensure_user(uid_str, email=email, phone=phone)
                 except Exception:  # noqa: BLE001 —— 补建失败不影响身份验证
                     pass
             return uid_str

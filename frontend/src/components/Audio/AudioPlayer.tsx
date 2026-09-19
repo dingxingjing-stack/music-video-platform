@@ -15,6 +15,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Track } from '../../types/trackStudio';
 import { MiniWaveform } from './MiniWaveform';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   track: Track;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) {
+  const { t } = useTranslation();
   const [showRename, setShowRename] = useState(false);
   const [renameValue, setRenameValue] = useState(track.name);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -118,7 +120,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
   const handleDownloadSnippet = useCallback(async () => {
     if (!track.url) return;
     if (trimEnd - trimStart <= 0.5) {
-      alert('Trim range too short. Select at least 0.5 seconds.');
+      alert(t('audioPlayer.trimTooShort'));
       return;
     }
 
@@ -148,13 +150,9 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
       console.error('Trim download failed:', err);
       const msg = err instanceof Error ? err.message : 'Unknown error';
       if (msg.includes('ffmpeg')) {
-        alert(
-          'Audio trimming requires ffmpeg to be installed on the server.\n\n' +
-            'Please install ffmpeg and restart the backend.\n' +
-            'Download: https://ffmpeg.org/download.html',
-        );
+        alert(t('audioPlayer.ffmpegRequired'));
       } else {
-        alert(`Download failed: ${msg}`);
+        alert(t('audioPlayer.downloadFailed', { msg }));
       }
     } finally {
       setDownloading(false);
@@ -271,7 +269,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
               setRenameValue(track.name);
             }}
             className="flex-1 text-left text-xs text-[#b0b0b0] hover:text-[#e0e0e0] truncate"
-            title="Click to rename"
+            title={t('ui.rename')}
           >
             {track.name}
           </button>
@@ -283,7 +281,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
           className={`px-2 py-1 text-xs rounded transition-colors ${
             showTrim ? 'bg-indigo-600 text-[#e0e0e0]' : 'text-[#b0b0b0] hover:text-[#e0e0e0]'
           }`}
-          title="Toggle trim mode"
+          title={t('ui.toggleTrim')}
         >
           ✂
         </button>
@@ -292,7 +290,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
         <button
           onClick={handleDownload}
           className="px-2 py-1 text-xs text-[#b0b0b0] hover:text-[#e0e0e0] transition-colors"
-          title="Download full"
+          title={t('ui.downloadFull')}
         >
           ⬇
         </button>
@@ -300,10 +298,10 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
         {/* Delete */}
         <button
           onClick={() => {
-            if (confirm(`Delete "${track.name}"?`)) onDelete(track.id);
+            if (confirm(t('ui.confirmDelete', { name: track.name }))) onDelete(track.id);
           }}
           className="px-2 py-1 text-xs text-[#b0b0b0] hover:text-[#ef4444] transition-colors"
-          title="Delete"
+          title={t('ui.delete')}
         >
           🗑
         </button>
@@ -313,7 +311,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
       {showTrim && (
         <div className="space-y-2 pt-1 border-t border-[#2a2a38]">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#777777]">Trim Range</span>
+            <span className="text-xs text-[#777777]">{t('ui.trimRange')}</span>
             <span className="text-xs font-mono text-indigo-400">
               {formatTime(trimStart)} → {formatTime(trimEnd)} ({formatTime(trimEnd - trimStart)})
             </span>
@@ -321,7 +319,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
 
           {/* Start slider */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-[#76b900] w-8">Start</label>
+            <label className="text-[10px] text-[#76b900] w-8">{t('ui.rangeStart')}</label>
             <input
               type="range"
               min={0}
@@ -348,7 +346,7 @@ export function AudioPlayer({ track, onRename, onDelete, onTrimChange }: Props) 
 
           {/* End slider */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-rose-400 w-8">End</label>
+            <label className="text-[10px] text-rose-400 w-8">{t('ui.rangeEnd')}</label>
             <input
               type="range"
               min={0.5}

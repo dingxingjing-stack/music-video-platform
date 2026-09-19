@@ -192,6 +192,44 @@ class BetaBugReport(Base):
     status = Column(String(30), default="open")
     created_at = Column(String(50), default=lambda: datetime.utcnow().isoformat())
 
+# projects 主表（Phase 3-1）——类型对齐 Production `public.projects`
+#   id/user_id/name = text；created_at/updated_at = timestamptz
+class Project(Base):
+    __tablename__ = "projects"
+    id = Column(String(100), primary_key=True)
+    user_id = Column(String(255), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ── Credits 商业体系（余额型积分，独立于 ai_limits 的每日次数保护）─────────
+# user_credits：每用户一行余额 + 免费奖励领取标记（幂等）；credits_transactions：余额流水账本。
+class UserCredit(Base):
+    __tablename__ = "user_credits"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), unique=True, nullable=False, index=True)
+    balance = Column(Integer, nullable=False, default=0)
+    lifetime_earned = Column(Integer, nullable=False, default=0)
+    lifetime_spent = Column(Integer, nullable=False, default=0)
+    # 免费奖励领取标记（每项仅一次；由 CAS UPDATE ... WHERE NOT claimed 保证幂等）
+    welcome_bonus_claimed = Column(Boolean, nullable=False, default=False)
+    email_verification_bonus_claimed = Column(Boolean, nullable=False, default=False)
+    first_song_bonus_claimed = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CreditTransaction(Base):
+    __tablename__ = "credits_transactions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), nullable=False, index=True)
+    amount = Column(Integer, nullable=False)  # 正=入账，负=扣减
+    transaction_type = Column(String(40), nullable=False, index=True)
+    reference_id = Column(String(255), nullable=True, index=True)  # task_id / purchase id 等
+    description = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
 # ── 工具 ────────────────────────────────────────────
 def init_db() -> None:
     """幂等建表（不 DROP，生产安全）。"""

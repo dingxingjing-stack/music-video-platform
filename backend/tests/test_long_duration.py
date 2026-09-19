@@ -3,9 +3,10 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 import asyncio
 
-def test_max_duration_allows_300():
+def test_max_duration_caps_270():
+    """第一版产品统一硬上限 270s（2026-09-18 批准，替代旧 300s 政策）。"""
     from app.services.ai_limits import MAX_AUDIO_DURATION_SECONDS, MAX_TASK_RUNTIME_SECONDS
-    assert MAX_AUDIO_DURATION_SECONDS == 300, f"MAX 300 expected got {MAX_AUDIO_DURATION_SECONDS}"
+    assert MAX_AUDIO_DURATION_SECONDS == 270, f"MAX 270 expected got {MAX_AUDIO_DURATION_SECONDS}"
     assert MAX_TASK_RUNTIME_SECONDS == 900
 
 def test_provider_max_300():
@@ -31,14 +32,17 @@ def test_duration_weight():
     assert get_duration_weight(180) == 2
     assert get_duration_weight(300) == 2
 
-def test_no_truncation_300():
+def test_no_truncation_270():
+    """270s（第一版上限）不被截断；超过 270 的请求按政策截断到 270。"""
     from app.routers.ai_music import MAX_SONG_DURATION_SECONDS
     from app.services.ai_limits import MAX_AUDIO_DURATION_SECONDS
+    # 死常量按本轮指令保持 300 原值（无运行时引用，仅此处记录现状）
     assert MAX_SONG_DURATION_SECONDS == 300
-    assert MAX_AUDIO_DURATION_SECONDS == 300
-    # Simulate ai_music duration calc
-    duration = min(300, MAX_AUDIO_DURATION_SECONDS)
-    assert duration == 300, "300 should not be truncated"
+    assert MAX_AUDIO_DURATION_SECONDS == 270
+    duration = min(270, MAX_AUDIO_DURATION_SECONDS)
+    assert duration == 270, "270 不应被截断"
+    duration_over = min(300, MAX_AUDIO_DURATION_SECONDS)
+    assert duration_over == 270, "第一版政策：300 请求应截断为 270"
 
 @pytest.mark.asyncio
 async def test_long_generation_uses_continuation(monkeypatch):

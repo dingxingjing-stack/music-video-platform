@@ -209,14 +209,14 @@ export function TrackInputArea({
             />
             {batchPrompts.trim() && (
               <p className="text-xs text-[#777777] mt-1">
-                {promptCount} prompt(s) ready
+                {t('trackInput.promptsReady', { n: promptCount })}
               </p>
             )}
           </div>
           {pathDef.id === 'b' && (
             <div>
               <label className="text-sm font-medium text-[#e0e0e0]">
-                {t('ui.ttsText')} (one per line, optional)
+                {t('ui.ttsText')} {t('trackInput.onePerLine')}
               </label>
               <textarea
                 value={ttsText}
@@ -226,7 +226,7 @@ export function TrackInputArea({
                 placeholder={'Line 1 lyrics\nLine 2 lyrics\nLine 3 lyrics'}
               />
               <p className="text-xs text-[#777777] mt-1">
-                If fewer lines than prompts, last line repeats cyclically
+                {t('trackInput.lineRepeatHint')}
               </p>
             </div>
           )}

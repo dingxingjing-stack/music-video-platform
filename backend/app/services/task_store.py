@@ -215,6 +215,25 @@ def list_user_tasks(user_key: str) -> list[dict]:
     finally:
         sess.close()
 
+def count_user_tasks(user_key: Optional[str]) -> int:
+    """返回某用户的 ai_tasks 总数（SQLAlchemy 直接 COUNT，不加载全部行）。
+
+    供 auth.get_user_stats 等统计端点使用，替代对 ai_tasks 的 PostgREST 读取。
+    """
+    if not user_key:
+        return 0
+    sess = _get_session()
+    try:
+        from sqlalchemy import text
+        row = sess.execute(
+            text("SELECT COUNT(*) FROM ai_tasks WHERE user_key = :uk"),
+            {"uk": user_key},
+        ).fetchone()
+        return int(row[0]) if row is not None else 0
+    finally:
+        sess.close()
+
+
 def is_user_busy(user_key: Optional[str]) -> bool:
     if not user_key:
         return False

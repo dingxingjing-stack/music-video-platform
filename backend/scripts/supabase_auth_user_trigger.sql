@@ -3,7 +3,8 @@
 -- 目标：auth.users 新增用户时，自动在 public.users 建立一致身份
 --   public.users.id              = auth.users.id  (UUID 字符串)
 --   public.users.supabase_user_id = auth.users.id
---   public.users.email            = auth.users.email
+--   public.users.email            = auth.users.email（可为空）
+--   public.users.phone            = auth.users.phone（可为空）
 -- 幂等：ON CONFLICT (supabase_user_id) DO NOTHING，不产生重复行。
 -- 只插入、不更新、不删除、不触碰既有数据。
 --
@@ -18,13 +19,13 @@ security definer
 set search_path = public
 as $$
 begin
-    -- auth.users.email 可能为空（手机/OAuth 等）；email 为空的场景暂不回填。
-    if new.email is null then
+    -- email-only / phone-only / email+phone 均可建档；两者都为空时跳过（不产生身份不明的用户行）。
+    if new.email is null and new.phone is null then
         return new;
     end if;
 
-    insert into public.users (id, supabase_user_id, email)
-    values (new.id::text, new.id::text, new.email)
+    insert into public.users (id, supabase_user_id, email, phone)
+    values (new.id::text, new.id::text, new.email, new.phone)
     on conflict (supabase_user_id) do nothing;
 
     return new;

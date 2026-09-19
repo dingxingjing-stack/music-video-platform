@@ -24,7 +24,6 @@ export function Landing() {
 
   const FEATURES = [
     { icon: '♪', title: tr('home.cards.createMusic.title', 'Create Music'), desc: tr('home.cards.createMusic.desc', 'Generate complete tracks from description, lyrics and style.'), path: '/create', color: 'from-[#ff6a10]/20 to-[#ee0979]/5' },
-    { icon: '◐', title: tr('home.cards.voiceClone.title', 'Voice Clone'), desc: tr('home.cards.voiceClone.desc', 'Create and manage your own voice models for licensed generation.'), path: '/voice-clone', color: 'from-[#38bdf8]/20 to-[#6366f1]/5' },
     { icon: '⬢', title: tr('home.cards.audioTools.title', 'Audio Tools'), desc: tr('home.cards.audioTools.desc', 'Separation, mastering, conversion and more — all in one place.'), path: '/audio-tools', color: 'from-[#34d399]/20 to-[#06b6d4]/5' },
     { icon: '♡', title: tr('home.cards.myCreations.title', 'My Creations'), desc: tr('home.cards.myCreations.desc', 'Manage all your generated and edited works in one hub.'), path: '/my-works', color: 'from-[#a78bfa]/20 to-[#fb923c]/5' },
   ];
@@ -44,10 +43,8 @@ export function Landing() {
         const data = await res.json();
         setFeedbacks(data.map((f: any) => ({ name: f.name, text: f.text })));
       } catch {
-        setFeedbacks([
-          { name: tr('landing.anonymousUser', 'Anonymous'), text: tr('landing.feedbackSample1', 'Great public beta — fast generation and clean studio feel.') },
-          { name: tr('landing.anonymousUser', 'Anonymous'), text: tr('landing.feedbackSample2', 'Voice Clone UI is crystal clear, and the audio tools are well integrated.') },
-        ]);
+        // 后端不可用时保持空态：不展示虚构评价（含旧 beta 文案的 mock 已移除）
+        setFeedbacks([]);
       } finally { setLoading(false); }
     };
     fetchFeedback();
@@ -103,8 +100,8 @@ export function Landing() {
             <button onClick={() => navigate('/')} className="px-8 py-3.5 rounded-xl font-semibold bg-white text-[#0a0a0a] hover:bg-[#ededed] transition">
               {tr('landing.ctaStart','Start Creating')}
             </button>
-            <button onClick={() => navigate('/community')} className="px-8 py-3.5 rounded-xl font-medium border border-[#1f1f1f] bg-[#141414] text-white hover:bg-[#1a1a1a] transition">
-              {tr('landing.ctaExplore','Explore the Community')}
+            <button onClick={() => navigate('/my-works')} className="px-8 py-3.5 rounded-xl font-medium border border-[#1f1f1f] bg-[#141414] text-white hover:bg-[#1a1a1a] transition">
+              {tr('landing.ctaMyWorks','My Creations')}
             </button>
           </div>
         </motion.div>
@@ -179,7 +176,6 @@ export function Landing() {
             <a href="/legal/terms" className="hover:text-white">{tr('legal.links.terms', 'Terms')}</a>
             <a href="/legal/privacy" className="hover:text-white">{tr('legal.links.privacy', 'Privacy')}</a>
             <a href="/legal/aimusic-copyright" className="hover:text-white">{tr('legal.links.aiCopyright', 'AI Copyright')}</a>
-            <a href="/legal/voice-cloning" className="hover:text-white">{tr('legal.links.voiceCloning', 'Voice Clone Policy')}</a>
           </div>
           <p className="text-xs text-[#4a4a4a]">{tr('landing.footerCopyright', '© 2026 Zyvexo. All rights reserved.')}</p>
         </div>

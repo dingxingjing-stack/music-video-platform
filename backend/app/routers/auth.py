@@ -70,6 +70,15 @@ async def register_user(user_data: UserCreate, authorization: Optional[str] = He
     try:
         user = ensure_user(supabase_user_id, user_data.email)
 
+        # 注册赠送 50 Credits（幂等，重复 register 不会重复发放）
+        try:
+            import threading
+            credits_service = __import__("app.services.credits_service", fromlist=["claim_welcome_bonus"])
+            credits_service.claim_welcome_bonus(supabase_user_id)
+        except Exception:
+            # 发放失败不阻断注册（避免 credits 表未就绪时注册失败）
+            pass
+
         # 记录活动日志
         log_activity(
             user_id=user["id"],
@@ -198,11 +207,10 @@ async def get_user_stats(user_id: str):
         .eq("user_id", user_id)\
         .execute()
     
-    # 获取任务数量
-    tasks_response = supabase.table("ai_tasks")\
-        .select("task_id", count="exact")\
-        .eq("user_key", user_id)\
-        .execute()
+    # 获取任务数量 —— ai_tasks 统一走 SQLAlchemy（task_store），不再经 Supabase/PostgREST
+    # （生产 service_role → ai_tasks 会 403；见 Phase 2B 审计）
+    from app.services import task_store
+    total_tasks = task_store.count_user_tasks(user_id)
     
     user = get_user(user_id)
     if not user:
@@ -213,6 +221,6 @@ async def get_user_stats(user_id: str):
         "email": user["email"],
         "credits": user["credits"],
         "total_songs": songs_response.count,
-        "total_tasks": tasks_response.count,
+        "total_tasks": total_tasks,
         "subscription_tier": user["subscription_tier"]
     }

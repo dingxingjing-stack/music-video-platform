@@ -10,6 +10,8 @@ interface AuthCtx {
   login: (email: string, pwd: string) => Promise<void>;
   register: (email: string, pwd: string) => Promise<{ needsEmailConfirmation: boolean }>;
   resendVerification: (email: string) => Promise<void>;
+  sendPhoneOtp: (phone: string) => Promise<void>;
+  verifyPhoneOtp: (phone: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   showLogin: boolean;
   setShowLogin: (v: boolean) => void;
@@ -64,6 +66,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const sendPhoneOtp = useCallback(async (phone: string) => {
+    // Supabase Phone Auth 负责创建/复用 Auth 用户；signup/signin 由同一个 OTP 流程完成。
+    const { error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) throw error;
+  }, []);
+
+  const verifyPhoneOtp = useCallback(async (phone: string, otp: string) => {
+    const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' });
+    if (error) throw error;
+    if (!data.session) throw new Error('Phone verification did not create a session');
+    setShowLogin(false);
+  }, []);
+
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setShowLogin(false);
@@ -77,6 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     resendVerification,
+    sendPhoneOtp,
+    verifyPhoneOtp,
     logout,
     showLogin,
     setShowLogin,

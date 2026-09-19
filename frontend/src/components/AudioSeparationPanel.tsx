@@ -11,6 +11,7 @@
 
 import { useState, useRef } from 'react';
 import { api } from '../config/api';
+import { supabase } from '../lib/supabase';
 import { useTranslation } from '../i18n/useTranslation';
 
 export function AudioSeparationPanel() {
@@ -45,15 +46,24 @@ export function AudioSeparationPanel() {
     formData.append('model', model);
 
     try {
+      // 后端 /audio/separate 强制 JWT（get_verified_user_id）；FormData 不能走 authFetch
+      // （其固定 Content-Type: application/json 会破坏 multipart 边界），手动注入 Authorization。
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
+      if (!token) throw new Error(t('auth.pleaseLogin'));
+
       const response = await fetch(api.url('/api/v1/audio/separate'), {
         method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       const data = await response.json();
 
-      if (!data.success) {
-        throw new Error(data.message || t('separation.failed'));
+      if (response.status === 401) throw new Error(t('auth.pleaseLogin'));
+      if (response.status === 429) throw new Error(t('errors.rateLimited'));
+      if (!response.ok || !data.success) {
+        throw new Error(data.detail || data.message || t('separation.failed'));
       }
 
       setStems(data.stems);

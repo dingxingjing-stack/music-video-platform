@@ -1,20 +1,30 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAudioGeneration } from '../hooks/useAudioGeneration';
 import { WaveformEditor } from '../components/Audio/WaveformEditor';
 import { SONG_LANGUAGES } from '../config/songLanguages';
 import { authFetch } from '../api/http';
 import { api } from '../config/api';
+import { useAuth } from '../context/AuthContext';
+import { useCreditsBalance } from '../hooks/useCreditsBalance';
+
+// 产品规则 v1：用户不选择时长，系统按 240–270s 自动生成（后端硬上限 270s）
+const GENERATION_SECONDS = 270;
+// 一次成功创作的官方定价（Credits），用于前端余额提示
+const CREATION_COST_CREDITS = 30;
 
 export function CreateMusicPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+  const credits = useCreditsBalance(isLoggedIn);
   const [description, setDescription] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [genre, setGenre] = useState('');
   const [mood, setMood] = useState('');
   const [vocal, setVocal] = useState('');
   const [songLanguage, setSongLanguage] = useState('');
-  const [duration, setDuration] = useState('30');
   const [saving, setSaving] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<{id:string, url:string, prompt:string, time:string}[]>(()=> {
@@ -38,7 +48,8 @@ export function CreateMusicPage() {
       style: genre || 'pop',
       mood: mood || undefined,
       vocal: vocal || undefined,
-      duration: parseInt(duration)||30,
+      instrumental: vocal === 'instrumental' || undefined,
+      duration: GENERATION_SECONDS,
       song_language: songLanguage || undefined,
     };
     generate('/ai/generate', payload);
@@ -63,7 +74,7 @@ export function CreateMusicPage() {
           title: description.trim().slice(0, 80) || 'Untitled',
           lyrics: lyrics.trim() || null,
           style: genre || 'pop',
-          duration_seconds: parseInt(duration) || 30,
+          duration_seconds: GENERATION_SECONDS,
           song_language: songLanguage || null,
         },
       });
@@ -129,20 +140,6 @@ export function CreateMusicPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.duration')}</label>
-                <select value={duration} onChange={e=> setDuration(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
-                  <option value="15">{t('createMusic.durations.15s')}</option>
-                  <option value="30">{t('createMusic.durations.30s')}</option>
-                  <option value="60">{t('createMusic.durations.60s')}</option>
-                  <option value="90">{t('createMusic.durations.90s')}</option>
-                  <option value="120">{t('createMusic.durations.120s')}</option>
-                  <option value="180">{t('createMusic.durations.180s')}</option>
-                  <option value="240">{t('createMusic.durations.240s')}</option>
-                  <option value="300">{t('createMusic.durations.300s')}</option>
-                </select>
-                {duration === '300' && <p className="mt-1 text-[11px] text-[#8a8a8a]">{t('createMusic.extendedHint')}</p>}
-              </div>
-              <div>
                 <label className="text-xs font-medium text-[#b0b0b0]">{t('createMusic.songLanguage')}</label>
                 <select value={songLanguage} onChange={e=> setSongLanguage(e.target.value)} className="mt-1.5 w-full rounded-xl bg-[#0f0f0f] border border-[#262626] px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white/20">
                   <option value="">{t('createMusic.songLanguageAuto')}</option>
@@ -152,9 +149,27 @@ export function CreateMusicPage() {
                 </select>
               </div>
             </div>
-            <button onClick={handleGenerate} disabled={loading || !description.trim()} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">
-              {loading ? <><span className="w-4 h-4 border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] rounded-full animate-spin" /> {t('createMusic.generating')}</> : t('createMusic.generate')}
-            </button>
+            {(() => {
+              const balanceKnown = credits.balance !== null;
+              const insufficient = balanceKnown && (credits.balance as number) < CREATION_COST_CREDITS;
+              return (
+                <>
+                  <p className="text-xs text-[#8a8a8a] -mt-1">
+                    {t('createMusic.creditsRule')}
+                    {balanceKnown && <span className="ml-2 text-[#b0b0b0]">{t('nav.credits', { n: credits.balance as number })}</span>}
+                  </p>
+                  {insufficient && (
+                    <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300 flex items-center justify-between">
+                      <span>{t('createMusic.creditsLow')}</span>
+                      <button onClick={() => navigate('/pricing')} className="text-white underline">{t('createMusic.goPricing')}</button>
+                    </div>
+                  )}
+                  <button onClick={handleGenerate} disabled={loading || !description.trim() || insufficient} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">
+                    {loading ? <><span className="w-4 h-4 border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] rounded-full animate-spin" /> {t('createMusic.generating')}</> : `${t('createMusic.generate')} · ${CREATION_COST_CREDITS} ${t('pricing.credits')}`}
+                  </button>
+                </>
+              );
+            })()}
             <p className="text-xs text-[#555555]">{t('createMusic.tips')}</p>
             {rateLimited && (
               <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300 flex items-center justify-between">

@@ -1,4 +1,4 @@
-"""娴嬭瘯锛欰I 鐢熸垚棰濆害/鎴愭湰淇濇姢 + 鎺堟潈涓嬭浇锛圛DOR 闃叉姢/闄愭祦/瀹¤锛夈€?""
+"""测试：AI 生成额度/成本保护 + 授权下载（IDOR 防护/限流/审计）。"""
 
 import tempfile
 
@@ -10,7 +10,7 @@ from app.routers import ai_music
 
 @pytest.fixture()
 def isolated_db(tmp_path, monkeypatch):
-    """姣忎釜娴嬭瘯浣跨敤鐙珛 SQLite锛岄伩鍏嶆薄鏌?backend/data/beta.db銆?""
+    """每个测试使用独立 SQLite，避免污染 backend/data/beta.db。"""
     db_path = str(tmp_path / "test_beta.db")
     monkeypatch.setattr(ai_limits, "_DB_DIR", str(tmp_path))
     monkeypatch.setattr(ai_limits, "_DB_PATH", db_path)
@@ -41,14 +41,14 @@ def _client():
     return TestClient(app)
 
 
-# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 棰濆害 / 鎴愭湰淇濇姢 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# ────────────────────────── 额度 / 成本保护 ──────────────────────────
 
 def test_daily_limit_enforced(isolated_db, monkeypatch):
     monkeypatch.setattr(ai_limits, "DAILY_GENERATION_LIMIT", 1)
     assert ai_limits.reserve_generation("u1")["success"] is True
     r2 = ai_limits.reserve_generation("u1")
     assert r2["success"] is False
-    assert "浠婃棩" in r2["error"]
+    assert "今日" in r2["error"]
     ai_limits.refund_generation("u1")
     assert ai_limits.reserve_generation("u1")["success"] is True
 
@@ -67,8 +67,9 @@ def test_global_daily_cost_guard(isolated_db, monkeypatch):
     assert ai_limits.reserve_generation("u4")["success"] is True
     blocked = ai_limits.reserve_generation("u5")
     assert blocked["success"] is False
-    assert "鍏ㄥ钩鍙? in blocked["error"]
-    # 鍏ㄥ眬璁℃暟鍙涓嶅噺锛氬け璐ラ€€娆句笉鍥為€€鍏ㄥ眬锛堥槻"澶辫触鈫掗€€娆锯啋閲嶈瘯"绌鸿浆 GPU锛?    ai_limits.refund_generation("u3")
+    assert "全平台" in blocked["error"]
+    # 全局计数只增不减：失败退款不回退全局（防"失败→退款→重试"空转 GPU）
+    ai_limits.refund_generation("u3")
     assert ai_limits.reserve_generation("u5")["success"] is False
 
 
@@ -77,7 +78,7 @@ def test_budget_hard_stop(isolated_db, monkeypatch):
     assert ai_limits.reserve_generation("u6")["success"] is True
     blocked = ai_limits.reserve_generation("u7")
     assert blocked["success"] is False
-    assert "棰勭畻" in blocked["error"]
+    assert "预算" in blocked["error"]
 
 
 def test_refund_never_below_zero(isolated_db):
@@ -85,7 +86,7 @@ def test_refund_never_below_zero(isolated_db):
     assert ai_limits.reserve_generation("ghost")["success"] is True
 
 
-# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鎺堟潈涓嬭浇 / IDOR 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# ────────────────────────── 授权下载 / IDOR ──────────────────────────
 
 def test_download_requires_matching_user(isolated_db, monkeypatch):
     monkeypatch.setattr(
@@ -95,18 +96,20 @@ def test_download_requires_matching_user(isolated_db, monkeypatch):
     _task_for("userA", "task-idor-1")
 
     c = _client()
-    # 鐢ㄦ埛 A 鑷繁涓嬭浇 鈫?200 + 棰勭鍚?URL
+    # 用户 A 自己下载 → 200 + 预签名 URL
     r = c.get("/api/v1/ai/task/task-idor-1/download?file=full", headers={"Authorization": "Bearer userA"})
     assert r.status_code == 200, r.text
     assert "https://signed/music/task-idor-1/full.mp3" in r.json()["url"]
 
-    # 鐢ㄦ埛 B 灏濊瘯涓嬭浇鐢ㄦ埛 A 鐨?job 鈫?403锛圛DOR 闃叉姢锛?    r = c.get("/api/v1/ai/task/task-idor-1/download?file=full", headers={"Authorization": "Bearer userB"})
+    # 用户 B 尝试下载用户 A 的 job → 403（IDOR 防护）
+    r = c.get("/api/v1/ai/task/task-idor-1/download?file=full", headers={"Authorization": "Bearer userB"})
     assert r.status_code == 403
 
-    # 鏃?Authorization 鈫?401锛堜緷璧栧眰 fail-closed锛?    r = c.get("/api/v1/ai/task/task-idor-1/download?file=full")
+    # 未带 X-User-ID → 403
+    r = c.get("/api/v1/ai/task/task-idor-1/download?file=full")
     assert r.status_code == 401
 
-    # 涓嶅瓨鍦ㄧ殑 job 鈫?404
+    # 不存在的 job → 404
     r = c.get("/api/v1/ai/task/task-none/download?file=full", headers={"Authorization": "Bearer userA"})
     assert r.status_code == 404
 
@@ -162,11 +165,14 @@ def test_task_poll_ownership(isolated_db, monkeypatch):
     c = _client()
     assert c.get("/api/v1/ai/task/task-poll", headers={"Authorization": "Bearer userA"}).status_code == 200
     assert c.get("/api/v1/ai/task/task-poll", headers={"Authorization": "Bearer userB"}).status_code == 403
-    # 鏃?Authorization 鈫?401锛堝垹闄ゅ尶鍚嶆斁琛岋級
+    # 不带头仍兼容（公测安全限制）
     assert c.get("/api/v1/ai/task/task-poll").status_code == 401
 
 
-# Phase 3B-1锛氳韩浠芥敼涓?Authorization Bearer JWT銆傛祴璇曠幆澧冧笉鑱旂湡瀹?Supabase Auth锛?# 鍥犳 autouse 鎵撴々 resolve_auth_user_id锛屼娇 "Bearer <token>" 鏈夋晥鏃跺彲纭畾鍦拌繑鍥?token 閮ㄥ垎锛?# 涓?"Authorization" 缂哄け/闈?Bearer 杩斿洖 None锛堢瓑浠?fail-closed 401锛夛紝涓嶄緷璧栫幆澧冨彉閲忋€?@pytest.fixture(autouse=True)
+# Phase 3B-1：身份改为 Authorization Bearer JWT。测试环境不联真实 Supabase Auth，
+# 因此 autouse 打桩 resolve_auth_user_id，使 "Bearer <token>" 有效时确定地返回 token 部分，
+# 缺失/非 Bearer 返回 None（等价 fail-closed 401），不依赖环境变量。
+@pytest.fixture(autouse=True)
 def _jwt_identity_stub(monkeypatch):
     from app.services import auth_identity
 
@@ -176,3 +182,4 @@ def _jwt_identity_stub(monkeypatch):
         return None
 
     monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
+

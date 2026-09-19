@@ -13,6 +13,7 @@ import type { Track } from '../../types/trackStudio';
 import { TRACK_COLORS } from '../../types/trackStudio';
 import { AudioPlayer } from '../Audio/AudioPlayer';
 import { RemixTool } from './RemixTool';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
   tracks: Track[];
@@ -45,6 +46,7 @@ export function TrackList({
   onRemixComplete,
   onRemixError,
 }: Props) {
+  const { t } = useTranslation();
   const selectedTrackData = useMemo(
     () => tracks.find((t) => t.id === selectedTrack),
     [tracks, selectedTrack],
@@ -55,7 +57,7 @@ export function TrackList({
   return (
     <div className="space-y-2">
       <h2 className="text-sm font-semibold text-[#b0b0b0] uppercase tracking-wider">
-        Active Sessions
+        {t('trackList.activeSessions')}
       </h2>
 
       {/* Grid of track cards */}
@@ -127,7 +129,7 @@ export function TrackList({
             )}
 
             {track.status === 'completed' && !track.url && (
-              <p className="text-xs text-[#777777] mt-2">No audio URL</p>
+              <p className="text-xs text-[#777777] mt-2">{t('trackList.noAudioUrl')}</p>
             )}
           </button>
         ))}
@@ -140,12 +142,12 @@ export function TrackList({
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-[#b0b0b0]">
-                  {wsStatus === 'loading' && '🔄 Loading model...'}
-                  {wsStatus === 'running' && '🎵 Generating...'}
-                  {wsStatus === 'pending' && '⏳ Queued...'}
-                  {wsStatus === 'completed' && '✅ Done!'}
-                  {wsStatus === 'failed' && '❌ Failed'}
-                  {!wsStatus && '⏳ Starting...'}
+                  {wsStatus === 'loading' && t('trackList.statusLoading')}
+                  {wsStatus === 'running' && t('trackList.statusRunning')}
+                  {wsStatus === 'pending' && t('trackList.statusPending')}
+                  {wsStatus === 'completed' && t('trackList.statusCompleted')}
+                  {wsStatus === 'failed' && t('trackList.statusFailed')}
+                  {!wsStatus && t('trackList.statusStarting')}
                 </span>
                 <span className="text-sm font-bold text-[#ff6a10]">
                   {wsProgress}%
@@ -160,12 +162,12 @@ export function TrackList({
               {wsMessage && <p className="text-xs text-[#777777] mt-1">{wsMessage}</p>}
               {wsElapsedTime !== null && wsElapsedTime > 0 && (
                 <p className="text-xs text-[#777777] mt-1">
-                  Elapsed: {formatDuration(wsElapsedTime)}
+                  {t('trackList.elapsed')} {formatDuration(wsElapsedTime)}
                 </p>
               )}
             </div>
             {wsConnected && (
-              <span className="text-xs text-[#ff6a10] animate-pulse">● LIVE</span>
+              <span className="text-xs text-[#ff6a10] animate-pulse">{t('trackList.live')}</span>
             )}
           </div>
         </div>
@@ -189,26 +191,27 @@ function TrackDetailPanel({
   track: Track;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl border border-[#2a2a38] bg-[#1f1f1f]/50 p-5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-[#e0e0e0]">
-          Track Detail: {track.name}
+          {t('trackList.trackDetail', { name: track.name })}
         </h3>
         <button
           onClick={onClose}
           className="text-xs text-[#777777] hover:text-[#e0e0e0]"
         >
-          ✕ Close
+          {t('trackList.close')}
         </button>
       </div>
       <div className="grid grid-cols-2 gap-4 text-xs">
         <div>
-          <span className="text-[#777777]">Type:</span>{' '}
+          <span className="text-[#777777]">{t('trackList.type')}</span>{' '}
           <span className="capitalize text-[#e0e0e0]">{track.type}</span>
         </div>
         <div>
-          <span className="text-[#777777]">Status:</span>{' '}
+          <span className="text-[#777777]">{t('trackList.status')}</span>{' '}
           <span
             className={`capitalize ${
               track.status === 'completed'
@@ -224,11 +227,11 @@ function TrackDetailPanel({
           </span>
         </div>
         <div>
-          <span className="text-[#777777]">Progress:</span>{' '}
+          <span className="text-[#777777]">{t('trackList.progress')}</span>{' '}
           <span className="text-[#e0e0e0]">{track.progress}%</span>
         </div>
         <div>
-          <span className="text-[#777777]">URL:</span>{' '}
+          <span className="text-[#777777]">{t('trackList.url')}</span>{' '}
           <span className="text-[#e0e0e0] font-mono truncate block max-w-[200px]">
             {track.url || '—'}
           </span>

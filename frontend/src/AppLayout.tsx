@@ -1,29 +1,22 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useUserGrayStatus } from './hooks/useUserGrayStatus';
 import { BetaConsentModal } from './components/BetaConsentModal';
 import { useSound } from './context/SoundContext';
 import { useAuth } from './context/AuthContext';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { Under13BlockedModal } from './components/Under13BlockedModal';
 import { getUserAge } from './hooks/useUserAge';
+import { useCreditsBalance } from './hooks/useCreditsBalance';
 import { useTranslation } from './i18n/useTranslation';
 
-// 主导航 — 新产品结构：Home / Create Music / Voice Clone / Audio Tools / My Creations / Settings
+// 主导航 — 正式产品结构 v1：Home / Create / Audio Tools / My Creations / Pricing / Settings
 const NAV_MAIN = [
   { to: '/', labelKey: 'nav.home', fallback: 'Home', icon: '⌂', end: true },
   { to: '/create', labelKey: 'nav.createMusic', fallback: 'Create Music', icon: '♪' },
-  { to: '/voice-clone', labelKey: 'nav.voiceClone', fallback: 'Voice Clone', icon: '◐' },
   { to: '/audio-tools', labelKey: 'nav.audioTools', fallback: 'Audio Tools', icon: '⬢' },
   { to: '/my-works', labelKey: 'nav.myCreations', fallback: 'My Creations', icon: '♡' },
+  { to: '/pricing', labelKey: 'nav.pricing', fallback: 'Pricing', icon: '$' },
   { to: '/settings', labelKey: 'nav.settings', fallback: 'Settings', icon: '⚙' },
-];
-
-// 灰度专区（已移除 MV，保留协作等）
-const NAV_GRAY = [
-  { to: '/path-d?feature=collab', labelKey: 'nav.liveCollab', fallback: 'Live Collaboration', icon: '◈', feature: 'ws_collab' },
-  { to: '/path-a?feature=hf', labelKey: 'nav.hfModels', fallback: 'HF Models', icon: '⬡', feature: 'hf_models' },
-  { to: '/path-a?feature=subtitle', labelKey: 'nav.subtitles', fallback: 'Subtitle', icon: '≡', feature: 'subtitle' },
 ];
 
 export function AppLayout() {
@@ -38,11 +31,12 @@ export function AppLayout() {
     checkAge();
   }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  if (blocked) return <Under13BlockedModal />;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isLoggedIn, user, setShowLogin, logout } = useAuth();
-  const { status } = useUserGrayStatus(user?.id);
+  const { isLoggedIn, setShowLogin, logout } = useAuth();
+  const credits = useCreditsBalance(isLoggedIn);
   const { muted, toggle } = useSound();
+  // React Hooks 顺序纪律：所有 hooks 必须先于任何条件 return（修复此前的 hook-order 违规）
+  if (blocked) return <Under13BlockedModal />;
 
   const tr = (k: string, fallback: string) => {
     const v = t(k);
@@ -100,34 +94,25 @@ export function AppLayout() {
               </NavLink>
             ))}
           </div>
-
-          {status.isGray && NAV_GRAY.length > 0 && (
-            <>
-              {!sidebarCollapsed && <div className="px-4 mb-2 mt-6 text-[10px] font-semibold tracking-[0.14em] text-[#4a4a4a] uppercase">{t('nav.experimental')}</div>}
-              <div className="space-y-0.5 px-2">
-                {NAV_GRAY.map((n) => (
-                  <NavLink key={n.to} to={n.to} onClick={() => { if (window.innerWidth < 768) setMobileMenuOpen(false); }}>
-                    {({ isActive }) => (
-                      <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-3 cursor-pointer transition-all ${isActive ? 'bg-[#ff6a10]/10 text-[#ff6a10]' : 'text-[#6a6a6a] hover:text-[#ff6a10] hover:bg-[#1a1a1a]'}`}>
-                        <span className="text-base shrink-0">{n.icon}</span>
-                        {!sidebarCollapsed && <span className="truncate text-xs">{tr(n.labelKey, n.fallback)}</span>}
-                      </div>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </>
-          )}
         </nav>
 
         {/* 底部用户区 */}
         {!sidebarCollapsed && (
           <div className="px-3 py-3 border-t border-[#1f1f1f] space-y-2.5">
             {isLoggedIn ? (
-              <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#141414] border border-[#262626]">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-xs text-[#b0b0b0] truncate">{user?.email}</span>
-                <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">{t('common.logout')}</button>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#141414] border border-[#262626]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-xs text-[#b0b0b0] truncate">{user?.email}</span>
+                  <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">{t('common.logout')}</button>
+                </div>
+                {credits.loading ? (
+                  <div className="px-2.5 text-[11px] text-[#666666]">{t('common.loading')}</div>
+                ) : credits.balance !== null ? (
+                  <button onClick={() => navigate('/pricing')} className="block px-2.5 text-[11px] text-[#9a9a9a] hover:text-white transition text-left" title={t('pricing.title')}>
+                    {t('nav.credits', { n: credits.balance })}
+                  </button>
+                ) : null}
               </div>
             ) : (
               <button onClick={() => setShowLogin(true)} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-white text-[#0a0a0a] text-sm font-semibold rounded-xl hover:bg-[#ededed] transition">
