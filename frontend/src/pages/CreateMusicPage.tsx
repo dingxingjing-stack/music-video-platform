@@ -189,6 +189,11 @@ export function CreateMusicPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded-md bg-[#ff6a10]/15 border border-[#ff6a10]/30 text-[#ff8a3d] text-[10px] font-semibold tracking-wide">
+                      {t('common.aiGenerated')}
+                    </span>
+                  </div>
                   <WaveformEditor url={audioUrl} />
                   <audio controls src={audioUrl} className="w-full" />
                   <div className="flex flex-wrap gap-2">

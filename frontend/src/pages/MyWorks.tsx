@@ -173,6 +173,11 @@ export default function MyWorks() {
             <div className="flex-1 min-w-0">
               <h3 className="text-white text-sm font-medium truncate">
                 {t('myCreations.taskPrefix')} {task.task_id.substring(0, 8)}
+                {isDone(task.state) && (
+                  <span className="ml-2 inline-block align-middle px-1.5 py-0.5 rounded-md bg-[#ff6a10]/15 border border-[#ff6a10]/30 text-[#ff8a3d] text-[10px] font-semibold tracking-wide">
+                    {t('common.aiGenerated')}
+                  </span>
+                )}
               </h3>
               <p className="text-xs text-[#6a6a6a]">
                 {task.state} · {formatTime(task.progress)} · {new Date(task.created_at * 1000).toLocaleDateString()}
