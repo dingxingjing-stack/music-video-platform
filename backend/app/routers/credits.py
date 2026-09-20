@@ -40,7 +40,7 @@ from app.services.credits_config import (
     get_membership_plan,
     resolve_plan_by_price_id,
 )
-from app.services import credit_pack_service, credits_service, membership_service, paddle_service
+from app.services import credit_pack_service, credits_service, membership_service, paddle_mirror, paddle_service
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +133,37 @@ async def billing_status():
 
 @router.get("/membership")
 async def get_membership(user_id: str = Depends(get_verified_user_id)):
-    """当前会员等级与到期时间（同一套用户/积分系统，不另建账号）。"""
-    return {"membership": membership_service.get_active_membership(user_id)}
+    """当前会员等级与到期时间（同一套用户/积分系统，不另建账号）。
+
+    paid_access 由订阅镜像判定（active/trialing 才算有效），与等级信息一并返回，
+    供账号页决定"续费/管理订阅"入口是否出现。
+    """
+    return {"membership": membership_service.get_active_membership(user_id),
+            "paid_access": paddle_mirror.has_paid_access(user_id)}
+
+
+@router.post("/portal-session")
+async def create_portal_session(user_id: str = Depends(get_verified_user_id)):
+    """铸造 Paddle 客户门户会话：改卡、取消、看发票都在 Paddle 托管页完成。
+
+    安全边界：身份只来自 JWT；customer_id 只从服务端镜像反查（get_customer_id_for_user），
+    绝不接受客户端传来的 ctre_...，否则任何人拿到别人的 customer id 就能进别人账单页。
+    """
+    if not paddle_service.api_key():
+        raise HTTPException(503, "payment_not_configured")
+    customer_id = paddle_mirror.get_customer_id_for_user(user_id)
+    if not customer_id:
+        # 从未产生过任何 Paddle 交易/订阅 → 没有客户实体，门户无从登录
+        raise HTTPException(404, "no_paddle_customer")
+    sub_ids = [s["paddle_subscription_id"]
+               for s in paddle_mirror.list_user_subscriptions(user_id)
+               if s.get("status") in paddle_mirror.GRANTING_STATUSES]
+    try:
+        session = await paddle_service.create_portal_session(customer_id, sub_ids or None)
+    except paddle_service.PaddleError as exc:
+        logger.warning("Paddle portal session failed for %s: %s", user_id, type(exc).__name__)
+        raise HTTPException(502, str(exc))
+    return session
 
 
 @router.get("/costs")
@@ -261,6 +290,50 @@ SYNC_ONLY_EVENTS = {
     "subscription.canceled",
     "subscription.paused",
 }
+# 客户资料事件：只镜像，永不发放、永不改等级
+CUSTOMER_EVENTS = {"customer.created", "customer.updated", "customer.imported"}
+
+
+def _resolve_event_user(custom: dict[str, Any], obj: dict[str, Any]) -> Optional[str]:
+    """事件里可信的用户标识：只认服务端写入的 custom_data.user_id，或已登记过的订阅归属。"""
+    user_id = str(custom.get("user_id") or "").strip()
+    if user_id:
+        return user_id
+    sub_id = paddle_service.extract_subscription_id(obj)
+    return membership_service.get_user_id_for_subscription(sub_id) if sub_id else None
+
+
+def _mirror_event(event_type: str, obj: dict[str, Any], price_id: Optional[str],
+                  user_id: Optional[str], attributable: bool) -> None:
+    """把已验签事件写进客户/订阅镜像。best-effort：镜像失败只记日志，绝不断掉发放。
+
+    只镜像能归因到我们目录或我们用户的事件；后台另建的陌生商品不落库，避免噪声。
+    """
+    if not attributable:
+        return
+    try:
+        paddle_mirror.mirror_from_event(event_type, obj, user_id=user_id, price_id=price_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Paddle mirror failed for %s event %s: %s", event_type, obj.get("id"), exc)
+
+
+def _route_membership(event_id: str, event_type: str, obj: dict[str, Any],
+                      price_id: Optional[str], custom: dict[str, Any]) -> dict[str, Any]:
+    """进会员处理路径，并区别对待"归属冲突"这一种异常。
+
+    - 付款类事件撞上归属冲突 = 有钱进来却要落到别人头上，绝不能静默确认：抛出 → 5xx →
+      Paddle 重投，日志留下痕迹，需要人工看；
+    - 纯状态同步（updated/canceled/paused）撞上冲突：重投也不可能变好，记 error 后确认掉，
+      归属保持不变。
+    """
+    try:
+        return _handle_membership(event_id, event_type, obj, price_id, custom)
+    except ValueError:
+        if event_type in PAYING_EVENTS:
+            raise
+        logger.error("Paddle %s targets a subscription owned by another user; state not synced",
+                     event_type)
+        return {"received": True, "ignored": "owner_conflict"}
 
 
 def _public_packs() -> list[dict]:
@@ -441,11 +514,27 @@ async def paddle_webhook(request: Request,
     price_id = _extract_any_price_id(obj)
     pack = resolve_pack_by_price_id(price_id)
     plan = resolve_plan_by_price_id(price_id)
+    event_user = _resolve_event_user(custom, obj)
+    # 客户资料事件本身就带 customer_id，没有 user_id 也要镜像（归属之后再从交易回链）
+    attributable = (pack is not None or plan is not None
+                    or bool(custom.get("user_id")) or event_type in CUSTOMER_EVENTS)
+
+    # 镜像先于发放决策：投影失败只记日志，不影响下面的钱和权益。
+    _mirror_event(event_type, obj, price_id, event_user, attributable)
 
     # 路由主依据 = 后端登记的 Price ID（custom_data 只作辅助与交叉校验）：
     # 续费交易万一不带 custom_data，也能凭订阅归属正确发放。
     if kind == "membership" or plan is not None:
-        return _handle_membership(event_id, event_type, obj, price_id, custom)
+        return _route_membership(event_id, event_type, obj, price_id, custom)
+
+    if event_type in CUSTOMER_EVENTS:
+        return {"received": True, "processed": True, "mirrored": True, "event_type": event_type}
+
+    # subscription.* 的状态变化（取消/暂停/降级）也必须落到台账，
+    # 否则 /credits/membership 会在订阅已死后继续报"生效中"。
+    # 归因不到我们用户的陌生订阅不进这条路径（避免 400 → 无谓重投）。
+    if event_type.startswith("subscription.") and plan is not None and event_user:
+        return _route_membership(event_id, event_type, obj, price_id, custom)
 
     if event_type in ("transaction.completed", "transaction.paid"):
         status = str(obj.get("status") or "")

@@ -134,6 +134,12 @@ class AiTask(Base):
     # 生产 Supabase 需人工执行 ALTER TABLE（见 docs/MUREKA_API_CONTRACT_AUDIT.md 的 DDL），
     # create_all 仅为新库/测试库建此列，不对已存在表加列。
     refunded_at = Column(DateTime(timezone=True), nullable=True)
+    # 本任务在 reserve_generation 中**实际**预留的日/月额度权重（1 或 2）。
+    # 退款必须按这个持久化值退，不能在退款时重新由 duration 推断：
+    # 推断口径一旦与预留口径不同就会出现「180s 扣 2、退 1」的少退。
+    # NULL = 字段上线前的旧任务，权重不可知 → 退款按保守值 1（宁可少退不多退）。
+    # 生产需人工执行：ALTER TABLE ai_tasks ADD COLUMN IF NOT EXISTS generation_quota_weight INTEGER;
+    generation_quota_weight = Column(Integer, nullable=True)
 
 class TaskLock(Base):
     __tablename__ = "task_locks"
@@ -273,6 +279,50 @@ class UserMembership(Base):
     current_period_end = Column(String(40), nullable=True)
     last_granted_period_start = Column(String(40), nullable=True)
     cancel_at_period_end = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class PaddleCustomer(Base):
+    """Paddle 客户镜像（customer.created / customer.updated / 交易与订阅事件里的 customer_id）。
+
+    纯投影：字段照抄 Paddle，不掺业务规则。user_id 是"这个 Paddle 客户属于我们哪个账号"
+    的回链，只从服务端可信来源写入（交易 custom_data.user_id），客户端无法指定。
+    客户门户会话靠它反查 customer_id —— 绝不接受前端传来的 customer_id。
+    """
+    __tablename__ = "paddle_customers"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    paddle_customer_id = Column(String(120), nullable=False, unique=True)
+    user_id = Column(String(255), nullable=True, index=True)
+    email = Column(String(320), nullable=True, index=True)
+    name = Column(String(1024), nullable=True)
+    status = Column(String(30), nullable=True)
+    locale = Column(String(16), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PaddleSubscription(Base):
+    """Paddle 订阅状态镜像（"订阅现在到底是什么状态"以这张表为准）。
+
+    与 user_memberships 的分工：本表是**支付方状态的投影**（含 scheduled_change 等
+    Paddle 独有字段），user_memberships 是**我们的发放台账**（周期锚点幂等）。
+    判定"当前是否付费会员"读本表的 status，不读台账。
+    """
+    __tablename__ = "paddle_subscriptions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    paddle_subscription_id = Column(String(120), nullable=False, unique=True)
+    user_id = Column(String(255), nullable=True, index=True)
+    paddle_customer_id = Column(String(120), nullable=True, index=True)
+    status = Column(String(30), nullable=False, index=True)
+    price_id = Column(String(120), nullable=True)
+    product_id = Column(String(120), nullable=True)
+    interval = Column(String(16), nullable=True)
+    current_period_start = Column(String(40), nullable=True)
+    current_period_end = Column(String(40), nullable=True)
+    cancel_at_period_end = Column(Boolean, nullable=False, default=False)
+    scheduled_change_action = Column(String(30), nullable=True)
+    scheduled_change_at = Column(String(40), nullable=True)
+    last_event_type = Column(String(60), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

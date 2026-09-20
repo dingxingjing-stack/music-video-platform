@@ -138,12 +138,12 @@ def test_checkout_fails_closed_without_api_key(env, monkeypatch):
 
 
 def test_checkout_unknown_pack(env, monkeypatch):
-    monkeypatch.setenv("PADDLE_API_KEY", "sgr_test")
+    monkeypatch.setenv("PADDLE_API_KEY", "pdl_sdbx_apikey_test")
     assert _client().post("/api/v1/credits/checkout", json={"pack_id": "credits_999999"}).status_code == 404
 
 
 def test_checkout_creates_txn_but_grants_nothing(env, monkeypatch):
-    monkeypatch.setenv("PADDLE_API_KEY", "sgr_test")
+    monkeypatch.setenv("PADDLE_API_KEY", "pdl_sdbx_apikey_test")
 
     async def _fake_create(**kwargs):
         return {"transaction_id": "txn_pending_1", "checkout_url": None}

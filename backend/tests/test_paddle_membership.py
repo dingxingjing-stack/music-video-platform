@@ -62,7 +62,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(membership_service, "SessionLocal", sessionmaker(bind=eng))
     monkeypatch.setenv("PADDLE_WEBHOOK_SECRET", SECRET)
     monkeypatch.setenv("PADDLE_ENV", "sandbox")
-    monkeypatch.setenv("PADDLE_API_KEY", "sgr_test_value")
+    monkeypatch.setenv("PADDLE_API_KEY", "pdl_sdbx_apikey_test_value")
     monkeypatch.setenv("PADDLE_CLIENT_TOKEN", "test_client_token_value")
     for k, v in {**PLAN_ENVS, **PACK_ENVS}.items():
         monkeypatch.setenv(k, v)

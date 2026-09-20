@@ -83,7 +83,8 @@ def credential_warnings() -> list[str]:
         if env == "production" and token.startswith("test_"):
             warnings.append("client_token_is_test_in_production")
     key = api_key()
-    if key and not (key.startswith("pdl_sgr_") or key.startswith("sgr_")):
+    # Paddle Billing v2 的真实前缀：沙箱 pdl_sdbx_apikey_、生产 pdl_live_apikey_
+    if key and not (key.startswith("pdl_sdbx_apikey_") or key.startswith("pdl_live_apikey_")):
         warnings.append("api_key_format_unexpected")
     if any(not s.startswith("pdl_ntfset_") for s in webhook_secrets()):
         warnings.append("webhook_secret_format_unexpected")
@@ -273,3 +274,87 @@ def extract_billing_period(obj: dict[str, Any]) -> tuple[Optional[str], Optional
     start = obj.get("current_billing_period_start") or obj.get("billing_period_start")
     end = obj.get("current_billing_period_end") or obj.get("next_bills_at")
     return (str(start) if start else None, str(end) if end else None)
+
+
+def extract_customer_id(obj: dict[str, Any]) -> Optional[str]:
+    """事件对象上的 Paddle customer id（ctre_...）。
+
+    customer.* 事件里主体本身就是客户 → 取 id；交易/订阅事件只取 customer_id，
+    且必须带 ctre_ 前缀，避免把 txn_/sub_ 误当客户号写进镜像表。
+    """
+    value = obj.get("customer_id")
+    if value and str(value).startswith("ctre_"):
+        return str(value)
+    ident = str(obj.get("id") or "")
+    return ident if ident.startswith("ctre_") else None
+
+
+def extract_product_id(obj: dict[str, Any]) -> Optional[str]:
+    """订阅首个条目上的 product id（pro_...）。Paddle 一个订阅当前只有一个商品条目。"""
+    for item in (obj.get("items") or []):
+        if not isinstance(item, dict):
+            continue
+        price = item.get("price")
+        if isinstance(price, dict) and str(price.get("product_id") or "").startswith("pro_"):
+            return str(price["product_id"])
+        if str(item.get("product_id") or "").startswith("pro_"):
+            return str(item["product_id"])
+    return None
+
+
+def extract_scheduled_change(obj: dict[str, Any]) -> tuple[Optional[str], Optional[str]]:
+    """(计划中的动作, 生效时间)。Paddle 在 cancel_at_period_end 之前会先挂 scheduled_change。
+
+    镜像这个字段的意义就在于：**有 scheduled_change 不等于已经失去访问权**，
+    只有 status 真的变成 canceled 才收回。
+    """
+    change = obj.get("scheduled_change")
+    if not isinstance(change, dict):
+        return None, None
+    action = change.get("action")
+    at = change.get("resume_at") or change.get("effective_from")
+    return (str(action) if action else None, str(at) if at else None)
+
+
+async def create_portal_session(customer_id: str,
+                                subscription_ids: Optional[list[str]] = None) -> dict[str, Any]:
+    """为客户门户铸造一次性会话，返回 {url, subscription_urls, customer_id}。
+
+    门户由 Paddle 托管，会话是临时凭据 —— 调用方必须已经通过 JWT 确认身份，
+    customer_id 只能来自服务端解析结果（见 paddle_mirror.get_customer_id_for_user）。
+    """
+    key = api_key()
+    if not key:
+        raise PaddleError("PADDLE_API_KEY not configured")
+    if not customer_id or not customer_id.startswith("ctre_"):
+        raise PaddleError("invalid customer id")
+
+    body: dict[str, Any] = {}
+    if subscription_ids:
+        body["subscription_ids"] = list(subscription_ids)
+
+    url = f"{api_base_url()}/customers/{customer_id}/portal-sessions"
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers={"Authorization": f"Bearer {key}",
+                                                   "Content-Type": "application/json"},
+                                     json=body or None)
+    except Exception as exc:  # noqa: BLE001 - 网络异常不外泄细节
+        logger.warning("Paddle portal session failed (network): %s", type(exc).__name__)
+        raise PaddleError("payment provider unreachable") from exc
+
+    if resp.status_code not in (200, 201):
+        logger.warning("Paddle portal session returned status %s", resp.status_code)
+        raise PaddleError(f"portal session failed ({resp.status_code})")
+
+    try:
+        data = resp.json()
+    except ValueError:
+        raise PaddleError("unexpected portal response")
+
+    # 响应形状：{ id, customer_id, urls: { general: { overview }, subscriptions: [ {id,url} ] } }
+    general = ((data.get("urls") or {}).get("general") or {}).get("overview")
+    if not general:
+        raise PaddleError("portal session missing url")
+    return {"url": str(general), "subscription_urls": (data.get("urls") or {}).get("subscriptions") or [],
+            "customer_id": str(data.get("customer_id") or customer_id)}
