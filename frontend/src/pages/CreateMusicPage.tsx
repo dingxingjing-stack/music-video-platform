@@ -197,7 +197,7 @@ export function CreateMusicPage() {
                   <WaveformEditor url={audioUrl} />
                   <audio controls src={audioUrl} className="w-full" />
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={()=> { const a=document.createElement('a'); a.href=audioUrl; a.download='zyvexo-track.wav'; a.click(); }} className="px-4 py-2 rounded-xl bg-white text-[#0a0a0a] text-sm font-medium hover:bg-[#ededed]">{t('createMusic.download')}</button>
+                    <button onClick={()=> { const a=document.createElement('a'); a.href=audioUrl; a.download='melovar-track.wav'; a.click(); }} className="px-4 py-2 rounded-xl bg-white text-[#0a0a0a] text-sm font-medium hover:bg-[#ededed]">{t('createMusic.download')}</button>
                     <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222] disabled:opacity-50">{t('createMusic.save')}</button>
                     <button onClick={()=> setAudioUrl(null)} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-[#ff6b6b] text-sm hover:bg-[#1f1a1a]">{t('createMusic.delete')}</button>
                     <button onClick={()=> { setDescription(''); setLyrics(''); }} className="px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#262626] text-white text-sm hover:bg-[#222222]">{t('createMusic.createAgain')}</button>

@@ -143,7 +143,7 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Hermes 音乐平台', {
+    self.registration.showNotification(data.title || 'Melovar', {
       body: data.body || '您有新的通知',
       icon: '/icon-192.png',
       badge: '/badge-192.png',

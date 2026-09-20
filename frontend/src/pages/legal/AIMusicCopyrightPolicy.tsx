@@ -22,7 +22,7 @@ export function AIMusicCopyrightPolicy() {
         <section className="py-6 border-b border-[#2a2a2a]">
           <h2 className="text-xl font-semibold text-white mb-3">1. 适用范围</h2>
           <p className="text-sm leading-relaxed text-[#b0b0b0]">
-            本政策适用于您在 Zyvexo 平台上使用 AI 音乐生成功能（包括但不限于音乐生成、音频协作、音乐数据处理等）时产生的全部内容（以下简称「AI 生成内容」）。
+            本政策适用于您在 Melovar 平台上使用 AI 音乐生成功能（包括但不限于音乐生成、音频协作、音乐数据处理等）时产生的全部内容（以下简称「AI 生成内容」）。
           </p>
         </section>
 

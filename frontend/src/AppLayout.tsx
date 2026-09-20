@@ -63,7 +63,7 @@ export function AppLayout() {
           </button>
           {!sidebarCollapsed && (
             <span className="font-black text-[17px] tracking-tight cursor-pointer" onClick={() => navigate('/')}>
-              <span className="bg-gradient-to-r from-[#ff6a10] to-[#ee0979] bg-clip-text text-transparent">Zyvexo</span>
+              <span className="bg-gradient-to-r from-[#ff6a10] to-[#ee0979] bg-clip-text text-transparent">{t('common.appName')}</span>
               <span className="ml-1.5 text-[10px] font-medium tracking-[0.14em] text-[#555555] align-middle">STUDIO</span>
             </span>
           )}

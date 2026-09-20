@@ -84,7 +84,7 @@ export function HomePage() {
             <div className="text-[#8a8a8a] leading-relaxed">{t('home.info.worksDesc')}</div>
           </div>
         </div>
-        <p className="mt-6 text-center text-xs text-[#4a4a4a]">© 2026 Zyvexo · AI Music Studio</p>
+        <p className="mt-6 text-center text-xs text-[#4a4a4a]">© 2026 Melovar · AI Music Studio</p>
       </div>
     </div>
   );

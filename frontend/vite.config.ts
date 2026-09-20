@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'zyvexo-mark.svg'],
       manifest: {
-        name: 'Zyvexo',
-        short_name: 'Zyvexo',
-        description: 'Zyvexo — Global Digital Platform',
+        name: 'Melovar',
+        short_name: 'Melovar',
+        description: 'Melovar — AI Music Studio',
         theme_color: '#121212',
         background_color: '#121212',
         display: 'standalone',

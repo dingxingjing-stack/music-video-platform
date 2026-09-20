@@ -1,7 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '../i18n/useTranslation';
 import { api } from '../config/api';
-import { authFetchOptional } from '../api/http';
+import { authFetchOptional, AuthenticationError } from '../api/http';
+import { openPackCheckout, type PaddlePack, type PacksResponse } from '../lib/paddle';
+
+/** 会员计划（一次性补充包见 /packs；两者共用同一套后端建单 + Paddle.js 流程） */
+export interface MembershipPlan {
+  id: string;
+  name: string;
+  price_usd: number;
+  currency: string;
+  credits_per_month: number;
+  interval: string;
+  recurring: boolean;
+}
+
+interface PlansResponse {
+  currency: string;
+  interval: string;
+  recurring: boolean;
+  paddle_configured: boolean;
+  paddle_env: string | null;
+  client_token: string | null;
+  plans: MembershipPlan[];
+}
 
 /**
  * Pricing v1（正式产品定价，2026-09-18 定稿）。
@@ -22,17 +44,78 @@ const CREATION_COST_CREDITS = 30;
 export function PricingPage() {
   const { t } = useTranslation();
   const [balance, setBalance] = useState<number | null>(null);
+  const [packs, setPacks] = useState<PacksResponse | null>(null);
+  const [plans, setPlans] = useState<PlansResponse | null>(null);
+  const [planOfRecord, setPlanOfRecord] = useState<{ plan_id: string; current_period_end: string | null } | null>(null);
+  const [busyPack, setBusyPack] = useState<string | null>(null);
+  const [packNotice, setPackNotice] = useState<string | null>(null);
+
+  const refreshAccount = useCallback(async () => {
+    try {
+      const bal = await authFetchOptional<{ balance: number }>(`${api.base}/api/v1/credits/balance`);
+      setBalance(typeof bal.balance === 'number' ? bal.balance : null);
+    } catch {
+      setBalance(null);
+    }
+    try {
+      const res = await authFetchOptional<{ membership: { plan_id: string; current_period_end: string | null } | null }>(
+        `${api.base}/api/v1/credits/membership`);
+      setPlanOfRecord(res?.membership ? { plan_id: res.membership.plan_id,
+                                            current_period_end: res.membership.current_period_end } : null);
+    } catch {
+      setPlanOfRecord(null);
+    }
+  }, []);
 
   useEffect(() => {
+    refreshAccount();
     (async () => {
       try {
-        const bal = await authFetchOptional<{ balance: number }>(`${api.base}/api/v1/credits/balance`);
-        setBalance(typeof bal.balance === 'number' ? bal.balance : null);
+        const [packsResp, plansResp] = await Promise.all([
+          authFetchOptional<PacksResponse>(`${api.base}/api/v1/credits/packs`),
+          authFetchOptional<PlansResponse>(`${api.base}/api/v1/credits/plans`),
+        ]);
+        setPacks(packsResp);
+        setPlans(plansResp);
       } catch {
-        setBalance(null);
+        setPacks(null);     // 拉不到就不显示补充包区块，也绝不做可点的假按钮
+        setPlans(null);
       }
     })();
-  }, []);
+  }, [refreshAccount]);
+
+  // 购买积分补充包 / 订阅会员：后端建单 → Paddle.js 打开收银台 → 支付成功回调只负责刷新显示。
+  // 真正的 Credits 与会员等级都发生在后端 webhook（前端任何回调都不入账）。
+  const openCheckout = async (
+    body: { pack_id?: string; plan_id?: string },
+    key: string,
+    setBusy: (v: string | null) => void,
+  ) => {
+    const config = body.pack_id ? packs : plans;
+    if (!config?.paddle_configured) return;
+    setBusy(key);
+    setPackNotice(null);
+    try {
+      const order = await authFetchOptional<{ transaction_id: string }>(
+        `${api.base}/api/v1/credits/checkout`,
+        { method: 'POST', body },
+      );
+      const opened = await openPackCheckout({
+        transactionId: order.transaction_id,
+        clientToken: config.client_token || '',
+        environment: config.paddle_env,
+        onCompleted: () => { refreshAccount(); },
+      });
+      if (!opened) setPackNotice(t('pricing.packs_unavailable'));
+    } catch (err) {
+      setPackNotice(err instanceof AuthenticationError ? t('pricing.packs_login_required') : t('pricing.packs_error'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const buyPack = (pack: PaddlePack) => openCheckout({ pack_id: pack.id }, pack.id, setBusyPack);
+  const buyPlan = (plan: MembershipPlan) => openCheckout({ plan_id: plan.id }, plan.id, setBusyPack);
 
   const badgeLabel = (badge: string | null) =>
     badge === 'best_value' ? t('pricing.best_value') : null;
@@ -87,15 +170,70 @@ export function PricingPage() {
                 <div className="mt-1 text-2xl font-black">${p.price_usd}</div>
                 <div className="mt-1 text-xs text-[#8a8a8a]">{p.credits.toLocaleString('en-US')} {t('pricing.credits')}</div>
                 <p className="mt-3 text-xs text-[#b0b0b0]">{t(p.description_key)}</p>
-                <button disabled className="mt-auto pt-4 w-full">
-                  <span className="block w-full py-2 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#666666] text-sm font-semibold cursor-not-allowed">
-                    {t('pricing.buy_credits')} · {t('pricing.coming_soon')}
-                  </span>
-                </button>
+                {(() => {
+                  const plan = plans?.plans.find((x) => x.id === p.id);
+                  if (!plan || !plans?.paddle_configured) {
+                    // 后端未配置该 Recurring Price → 保持原有 disabled + Coming Soon
+                    return (
+                      <button disabled className="mt-auto pt-4 w-full">
+                        <span className="block w-full py-2 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#666666] text-sm font-semibold cursor-not-allowed">
+                          {t('pricing.buy_credits')} · {t('pricing.coming_soon')}
+                        </span>
+                      </button>
+                    );
+                  }
+                  const isCurrent = planOfRecord?.plan_id === plan.id;
+                  return (
+                    <button onClick={() => buyPlan(plan)} disabled={busyPack !== null} className="mt-auto pt-4 w-full">
+                      <span className="block w-full py-2 rounded-lg bg-orange-400 text-black text-sm font-semibold hover:bg-orange-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                        {busyPack === plan.id
+                          ? t('pricing.packs_busy')
+                          : isCurrent
+                            ? t('pricing.plan_current')
+                            : `${t('pricing.plan_subscribe')} $${plan.price_usd.toFixed(2)}${t('pricing.plan_per_month')}`}
+                      </span>
+                    </button>
+                  );
+                })()}
               </div>
             );
           })}
         </div>
+
+        {plans?.plans.length ? (
+          <p className="mt-3 text-xs text-[#666666]">{t('pricing.plan_recurring_note')}</p>
+        ) : null}
+
+        {/* 积分补充包（一次性购买）：后端未配置 Price ID 时整块不渲染，绝不出现假按钮 */}
+        {packs && packs.packs.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-bold mb-1">{t('pricing.packs_title')}</h2>
+            <p className="text-sm text-[#8a8a8a] mb-4">{t('pricing.packs_subtitle')}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {packs.packs.map((p) => (
+                <div key={p.id} className="rounded-xl bg-[#141414] border border-[#1f1f1f] p-5 flex flex-col">
+                  <div className="text-lg font-black">{p.credits.toLocaleString('en-US')}</div>
+                  <div className="text-xs text-[#8a8a8a]">
+                    {t('pricing.credits')} · {t('pricing.packs_one_time')}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-orange-400">${p.price_usd.toFixed(2)}</div>
+                  <button
+                    onClick={() => buyPack(p)}
+                    disabled={!packs.paddle_configured || busyPack !== null}
+                    className="mt-4 w-full py-2 rounded-lg text-sm font-semibold bg-orange-400 text-black hover:bg-orange-300 disabled:bg-[#1a1a1a] disabled:text-[#666666] disabled:border disabled:border-[#262626] disabled:cursor-not-allowed"
+                  >
+                    {busyPack === p.id ? t('pricing.packs_busy') : t('pricing.packs_buy')}
+                  </button>
+                </div>
+              ))}
+            </div>
+            {!packs.paddle_configured && (
+              <p className="mt-3 text-xs text-[#8a8a8a]">{t('pricing.packs_unavailable')}</p>
+            )}
+            {packNotice && <p className="mt-3 text-xs text-orange-300">{packNotice}</p>}
+            <p className="mt-2 text-xs text-[#666666]">{t('pricing.packs_wait_note')}</p>
+          </div>
+        )}
 
         {/* How Credits Work — v1 官方规则 */}
         <div className="mt-12">
