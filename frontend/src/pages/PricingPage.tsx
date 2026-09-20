@@ -69,16 +69,17 @@ export function PricingPage() {
 
   useEffect(() => {
     refreshAccount();
+    // 两个目录各自独立加载：积分包接口挂了不能连带抹掉会员入口（反之亦然），
+    // 否则用户看到的是"整页没有付款按钮"，而真实原因只是其中一个接口失败。
     (async () => {
       try {
-        const [packsResp, plansResp] = await Promise.all([
-          authFetchOptional<PacksResponse>(`${api.base}/api/v1/credits/packs`),
-          authFetchOptional<PlansResponse>(`${api.base}/api/v1/credits/plans`),
-        ]);
-        setPacks(packsResp);
-        setPlans(plansResp);
+        setPacks(await authFetchOptional<PacksResponse>(`${api.base}/api/v1/credits/packs`));
       } catch {
         setPacks(null);     // 拉不到就不显示补充包区块，也绝不做可点的假按钮
+      }
+      try {
+        setPlans(await authFetchOptional<PlansResponse>(`${api.base}/api/v1/credits/plans`));
+      } catch {
         setPlans(null);
       }
     })();
@@ -92,7 +93,11 @@ export function PricingPage() {
     setBusy: (v: string | null) => void,
   ) => {
     const config = body.pack_id ? packs : plans;
-    if (!config?.paddle_configured) return;
+    if (!config?.paddle_configured) {
+      // 到这里说明后端没配齐该档 Price：必须给出可见原因，不能静默 return（点一下没反应最难排查）。
+      setPackNotice(t('pricing.packs_unavailable'));
+      return;
+    }
     setBusy(key);
     setPackNotice(null);
     try {
@@ -204,6 +209,12 @@ export function PricingPage() {
           <p className="mt-3 text-xs text-[#666666]">{t('pricing.plan_recurring_note')}</p>
         ) : null}
 
+        {/* 购买结果提示：放在页面级，套餐区与补充包区共用。
+            此前它只渲染在补充包区块内部，点击套餐失败（未登录 / 建单 502）时用户看不到任何反馈。 */}
+        {packNotice && (
+          <p className="mt-4 text-sm text-orange-300" role="status">{packNotice}</p>
+        )}
+
         {/* 积分补充包（一次性购买）：后端未配置 Price ID 时整块不渲染，绝不出现假按钮 */}
         {packs && packs.packs.length > 0 && (
           <div className="mt-12">
@@ -230,7 +241,6 @@ export function PricingPage() {
             {!packs.paddle_configured && (
               <p className="mt-3 text-xs text-[#8a8a8a]">{t('pricing.packs_unavailable')}</p>
             )}
-            {packNotice && <p className="mt-3 text-xs text-orange-300">{packNotice}</p>}
             <p className="mt-2 text-xs text-[#666666]">{t('pricing.packs_wait_note')}</p>
           </div>
         )}

@@ -33,12 +33,30 @@ async function rawFetch(url: string, opts: RequestOptions = {}): Promise<Respons
   return fetch(url, init);
 }
 
+/**
+ * 失败响应 → 可安全展示的 Error。
+ * 401 归一为 AuthenticationError（后端只认 JWT，未登录/令牌过期都应走登录态分支）；
+ * 其余只保留状态码 + 后端 detail —— 直接把整段响应体塞进 message 会把网关的 HTML
+ * 错误页原样渲染到页面上，用户看到的就是一屏乱码。
+ */
+async function toHttpError(resp: Response): Promise<Error> {
+  if (resp.status === 401) return new AuthenticationError();
+  const txt = await resp.text().catch(() => '');
+  let detail = '';
+  try {
+    const parsed = JSON.parse(txt) as { detail?: unknown };
+    if (typeof parsed?.detail === 'string') detail = parsed.detail.slice(0, 200);
+  } catch {
+    // 非 JSON 响应体：不外泄内容，只报状态码
+  }
+  return new Error(detail ? `HTTP ${resp.status}: ${detail}` : `HTTP ${resp.status}`);
+}
+
 /** 普通请求（可匿名）：直接 fetch，无身份注入。 */
 export async function apiFetch<T = unknown>(url: string, opts: RequestOptions = {}): Promise<T> {
   const resp = await rawFetch(url, opts);
   if (!resp.ok) {
-    const txt = await resp.text().catch(() => '');
-    throw new Error(`HTTP ${resp.status}: ${txt}`);
+    throw await toHttpError(resp);
   }
   if (resp.status === 204) return undefined as T;
   return (await resp.json()) as T;

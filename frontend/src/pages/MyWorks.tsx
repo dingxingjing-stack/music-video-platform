@@ -15,7 +15,7 @@ interface TaskSummary {
 }
 
 export default function MyWorks() {
-  const { t } = useTranslation();
+  const { t, loading: i18nLoading } = useTranslation();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +118,9 @@ export default function MyWorks() {
     }
   };
 
-  if (loading) {
+  // 文案包是异步 chunk：未就绪时 t() 会原样返回 key（myCreations.empty），
+  // 页面就会把 "myCreations.empty" 当成空状态标题显示出来 —— 必须一起等。
+  if (loading || i18nLoading) {
     return (
       <div className="max-w-[960px] mx-auto px-6 py-10 text-center">
         <div className="animate-pulse flex items-center justify-center h-16 text-[#6a6a6a] text-sm">

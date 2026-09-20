@@ -31,7 +31,7 @@ export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   oneclick_publish:   { key: 'oneclick_publish',   name: 'features.oneclickPublish.name', level: 'gray',  description: 'features.oneclickPublish.desc', icon: '📢' },
 
   // ===== 完全关闭（隐藏入口）=====
-  // mv_generate 已移除，改为声音克隆；保留兼容键但关闭
+  // MV 生成已下线；保留兼容键但关闭
   mv_generate:        { key: 'mv_generate',        name: 'features.mvGenerate.name',      level: 'closed', description: 'features.mvGenerate.desc', icon: '🎬' },
   asset_store:        { key: 'asset_store',        name: 'features.assetStore.name',      level: 'closed', description: 'features.assetStore.desc', icon: '🛒' },
   paid_subscription:  { key: 'paid_subscription',  name: 'features.paidSubscription.name',level: 'closed', description: 'features.paidSubscription.desc', icon: '💳' },
