@@ -13,11 +13,81 @@ from __future__ import annotations
 
 import asyncio
 import io
+import ipaddress
 import logging
+import os
+import socket
 import subprocess
 from typing import Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+# ── P0-2：媒体源白名单（SSRF / 任意本地文件读取防护）────────────────────────
+# 只允许 https + 显式主机后缀；拒绝本地路径、file://、IP 字面量、非 443 端口、
+# 以及解析到内网/回环/link-local（云 metadata）的主机。
+_TRIM_ALLOWED_HOST_SUFFIXES = (
+    ".r2.cloudflarestorage.com",
+    ".r2.dev",
+    "zyvexo-cdn.dingxingjing.workers.dev",
+    "music-video-platform.zezhending90.workers.dev",
+    "music-video-platform.pages.dev",
+)
+
+
+def _trim_allowed_suffixes() -> tuple[str, ...]:
+    extra = tuple(
+        h.strip().lower() for h in (os.getenv("AUDIO_TRIM_EXTRA_HOSTS") or "").split(",") if h.strip()
+    )
+    # 只从 CDN 基址派生可信媒体主机；不派生 API/FRONTEND 域（避免把 localhost 带进白名单）
+    derived: list[str] = []
+    host = urlparse(os.getenv("CDN_BASE_URL") or "").hostname
+    if host:
+        derived.append(host.lower())
+    return _TRIM_ALLOWED_HOST_SUFFIXES + tuple(derived) + extra
+
+
+def _is_blocked_ip(ip_str: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return True  # 解析不出来就拒绝
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+        or (ip.version == 4 and ip in ipaddress.ip_network("169.254.169.254/32"))
+    )
+
+
+def resolve_safe_media_source(source: str) -> str:
+    """校验并返回可安全交给 ffmpeg 的媒体地址；不合法一律抛 ValueError。"""
+    raw = (source or "").strip()
+    if not raw:
+        raise ValueError("媒体地址为空")
+    parsed = urlparse(raw)
+    if parsed.scheme != "https" or not parsed.hostname:
+        # 明确禁止：本地文件路径、file://、http://、gopher:// 等
+        raise ValueError("仅允许 https 媒体地址")
+    host = parsed.hostname.lower().rstrip(".")
+    if host.replace(".", "").isdigit():
+        raise ValueError("不允许使用 IP 字面量")
+    if parsed.port not in (None, 443):
+        raise ValueError("仅允许默认 443 端口")
+    allowed = _trim_allowed_suffixes()
+    if not any(host == a.lstrip(".") or host.endswith(a) for a in allowed if a):
+        raise ValueError("媒体主机不在允许清单内")
+    try:
+        infos = socket.getaddrinfo(host, parsed.port or 443, proto=socket.IPPROTO_TCP)
+    except OSError as exc:
+        raise ValueError(f"媒体主机解析失败：{exc}") from exc
+    for info in infos:
+        if _is_blocked_ip(str(info[4][0])):
+            raise ValueError("媒体主机指向内网地址")
+    return parsed.geturl()
 
 
 async def trim_audio(
@@ -45,19 +115,15 @@ async def trim_audio(
     if duration <= 0:
         raise ValueError(f"Invalid trim range: start={start}, end={end}")
 
-    # Determine input args
-    if url.startswith(("http://", "https://")):
-        input_args = ["-i", url]
-    else:
-        # Local file
-        input_args = ["-i", url]
+    # P0-2：在服务层再校验一次，保证任何调用方（不只是 HTTP 端点）都不能喂本地路径/内网地址
+    safe_url = resolve_safe_media_source(url)
 
     # Build ffmpeg command
     cmd = [
         "ffmpeg",
         "-y",                    # overwrite output
         "-ss", str(start),       # seek to start (accurate)
-        "-i", url,               # input (can be URL or path)
+        "-i", safe_url,          # input（已通过 https + 主机白名单 + 非内网校验）
         "-t", str(duration),     # duration
         "-c:a", "copy" if output_format == "wav" else "aac",  # codec
         "-f", output_format,     # force format

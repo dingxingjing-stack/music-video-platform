@@ -126,20 +126,37 @@ async def get_user_by_id(user_id: str):
 async def add_user_credits(
     user_id: str,
     amount: int,
-    authorization: Optional[str] = Header(None)
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
 ):
+    """管理员专用：为指定用户增加额度（旧 users.credits 账本）。
+
+    P0-1 安全收口（原实现只判断「Authorization 头非空」，任何人不验证 JWT 就能给任意
+    用户任意加额度）：
+      - 必须提供 X-Admin-Token，且与环境变量 ADMIN_API_TOKEN 常量时间相等；
+      - ADMIN_API_TOKEN 未配置时该端点一律 503（默认关闭，fail-closed）；
+      - 不接受普通用户 JWT 作为授权凭据；客户端传入的 user_id/amount 仍需边界校验。
     """
-    增加用户额度（仅管理员或服务）
-    """
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization required")
-    
+    import hmac
+    import os
+
+    admin_token = (os.getenv("ADMIN_API_TOKEN") or "").strip()
+    if not admin_token:
+        raise HTTPException(status_code=503, detail="admin_not_configured")
+    if not x_admin_token or not hmac.compare_digest(str(x_admin_token), admin_token):
+        raise HTTPException(status_code=403, detail="admin token required")
+
+    if not user_id or not user_id.strip():
+        raise HTTPException(status_code=400, detail="user_id required")
+    if amount <= 0 or amount > 100_000:
+        raise HTTPException(status_code=400, detail="amount 必须在 1..100000 之间")
+
     try:
-        new_credits = increment_user_credits(user_id, amount)
+        new_credits = increment_user_credits(user_id.strip(), amount)
         
         # 记录日志
         log_activity(
-            user_id=user_id,
+            user_id=user_id.strip(),
             action="CREDITS_ADDED",
             metadata={"amount": amount, "new_credits": new_credits}
         )
@@ -149,6 +166,8 @@ async def add_user_credits(
             "new_credits": new_credits,
             "added": amount
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

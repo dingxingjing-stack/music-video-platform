@@ -1080,12 +1080,18 @@ async def trim_audio_endpoint(
     end: Optional[float] = None,
     duration: Optional[float] = None,
     fmt: str = "wav",
+    user_id: str = Depends(get_verified_user_id),
 ):
     """
-    Trim audio from a URL or local path.
+    Trim audio from an allowlisted https media source.
+
+    P0-2 安全收口（原先为完全无鉴权的任意 URL 代理，可被用于 SSRF / 读取服务端本地文件）：
+      - 必须携带有效 Supabase JWT（get_verified_user_id，失败 401）；
+      - `url` 只接受 https 且主机在服务端白名单内（R2/自有 CDN/API 域），
+        拒绝本地文件路径、file://、IP 字面量、非 443 端口、解析到内网/云 metadata 的主机。
 
     Args:
-        url: Path or URL to the source audio file.
+        url: 允许清单内的 https 音频地址。
         start: Start time in seconds (default 0).
         end: End time in seconds. Required if duration not provided.
         duration: Duration in seconds. Alternative to `end`.
@@ -1094,7 +1100,7 @@ async def trim_audio_endpoint(
     Returns:
         Audio file stream with Content-Disposition: attachment.
     """
-    from app.services.audio_trim import trim_audio
+    from app.services.audio_trim import resolve_safe_media_source, trim_audio
 
     if not url:
         raise HTTPException(status_code=422, detail="'url' is required")
@@ -1114,8 +1120,15 @@ async def trim_audio_endpoint(
             detail=f"Invalid range: start={start}, end={end}",
         )
 
+    # 白名单校验在拉起 ffmpeg 之前完成；不合法来源 → 403（不泄露内部网络/路径信息）
     try:
-        audio_bytes, content_type = await trim_audio(url, start, end, fmt)
+        safe_url = resolve_safe_media_source(url)
+    except ValueError as exc:
+        logger.warning("Trim source rejected for user %s: %s", user_id, exc)
+        raise HTTPException(status_code=403, detail="不支持的媒体来源")
+
+    try:
+        audio_bytes, content_type = await trim_audio(safe_url, start, end, fmt)
         filename = f"trimmed_{int(start)}s_{int(end)}s.{fmt}"
         return Response(
             content=audio_bytes,
@@ -1666,6 +1679,16 @@ async def on_startup():
             logger.info("Database init_db completed (env=%s)", os.getenv("ENVIRONMENT", "development"))
         except Exception as exc:
             logger.warning("Database init_db failed (may be expected in tests): %s", exc)
+            return
+
+        # P0-4：进程刚启动时，本进程不可能持有上一进程的任何协程，
+        # 因此库里仍处于活跃态的任务都是孤儿 → 统一终态化并幂等退款。
+        # 依赖 init_db 成功；整段异常隔离，绝不影响端口 bind / 健康检查。
+        try:
+            from app.services.task_recovery import reconcile_orphans_after_restart
+            reconcile_orphans_after_restart()
+        except Exception as exc:
+            logger.warning("Startup orphan reconciliation failed: %s", exc)
 
     threading.Thread(target=_init_db_background, daemon=True).start()
     logger.info("Database init_db started in background thread (non-blocking startup)")

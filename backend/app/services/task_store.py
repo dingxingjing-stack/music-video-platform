@@ -10,10 +10,19 @@
 import os
 import time
 import uuid
+import logging
 import threading
 from typing import Any, Dict, Optional
 
+logger = logging.getLogger(__name__)
+
 TASK_TIMEOUT = float(os.getenv("TASK_TIMEOUT", "600"))
+
+# 终态：一旦进入就不可逆（F1）。带 state 的写入必须在数据库层用这个集合裁决，
+# 不能只在 Python 里判断——判断与写入之间必有 race。
+TERMINAL_STATES = ("completed", "completed_with_stems_failed", "failed")
+# text() 不能把 tuple 绑进 IN，这里内联固定字面量（无任何外部输入）
+_TERMINAL_LIST = "(" + ", ".join(f"'{s}'" for s in TERMINAL_STATES) + ")"
 
 _DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
 _DB_PATH = os.path.join(_DB_DIR, "beta.db")
@@ -61,14 +70,28 @@ def _row_to_task(row) -> Dict[str, Any]:
             pass
     return d
 
-def new_task(user_key: Optional[str] = None, task_id: Optional[str] = None) -> str:
+def new_task(user_key: Optional[str] = None, task_id: Optional[str] = None,
+             generation_quota_weight: Optional[int] = None) -> str:
+    """建任务行。
+
+    generation_quota_weight：本次生成在 reserve_generation 中实际预留的日/月额度权重，
+    建表时就要写入 —— 退款若届时再按 duration 推断，口径可能已与预留不一致。
+    非生成类任务（workflow 等）不预留权重时传 None。
+    """
     tid = task_id or f"task-{uuid.uuid4().hex[:8]}"
     now = time.time()
     sess = _get_session()
+    insert_sql = (
+        "INSERT INTO ai_tasks (task_id, user_key, state, progress, created_at, updated_at, generation_quota_weight) "
+        "VALUES (:tid, :uk, 'pending', 0, :ca, :ua, :qqw)"
+    )
+    def _params(task_id_value: str) -> Dict[str, Any]:
+        return {"tid": task_id_value, "uk": user_key or "", "ca": now, "ua": now,
+                "qqw": generation_quota_weight}
     try:
         from sqlalchemy import text
         sess.execute(text("BEGIN"))
-        sess.execute(text("INSERT INTO ai_tasks (task_id, user_key, state, progress, created_at, updated_at) VALUES (:tid, :uk, 'pending', 0, :ca, :ua)"), {"tid": tid, "uk": user_key or "", "ca": now, "ua": now})
+        sess.execute(text(insert_sql), _params(tid))
         sess.commit()
         return tid
     except Exception as e:
@@ -76,7 +99,7 @@ def new_task(user_key: Optional[str] = None, task_id: Optional[str] = None) -> s
         # 极小概率冲突，重试一次
         tid = f"task-{uuid.uuid4().hex[:8]}"
         try:
-            sess.execute(text("INSERT INTO ai_tasks (task_id, user_key, state, progress, created_at, updated_at) VALUES (:tid, :uk, 'pending', 0, :ca, :ua)"), {"tid": tid, "uk": user_key or "", "ca": now, "ua": now})
+            sess.execute(text(insert_sql), _params(tid))
             sess.commit()
             return tid
         except Exception:
@@ -86,6 +109,13 @@ def new_task(user_key: Optional[str] = None, task_id: Optional[str] = None) -> s
         sess.close()
 
 def update(task_id: str, **kw: Any) -> None:
+    """写入任务字段。
+
+    终态不可逆（F1）：任何携带 state 的写入都由数据库条件更新裁决
+    `WHERE ... (state IS NULL OR state NOT IN 终态)`，rowcount==0 即整笔作废。
+    否则惰性超时退款后，仍在运行的 Provider 协程可以把 failed 覆写成 completed，
+    形成「歌拿到了、钱也退了」的双重收益。
+    """
     import json
     if not kw:
         return
@@ -98,16 +128,35 @@ def update(task_id: str, **kw: Any) -> None:
         fields = []
         params: Dict[str, Any] = {}
         for k, v in kw.items():
+            if k == "state":
+                continue  # state 走下面的条件更新
             if k in json_columns and isinstance(v, (dict, list)):
                 fields.append(f"{k} = :{k}")
                 params[k] = json.dumps(v)
             else:
                 fields.append(f"{k} = :{k}")
                 params[k] = v
-        fields.append("updated_at = :ua")
         params["ua"] = now
         params["tid"] = task_id
-        sess.execute(text(f"UPDATE ai_tasks SET {', '.join(fields)} WHERE task_id = :tid"), params)
+
+        target_state = kw.get("state")
+        if target_state is not None:
+            guard = sess.execute(text(
+                "UPDATE ai_tasks SET state = :st, updated_at = :ua "
+                f"WHERE task_id = :tid AND (state IS NULL OR state NOT IN {_TERMINAL_LIST})"
+            ), {"st": target_state, "ua": now, "tid": task_id})
+            if guard.rowcount == 0:
+                # 任务已是终态（或根本不存在）：拒绝任何回写，也不刷新心跳
+                sess.rollback()
+                logger.warning(
+                    "update(%s) ignored: 任务已处于终态，拒绝写入 state=%s", task_id, target_state
+                )
+                return
+
+        if fields:
+            sess.execute(text(
+                f"UPDATE ai_tasks SET {', '.join(fields)}, updated_at = :ua WHERE task_id = :tid"
+            ), params)
         sess.execute(text("UPDATE task_locks SET updated_at=:ua WHERE task_id=:tid"), {"ua": now, "tid": task_id})
         sess.commit()
     except Exception:
@@ -172,13 +221,11 @@ def get(task_id: str) -> Optional[Dict[str, Any]]:
                     task[col] = json.loads(task[col])
                 except Exception:
                     task[col] = None
-        # 惰性超时
+        # 惰性超时：只标记，不在这里翻状态/删锁（退款必须收敛到
+        # task_recovery.finalize_stale_task 这一个出口，否则会出现「判失败但没退款」）
         if task.get("state") in ("pending", "processing", "generating", "separating", "uploading") and time.time() - float(task.get("updated_at") or 0) > TASK_TIMEOUT:
-            sess.execute(text("UPDATE ai_tasks SET state='failed', error=:err, updated_at=:ua WHERE task_id=:tid"), {"err": "生成超时（超过限制时长），请稍后重试", "ua": time.time(), "tid": task_id})
-            sess.execute(text("DELETE FROM task_locks WHERE task_id=:tid"), {"tid": task_id})
+            task["stale_timed_out"] = True
             sess.commit()
-            task["state"] = "failed"
-            task["error"] = "生成超时（超过限制时长），请稍后重试"
             return task
         sess.commit()
         return task
@@ -252,28 +299,52 @@ def is_user_busy(user_key: Optional[str]) -> bool:
         sess.close()
 
 def acquire_lock(user_key: Optional[str], task_id: str) -> bool:
+    """占用用户任务锁。任何情况都不抛异常 —— 失败一律返回 False，由调用方走无副作用分支。
+
+    修复点（P0-3）：
+    1. 旧实现是 `INSERT ... SELECT WHERE NOT EXISTS`，而 task_locks.user_key 是主键：
+       进程崩溃/部署重启后残留的锁行不会命中 NOT EXISTS 条件，而是直接撞主键
+       → IntegrityError 冒到路由层变成 500，此时 Credits 已扣且不会被退回。
+    2. 现在先清理该用户的陈旧锁（任务已不存在/已终态/超过 TTL），再用
+       `ON CONFLICT DO NOTHING` + rowcount 判定，并把任何数据库异常收敛为 False。
+    """
     if not user_key:
         return True
+    now = time.time()
     sess = _get_session()
     try:
         from sqlalchemy import text
         sess.execute(text("BEGIN"))
+        # 陈旧锁清理：所绑任务已不存在，或已不在活跃状态
+        # （不用 DELETE 表别名：SQLite 不支持，PG/SQLite 需同一份 SQL 可跑）
+        sess.execute(text("""
+            DELETE FROM task_locks
+            WHERE user_key = :uk
+              AND task_id NOT IN (
+                  SELECT task_id FROM ai_tasks
+                  WHERE state IN ('pending','processing','generating','separating','uploading')
+              )
+        """), {"uk": user_key})
+        # TTL 过期的锁（即便任务状态还没被惰性刷新）
+        sess.execute(text("""
+            DELETE FROM task_locks WHERE user_key = :uk AND updated_at + 600 <= :now
+        """), {"uk": user_key, "now": now})
         cur = sess.execute(text("""
             INSERT INTO task_locks (user_key, task_id, updated_at)
-            SELECT :uk, :tid, :now
-            WHERE NOT EXISTS (
-                SELECT 1 FROM task_locks tl
-                JOIN ai_tasks t ON tl.task_id = t.task_id
-                WHERE tl.user_key=:uk2
-                  AND t.state IN ('pending','processing','generating','separating','uploading')
-                  AND tl.updated_at + 600 > :now2
-            )
-        """), {"uk": user_key, "tid": task_id, "now": time.time(), "uk2": user_key, "now2": time.time()})
+            VALUES (:uk, :tid, :now)
+            ON CONFLICT (user_key) DO NOTHING
+        """), {"uk": user_key, "tid": task_id, "now": now})
         if cur.rowcount == 0:
             sess.rollback()
             return False
         sess.commit()
         return True
+    except Exception:
+        try:
+            sess.rollback()
+        except Exception:
+            pass
+        return False
     finally:
         sess.close()
 

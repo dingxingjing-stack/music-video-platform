@@ -16,11 +16,14 @@ API 端点:
 - GET /api/v1/store/preview/{id} - 预览素材
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
+from typing import List, Optional, Dict
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+
+from app.services.auth_identity import get_verified_user_id
 
 router = APIRouter(prefix="/api/v1/store", tags=["Asset Store"])
 
@@ -186,18 +189,28 @@ async def get_asset_detail(asset_id: str):
 
 
 @router.post("/purchase", response_model=PurchaseResponse)
-async def purchase_asset(request: PurchaseRequest):
-    """购买素材"""
+async def purchase_asset(
+    request: PurchaseRequest,
+    user_id: str = Depends(get_verified_user_id),
+):
+    """购买素材。
+
+    P0-6 安全收口（原实现接受客户端 user_id 且「TODO: 实际支付流程」之后直接写购买
+    记录并返回下载地址 ⇒ 任何人零成本获得付费素材）：
+      - 身份只取 verified JWT（get_verified_user_id），忽略请求体里的 user_id；
+      - 付费素材在支付系统未接入前一律 501，不写任何购买记录；
+      - 免费素材仍可正常领取下载地址。
+    """
     # 查找素材
     asset = None
     for a in ASSETS:
         if a.id == request.asset_id:
             asset = a
             break
-    
+
     if not asset:
         raise HTTPException(status_code=404, detail="素材不存在")
-    
+
     if asset.price == 0:
         # 免费素材直接下载
         return PurchaseResponse(
@@ -206,30 +219,14 @@ async def purchase_asset(request: PurchaseRequest):
             download_url=f"/api/v1/store/download/{request.asset_id}",
             message="免费素材，可直接下载"
         )
-    
-    # TODO: 实际支付流程
-    # 1. 创建支付订单
-    # 2. 调起支付
-    # 3. 处理回调
-    # 4. 添加购买记录
-    
-    # 添加购买记录
-    if request.user_id not in purchases_db:
-        purchases_db[request.user_id] = []
-    if request.asset_id not in purchases_db[request.user_id]:
-        purchases_db[request.user_id].append(request.asset_id)
-    
-    return PurchaseResponse(
-        success=True,
-        asset_id=request.asset_id,
-        download_url=f"/api/v1/store/download/{request.asset_id}",
-        message="购买成功！"
-    )
+
+    # 支付未接入：绝不制造「已购买」状态，也不给付费素材下载地址
+    raise HTTPException(status_code=501, detail="payment_not_configured")
 
 
 @router.get("/purchases")
-async def get_purchases(user_id: str = Query(..., description="用户 ID")):
-    """获取已购素材列表"""
+async def get_purchases(user_id: str = Depends(get_verified_user_id)):
+    """获取已购素材列表（身份只取 verified JWT，不接受客户端传参）"""
     if user_id not in purchases_db:
         return []
     
@@ -238,8 +235,15 @@ async def get_purchases(user_id: str = Query(..., description="用户 ID")):
 
 
 @router.get("/download/{asset_id}")
-async def download_asset(asset_id: str, user_id: str = Query(..., description="用户 ID")):
-    """下载素材 (需已购买)"""
+async def download_asset(
+    asset_id: str,
+    user_id: str = Depends(get_verified_user_id),
+):
+    """下载素材 (需已购买)
+
+    P0-6：身份来自 verified JWT；付费素材必须有属于该用户的购买记录才可取地址。
+    由于 /purchase 对付费素材恒 501，该分支当前不可达（等价于付费下载已关闭）。
+    """
     # 先查找素材
     asset = None
     for a in ASSETS:
@@ -255,7 +259,7 @@ async def download_asset(asset_id: str, user_id: str = Query(..., description="�
         # 免费素材直接下载
         return {"download_url": f"https://storage.example.com/assets/{asset_id}.mp4", "expires_in": 3600}
     
-    # 检查购买记录
+    # 检查购买记录（归属以 verified uid 为准）
     if user_id not in purchases_db or asset_id not in purchases_db[user_id]:
         raise HTTPException(status_code=403, detail="未购买该素材")
     

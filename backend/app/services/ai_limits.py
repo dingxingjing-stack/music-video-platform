@@ -320,7 +320,7 @@ def reserve_generation(user_id: str, duration: int | None = None) -> dict[str, A
     finally:
         sess.close()
 
-def refund_generation(user_id: str, duration: int | None = None, reason: str = "provider_failure", task_id: str | None = None) -> dict[str, Any]:
+def refund_generation(user_id: str, duration: int | None = None, reason: str = "provider_failure", task_id: str | None = None, weight: int | None = None) -> dict[str, Any]:
     """
     统一退款语义 —— 根据失败原因决定是否退还用户额度。
 
@@ -340,6 +340,9 @@ def refund_generation(user_id: str, duration: int | None = None, reason: str = "
             - "persistence_failed"     : provider 成功但持久化失败 → **不退款**，可能已产生真实成本
         task_id: generation task 的唯一退款身份（对应 ai_tasks.task_id）。
             None 时保持旧行为（无条件退款），向后兼容无 task_id 的调用方。
+        weight: 显式退款权重，优先于 duration 推断。调用方必须传
+            **当初 reserve_generation 实际扣减的权重**（已持久化在
+            ai_tasks.generation_quota_weight），否则会出现扣 2 退 1 的少退。
 
     返回:
         dict: {"success": bool, "refunded": bool, "already_refunded": bool,
@@ -354,7 +357,14 @@ def refund_generation(user_id: str, duration: int | None = None, reason: str = "
     if reason in ("timeout_unknown", "persistence_failed"):
         return {"success": False, "error": f"不退款: {reason}", "refunded": False, "reason": reason}
 
-    weight = get_duration_weight(duration) if duration is not None else 1
+    if weight is not None:
+        try:
+            # 下限 1：绝不允许负数/0 变成"倒扣"，也不让脏数据放大退款
+            weight = max(1, int(weight))
+        except (TypeError, ValueError):
+            weight = 1
+    else:
+        weight = get_duration_weight(duration) if duration is not None else 1
     today, mkey = _today(), _month_key()
 
     sess = _get_session()

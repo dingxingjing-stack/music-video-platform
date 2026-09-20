@@ -74,6 +74,9 @@ class _FakeRunPodClient:
 @pytest.fixture()
 def smoke_env(monkeypatch):
     """配置 RunPod smoke 所需环境变量，返回 submit 计数器与 client 替换。"""
+    # P0-7 契约变更：该端点默认关闭（404）。本文件测的是"启用之后"的 token 门，
+    # 因此显式启用；默认关闭由 tests/test_p0_security_fixes.py 覆盖。
+    monkeypatch.setenv("ENABLE_RUNPOD_SMOKE_TEST", "true")
     monkeypatch.setenv("RUNPOD_SMOKE_TEST_TOKEN", "the-secret-token")
     monkeypatch.setenv("RUNPOD_API_KEY", "sk-fake")
     monkeypatch.setenv("RUNPOD_ENDPOINT_ID", "endpoint-fake")
@@ -167,8 +170,14 @@ def test_t9_production_missing_token_fail_closed(monkeypatch):
     counter = _SubmitCount()
     monkeypatch.setattr(ai_music.httpx, "AsyncClient", lambda *a, **k: _FakeRunPodClient(counter))
     c = _client()
+    # P0-7 后契约：默认未启用 → 404（对外不存在）；显式启用但缺 token → 503。
+    # 两种都必须 fail-closed 且 RunPod submit 次数为 0。
     r = c.post("/api/v1/ai/runpod-smoke-test", headers={"X-RunPod-Smoke-Token": ""})
-    assert r.status_code == 503
+    assert r.status_code == 404, "未显式启用时端点应表现为不存在"
+    assert counter.n == 0
+    monkeypatch.setenv("ENABLE_RUNPOD_SMOKE_TEST", "true")
+    r2 = c.post("/api/v1/ai/runpod-smoke-test", headers={"X-RunPod-Smoke-Token": ""})
+    assert r2.status_code == 503, "启用但未配置 token 仍须 fail closed"
     assert counter.n == 0
 
 

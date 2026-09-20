@@ -48,6 +48,7 @@ from app.services.ai_limits import (
     MAX_TASK_RUNTIME_SECONDS,
     reserve_generation,
     refund_generation,
+    get_duration_weight,
     generation_usage_status,
     check_and_log_download,
     global_hard_stop_reached,
@@ -247,8 +248,21 @@ def _log_generation_cost(task_id: str, user_key: str, provider, result: str, tot
         print(f"[CostLog] log_generation_cost failed: {exc}")
 
 
-async def _run_generation(task_id: str, request: GenerateRequest, user_key: str):
-    """后台执行完整生成链路：Agnes -> 150+150 continuation(>180) / 单段(<=180) -> R2"""
+async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
+                          quota_weight: Optional[int] = None):
+    """后台执行完整生成链路：Agnes -> 150+150 continuation(>180) / 单段(<=180) -> R2
+
+    quota_weight：本次生成在 reserve_generation 中实际扣减的日/月额度权重，由
+    generate_music 沿 _run_with_timeout 透传（F2）。绝不在此按 request.duration 重新
+    推算：duration 省略时 reserve 扣 1，而 min(duration or 180) 会推出 2，形成超额退款。
+    未显式传入的调用方（历史 3 参调用/测试）退回读任务行的持久化值。
+    """
+    if quota_weight is None:
+        quota_weight = (task_store.get(task_id) or {}).get("generation_quota_weight")
+    try:
+        quota_weight = max(1, int(quota_weight))
+    except (TypeError, ValueError):
+        quota_weight = 1
     try:
         task_store.update(task_id, state="processing", progress=10)
 
@@ -363,29 +377,29 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str)
             error=(str(gen_result.get("error")) if non_retryable and gen_result
                    else "音乐生成失败：所有 Provider 与 HF 兜底均不可用"),
         )
-        refund_generation(user_key, duration,
-                          reason="validation_failed" if non_retryable else "provider_failed",
-                          task_id=task_id)
+        refund_generation(user_key, reason="validation_failed" if non_retryable else "provider_failed",
+                          task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
     except QueueFullError as e:
         _log_generation_cost(task_id, user_key, last_provider if 'last_provider' in locals() else None, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
         task_store.update(task_id, state="failed", error=str(e))
-        refund_generation(user_key, request.duration, reason="request_not_sent", task_id=task_id)
+        refund_generation(user_key, reason="request_not_sent", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
     except HTTPException:
         task_store.update(task_id, state="failed", error="请求参数错误")
-        refund_generation(user_key, request.duration, reason="validation_failed", task_id=task_id)
+        refund_generation(user_key, reason="validation_failed", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key, request.duration, reason="timeout_unknown", task_id=task_id)
+        # timeout_unknown 在 ai_limits 内部一律不退额度（既有策略，本轮不改）
+        refund_generation(user_key, reason="timeout_unknown", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
     except Exception as e:  # noqa: BLE001
         import traceback
         print(f"[generate 未捕获异常] {type(e).__name__}: {e}")
         traceback.print_exc()
         task_store.update(task_id, state="failed", error=f"{type(e).__name__}: {e}")
-        refund_generation(user_key, getattr(request, 'duration', None), reason="provider_failed", task_id=task_id)
+        refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
     finally:
         task_store.release_lock_for_task(task_id)
@@ -492,16 +506,21 @@ def _stems_signed(task_id: str, manifest: Optional[dict]) -> Optional[dict]:
     return out or None
 
 
-async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: str):
-    """包一层超时（单任务最大 10 分钟），超时自动标记 failed 并回退额度。"""
+async def _run_with_timeout(task_id: str, request: GenerateRequest, user_key: str,
+                            quota_weight: Optional[int] = None):
+    """包一层超时（单任务最大 10 分钟），超时自动标记 failed 并回退额度。
+
+    quota_weight 由 generate_music 透传，语义同 _run_generation（F2）。
+    """
     try:
         await asyncio.wait_for(
-            _run_generation(task_id, request, user_key),
+            _run_generation(task_id, request, user_key, quota_weight),
             timeout=MAX_TASK_RUNTIME_SECONDS,
         )
     except asyncio.TimeoutError:
         task_store.update(task_id, state="failed", error="生成超时，请稍后重试")
-        refund_generation(user_key, request.duration, reason="timeout_unknown", task_id=task_id)
+        # timeout_unknown 在 ai_limits 内部一律不退额度（既有策略，本轮不改）
+        refund_generation(user_key, reason="timeout_unknown", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
         task_store.release_lock_for_task(task_id)
 
@@ -528,9 +547,36 @@ async def generate_music(
             error="您有一个生成任务正在进行中，请完成后再试",
         )
 
+    # ── P0-3 顺序修复：先建任务并拿到锁，再做任何有成本的预留/扣费 ──
+    # 旧顺序是「扣 Credits → 抢锁」，锁失败路径若抛异常（task_locks 主键冲突曾返回 500）
+    # 会让已扣的 Credits 永久损失。现在锁失败发生在任何扣费之前，天然无资金损失。
+    # 日额度权重在预留之前就固化到任务行：退款方（惰性超时 / 重启对账）届时无需
+    # 也不能再按 duration 推断，否则会出现「180s 扣 2、退 1」的少退。
+    quota_weight = get_duration_weight(req.duration)
+    task_id = task_store.new_task(user_key=user_key, generation_quota_weight=quota_weight)
+
+    def _abandon(reason: str) -> None:
+        """回滚本次尚未产生任何外部副作用的占位：释放锁 + 删除空任务。"""
+        try:
+            task_store.release_lock_for_task(task_id)
+        except Exception:
+            logger.warning("release_lock failed while abandoning %s (%s)", task_id, reason)
+        try:
+            task_store.delete(task_id)
+        except Exception:
+            logger.warning("delete task failed while abandoning %s (%s)", task_id, reason)
+
+    if not task_store.acquire_lock(user_key, task_id):
+        _abandon("lock_busy")
+        return GenerateResponse(
+            success=False,
+            error="您有一个生成任务正在进行中，请完成后再试",
+        )
+
     # 原子预留额度（GPU 启动前扣减）—— 不可通过重复 POST / 改 localStorage 绕过
     reserved = reserve_generation(user_key, req.duration)
     if not reserved["success"]:
+        _abandon("limits_reserved_failed")
         # GPU 预算硬停线：达到 FAL_BUDGET_DAILY 后在 GPU 启动前返回 429（与 retry-stems 一致，兼容旧 MODAL_BUDGET_DAILY）
         if "预算" in reserved["error"]:
             return JSONResponse(
@@ -539,7 +585,15 @@ async def generate_music(
             )
         return GenerateResponse(success=False, error=reserved["error"])
 
-    task_id = task_store.new_task(user_key=user_key)
+    # 一致性保证：以 reserve_generation 实际扣减的权重为唯一事实来源（正常情况下
+    # 与建任务时写入的值相同；不同则说明权重口径已漂移，立即改写任务行并告警）。
+    actual_weight = reserved.get("weight")
+    if isinstance(actual_weight, int) and actual_weight != quota_weight:
+        logger.warning(
+            "quota weight drift on %s: task=%s reserve=%s → 以 reserve 为准", task_id, quota_weight, actual_weight
+        )
+        task_store.update(task_id, generation_quota_weight=actual_weight)
+        quota_weight = actual_weight
 
     # ── Credits 扣费（余额型；与 ai_limits 的每日次数并存）──
     # credit_cost=0（未定价）时 get_credit_cost 返回 None → 跳过扣费，保持现有免费流程。
@@ -548,22 +602,19 @@ async def generate_music(
     if credit_cost is not None and credit_cost > 0:
         consume = credits_service.reserve_generation_credits(user_key, task_id, credit_cost)
         if not consume["success"]:
-            refund_generation(user_key, req.duration, reason="request_not_sent", task_id=task_id)
-            task_store.delete(task_id)
+            refund_generation(user_key, reason="request_not_sent", task_id=task_id, weight=quota_weight)
+            _abandon("insufficient_credits")
             return GenerateResponse(success=False, error="insufficient_credits")
 
-    if not task_store.acquire_lock(user_key, task_id):
-        # 扣费已发生则先退 Credits，再退 ai_limits，最后删空 task
+    try:
+        asyncio.create_task(_run_with_timeout(task_id, req, user_key, quota_weight))
+    except Exception as exc:  # 协程根本没起来：钱已扣，必须立刻退回
+        logger.error("failed to spawn generation task %s: %s", task_id, exc)
         if credit_cost:
             credits_service.refund_generation_credits(user_key, task_id)
-        refund_generation(user_key, req.duration, reason="request_not_sent", task_id=task_id)
-        task_store.delete(task_id)
-        return GenerateResponse(
-            success=False,
-            error="您有一个生成任务正在进行中，请完成后再试",
-        )
-
-    asyncio.create_task(_run_with_timeout(task_id, req, user_key))
+        refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=quota_weight)
+        _abandon("spawn_failed")
+        return GenerateResponse(success=False, error="服务繁忙，请稍后重试")
     return GenerateResponse(
         success=True,
         task_id=task_id,
@@ -587,6 +638,12 @@ async def get_task(
     user_key = task.get("user_key")
     if not user_key or user_key != user_id:
         raise HTTPException(status_code=403, detail="无权访问该任务")
+
+    # P0-4：惰性超时统一在此终态化并退款（task_store.get() 只标记，不再自己翻状态）
+    if task.get("stale_timed_out"):
+        from app.services import task_recovery
+        task_recovery.finalize_stale_task(task_id, reason="生成超时（服务未收到结果），已自动退款")
+        task = task_store.get(task_id) or task
 
     state = task["state"]
     audio_url = task.get("audio_url")
@@ -900,11 +957,21 @@ class RunPodSmokeTestResponse(BaseModel):
     message: str = "RunPod smoke test completed"
 
 
+def _smoke_test_enabled() -> bool:
+    """P0-7：生产方向不使用 RunPod，该端点默认关闭。
+
+    仅当显式设置 ENABLE_RUNPOD_SMOKE_TEST=true/1/yes 才开放；
+    且仍要求 X-RunPod-Smoke-Token 与 RUNPOD_SMOKE_TEST_TOKEN 常量时间比较通过。
+    """
+    return (os.getenv("ENABLE_RUNPOD_SMOKE_TEST") or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _verify_smoke_token(x_token: Optional[str]) -> bool:
+    import hmac
     expected = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
-    if not expected:
+    if not expected or not x_token:
         return False
-    return x_token == expected
+    return hmac.compare_digest(str(x_token), str(expected))
 
 
 @router.post("/runpod-smoke-test", response_model=RunPodSmokeTestResponse)
@@ -918,11 +985,13 @@ async def runpod_smoke_test(
 
     返回 RunPod API 调用链路关键指标，不返回任何密钥。
     """
-    # 鉴权：X-RunPod-Smoke-Token → RUNPOD_SMOKE_TEST_TOKEN
-    expected_token = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
-    if not expected_token:
+    # P0-7：未显式启用 → 对外表现为「端点不存在」，不给探测者任何信息
+    if not _smoke_test_enabled():
+        raise HTTPException(status_code=404, detail="Not Found")
+    # 鉴权：X-RunPod-Smoke-Token → RUNPOD_SMOKE_TEST_TOKEN（常量时间比较）
+    if not os.getenv("RUNPOD_SMOKE_TEST_TOKEN"):
         raise HTTPException(status_code=503, detail="RUNPOD_SMOKE_TEST_TOKEN not configured")
-    if not x_runpod_smoke_token or x_runpod_smoke_token != expected_token:
+    if not _verify_smoke_token(x_runpod_smoke_token):
         raise HTTPException(status_code=401, detail="Invalid X-RunPod-Smoke-Token")
 
     api_key = os.getenv("RUNPOD_API_KEY")
