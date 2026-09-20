@@ -230,6 +230,52 @@ class CreditTransaction(Base):
     description = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
+
+class CreditPackPurchase(Base):
+    """积分补充包购买流水（Paddle 一次性交易）。
+
+    幂等核心：paddle_transaction_id 唯一。Paddle 重发同一事件（网络重试、人工 replay）
+    时 INSERT 冲突 → 判定为已处理 → 绝不二次发放 Credits。
+    只记录一次性商品；会员订阅（recurring）不写这张表，与会员体系完全隔离。
+    """
+    __tablename__ = "credit_pack_purchases"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), nullable=False, index=True)      # verified auth.users.id
+    paddle_transaction_id = Column(String(120), nullable=False, unique=True)
+    paddle_event_id = Column(String(120), nullable=True)
+    paddle_price_id = Column(String(120), nullable=False, index=True)
+    pack_id = Column(String(40), nullable=False)
+    credits = Column(Integer, nullable=False)
+    currency = Column(String(8), nullable=True)
+    amount_cents = Column(Integer, nullable=True)                  # Paddle 实收（最小货币单位）
+    status = Column(String(30), nullable=False, default="completed")
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserMembership(Base):
+    """会员订阅状态（Paddle Recurring）。一个 Paddle subscription 对应一行。
+
+    - 等级与到期时间只由这张表表达；积分余额仍走 user_credits（同一套积分系统）。
+    - last_granted_period_start 是"本计费周期是否已发过月度积分"的幂等锚点：
+      同一周期内 webhook 重投不会二次发放，跨过新周期才会再发一次。
+    """
+    __tablename__ = "user_memberships"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), nullable=False, index=True)
+    paddle_subscription_id = Column(String(120), nullable=False, unique=True)
+    plan_id = Column(String(40), nullable=False, index=True)
+    paddle_price_id = Column(String(120), nullable=True)
+    status = Column(String(30), nullable=False, default="active")
+    interval = Column(String(16), nullable=False, default="month")
+    credits_per_month = Column(Integer, nullable=False, default=0)
+    current_period_start = Column(String(40), nullable=True)
+    current_period_end = Column(String(40), nullable=True)
+    last_granted_period_start = Column(String(40), nullable=True)
+    cancel_at_period_end = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # ── 工具 ────────────────────────────────────────────
 def init_db() -> None:
     """幂等建表（不 DROP，生产安全）。"""
