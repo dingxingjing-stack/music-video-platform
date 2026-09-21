@@ -69,19 +69,16 @@ export function PricingPage() {
 
   useEffect(() => {
     refreshAccount();
-    // 两个目录各自独立加载：积分包接口挂了不能连带抹掉会员入口（反之亦然），
-    // 否则用户看到的是"整页没有付款按钮"，而真实原因只是其中一个接口失败。
+    // 两个目录并行 + 各自隔离：任一个接口失败或慢（Render 冷启动实测可达 70s）都不能拖住另一个，
+    // 否则用户看到的是"整页没有付款按钮"，而真实原因只是一个接口在等待。
     (async () => {
-      try {
-        setPacks(await authFetchOptional<PacksResponse>(`${api.base}/api/v1/credits/packs`));
-      } catch {
-        setPacks(null);     // 拉不到就不显示补充包区块，也绝不做可点的假按钮
-      }
-      try {
-        setPlans(await authFetchOptional<PlansResponse>(`${api.base}/api/v1/credits/plans`));
-      } catch {
-        setPlans(null);
-      }
+      const [p, l] = await Promise.allSettled([
+        authFetchOptional<PacksResponse>(`${api.base}/api/v1/credits/packs`),
+        authFetchOptional<PlansResponse>(`${api.base}/api/v1/credits/plans`),
+      ]);
+      // fulfilled 才用；rejected 一律置 null —— 拉不到就整块不显示，也绝不做可点的假按钮
+      setPacks(p.status === 'fulfilled' ? p.value : null);
+      setPlans(l.status === 'fulfilled' ? l.value : null);
     })();
   }, [refreshAccount]);
 
