@@ -25,11 +25,12 @@ GET  /api/v1/ai/limits                 额度/成本保护状态
 
 import asyncio
 import json
+import logging
 import os
 import time
 import httpx
 from fastapi import APIRouter, HTTPException, Header, Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from typing import Optional
 
@@ -1138,3 +1139,57 @@ async def list_styles():
             {"value": "lo-fi", "label": "Lo-Fi", "description": "低保真音乐"},
         ]
     }
+
+
+# ── 天谱乐（TemPolor）音乐生成回调 ────────────────────────────────────
+# 官方 /song/generate 把 callback_url 列为必填字段，且要求处理成功时返回纯文本
+# "success"（一次生成会回调 mp3 / wav / 歌词多次）。本端点只确认收到并留痕：
+# 不写 ai_tasks、不动 Credits、不作为任务终态来源 —— 终态仍由 TempolorProvider
+# 的轮询决定。回调体没有任何签名机制，故全部内容按不可信输入处理。
+_callback_logger = logging.getLogger("app.routers.ai_music.tempolor_callback")
+
+_CALLBACK_MAX_BYTES = 256 * 1024
+_CALLBACK_ID_CHARS = 64
+_CALLBACK_LOG_ITEM_CAP = 10
+
+
+def _safe_item_id(raw: str) -> str:
+    """item_id 由 provider 控制：剥掉控制字符（防换行伪造日志行）并截断长度。"""
+    printable = [ch for ch in raw if 0x20 <= ord(ch) < 0x7F]
+    return "".join(printable)[:_CALLBACK_ID_CHARS]
+
+
+@router.post("/tempolor/callback")
+async def tempolor_callback(request: Request):
+    """接收天谱乐生成回调：解析 songs[].item_id 并记录，恒返回 200 + "success"。"""
+    body = await request.body()
+    item_ids: list[str] = []
+
+    if not body:
+        _callback_logger.warning("[tempolor] callback 负载为空")
+    elif len(body) > _CALLBACK_MAX_BYTES:
+        _callback_logger.warning("[tempolor] callback 负载过大（%d bytes），跳过解析", len(body))
+    else:
+        payload: object = None
+        try:
+            payload = json.loads(body.decode("utf-8", "replace"))
+        except (ValueError, UnicodeDecodeError):
+            # 重投也不会变成合法 JSON，直接确认掉，避免平台无限重试
+            _callback_logger.warning("[tempolor] callback 非合法 JSON，已确认收到")
+        songs = payload.get("songs") if isinstance(payload, dict) else None
+        if isinstance(songs, list):
+            for song in songs:
+                item_id = song.get("item_id") if isinstance(song, dict) else None
+                if isinstance(item_id, str):
+                    safe = _safe_item_id(item_id)
+                    if safe:
+                        item_ids.append(safe)
+        elif songs is not None:
+            _callback_logger.warning("[tempolor] callback songs 字段类型异常：%s", type(songs).__name__)
+
+    _callback_logger.info(
+        "[tempolor] callback 收到 %d 个 item_id：%s",
+        len(item_ids),
+        item_ids[:_CALLBACK_LOG_ITEM_CAP] or "-",
+    )
+    return PlainTextResponse("success") 
