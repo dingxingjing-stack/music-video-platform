@@ -21,7 +21,9 @@ import hmac
 import json
 import logging
 import os
+import re
 import time
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import httpx
@@ -35,9 +37,57 @@ PRODUCTION_BASE_URL = "https://api.paddle.com"
 # 这里额外加一层防重放；设为 0 可关闭。
 DEFAULT_WEBHOOK_MAX_AGE = int(os.getenv("PADDLE_WEBHOOK_MAX_AGE_SECONDS", "300"))
 
+# Paddle 的 detail 是人话、可能顺带复述我们提交的字段（含客户邮箱），
+# 所以进日志/异常前一律打码并截断。
+_DETAIL_MAX_CHARS = 200
+_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.+-]+")
+
 
 class PaddleError(Exception):
-    """Paddle 侧错误（对外只暴露类型与安全消息，绝不回显密钥/上游原文）。"""
+    """Paddle 侧错误（对外只暴露类型与安全消息，绝不回显密钥/上游原文）。
+
+    `code` / `status` 带的是 Paddle 错误信封里的机器码与 HTTP 状态。它们不含任何
+    凭据，却是唯一能把"账户级前置条件没满足"（例如 `transaction_checkout_not_enabled`）
+    和"上游抖动一下"区分开的信息 —— 没有它们，日志里就只剩一句泛化的 PaddleError。
+    """
+
+    def __init__(self, message: str, *, code: Optional[str] = None,
+                 status: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.status = status
+
+
+def _safe_json(resp: httpx.Response) -> Any:
+    """响应不是 JSON 时返回 None，而不是在诊断路径上再抛一个异常。"""
+    try:
+        return resp.json()
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+def describe_paddle_error(payload: Any) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """从 Paddle 的错误响应里取 (code, 已打码的 detail, request_id)。
+
+    只取这三个字段，其它一律不看：响应体里可能带客户邮箱等个人数据。
+    解析失败就退化成 (None, None, None) —— 诊断信息缺失绝不能变成新故障源。
+    `request_id` 是 Paddle 侧的关联 id，找他们支持时唯一需要提供的东西。
+    """
+    if not isinstance(payload, dict):
+        return None, None, None
+    err = payload.get("error")
+    if not isinstance(err, dict):
+        return None, None, None
+
+    def _clean(value: Any) -> Optional[str]:
+        if not isinstance(value, str) or not value:
+            return None
+        printable = "".join(ch for ch in value if 0x20 <= ord(ch) < 0x7F)
+        return _EMAIL_RE.sub("[redacted]", printable)[:_DETAIL_MAX_CHARS]
+
+    meta = payload.get("meta")
+    request_id = _clean(meta.get("request_id")) if isinstance(meta, dict) else None
+    return _clean(err.get("code")), _clean(err.get("detail")), request_id
 
 
 def paddle_env() -> str:
@@ -134,8 +184,13 @@ async def create_checkout_transaction(*, price_id: str, custom_data: dict[str, A
         raise PaddleError("payment provider unreachable") from exc
 
     if resp.status_code not in (200, 201):
-        logger.warning("Paddle create returned status %s", resp.status_code)
-        raise PaddleError(f"payment provider rejected the order (status {resp.status_code})")
+        code, detail, request_id = describe_paddle_error(_safe_json(resp))
+        logger.warning(
+            "Paddle 建单被拒 status=%s code=%s request_id=%s detail=%s",
+            resp.status_code, code or "-", request_id or "-", detail or "-",
+        )
+        raise PaddleError(f"payment provider rejected the order (status {resp.status_code})",
+                          code=code, status=resp.status_code)
 
     try:
         data = resp.json().get("data") or {}
@@ -229,26 +284,127 @@ def extract_price_id(transaction: dict[str, Any]) -> Optional[str]:
     return first.get("price_id") or price.get("id")
 
 
-def extract_transaction_amount(transaction: dict[str, Any]) -> tuple[Optional[int], Optional[str]]:
-    """(实收最小货币单位, 币种)。取不到时返回 (None, None)。"""
-    for field in ("grand_total", "subtotal", "total"):
-        value = transaction.get(field)
-        if value not in (None, ""):
-            try:
-                amount = int(value)
-            except (TypeError, ValueError):
-                continue
-            if amount > 0:
-                return amount, str(transaction.get("currency_code") or "").upper() or None
-    amounts = transaction.get("amounts") if isinstance(transaction.get("amounts"), dict) else {}
-    for field in ("grand_total", "total"):
-        try:
-            amount = int(amounts.get(field))
-        except (TypeError, ValueError):
+# ── 交易金额解析（按 Paddle Billing v2 的真实载荷形状）────────────────────
+# 真实 transaction 对象把金额放在 details.totals（客户支付币种）与 details.payout_totals
+# （余额币种）里，顶层只有 currency_code —— **没有**顶层 grand_total / subtotal / total /
+# amounts。按顶层字段取值会在真实回调上永远取不到东西，让金额校验静默退化成空操作。
+DEFAULT_ALLOWED_PAYMENT_CURRENCIES = ("USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CNY", "SGD")
+
+
+def allowed_payment_currencies() -> tuple[str, ...]:
+    """允许收款/发放的币种白名单。Paddle 开启本地货币后，交易币种不再恒等于基础币种。"""
+    raw = os.getenv("PADDLE_ALLOWED_PAYMENT_CURRENCIES", "").strip()
+    if not raw:
+        return DEFAULT_ALLOWED_PAYMENT_CURRENCIES
+    codes = tuple(c.strip().upper() for c in raw.split(",") if c.strip())
+    return codes or DEFAULT_ALLOWED_PAYMENT_CURRENCIES
+
+
+def _to_int(value: Any) -> Optional[int]:
+    if value is None or value == "":
+        return None
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+@dataclass(frozen=True)
+class PaymentAmounts:
+    """一笔交易里与"实收"有关的全部事实。取不到的字段一律留 None，由调用方决定拒绝。
+
+    三个金额字段的口径不同，别混用（全部由 sandbox 真实载荷 + transactions.preview 实测）：
+      subtotal    —— **不含税**的商品合计；tax_mode=location 时税含在标价内，Paddle 会把
+                     subtotal 反推压低（499 的价 → JP 454、DE 419），所以它**不能**当实付。
+      total       —— subtotal - discount + tax，即客户按标价应付的数；判断"付满没有"看这个。
+      grand_total —— 实际扣款额（可能再减余额/积分抵扣）。
+    """
+    currency: Optional[str] = None
+    subtotal: Optional[int] = None
+    total: Optional[int] = None
+    grand_total: Optional[int] = None
+    payout_currency: Optional[str] = None
+    payout_grand_total: Optional[int] = None
+    item_count: int = 0
+    price_id: Optional[str] = None
+    quantity: Optional[int] = None
+    unit_amount: Optional[int] = None
+    unit_currency: Optional[str] = None
+    override_amounts: dict[str, int] = field(default_factory=dict)
+
+    @property
+    def due_amount(self) -> Optional[int]:
+        """该交易币种下的应收额（最小货币单位）。
+
+        只在同一币种内取值：客户付的就是基础币种 → 用 unit_price.amount；付的是本地货币
+        → 用该 price 自带的 override。两者都没有就是 None（调用方必须拒绝）。
+        这里刻意不做任何汇率换算。
+        """
+        if not self.currency:
+            return None
+        if self.currency == self.unit_currency:
+            return self.unit_amount
+        return self.override_amounts.get(self.currency)
+
+
+def extract_payment_amounts(obj: dict[str, Any]) -> PaymentAmounts:
+    if not isinstance(obj, dict):
+        return PaymentAmounts()
+
+    currency = str(obj.get("currency_code") or "").strip().upper() or None
+    details = obj.get("details") if isinstance(obj.get("details"), dict) else {}
+    totals = details.get("totals") if isinstance(details.get("totals"), dict) else {}
+    payout = details.get("payout_totals") if isinstance(details.get("payout_totals"), dict) else {}
+
+    items = obj.get("items") if isinstance(obj.get("items"), list) else []
+    result = PaymentAmounts(
+        currency=currency,
+        subtotal=_to_int(totals.get("subtotal")),
+        total=_to_int(totals.get("total")),
+        grand_total=_to_int(totals.get("grand_total")),
+        payout_currency=(str(payout.get("currency_code") or obj.get("payout_currency_code") or "")
+                         .strip().upper() or None),
+        payout_grand_total=_to_int(payout.get("grand_total")),
+        item_count=len(items),
+    )
+    if len(items) != 1 or not isinstance(items[0], dict):
+        return result
+
+    item = items[0]
+    price = item.get("price") if isinstance(item.get("price"), dict) else {}
+    unit = price.get("unit_price") if isinstance(price.get("unit_price"), dict) else {}
+
+    # 本地货币覆盖价只按 Paddle 官方 schema 记载的形状解析：
+    # unit_price_overrides: [{country_codes: [...], unit_price: {amount, currency_code}}]
+    # 2026-09-23 实测：4 份真实事件载荷 + 目录里 8 个 price 一律用这个列表形状，
+    # 且当前全部为 []（未开 automatic currency conversion）。unit_price 里并不存在
+    # "override" 这个 map 字段，所以不为其写猜测性的兼容分支。
+    overrides: dict[str, int] = {}
+    for entry in price.get("unit_price_overrides") or []:
+        if not isinstance(entry, dict):
             continue
-        if amount > 0:
-            return amount, str(transaction.get("currency_code") or "").upper() or None
-    return None, None
+        entry_price = entry.get("unit_price") if isinstance(entry.get("unit_price"), dict) else {}
+        code = str(entry_price.get("currency_code") or "").strip().upper()
+        amount = _to_int(entry_price.get("amount"))
+        if code and amount is not None:
+            overrides.setdefault(code, amount)
+
+    return PaymentAmounts(
+        currency=currency,
+        subtotal=result.subtotal,
+        total=result.total,
+        grand_total=result.grand_total,
+        payout_currency=result.payout_currency,
+        payout_grand_total=result.payout_grand_total,
+        item_count=len(items),
+        # 真实事件的 items[] 只有 {price, quantity, proration}——没有 price_id；
+        # price_id 只出现在 details.line_items[] 和 REST 返回里。所以必须回退到 price.id。
+        price_id=(str(item.get("price_id") or price.get("id") or "").strip() or None),
+        quantity=_to_int(item.get("quantity")),
+        unit_amount=_to_int(unit.get("amount")),
+        unit_currency=(str(unit.get("currency_code") or "").strip().upper() or None),
+        override_amounts=overrides,
+    )
 
 
 def extract_subscription_id(obj: dict[str, Any]) -> Optional[str]:

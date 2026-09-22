@@ -24,6 +24,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.routers import credits as credits_router
+from tests.paddle_payload import normalize_transaction_payload
 from app.services import (
     credit_pack_service,
     credits_service,
@@ -96,6 +97,8 @@ def _post(body: bytes) -> tuple[int, dict]:
 
 
 def _event(event_type: str, data: dict, event_id: str = "evt_1") -> bytes:
+    # 交易类夹具统一转成 Paddle 真实载荷形状（金额在 details.totals、price 内嵌 items[]）
+    data = normalize_transaction_payload(data)
     return json.dumps({"event_id": event_id, "event_type": event_type,
                        "occurred_at": "2026-09-20T00:00:00Z", "data": data}).encode()
 

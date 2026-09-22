@@ -24,6 +24,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.routers import credits as credits_router
+from tests.paddle_payload import normalize_transaction_payload
 from app.services import credit_pack_service, credits_service, paddle_service
 from app.services.auth_identity import get_verified_user_id
 
@@ -84,14 +85,14 @@ def _txn_event(*, price_id="pri_200credits", txn_id="txn_abc", user_id=USER, sta
         "event_id": "evt_" + txn_id,
         "event_type": event_type,
         "occurred_at": "2026-09-20T00:00:00Z",
-        "data": {
+        "data": normalize_transaction_payload({
             "id": txn_id,
             "status": status,
             "currency_code": currency,
             "grand_total": str(grand_total),
             "custom_data": custom,
             "items": [{"price_id": price_id, "quantity": 1}],
-        },
+        }),
     }
     return json.dumps(payload).encode("utf-8")
 
@@ -299,12 +300,9 @@ def test_different_packs_accumulate_and_other_user_unaffected(env):
     credits_service.add_credits(OTHER, 10, "admin_adjustment", description="seed other")
     b1 = _txn_event(txn_id="txn_p200", price_id="pri_200credits", grand_total=499)
     assert _post_webhook(b1, _sign(b1, int(time.time()))).status_code == 200
-    payload = json.loads(b1)
-    payload["data"]["items"][0]["price_id"] = "pri_2800credits"
-    payload["data"]["grand_total"] = "3999"
-    payload["data"]["id"] = "txn_p2800"
-    payload["event_id"] = "evt_txn_p2800"
-    b2 = json.dumps(payload).encode("utf-8")
+    b2 = _txn_event(txn_id="txn_p2800", price_id="pri_2800credits", grand_total=3999,
+                    custom_data={"user_id": USER, "pack_id": "credits_2800",
+                                 "credits": "2800", "kind": "credit_pack"})
     assert _post_webhook(b2, _sign(b2, int(time.time()))).status_code == 200
     assert _balance(USER) == 20 + 200 + 2800
     assert _balance(OTHER) == 10, "别人买包不得影响本账号余额"
@@ -329,3 +327,29 @@ def _scalar(eng, sql, **params):
         return value
     finally:
         sess.close()
+
+
+# ── Webhook secret 轮换：逗号分隔的多 secret 必须都能验通 ──────────────
+def test_webhook_accepts_any_secret_during_rotation(env, monkeypatch):
+    """轮换窗口里新旧 secret 并存：任一把签名通过即有效，第三把必须被拒。
+
+    实现只支持逗号分隔（paddle_service.webhook_secrets），所以这条锁的是
+    "轮换不会让 Paddle 的在途回调突然全 401" —— 那会直接表现为付了钱不到账。
+    """
+    new_secret = "pdl_ntfset_rotated_secret"
+    monkeypatch.setenv("PADDLE_WEBHOOK_SECRET", f"{SECRET},{new_secret}")
+    base = _balance()
+
+    body_old = _txn_event(txn_id="txn_rot_old")
+    assert _post_webhook(body_old, _sign(body_old, int(time.time()), secret=SECRET)).status_code == 200, "旧 secret 在轮换窗口内必须仍然可用"
+
+    body_new = _txn_event(txn_id="txn_rot_new")
+    assert _post_webhook(body_new, _sign(body_new, int(time.time()), secret=new_secret)).status_code == 200, "新 secret 必须立即可用，否则轮换会丢发放"
+
+    body_bad = _txn_event(txn_id="txn_rot_bad")
+    assert _post_webhook(body_bad, _sign(body_bad, int(time.time()), secret="pdl_ntfset_third")).status_code == 401
+
+    assert _balance() == base + 400, "两次有效回调各发一包，第三条不得入账"
+    rows = credit_pack_service.list_purchases(USER)
+    assert len(rows) == 2 and all(r["credits"] == 200 for r in rows), "轮换窗口内只应留下两笔购买记录"
+    assert credit_pack_service.find_purchase("txn_rot_bad") is None, "签名不通过的回调不得留下任何购买记录"

@@ -49,6 +49,12 @@ router = APIRouter(prefix="/api/v1/credits", tags=["credits"])
 # 支付 Provider 是否已接入；积分补充包由 PADDLE_API_KEY 是否配置决定。
 PAYMENT_PROVIDER_CONFIGURED = os.getenv("PAYMENT_PROVIDER", "").strip().lower() in ("stripe", "lemon_squeezy", "paddle")
 
+# Paddle 返回这些机器码时，问题在**账户本身**（改 Price、改参数、重试都无用），
+# 所以建单接口用 503 原样回传 code，而不是伪装成一次普通的 502 上游错误。
+_PADDLE_ACCOUNT_PRECONDITIONS = frozenset({
+    "transaction_checkout_not_enabled",
+})
+
 
 class PurchaseRequest(BaseModel):
     package_id: str
@@ -220,8 +226,16 @@ async def create_checkout(req: PackCheckoutRequest, user_id: str = Depends(get_v
         order = await paddle_service.create_checkout_transaction(
             price_id=price_id, custom_data=custom_data, email=email)
     except paddle_service.PaddleError as exc:
-        logger.warning("Paddle checkout failed for %s: %s", user_id, type(exc).__name__)
-        raise HTTPException(502, str(exc))
+        # 账户级前置条件（如 Paddle 未完成 onboarding → transaction_checkout_not_enabled）
+        # 重试不会变好，必须用 503 + Paddle 原始 code 暴露出来；混进 502 的
+        # "payment provider rejected the order" 会让人以为是我们的 Price ID 或参数错了。
+        if exc.code in _PADDLE_ACCOUNT_PRECONDITIONS:
+            logger.error("Paddle 无法建单：账户级前置条件未满足 code=%s status=%s price_id=%s",
+                         exc.code, exc.status, price_id)
+            raise HTTPException(503, exc.code)
+        logger.warning("Paddle checkout failed for %s: %s code=%s status=%s",
+                       user_id, type(exc).__name__, exc.code or "-", exc.status or "-")
+        raise HTTPException(502, exc.code or str(exc))
     result = {
         "transaction_id": order["transaction_id"],
         "checkout_url": order.get("checkout_url"),
@@ -349,21 +363,74 @@ def _public_plans() -> list[dict]:
 
 
 def _verify_paid_amount(*, label: str, obj: dict[str, Any],
-                        expected_cents: int, expected_currency: str) -> None:
-    """核对 Paddle 实收：只拒绝"低于配置价"与币种不符。
+                        expected_cents: int, expected_currency: str,
+                        expected_price_id: Optional[str] = None
+                        ) -> paddle_service.PaymentAmounts:
+    """核对 Paddle 实收，返回解析结果；任何一项不满足都拒绝（fail-closed）。
 
-    取高不拒是因为 Paddle 的 grand_total 含税/可能含附加项；取低必须拒——
-    那是"用便宜的交易套取高价商品"的唯一现实路径。订阅续费事件里通常没有金额字段，
-    取不到金额时不阻断（由 Price ID 与周期锚点保证正确性与幂等）。
+    比较只在"该交易自己的币种"内进行：应收额取自交易自带的 price 定义（基础币种用
+    unit_price.amount，本地货币用该 price 的 override），因此**绝不做汇率换算**，也不会
+    拿 USD 分去和 EUR/JPY 的数字裸比。取高不拒、取低必拒的原则保持不变——少付是
+    "用便宜的交易套取高价商品"的唯一现实路径。
+
+    判"付满没有"用 details.totals.total，**不是 subtotal**：subtotal 是不含税的商品合计，
+    而 Melovar 全部 price 的 tax_mode=location 把税含在标价里，Paddle 会反推压低 subtotal。
+    transactions.preview 对同一张 499 USD 的价实测：US 499/税0、JP 454/税45、DE 419/税80，
+    三者 total 与 grand_total 恒为 499。拿 subtotal 比 due 会把日德等所有含税买家误判成少付。
+
+    details.payout_totals 本轮只解析、不作为拒绝依据：它混着三个口径（含 fee_rate/fee，
+    且 earnings = 税前 subtotal − fee，与 grand_total 不同源），用它判"付款不足"会误拒。
     """
-    amount_cents, currency = paddle_service.extract_transaction_amount(obj)
-    if amount_cents is not None and amount_cents < expected_cents:
-        logger.error("Paddle %s paid %s (%s) < configured %s — refusing",
-                     label, amount_cents, currency, expected_cents)
+    amounts = paddle_service.extract_payment_amounts(obj)
+
+    if not amounts.currency:
+        logger.error("Paddle %s carries no currency_code — refusing", label)
+        raise HTTPException(400, "missing transaction currency")
+    if amounts.currency not in paddle_service.allowed_payment_currencies():
+        logger.error("Paddle %s currency %s is not in the allowed list — refusing",
+                     label, amounts.currency)
+        raise HTTPException(400, "currency_not_supported")
+    if amounts.total is None or amounts.grand_total is None:
+        logger.error("Paddle %s has no details.totals.total/grand_total on the transaction "
+                     "— refusing", label)
+        raise HTTPException(400, "payment totals missing")
+    if amounts.item_count != 1:
+        logger.error("Paddle %s has %d items (expected exactly 1) — refusing",
+                     label, amounts.item_count)
+        raise HTTPException(400, "unexpected item count")
+    if amounts.quantity != 1:
+        logger.error("Paddle %s quantity=%s (expected 1) — refusing", label, amounts.quantity)
+        raise HTTPException(400, "unexpected quantity")
+    if expected_price_id and amounts.price_id and amounts.price_id != expected_price_id:
+        logger.error("Paddle %s item price %s != routed price %s — refusing",
+                     label, amounts.price_id, expected_price_id)
+        raise HTTPException(400, "price id mismatch")
+
+    due = amounts.due_amount
+    if due is None:
+        # 顶层写着 EUR 但这份 price 根本没有 EUR 定义 ⇒ 币种是伪造的，不能仅凭字段放行
+        logger.error("Paddle %s paid in %s but the price defines no amount for it "
+                     "(base=%s overrides=%s) — refusing", label, amounts.currency,
+                     amounts.unit_currency, sorted(amounts.override_amounts))
+        raise HTTPException(400, "no configured amount for currency")
+    if amounts.grand_total < amounts.total:
+        logger.error("Paddle %s grand_total %s < total %s — refusing",
+                     label, amounts.grand_total, amounts.total)
+        raise HTTPException(400, "inconsistent totals")
+    if amounts.total < due:
+        logger.error("Paddle %s paid total %s %s < due %s %s (subtotal=%s tax-inclusive "
+                     "pricing) — refusing", label, amounts.total, amounts.currency, due,
+                     amounts.currency, amounts.subtotal)
         raise HTTPException(400, "amount below configured price")
-    if currency and currency != expected_currency:
-        logger.error("Paddle %s currency %s != configured %s", label, currency, expected_currency)
-        raise HTTPException(400, "currency mismatch")
+
+    if amounts.currency == expected_currency and amounts.unit_amount is not None \
+            and amounts.unit_amount != expected_cents:
+        # 只告警不拒绝：这说明 Paddle 上的价格和后端 PADDLE_PRICE_ID_* 配置漂移了，
+        # 需要人工对齐；本轮不因此断掉已付款的客户。
+        logger.warning("Paddle %s price definition says %s but backend config says %s "
+                       "— check PADDLE_PRICE_ID_* drift", label, amounts.unit_amount, expected_cents)
+
+    return amounts
 
 
 def _handle_credit_pack(event_id: str, txn: dict[str, Any], custom: dict[str, Any],
@@ -383,9 +450,10 @@ def _handle_credit_pack(event_id: str, txn: dict[str, Any], custom: dict[str, An
     if not txn_id:
         raise HTTPException(400, "missing transaction id")
 
-    _verify_paid_amount(label=f"credit pack {pack['id']} txn {txn_id}", obj=txn,
-                        expected_cents=pack["price_cents"], expected_currency=pack["currency"])
-    amount_cents, currency = paddle_service.extract_transaction_amount(txn)
+    amounts = _verify_paid_amount(label=f"credit pack {pack['id']} txn {txn_id}", obj=txn,
+                                  expected_cents=pack["price_cents"],
+                                  expected_currency=pack["currency"],
+                                  expected_price_id=str(price_id))
 
     try:
         result = credit_pack_service.grant_pack_credits(
@@ -394,8 +462,8 @@ def _handle_credit_pack(event_id: str, txn: dict[str, Any], custom: dict[str, An
             pack=pack,
             price_id=str(price_id),
             event_id=event_id or None,
-            currency=currency or pack["currency"],
-            amount_cents=amount_cents if amount_cents is not None else pack["price_cents"],
+            currency=amounts.currency or pack["currency"],
+            amount_cents=amounts.grand_total if amounts.grand_total is not None else pack["price_cents"],
         )
     except RuntimeError as exc:
         # 让 Paddle 重投（占位已释放，重试可再次尝试发放）
@@ -430,11 +498,14 @@ def _handle_membership(event_id: str, event_type: str, obj: dict[str, Any],
         logger.warning("Paddle subscription %s cannot be linked to a user", subscription_id)
         raise HTTPException(400, "missing user id")
 
-    # 先验金额再落库：便宜的交易不能把会员等级"买"出来
-    if event_type.startswith("transaction."):
+    # 先验金额再落库：便宜的交易不能把会员等级"买"出来。
+    # 只验"这一周期真的收到钱"的事件；transaction.canceled/updated/payment_failed 等
+    # 只是状态同步，不带也不该带付款事实，硬验会把状态同步打成 400 无限重投。
+    if event_type.startswith("transaction.") and event_type in PAYING_EVENTS:
         _verify_paid_amount(label=f"membership {plan['id']} subscription {subscription_id}",
                             obj=obj, expected_cents=plan["price_cents"],
-                            expected_currency=plan["currency"])
+                            expected_currency=plan["currency"],
+                            expected_price_id=price_id)
 
     # 关键区分：transaction.* 上的 status 是"交易状态"（paid/completed/past_due…），
     # subscription.* 上的 status 才是"订阅状态"（active/trialing/paused/canceled…）。
