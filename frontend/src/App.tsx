@@ -56,11 +56,12 @@ export default function App() {
           {/* Legacy hidden capability：Track Studio（stems/task client 宿主，不导航不宣传，保留可达） */}
           <Route path="/track-studio" element={<ConsentGuard><PageTransition><TrackStudio /></PageTransition></ConsentGuard>} />
 
-          <Route path="/legal/terms" element={<ConsentGuard><PageTransition><TermsOfService /></PageTransition></ConsentGuard>} />
-          <Route path="/legal/privacy" element={<ConsentGuard><PageTransition><PrivacyPolicy /></PageTransition></ConsentGuard>} />
-          <Route path="/legal/aimusic-copyright" element={<ConsentGuard><PageTransition><AIMusicCopyrightPolicy /></PageTransition></ConsentGuard>} />
-          <Route path="/legal/credits-refund" element={<ConsentGuard><PageTransition><CreditsRefundPolicy /></PageTransition></ConsentGuard>} />
-          <Route path="/legal/aup" element={<ConsentGuard><PageTransition><AcceptableUsePolicy /></PageTransition></ConsentGuard>} />
+          {/* 政策页面对外公开：无需登录、无需同意公测协议即可访问（支付服务商审核与合规要求） */}
+          <Route path="/legal/terms" element={<PageTransition><TermsOfService /></PageTransition>} />
+          <Route path="/legal/privacy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+          <Route path="/legal/aimusic-copyright" element={<PageTransition><AIMusicCopyrightPolicy /></PageTransition>} />
+          <Route path="/legal/credits-refund" element={<PageTransition><CreditsRefundPolicy /></PageTransition>} />
+          <Route path="/legal/aup" element={<PageTransition><AcceptableUsePolicy /></PageTransition>} />
         </Route>
       </Routes>
     </Suspense>

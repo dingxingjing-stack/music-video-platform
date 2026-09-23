@@ -24,6 +24,9 @@ export function SettingsPage() {
             <div className="mt-3 flex flex-wrap gap-3 text-xs">
               <a href="/legal/terms" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.terms')}</a>
               <a href="/legal/privacy" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.privacy')}</a>
+              <a href="/legal/credits-refund" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.creditsRefund')}</a>
+              <a href="/legal/aimusic-copyright" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.aiCopyright')}</a>
+              <a href="/legal/aup" className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.aup')}</a>
               <a href={`mailto:${t('legal.privacy.contactEmail')}`} className="text-[#8a8a8a] hover:text-white underline">{t('legal.links.contact')}</a>
             </div>
           </div>

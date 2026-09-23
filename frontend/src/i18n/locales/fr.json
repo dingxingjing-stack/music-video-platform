@@ -159,7 +159,7 @@
     "pricing": "Tarifs"
   },
   "landing": {
-    "heroBadge": "Bêta publique · Entièrement gratuit",
+    "heroBadge": "Bêta publique · Des crédits offerts à l'inscription",
     "heroTitle1": "IA tout-en-un",
     "heroTitle2": "Studio Musical IA",
     "heroSub": "De l inspiration a la production — votre studio IA.",
@@ -167,8 +167,8 @@
     "featuresTitle": "Cinq fonctionnalités clés",
     "featuresSub": "De l’inspiration au résultat final, tout au même endroit.",
     "cardCta": "Essayer maintenant →",
-    "casesTitle": "Créations de la communauté",
-    "casesSub": "Des créations réelles des utilisateurs de la bêta publique.",
+    "casesTitle": "Œuvres d'exemple (données de démonstration)",
+    "casesSub": "Ces entrées sont des espaces réservés servant à la mise en page. Elles ne représentent ni de vrais utilisateurs, ni de vraies œuvres, ni de vrais nombres d'écoutes.",
     "cases": {
       "playsLabel": "▶ {count} lectures"
     },
@@ -182,7 +182,8 @@
     "feedbackFormTitle": "Partagez votre avis",
     "feedbackNamePlaceholder": "Pseudo (facultatif)",
     "feedbackTextPlaceholder": "Racontez-nous votre expérience…",
-    "ctaMyWorks": "Mes créations"
+    "ctaMyWorks": "Mes créations",
+    "demoTag": "DEMO"
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Génération de chansons complètes (gratuite)",
@@ -220,7 +221,7 @@
     "titleCredits": "Politique de Credits et remboursements",
     "titlePrivacy": "Politique de confidentialité",
     "titleTerms": "Conditions d’utilisation",
-    "updated": "Dernière mise à jour : août 2026",
+    "updated": "Dernière mise à jour : septembre 2026",
     "effective": "Entrée en vigueur : août 2026",
     "version": "Version : v2.0 édition commerciale",
     "rights": "© 2026 Melovar. Tous droits réservés.",
@@ -232,14 +233,16 @@
       "sec2i1": "Données de compte – l'adresse e-mail utilisée pour l'inscription, un nom d'utilisateur facultatif, ainsi que l'âge, utilisé uniquement pour vérifier la condition d'âge minimum.",
       "sec2i2": "Contenu de création – les instructions (prompts), paroles et données de projet que vous saisissez, et les fichiers audio générés à partir de ceux-ci.",
       "sec2i3": "Données techniques et journaux – informations sur l'appareil et le navigateur, adresse IP et journaux d'utilisation, utilisés pour le diagnostic, la sécurité et l'amélioration du service.",
+      "sec2i4": "Données de commande et de transaction – le minimum nécessaire pour livrer votre achat : identifiants de commande/transaction, statut, devise et montant, pack de crédits ou formule souscrit. Elles n'incluent jamais d'identifiants de carte bancaire.",
       "sec2negLead": "Nous ne collectons pas :",
-      "sec2neg1": "Les données de cartes bancaires ou de comptes bancaires – l'achat payant de crédits n'est pas encore disponible sur Melovar ; aucune donnée de paiement n'est traitée.",
+      "sec2neg1": "Les numéros complets de cartes bancaires, codes CVV/CVC ou identifiants de comptes bancaires – les paiements sont traités par Paddle, notre prestataire tiers agissant en qualité de Merchant of Record, qui collecte et traite directement ces données ; Melovar ne les collecte ni ne les stocke.",
       "sec3Title": "Utilisation de vos données",
       "sec3Lead": "Vos données ne sont utilisées que pour les finalités suivantes :",
       "sec3i1": "Fournir, maintenir et améliorer le service.",
       "sec3i2": "Exécuter les générations musicales et les outils audio que vous demandez.",
       "sec3i3": "Appliquer les limites d'utilisation et prévenir les abus, la fraude et les pannes techniques.",
       "sec3i4": "Diagnostiquer les erreurs, garantir la sécurité et respecter les obligations légales.",
+      "sec3i5": "Livrer les crédits et avantages d'abonnement achetés, ainsi qu'à la réconciliation, au support client et au traitement des litiges.",
       "sec4Title": "Hébergement et conservation",
       "sec4Body": "Les comptes et les projets sont stockés dans une base PostgreSQL administrée par nos soins ; les fichiers audio sont conservés dans un bac de stockage d'objets privé ; les liens de lecture sont des URL signées de courte durée qui expirent automatiquement. Les compteurs d'utilisation sont réinitialisés chaque jour et chaque mois.",
       "sec4i1": "Lorsque vous supprimez une tâche ou une œuvre dans Mes créations, les fichiers audio et les enregistrements associés sont également supprimés.",
@@ -250,6 +253,7 @@
       "sec5i1": "Des tiers de génération musicale par IA et d'hébergement de modèles, qui ne reçoivent que les instructions, paroles ou audio nécessaires au résultat demandé.",
       "sec5i2": "Nos prestataires d'infrastructure, d'hébergement, de stockage et de supervision d'erreurs qui exploitent la plateforme pour nous.",
       "sec5i3": "Les autorités, lorsque la loi ou une demande légale légitime l'exige ; ou le successeur d'une fusion ou d'un transfert d'actifs, qui reste tenu par la présente politique.",
+      "sec5i4": "Notre prestataire de paiement Paddle, qui agit en qualité de Merchant of Record pour les paiements, reçus et factures, les remboursements et les taxes associées, et qui collecte directement vos identifiants de paiement.",
       "sec6Title": "Vos droits",
       "sec6Lead": "Sous réserve de la réglementation applicable en matière de protection des données, vous pouvez :",
       "sec6i1": "Accéder aux données que nous détenons à votre sujet et en obtenir une copie.",
@@ -1789,11 +1793,11 @@
     "r2Title": "Déverrouillage des fonctionnalités grises",
     "r2Text": "Atteignez 100 points d'activité avec ≥50 générations cumulées pour demander l'accès gris et déverrouiller des fonctions avancées comme l'édition collaborative",
     "r3Title": "Filigrane bêta",
-    "r3Text": "Toutes les œuvres générées pendant la bêta incluront automatiquement un filigrane bêta réservé à l'apprentissage et au plaisir personnel, sans usage commercial",
-    "r4Title": "Modules payants désactivés",
-    "r4Text": "Des fonctions comme la boutique d'actifs, les abonnements payants et le retrait des revenus UGC ne sont pas disponibles pendant la bêta",
-    "r5Title": "Usage commercial interdit",
-    "r5Text": "Tous les actifs de test générés pendant la bêta sont réservés à un usage personnel ; tout usage commercial est interdit",
+    "r3Text": "Les œuvres générées pendant la bêta portent automatiquement un filigrane bêta. L'éventuel usage commercial du contenu généré est régi par la section 5 des Conditions d'utilisation et par les conditions d'utilisation des modèles sous-jacents",
+    "r4Title": "Périmètre de la bêta et fonctions payantes",
+    "r4Text": "Les paiements des recharges de crédits et des abonnements sont traités par notre prestataire de paiement tiers Paddle ; des fonctions comme la boutique d'actifs et le retrait des revenus UGC ne sont pas disponibles pendant la bêta",
+    "r5Title": "Vérifiez vous-même l'usage commercial",
+    "r5Text": "Il vous appartient de vérifier si le contenu généré peut faire l'objet d'un usage commercial et de respecter la loi applicable, les conditions d'utilisation des modèles ainsi que les Conditions d'utilisation de la plateforme",
     "agreementVersion": "Accord de bêta-test · v2.0"
   },
   "score": {
@@ -1930,10 +1934,12 @@
     "packs_login_required": "Connectez-vous pour acheter des crédits.",
     "packs_unavailable": "Les packs de crédits ne sont pas disponibles pour le moment.",
     "packs_error": "Impossible de démarrer l'achat. Réessayez plus tard.",
+    "packs_checkout_not_enabled": "Le paiement n'est pas encore activé chez notre prestataire ; les achats sont indisponibles.",
     "packs_wait_note": "Les crédits sont ajoutés automatiquement dès confirmation du paiement.",
     "plan_subscribe": "S'abonner",
     "plan_per_month": "/mois",
     "plan_current": "Formule actuelle",
-    "plan_recurring_note": "L'abonnement se renouvelle chaque mois et peut être annulé à tout moment. L'achat de packs de crédits ne modifie ni votre formule ni votre date de renouvellement."
+    "plan_recurring_note": "L'abonnement se renouvelle chaque mois et peut être annulé à tout moment. L'achat de packs de crédits ne modifie ni votre formule ni votre date de renouvellement.",
+    "legal_notice": "En finalisant un achat, vous confirmez avoir lu et accepté les Conditions d'utilisation, la Politique de confidentialité et la Politique relative aux crédits et aux remboursements. Les paiements sont traités par Paddle, notre prestataire tiers agissant en qualité de Merchant of Record, qui émet reçus et factures."
   }
 }

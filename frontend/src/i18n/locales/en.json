@@ -159,7 +159,7 @@
     "pricing": "Pricing"
   },
   "landing": {
-    "heroBadge": "Public beta · Completely free",
+    "heroBadge": "Public beta · Free Credits on signup",
     "heroTitle1": "All-in-one AI",
     "heroTitle2": "AI Music Studio",
     "heroSub": "From inspiration to composition and final production — your AI-powered studio.",
@@ -167,8 +167,8 @@
     "featuresTitle": "Five Core Features",
     "featuresSub": "From inspiration to finished work, all in one place.",
     "cardCta": "Try Now →",
-    "casesTitle": "Community Works",
-    "casesSub": "Real creations from public beta users.",
+    "casesTitle": "Sample Works (demo data)",
+    "casesSub": "These entries are placeholders used to lay out the page. They are not real users, real works or real play counts.",
     "cases": {
       "playsLabel": "▶ {count} plays"
     },
@@ -182,7 +182,8 @@
     "feedbackFormTitle": "Share your feedback",
     "feedbackNamePlaceholder": "Nickname (optional)",
     "feedbackTextPlaceholder": "Share your experience...",
-    "ctaMyWorks": "My Creations"
+    "ctaMyWorks": "My Creations",
+    "demoTag": "DEMO"
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Full-song generation (free)",
@@ -220,7 +221,7 @@
     "titleCredits": "Credits & Refund Policy",
     "titlePrivacy": "Privacy Policy",
     "titleTerms": "Terms of Service",
-    "updated": "Last updated: August 2026",
+    "updated": "Last updated: September 2026",
     "effective": "Effective: August 2026",
     "version": "Version: v2.0 Commercial Release",
     "rights": "© 2026 Melovar. All rights reserved.",
@@ -232,14 +233,16 @@
       "sec2i1": "Account information – the email address you register with, an optional username, and the age value, which is used solely to enforce the minimum-age requirement.",
       "sec2i2": "Creation content – the prompts, lyrics and project data you submit, and the audio files generated from them.",
       "sec2i3": "Technical and log data – device and browser information, IP address and usage logs, used for troubleshooting, security and service improvement.",
+      "sec2i4": "Order and transaction data – the minimum needed to deliver what you bought: order/transaction IDs, transaction status, currency and amount, and the Credits pack or plan purchased. It never includes payment card credentials.",
       "sec2negLead": "We do not collect:",
-      "sec2neg1": "Payment card or bank account details – paid credit purchases are not available on Melovar yet, so no payment data is processed.",
+      "sec2neg1": "Full payment card numbers, CVV/CVC codes or bank account credentials – payments are handled by our third-party provider Paddle acting as Merchant of Record, which collects and processes those credentials directly; Melovar neither collects nor stores them.",
       "sec3Title": "How we use your data",
       "sec3Lead": "Your data is used only for the following purposes:",
       "sec3i1": "Providing, maintaining and improving the service.",
       "sec3i2": "Running the music generations and audio tools you request.",
       "sec3i3": "Enforcing usage limits and preventing abuse, fraud and technical failures.",
       "sec3i4": "Diagnosing errors and protecting security, and complying with legal obligations.",
+      "sec3i5": "Delivering the Credits and subscription benefits you purchased, and for reconciliation, customer support and dispute handling.",
       "sec4Title": "Storage and retention",
       "sec4Body": "Account and project records are stored in a PostgreSQL database we administer; audio files are stored in a private object-storage bucket; playback links we hand out are short-lived signed URLs that expire automatically. Usage counters roll over daily and monthly.",
       "sec4i1": "When you delete a task or work in My Creations, its audio files and related records are deleted as well.",
@@ -250,6 +253,7 @@
       "sec5i1": "Third-party AI music generation and model-hosting providers, which receive only the prompts, lyrics or audio needed to produce the result you asked for.",
       "sec5i2": "Infrastructure, hosting, storage and error-monitoring providers that operate the platform on our behalf.",
       "sec5i3": "Authorities, where required by law or a valid legal request; or a successor in a merger or asset transfer, which remains bound by this policy.",
+      "sec5i4": "Our payment provider Paddle, which acts as Merchant of Record for payments, receipts and invoices, refunds and the related taxes, and which collects your payment credentials directly.",
       "sec6Title": "Your rights",
       "sec6Lead": "Subject to applicable data protection law, you can:",
       "sec6i1": "Access the data we hold about you and obtain a copy of it.",
@@ -1789,11 +1793,11 @@
     "r2Title": "Unlock Gray-Scale Features",
     "r2Text": "Reach 100 activity points with ≥50 total generations to apply for gray-scale access and unlock advanced features like collaborative editing",
     "r3Title": "Beta Watermark",
-    "r3Text": "All works generated during beta will automatically include a beta watermark for personal learning and enjoyment only, not for commercial use",
-    "r4Title": "Paid Modules Disabled",
-    "r4Text": "Features such as the asset store, paid subscriptions, and UGC earnings withdrawal are unavailable during beta",
-    "r5Title": "No Commercial Use",
-    "r5Text": "All test assets generated during beta are for personal use only; commercial use is prohibited",
+    "r3Text": "Works generated during beta are automatically embedded with a beta watermark. Whether generated content may be used commercially is governed by Section 5 of the Terms of Service and the usage terms of the underlying models",
+    "r4Title": "Beta scope and paid features",
+    "r4Text": "Payments for Credit top-ups and memberships are handled by our third-party payment provider Paddle; features such as the asset store and UGC earnings withdrawal are unavailable during beta",
+    "r5Title": "Verify commercial use yourself",
+    "r5Text": "You are responsible for confirming whether generated content may be used commercially, and for complying with applicable law, the usage terms of the underlying models and the Terms of Service",
     "agreementVersion": "Beta Test Agreement · v2.0"
   },
   "score": {
@@ -1930,10 +1934,12 @@
     "packs_login_required": "Please log in to buy Credits.",
     "packs_unavailable": "Credit packs are currently unavailable.",
     "packs_error": "Couldn't start the purchase. Please try again later.",
+    "packs_checkout_not_enabled": "Checkout isn't enabled on our payment provider yet, so purchases aren't available right now.",
     "packs_wait_note": "Credits are added automatically once the payment is confirmed.",
     "plan_subscribe": "Subscribe",
     "plan_per_month": "/mo",
     "plan_current": "Current plan",
-    "plan_recurring_note": "Membership renews monthly and can be cancelled at any time. Buying a Credits pack never changes your plan or your renewal date."
+    "plan_recurring_note": "Membership renews monthly and can be cancelled at any time. Buying a Credits pack never changes your plan or your renewal date.",
+    "legal_notice": "By completing a purchase you confirm that you have read and accepted the Terms of Service, the Privacy Policy and the Credits & Refund Policy. Payments are processed by our third-party provider Paddle acting as Merchant of Record, which issues your receipts and invoices."
   }
 }

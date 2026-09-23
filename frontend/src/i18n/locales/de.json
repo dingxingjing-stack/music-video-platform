@@ -159,7 +159,7 @@
     "pricing": "Preise"
   },
   "landing": {
-    "heroBadge": "Öffentliche Beta · Vollständig kostenlos",
+    "heroBadge": "Öffentliche Beta · Kostenlose Credits zum Start",
     "heroTitle1": "KI-All-in-One",
     "heroTitle2": "AI Musikstudio",
     "heroSub": "Von der Inspiration bis zur Produktion — dein KI-Studio.",
@@ -167,8 +167,8 @@
     "featuresTitle": "Fünf Kernfunktionen",
     "featuresSub": "Von der Idee bis zum fertigen Werk – alles an einem Ort.",
     "cardCta": "Jetzt ausprobieren →",
-    "casesTitle": "Community-Werke",
-    "casesSub": "Echte Kreationen von Nutzern der öffentlichen Beta.",
+    "casesTitle": "Beispielwerke (Demo-Daten)",
+    "casesSub": "Diese Einträge sind Platzhalter für das Seitenlayout. Sie stehen nicht für echte Nutzer, echte Werke oder echte Wiedergabezahlen.",
     "cases": {
       "playsLabel": "▶ {count} Wiedergaben"
     },
@@ -182,7 +182,8 @@
     "feedbackFormTitle": "Teile deine Erfahrung",
     "feedbackNamePlaceholder": "Spitzname (optional)",
     "feedbackTextPlaceholder": "Teile deine Erfahrung…",
-    "ctaMyWorks": "Meine Kreationen"
+    "ctaMyWorks": "Meine Kreationen",
+    "demoTag": "DEMO"
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Vollständige Songerstellung (kostenlos)",
@@ -211,7 +212,7 @@
       "terms": "Nutzungsbedingungen",
       "privacy": "Datenschutzerklärung",
       "aiCopyright": "KI-Urheberrechtsrichtlinie",
-      "creditsRefund": "Credits & Rückerstattungen",
+      "creditsRefund": "Credits & Erstattungen",
       "aup": "Richtlinie zur zulässigen Nutzung",
       "contact": "Kontakt"
     },
@@ -220,7 +221,7 @@
     "titleCredits": "Credits- und Rückerstattungsrichtlinie",
     "titlePrivacy": "Datenschutzrichtlinie",
     "titleTerms": "Nutzungsbedingungen",
-    "updated": "Zuletzt aktualisiert: August 2026",
+    "updated": "Zuletzt aktualisiert: September 2026",
     "effective": "Gültig ab: August 2026",
     "version": "Version: v2.0 kommerzielle Ausgabe",
     "rights": "© 2026 Melovar. Alle Rechte vorbehalten.",
@@ -232,14 +233,16 @@
       "sec2i1": "Kontodaten – die bei der Registrierung verwendete E-Mail-Adresse, ein optionaler Benutzername sowie das Alter, das ausschließlich zur Prüfung der Mindestaltersanforderung verwendet wird.",
       "sec2i2": "Inhaltsdaten – die von Ihnen eingegebenen Prompts, Songtexte und Projektdaten sowie die daraus erzeugten Audiodateien.",
       "sec2i3": "Technische Daten und Protokolle – Geräte- und Browserinformationen, IP-Adresse und Nutzungsprotokolle, verwendet zur Fehlerbehebung, Sicherheit und Verbesserung des Dienstes.",
+      "sec2i4": "Bestell- und Transaktionsdaten – die nötigen Mindestangaben zur Auslieferung Ihres Kaufs: Bestell-/Transaktions-IDs, Transaktionsstatus, Währung und Betrag sowie das gekaufte Credit- oder Abo-Paket. Kartendaten sind darin nie enthalten.",
       "sec2negLead": "Wir erheben nicht:",
-      "sec2neg1": "Zahlungskarten- oder Bankkontodaten – ein kostenpflichtiger Kreditkauf ist bei Melovar noch nicht verfügbar; es werden keine Zahlungsdaten verarbeitet.",
+      "sec2neg1": "Vollständige Zahlungskartennummern, CVV/CVC-Codes oder Bankzugangsdaten – Zahlungen verarbeitet unser Drittanbieter Paddle als Merchant of Record, der diese Daten direkt erhebt; Melovar erhebt und speichert sie nicht.",
       "sec3Title": "Wie wir Ihre Daten nutzen",
       "sec3Lead": "Ihre Daten werden ausschließlich für folgende Zwecke verwendet:",
       "sec3i1": "Bereitstellung, Betrieb und Verbesserung des Dienstes.",
       "sec3i2": "Ausführung der von Ihnen angeforderten Musikgenerierung und Audioverarbeitung.",
       "sec3i3": "Durchsetzung von Nutzungsgrenzen sowie Verhinderung von Missbrauch, Betrug und technischen Störungen.",
       "sec3i4": "Fehlerdiagnose und Sicherheit sowie die Erfüllung gesetzlicher Pflichten.",
+      "sec3i5": "Auslieferung der gekauften Credits und Abo-Vorteile sowie Abrechnung, Kundensupport und Streitbeilegung.",
       "sec4Title": "Speicherung und Aufbewahrung",
       "sec4Body": "Konten und Projekte werden in einer von uns verwalteten PostgreSQL-Datenbank gespeichert; Audiodateien in einem privaten Object-Storage-Bucket; Wiedergabelinks sind kurzlebige signierte URLs, die automatisch ablaufen. Nutzungszähler werden täglich bzw. monatlich zurückgesetzt.",
       "sec4i1": "Wenn Sie eine Aufgabe oder ein Werk unter Meine Kreationen löschen, werden die zugehörigen Audiodateien und Einträge ebenfalls gelöscht.",
@@ -250,6 +253,7 @@
       "sec5i1": "Dritte für KI-Musikgenerierung und Modell-Hosting, die nur die für das gewünschte Ergebnis nötigen Prompts, Songtexte oder Audiodaten erhalten.",
       "sec5i2": "Anbieter für Infrastruktur, Hosting, Speicher und Fehlermonitoring, die die Plattform für uns betreiben.",
       "sec5i3": "Behörden, soweit gesetzlich oder aufgrund eines zulässigen Ersuchens erforderlich; oder bei Fusionen und Vermögensübertragungen den Rechtsnachfolger, der an diese Erklärung gebunden bleibt.",
+      "sec5i4": "Unser Zahlungsdienstleister Paddle, der als Merchant of Record Zahlungen, Belege und Rechnungen, Erstattungen sowie die zugehörigen Steuern verarbeitet und Ihre Zahlungsdaten direkt erhebt.",
       "sec6Title": "Ihre Rechte",
       "sec6Lead": "Nach Maßgabe des geltenden Datenschutzrechts können Sie:",
       "sec6i1": "Auf die über Sie gespeicherten Daten zugreifen und eine Kopie anfordern.",
@@ -1789,11 +1793,11 @@
     "r2Title": "Graustufen-Funktionen freischalten",
     "r2Text": "Erreichen Sie 100 Aktivitätspunkte bei ≥50 Gesamtgenerationen, um Graustufen-Zugriff zu beantragen und erweiterte Funktionen wie kollaborative Bearbeitung freizuschalten",
     "r3Title": "Beta-Wasserzeichen",
-    "r3Text": "Alle während der Beta generierten Werke erhalten automatisch ein Beta-Wasserzeichen und dienen nur dem persönlichen Lernen und Genießen, nicht der kommerziellen Nutzung",
-    "r4Title": "Bezahlmodule deaktiviert",
-    "r4Text": "Funktionen wie der Asset-Store, kostenpflichtige Abos und UGC-Auszahlungen sind während der Beta nicht verfügbar",
-    "r5Title": "Keine kommerzielle Nutzung",
-    "r5Text": "Alle während der Beta generierten Test-Assets dienen nur der persönlichen Nutzung; eine kommerzielle Verwendung ist untersagt",
+    "r3Text": "Während der Beta generierte Werke enthalten automatisch ein Beta-Wasserzeichen. Ob generierte Inhalte kommerziell genutzt werden dürfen, regeln Abschnitt 5 der Nutzungsbedingungen und die Nutzungsbedingungen der zugrunde liegenden Modelle",
+    "r4Title": "Beta-Umfang und kostenpflichtige Funktionen",
+    "r4Text": "Die Zahlungen für Credits und Mitgliedschaften übernimmt unser Drittanbieter Paddle; Funktionen wie der Asset-Store und UGC-Auszahlungen sind während der Beta nicht verfügbar",
+    "r5Title": "Kommerzielle Nutzung selbst prüfen",
+    "r5Text": "Sie sind selbst dafür verantwortlich zu prüfen, ob generierte Inhalte kommerziell genutzt werden dürfen, und die geltenden Gesetze, die Nutzungsbedingungen der Modelle sowie die Nutzungsbedingungen der Plattform einzuhalten",
     "agreementVersion": "Beta-Test-Vereinbarung · v2.0"
   },
   "score": {
@@ -1930,10 +1934,12 @@
     "packs_login_required": "Bitte melde dich an, um Credits zu kaufen.",
     "packs_unavailable": "Credit-Pakete sind derzeit nicht verfügbar.",
     "packs_error": "Kauf konnte nicht gestartet werden. Bitte später erneut versuchen.",
+    "packs_checkout_not_enabled": "Checkout ist bei unserem Zahlungsdienst noch nicht aktiviert — Käufe sind derzeit nicht möglich.",
     "packs_wait_note": "Credits werden nach bestätigter Zahlung automatisch gutgeschrieben.",
     "plan_subscribe": "Abonnieren",
     "plan_per_month": "/Monat",
     "plan_current": "Aktueller Tarif",
-    "plan_recurring_note": "Die Mitgliedschaft verlängert sich monatlich und ist jederzeit kündbar. Der Kauf von Credit-Paketen ändert weder Tarif noch Verlängerungsdatum."
+    "plan_recurring_note": "Die Mitgliedschaft verlängert sich monatlich und ist jederzeit kündbar. Der Kauf von Credit-Paketen ändert weder Tarif noch Verlängerungsdatum.",
+    "legal_notice": "Mit dem Abschluss eines Kaufs bestätigen Sie, dass Sie die Nutzungsbedingungen, die Datenschutzerklärung und die Credit- & Erstattungsrichtlinie gelesen und akzeptiert haben. Zahlungen verarbeitet unser Drittanbieter Paddle als Merchant of Record; Belege und Rechnungen stellt Paddle aus."
   }
 }

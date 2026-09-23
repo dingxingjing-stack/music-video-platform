@@ -84,7 +84,14 @@ export function HomePage() {
             <div className="text-[#8a8a8a] leading-relaxed">{t('home.info.worksDesc')}</div>
           </div>
         </div>
-        <p className="mt-6 text-center text-xs text-[#4a4a4a]">© 2026 Melovar · AI Music Studio</p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-[#6a6a6a]">
+          <a href="/legal/terms" className="hover:text-white">{t('legal.links.terms')}</a>
+          <a href="/legal/privacy" className="hover:text-white">{t('legal.links.privacy')}</a>
+          <a href="/legal/credits-refund" className="hover:text-white">{t('legal.links.creditsRefund')}</a>
+          <a href="/legal/aimusic-copyright" className="hover:text-white">{t('legal.links.aiCopyright')}</a>
+          <a href="/legal/aup" className="hover:text-white">{t('legal.links.aup')}</a>
+        </div>
+        <p className="mt-3 text-center text-xs text-[#4a4a4a]">© 2026 Melovar · AI Music Studio</p>
       </div>
     </div>
   );

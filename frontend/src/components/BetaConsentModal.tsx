@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n/useTranslation';
 
@@ -14,15 +15,22 @@ const RULES = [
 
 export function BetaConsentModal() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const [show, setShow] = useState(false);
+  // 政策页面必须能被尚未同意公测协议的访客完整阅读，因此不在 /legal/* 上覆盖全屏遮罩
+  const isPublicPolicy = pathname.startsWith('/legal/');
 
   useEffect(() => {
+    if (isPublicPolicy) {
+      setShow(false);
+      return;
+    }
     const accepted = localStorage.getItem(STORAGE_KEY);
     if (!accepted) {
       const timer = setTimeout(() => setShow(true), 800);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isPublicPolicy]);
 
   const handleAccept = () => {
     localStorage.setItem(STORAGE_KEY, 'true');

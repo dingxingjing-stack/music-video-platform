@@ -159,7 +159,7 @@
     "pricing": "Precios"
   },
   "landing": {
-    "heroBadge": "Beta pública · Totalmente gratis",
+    "heroBadge": "Beta pública · Créditos gratis al registrarte",
     "heroTitle1": "IA todo en uno",
     "heroTitle2": "Estudio Musical IA",
     "heroSub": "De la inspiracion a la produccion — tu estudio con IA.",
@@ -167,8 +167,8 @@
     "featuresTitle": "Cinco funciones principales",
     "featuresSub": "De la inspiración al resultado final, todo en un solo lugar.",
     "cardCta": "Probar ahora →",
-    "casesTitle": "Obras de la comunidad",
-    "casesSub": "Creaciones reales de usuarios de la beta pública.",
+    "casesTitle": "Obras de ejemplo (datos de demostración)",
+    "casesSub": "Estas entradas son marcadores de posición para maquetar la página. No representan usuarios reales, obras reales ni reproducciones reales.",
     "cases": {
       "playsLabel": "▶ {count} reproducciones"
     },
@@ -182,7 +182,8 @@
     "feedbackFormTitle": "Comparte tu experiencia",
     "feedbackNamePlaceholder": "Apodo (opcional)",
     "feedbackTextPlaceholder": "Cuéntanos tu experiencia…",
-    "ctaMyWorks": "Mis creaciones"
+    "ctaMyWorks": "Mis creaciones",
+    "demoTag": "DEMO"
   },
   "pathA": {
     "tagline": "Prompt → Agnes AI → Generación de canciones completas (gratis)",
@@ -220,7 +221,7 @@
     "titleCredits": "Política de Credits y reembolsos",
     "titlePrivacy": "Política de privacidad",
     "titleTerms": "Términos del servicio",
-    "updated": "Última actualización: agosto de 2026",
+    "updated": "Última actualización: septiembre de 2026",
     "effective": "Vigencia: agosto de 2026",
     "version": "Versión: v2.0 edición comercial",
     "rights": "© 2026 Melovar. Todos los derechos reservados.",
@@ -232,14 +233,16 @@
       "sec2i1": "Datos de la cuenta: el correo electrónico con el que te registras, un nombre de usuario opcional y la edad, que se usa solo para comprobar el requisito de edad mínima.",
       "sec2i2": "Contenido de creación: las indicaciones (prompts), letras y datos de proyecto que envías, y los archivos de audio generados a partir de ellos.",
       "sec2i3": "Datos técnicos y registros: información del dispositivo y del navegador, dirección IP y registros de uso, empleados para resolver incidencias, seguridad y mejora del servicio.",
+      "sec2i4": "Datos de pedidos y transacciones: los mínimos necesarios para entregar lo adquirido, es decir, identificadores de pedido/transacción, estado, moneda e importe, y el paquete de créditos o plan comprado. Nunca incluyen credenciales de tarjetas de pago.",
       "sec2negLead": "No recopilamos:",
-      "sec2neg1": "Datos de tarjetas de pago o cuentas bancarias: Melovar aún no ofrece la compra de créditos, por lo que no se procesa ningún dato de pago.",
+      "sec2neg1": "Números completos de tarjetas de pago, códigos CVV/CVC o credenciales de cuenta bancaria: los pagos los procesa Paddle, nuestro proveedor externo, en calidad de Merchant of Record, que recoge y trata directamente esos datos; Melovar no los recopila ni los almacena.",
       "sec3Title": "Cómo usamos tus datos",
       "sec3Lead": "Tus datos se usan únicamente para estas finalidades:",
       "sec3i1": "Prestar, mantener y mejorar el servicio.",
       "sec3i2": "Ejecutar las generaciones de música y las herramientas de audio que solicites.",
       "sec3i3": "Aplicar los límites de uso y evitar abusos, fraude y fallos técnicos.",
       "sec3i4": "Diagnosticar errores y proteger la seguridad, y cumplir obligaciones legales.",
+      "sec3i5": "Entregar los créditos y beneficios de suscripción adquiridos, así como para conciliación, soporte al cliente y gestión de disputas.",
       "sec4Title": "Almacenamiento y conservación",
       "sec4Body": "Las cuentas y los proyectos se guardan en una base de datos PostgreSQL administrada por nosotros; los archivos de audio se almacenan en un bucket privado de almacenamiento de objetos; los enlaces de reproducción son URLs firmadas de corta duración que caducan automáticamente. Los contadores de uso se reinician a diario y cada mes.",
       "sec4i1": "Si eliminas una tarea o una obra en Mis creaciones, también se borran sus archivos de audio y registros asociados.",
@@ -250,6 +253,7 @@
       "sec5i1": "Proveedores terceros de generación musical con IA y de alojamiento de modelos, que solo reciben las indicaciones, letras o audio necesarios para generar el resultado que pides.",
       "sec5i2": "Proveedores de infraestructura, alojamiento, almacenamiento y monitorización de errores que operan la plataforma por nosotros.",
       "sec5i3": "Autoridades, cuando la ley o una reclamación legítima lo exija; o el sucesor en una fusión o transmisión de activos, que seguirá vinculado por esta política.",
+      "sec5i4": "Nuestro proveedor de pagos Paddle, que actúa como Merchant of Record de los pagos, recibos y facturas, los reembolsos y los impuestos correspondientes, y que recoge directamente sus credenciales de pago.",
       "sec6Title": "Tus derechos",
       "sec6Lead": "Conforme a la normativa aplicable de protección de datos, puedes:",
       "sec6i1": "Acceder a los datos que conservamos sobre ti y obtener una copia.",
@@ -1789,11 +1793,11 @@
     "r2Title": "Desbloquear funciones en escala de grises",
     "r2Text": "Alcanza 100 puntos de actividad con ≥50 generaciones acumuladas para solicitar acceso beta y desbloquear funciones avanzadas como edición colaborativa",
     "r3Title": "Marca de agua beta",
-    "r3Text": "Todas las obras generadas durante la beta incluirán automáticamente una marca de agua beta solo para aprendizaje y disfrute personal, no para uso comercial",
-    "r4Title": "Módulos de pago desactivados",
-    "r4Text": "Funciones como la tienda de recursos, suscripciones de pago y retiro de ingresos UGC no están disponibles durante la beta",
-    "r5Title": "Prohibido uso comercial",
-    "r5Text": "Todos los recursos de prueba generados durante la beta son solo para uso personal; se prohíbe el uso comercial",
+    "r3Text": "Las obras generadas durante la beta incluyen automáticamente una marca de agua beta. Si el contenido generado puede usarse con fines comerciales se rige por la Sección 5 de los Términos de servicio y las condiciones de uso de los modelos empleados",
+    "r4Title": "Ámbito de la beta y funciones de pago",
+    "r4Text": "Los pagos de recargas de créditos y suscripciones los gestiona nuestro proveedor de pagos externo Paddle; funciones como la tienda de recursos y el retiro de ingresos UGC no están disponibles durante la beta",
+    "r5Title": "Verifique usted el uso comercial",
+    "r5Text": "Es su responsabilidad comprobar si el contenido generado puede usarse comercialmente y cumplir la ley aplicable, las condiciones de uso de los modelos y los Términos de servicio de la plataforma",
     "agreementVersion": "Acuerdo de prueba beta · v2.0"
   },
   "score": {
@@ -1930,10 +1934,12 @@
     "packs_login_required": "Inicia sesión para comprar créditos.",
     "packs_unavailable": "Los paquetes de créditos no están disponibles ahora.",
     "packs_error": "No se pudo iniciar la compra. Inténtalo más tarde.",
+    "packs_checkout_not_enabled": "El checkout aún no está activado en nuestro proveedor de pagos; las compras no están disponibles.",
     "packs_wait_note": "Los créditos se añaden automáticamente al confirmarse el pago.",
     "plan_subscribe": "Suscribirse",
     "plan_per_month": "/mes",
     "plan_current": "Plan actual",
-    "plan_recurring_note": "La membresía se renueva cada mes y puedes cancelarla cuando quieras. Comprar paquetes de créditos no cambia tu plan ni la fecha de renovación."
+    "plan_recurring_note": "La membresía se renueva cada mes y puedes cancelarla cuando quieras. Comprar paquetes de créditos no cambia tu plan ni la fecha de renovación.",
+    "legal_notice": "Al completar una compra confirmas que has leído y aceptado los Términos de servicio, la Política de privacidad y la Política de créditos y reembolsos. Los pagos los procesa Paddle, nuestro proveedor externo, en calidad de Merchant of Record, que emite los recibos y las facturas."
   }
 }

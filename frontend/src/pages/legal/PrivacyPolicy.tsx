@@ -55,14 +55,14 @@ export function PrivacyPolicy() {
 
         <Section n={2} title={t(P('sec2Title'))}>
           {lead('sec2Lead')}
-          {list(['sec2i1', 'sec2i2', 'sec2i3'])}
+          {list(['sec2i1', 'sec2i2', 'sec2i3', 'sec2i4'])}
           {body('sec2negLead')}
           {list(['sec2neg1'])}
         </Section>
 
         <Section n={3} title={t(P('sec3Title'))}>
           {lead('sec3Lead')}
-          {list(['sec3i1', 'sec3i2', 'sec3i3', 'sec3i4'])}
+          {list(['sec3i1', 'sec3i2', 'sec3i3', 'sec3i4', 'sec3i5'])}
         </Section>
 
         <Section n={4} title={t(P('sec4Title'))}>
@@ -72,7 +72,7 @@ export function PrivacyPolicy() {
 
         <Section n={5} title={t(P('sec5Title'))}>
           {lead('sec5Lead')}
-          {list(['sec5i1', 'sec5i2', 'sec5i3'])}
+          {list(['sec5i1', 'sec5i2', 'sec5i3', 'sec5i4'])}
         </Section>
 
         <Section n={6} title={t(P('sec6Title'))}>

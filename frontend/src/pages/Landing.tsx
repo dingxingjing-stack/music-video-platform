@@ -28,11 +28,12 @@ export function Landing() {
     { icon: '♡', title: tr('home.cards.myCreations.title', 'My Creations'), desc: tr('home.cards.myCreations.desc', 'Manage all your generated and edited works in one hub.'), path: '/my-works', color: 'from-[#a78bfa]/20 to-[#fb923c]/5' },
   ];
 
+  // 界面演示用的示例条目：只展示版式，不含任何真实用户、真实作品或真实播放数据。
   const CASES = [
-    { title: 'Night Neon', author: '@beta_01', genre: 'Synthwave', plays: 234, cover: '◈' },
-    { title: 'Summer Breeze', author: '@beta_02', genre: 'Indie Pop', plays: 189, cover: '○' },
-    { title: 'Code Poet', author: '@beta_03', genre: 'Lo-fi', plays: 312, cover: '⬡' },
-    { title: 'Deep Echo', author: '@beta_04', genre: 'Ambient', plays: 156, cover: '⬢' },
+    { title: 'Night Neon', genre: 'Synthwave', cover: '◈' },
+    { title: 'Summer Breeze', genre: 'Indie Pop', cover: '○' },
+    { title: 'Code Poet', genre: 'Lo-fi', cover: '⬡' },
+    { title: 'Deep Echo', genre: 'Ambient', cover: '⬢' },
   ];
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export function Landing() {
         <motion.div className="text-center max-w-3xl z-10" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-[11px] tracking-[0.14em] text-[#8a8a8a]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {tr('landing.heroBadge','Public beta · Completely free')}
+            {tr('landing.heroBadge','Public beta · Free Credits on signup')}
           </div>
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight mt-6 leading-none">
             <span className="bg-gradient-to-r from-white to-[#8a8a8a] bg-clip-text text-transparent">{tr('landing.heroTitle1','All-in-one AI')}</span>
@@ -134,10 +135,12 @@ export function Landing() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {CASES.map((c, i) => (
             <motion.div key={c.title} {...fadeIn(i * 0.05)} className="rounded-2xl p-5 bg-[#141414] border border-[#1f1f1f]">
-              <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center">{c.cover}</div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="w-10 h-10 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] flex items-center justify-center">{c.cover}</div>
+                <span className="shrink-0 px-1.5 py-0.5 rounded border border-[#2a2a2a] text-[9px] font-semibold tracking-[0.14em] text-[#6a6a6a]">{tr('landing.demoTag','DEMO')}</span>
+              </div>
               <h3 className="text-sm font-semibold text-white mt-3">{c.title}</h3>
-              <p className="text-xs text-[#6a6a6a] mt-1">{c.author} · {c.genre}</p>
-              <p className="text-xs text-[#4a4a4a] mt-1">▶ {c.plays} plays</p>
+              <p className="text-xs text-[#6a6a6a] mt-1">{c.genre}</p>
             </motion.div>
           ))}
         </div>
@@ -175,7 +178,9 @@ export function Landing() {
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4 text-xs text-[#6a6a6a]">
             <a href="/legal/terms" className="hover:text-white">{tr('legal.links.terms', 'Terms')}</a>
             <a href="/legal/privacy" className="hover:text-white">{tr('legal.links.privacy', 'Privacy')}</a>
+            <a href="/legal/credits-refund" className="hover:text-white">{tr('legal.links.creditsRefund', 'Credits & Refunds')}</a>
             <a href="/legal/aimusic-copyright" className="hover:text-white">{tr('legal.links.aiCopyright', 'AI Copyright')}</a>
+            <a href="/legal/aup" className="hover:text-white">{tr('legal.links.aup', 'Acceptable Use')}</a>
             <a href={`mailto:${tr('legal.privacy.contactEmail', 'zezhending@gmail.com')}`} className="hover:text-white">{tr('legal.links.contact', 'Contact')}</a>
           </div>
           <p className="text-xs text-[#4a4a4a]">{tr('landing.footerCopyright', '© 2026 Melovar. All rights reserved.')}</p>
