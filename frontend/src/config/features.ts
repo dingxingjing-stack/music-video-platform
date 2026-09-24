@@ -33,10 +33,8 @@ export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   // ===== 完全关闭（隐藏入口）=====
   // MV 生成已下线；保留兼容键但关闭
   mv_generate:        { key: 'mv_generate',        name: 'features.mvGenerate.name',      level: 'closed', description: 'features.mvGenerate.desc', icon: '🎬' },
-  asset_store:        { key: 'asset_store',        name: 'features.assetStore.name',      level: 'closed', description: 'features.assetStore.desc', icon: '🛒' },
   paid_subscription:  { key: 'paid_subscription',  name: 'features.paidSubscription.name',level: 'closed', description: 'features.paidSubscription.desc', icon: '💳' },
   messaging:          { key: 'messaging',          name: 'features.messaging.name',       level: 'closed', description: 'features.messaging.desc', icon: '💬' },
-  ugc_earnings:       { key: 'ugc_earnings',       name: 'features.ugcEarnings.name',     level: 'closed', description: 'features.ugcEarnings.desc', icon: '💰' },
   deep_copyright_db: { key: 'deep_copyright_db',  name: 'features.deepCopyrightDb.name',  level: 'closed', description: 'features.deepCopyrightDb.desc', icon: '📚' },
 };
 
