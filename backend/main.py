@@ -227,7 +227,7 @@ from app.routers.messages import router as msg_app
 from app.routers.subscription import router as sub_app
 
 # ---------- Asset store router ----------
-from app.routers.asset_store import router as store_app
+# from app.routers.asset_store import router as store_app  # P1: disabled (mock Asset Store surface)
 
 # ---------- Copyright detection router ----------
 from app.routers.copyright import router as copyright_app
@@ -236,7 +236,7 @@ from app.routers.copyright import router as copyright_app
 from app.routers.audio_quality import router as audio_quality_app
 
 # ---------- UGC submission router ----------
-from app.routers.ugc import router as ugc_app
+# from app.routers.ugc import router as ugc_app  # P1: disabled (scaffold UGC earnings/marketplace surface)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -363,7 +363,7 @@ from app.routers import ai_lyrics
 from app.routers import audio_processing
 from app.routers import song_continuation
 from app.routers import subtitle_recognition
-from app.routers import one_click_publish
+# from app.routers import one_click_publish  # P1: disabled (OAuth URLs are placeholder stubs)
 from app.routers import feedback
 # app.include_router(mv_app,       prefix="/api/v1/mv")  # P0-3: disabled MV router (MusicGen/MV)
 app.include_router(workflow_app, prefix="/api/v1/workflow")
@@ -392,16 +392,16 @@ app.include_router(audio_processing.router, prefix="/api/v1/audio")
 # song_continuation.py 与 continuation_service.py 均保留，仅停止路由注册。
 # app.include_router(song_continuation.router)
 app.include_router(subtitle_recognition.router)
-app.include_router(one_click_publish.router)
+# app.include_router(one_click_publish.router)  # P1: disabled (scaffold one-click publish)
 app.include_router(social_app)
 app.include_router(collab_app)
 app.include_router(copyright_app)
 app.include_router(notif_app)
 app.include_router(msg_app)
 app.include_router(sub_app)
-app.include_router(store_app)
+# app.include_router(store_app)  # P1: disabled (mock Asset Store: ASSETS 常量 + 内存 purchases_db，付费恒 501)
 app.include_router(audio_quality_app)
-app.include_router(ugc_app)
+# app.include_router(ugc_app)  # P1: disabled (mock_submissions 内存 list + 无鉴权 earnings/marketplace)
 app.include_router(feedback.router)
 
 # ---------- Rhythm analysis router (P0-6 节拍检测) ----------
