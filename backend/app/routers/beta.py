@@ -5,7 +5,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Depends
+import hmac
+import os
+from typing import Optional
+
+from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from app.services.beta_service import (
@@ -58,6 +62,18 @@ async def feature_access_route(user_id: str = Depends(get_verified_user_id)):
 
 
 @router.post("/daily-reset")
-async def daily_reset_route():
-    """每日额度重置（供 cron 调用，不对外公开）"""
+async def daily_reset_route(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+):
+    """每日额度重置（运维/定时任务专用，不对外公开）。
+
+    与 /api/v1/auth/credits/add 的 P0-1 收口保持同一口径：ADMIN_API_TOKEN 未配置时
+    一律 503（fail-closed），提供时用常量时间比对；不接受普通用户 JWT 作为授权凭据。
+    """
+    admin_token = (os.getenv("ADMIN_API_TOKEN") or "").strip()
+    if not admin_token:
+        raise HTTPException(status_code=503, detail="admin_not_configured")
+    if not x_admin_token or not hmac.compare_digest(str(x_admin_token), admin_token):
+        raise HTTPException(status_code=403, detail="admin token required")
+
     return await daily_reset()

@@ -11,11 +11,12 @@ POST /api/v1/community/{id}/like — 点赞
 POST /api/v1/community/{id}/play — 增加播放
 """
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional, List
 
 from app.services.community_service import community_service, CommunityTrack
 from app.services.cache_service import cached
+from app.services.auth_identity import get_verified_user_id
 
 
 router = APIRouter(prefix="/api/v1/community", tags=["社区"])
@@ -92,8 +93,8 @@ async def get_tracks_by_genre(
 
 
 @router.post("/{track_id}/like")
-async def like_track(track_id: str):
-    """点赞歌曲"""
+async def like_track(track_id: str, user_id: str = Depends(get_verified_user_id)):
+    """点赞歌曲（身份来自 verified JWT；缺 JWT 自动 401）"""
     likes = community_service.like_track(track_id)
     if likes == 0:
         raise HTTPException(status_code=404, detail="歌曲不存在")
@@ -101,8 +102,8 @@ async def like_track(track_id: str):
 
 
 @router.post("/{track_id}/play")
-async def play_track(track_id: str):
-    """增加播放量"""
+async def play_track(track_id: str, user_id: str = Depends(get_verified_user_id)):
+    """增加播放量（身份来自 verified JWT；缺 JWT 自动 401）"""
     plays = community_service.play_track(track_id)
     if plays == 0:
         raise HTTPException(status_code=404, detail="歌曲不存在")
