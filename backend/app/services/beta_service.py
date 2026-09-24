@@ -176,12 +176,13 @@ FEATURE_ACCESS_MAP: dict[str, dict] = {
 }
 
 async def get_feature_access(user_id: str) -> dict[str, Any]:
+    """对外只输出 level 与 accessible：FEATURE_ACCESS_MAP 的中文名是内部展示标签，不上线。"""
     s = await check_gray_status(user_id)
     f = {}
     for k, c in FEATURE_ACCESS_MAP.items():
-        if c["level"] == "open":       f[k] = {"name": c["name"], "level": "open", "accessible": True}
-        elif c["level"] == "gray":     f[k] = {"name": c["name"], "level": "gray", "accessible": s["is_gray"]}
-        else:                          f[k] = {"name": c["name"], "level": "closed", "accessible": False}
+        if c["level"] == "open":       f[k] = {"level": "open", "accessible": True}
+        elif c["level"] == "gray":     f[k] = {"level": "gray", "accessible": s["is_gray"]}
+        else:                          f[k] = {"level": "closed", "accessible": False}
     return {"user_id": user_id, "is_gray": s["is_gray"], "features": f}
 
 async def daily_reset() -> dict[str, Any]:

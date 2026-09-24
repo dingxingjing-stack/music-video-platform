@@ -103,7 +103,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: '关于即时履行：',
-            t: '购买 Credits 或开通会员后，服务通常在付款成功时立即开始提供。若您会在撤回期届满前开始使用，我们会在结账流程中就本次交易单独请您确认：您同意平台立即开始履行，并知悉作出该确认后您即不再就本次交易享有法定撤回权。该确认内容会随订单留存，供您事后查阅。',
+            t: '购买 Credits 或开通会员后，服务通常在付款成功时立即开始提供。收银台是否会就本次交易另行请您勾选“同意立即开始履行、并因此放弃本次交易的撤回权”，取决于您所在法域的强制性规则、Paddle 作为记账商户为您配置的结账流程，以及届时实际向您展示的内容。只有当该项确认在结账流程中确实向您提出并由您作出时，它才构成您就此放弃撤回权的意思表示；未被提出时，您的法定撤回权不受影响。',
           },
           {
             k: 'p',
@@ -256,7 +256,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: 'About immediate performance: ',
-            t: 'Credits and memberships are normally made available as soon as your payment succeeds. Where you will start using the service before the withdrawal period ends, our checkout asks you to confirm separately, for this transaction, that you agree to immediate performance and that you understand this confirmation ends your statutory right of withdrawal for it. The confirmation is stored with your order so you can review it later.',
+            t: 'Credits and memberships are normally made available as soon as your payment succeeds. Whether the checkout asks you to separately tick "I agree to immediate performance and thereby lose my withdrawal right for this transaction" depends on the mandatory rules of your jurisdiction, on the checkout flow configured for us by Paddle as Merchant of Record, and on what is actually presented to you at that time. Such a confirmation binds you only if it is in fact presented in the checkout and you give it; where it is not presented, your statutory withdrawal right is unaffected.',
           },
           {
             k: 'p',
