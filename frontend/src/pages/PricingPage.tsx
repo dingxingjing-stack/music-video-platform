@@ -4,6 +4,7 @@ import { api } from '../config/api';
 import { authFetchOptional, AuthenticationError } from '../api/http';
 import { openPackCheckout, type PaddlePack, type PacksResponse } from '../lib/paddle';
 import { checkoutNoticeKey } from '../lib/paddleErrors';
+import { fetchLemonSqueezyStatus, openLemonSqueezyCheckout } from '../lib/lemonSqueezy';
 
 /** 会员计划（一次性补充包见 /packs；两者共用同一套后端建单 + Paddle.js 流程） */
 export interface MembershipPlan {
@@ -67,6 +68,9 @@ export function PricingPage() {
   const [plansFailed, setPlansFailed] = useState(false);
   const [packsFailed, setPacksFailed] = useState(false);
   const [catalogRetrying, setCatalogRetrying] = useState(false);
+  // Lemon Squeezy 路由表：只有后端配好某条目 Variant 时才接管该条目的购买，
+  // 其余情况（含未配置、探测失败）一律保持现有 Paddle 行为。
+  const [lsRoute, setLsRoute] = useState<{ enabled: boolean; items: string[] }>({ enabled: false, items: [] });
 
   const refreshAccount = useCallback(async () => {
     try {
@@ -108,6 +112,7 @@ export function PricingPage() {
   useEffect(() => {
     refreshAccount();
     loadCatalog();
+    fetchLemonSqueezyStatus().then(setLsRoute);
   }, [refreshAccount, loadCatalog]);
 
   const retryCatalog = () => {
@@ -124,6 +129,24 @@ export function PricingPage() {
     setBusy: (v: string | null) => void,
   ) => {
     const config = body.pack_id ? packs : plans;
+    const itemId = (body.pack_id || body.plan_id || '');
+    if (lsRoute.enabled && lsRoute.items.includes(itemId)) {
+      // 该条目由 Lemon Squeezy 承接：后端建单 → 跳转 Hosted Checkout。
+      // 放在 paddle_configured 闸门之前，否则 LS-only 配置会被误判成"未开放"。
+      setBusy(key);
+      setPackNotice(null);
+      try {
+        const opened = await openLemonSqueezyCheckout(body);
+        if (!opened) setPackNotice(t('pricing.packs_unavailable'));
+      } catch (err) {
+        setPackNotice(err instanceof AuthenticationError
+          ? t('pricing.packs_login_required')
+          : t(checkoutNoticeKey(err)));
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
     if (!config?.paddle_configured) {
       // 到这里说明后端没配齐该档 Price：必须给出可见原因，不能静默 return（点一下没反应最难排查）。
       setPackNotice(t('pricing.packs_unavailable'));

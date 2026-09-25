@@ -432,6 +432,10 @@ app.include_router(songs_app)
 from app.routers.credits import router as credits_app
 app.include_router(credits_app)
 
+# ---------- Lemon Squeezy 路由（新增 provider，与 Paddle 并存；阶段一仅建单） ----------
+from app.routers.lemon_squeezy import router as lemon_squeezy_app
+app.include_router(lemon_squeezy_app)
+
 # ---------- Projects 路由（Phase 3-3） ----------
 from app.routers.projects import router as projects_app
 app.include_router(projects_app)
