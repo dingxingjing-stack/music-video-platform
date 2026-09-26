@@ -250,3 +250,53 @@ def test_provider_explicit_model_backcompat(monkeypatch):
         "prompt": "x", "lyrics": "y", "duration": 60, "model": "tempolor-latest",
     }))
     assert sink["posts"][0]["model"] == "tempolor-latest"
+
+
+# ── P3-13：production 选择底线（api_model_id 未确认的规格一律不可选）──────
+
+def test_prod_instrumental_never_selects_unconfirmed_model(monkeypatch):
+    """ENVIRONMENT=production：instrumental 不得返回 mureka-v9-instr（ID 未确认，提交不出去）。"""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("instrumental", 180, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"
+
+
+def test_prod_vocal_still_selects_confirmed_tempolor_latest(monkeypatch):
+    """正常人声路径不受影响：仍选中唯一已确认 ID 的 tempolor-latest，成本口径不变。"""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    sel = select_music_model("vocal", 180, lyrics_provided=True)
+    assert sel.model.key == "tempolor-latest" and sel.model.id_confirmed
+    assert sel.total_cost_cny == 0.30
+    sel2 = select_music_model("vocal", 270, lyrics_provided=False)
+    assert sel2.model.key == "tempolor-latest"
+    assert sel2.total_cost_cny == 0.37
+
+
+def test_prod_cover_still_selects_confirmed_model(monkeypatch):
+    """Cover 同理：已确认 ID 的 tempolor-latest-cover 仍可被选中。"""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    sel = select_music_model("vocal", 180, lyrics_provided=True, operation="cover")
+    assert sel.model.key == "tempolor-latest-cover"
+    assert sel.model.id_confirmed and sel.model.api_model_id == "tempolor-latest"
+
+
+def test_prod_never_returns_any_unconfirmed_model(monkeypatch):
+    """穷举：production 下任何被返回的规格都必须已确认，且绝不能是 mureka-v9-instr。"""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    for music_type in ("vocal", "instrumental"):
+        for dur in (60, 120, 180, 250, 270, 300):
+            for op in ("song", "cover"):
+                try:
+                    sel = select_music_model(music_type, dur, lyrics_provided=True, operation=op)
+                except NoValidModelError:
+                    continue
+                assert sel.model.id_confirmed and sel.model.api_model_id
+                assert sel.model.key != "mureka-v9-instr"
+
+
+def test_development_instrumental_selection_unchanged(monkeypatch):
+    """第一版路线（2026-09-18 批准）只在非生产保留：开发/测试仍指向 mureka-v9-instr。"""
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    sel = select_music_model("instrumental", 180, lyrics_provided=True)
+    assert sel.model.key == "mureka-v9-instr"
