@@ -21,6 +21,8 @@
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -202,6 +204,18 @@ def select_music_model(
 
     candidates = [s for s in MODELS.values() if s.enabled]
     candidates = [s for s in candidates if _matches_operation(s, operation, music_type)]
+
+    # 生产底线：api_model_id 未经确认的规格一律不可选 —— Provider 本就有同款零 HTTP 拒绝，
+    # 让 selector 提前拒绝，避免"选中一个提交不出去的目标"被上层误读成可用能力。
+    if os.getenv("ENVIRONMENT", "development").lower() == "production":
+        confirmed = [s for s in candidates if s.id_confirmed and s.api_model_id]
+        if not confirmed:
+            raise NoValidModelError(
+                "NO_VALID_MODEL",
+                f"production has no id-confirmed model: operation={operation} "
+                f"type={music_type} duration={target_duration}",
+            )
+        candidates = confirmed
 
     # 时长过滤（无 extend 能力 → 单次上限必须 ≥ target；上限未确认的不用于硬性承诺）
     if operation in ("song", "cover"):
