@@ -448,7 +448,8 @@ def _f2_full_failure_chain(env, monkeypatch, duration, expected_weight):
     baseline_used = _daily_used(env)
     baseline_gen = _gen_usage(env)
 
-    # 复刻 generate_music 的权威口径：weight → new_task → reserve（三者必须一致）
+    # 本地复刻「weight → new_task → reserve 三者必须一致」的不变量；权重按 raw
+    # duration 就地计算（endpoint 已改为 normalized 口径，见 P6-B-C3-4，此处只测一致性）
     quota_weight = ai_music.get_duration_weight(duration)
     assert quota_weight == expected_weight
     tid = task_store.new_task(user_key=USER, generation_quota_weight=quota_weight)
@@ -645,7 +646,7 @@ def _real_generate(monkeypatch, duration: int) -> str:
 
 
 # ── Daily quota 权重持久化：reserve == 落库 == 退款 ───────────────────
-@pytest.mark.parametrize("duration,expected_weight", [(180, 2), (120, 1), (270, 2)])
+@pytest.mark.parametrize("duration,expected_weight", [(180, 2), (120, 2), (270, 2)])
 def test_reserve_weight_equals_persisted_weight_equals_refund_weight(env, monkeypatch,
                                                                     duration, expected_weight):
     assert _daily_used(env) == 0

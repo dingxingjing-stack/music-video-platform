@@ -3,6 +3,8 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 import asyncio
 
+from tests.test_ai_music_flow import isolated_db  # noqa: F401  独立 SQLite（新 schema）+ HF 关闭
+
 def test_max_duration_caps_270():
     """第一版产品统一硬上限 270s（2026-09-18 批准，替代旧 300s 政策）。"""
     from app.services.ai_limits import MAX_AUDIO_DURATION_SECONDS, MAX_TASK_RUNTIME_SECONDS
@@ -45,65 +47,77 @@ def test_no_truncation_270():
     assert duration_over == 270, "第一版政策：300 请求应截断为 270"
 
 @pytest.mark.asyncio
-async def test_long_generation_uses_continuation(monkeypatch):
-    """300s 应走 continuation_service.generate_long_music，非单段"""
+async def test_long_generation_single_shot_no_continuation(monkeypatch, isolated_db):
+    """阶段 B：300s 不再走 continuation —— 单次生成 + 统一质量门，
+    链由 chain_for_operation 选一次；120s 短请求同样单次生成（归一化抬到 MIN=240）。"""
     from app.routers.ai_music import GenerateRequest
     from app.services import task_store
     from app.routers import ai_music
-    # Mock agnes, provider, continuation, upload
+    from app.services import continuation_service as cont_mod
+
     mock_agnes = AsyncMock()
     mock_agnes.generate_song = AsyncMock(return_value=MagicMock(optimized_prompt="opt", generated_lyrics="lyr"))
     monkeypatch.setattr("app.routers.ai_music.agnes_service", mock_agnes)
 
     mock_provider = MagicMock()
-    mock_provider.name = "runpod"
-    mock_provider.gpu = "runpod"
-    mock_provider.generate = AsyncMock(return_value={"success": True, "volume_files": {"full_wav": "fake.wav", "_local_path": "/tmp/fake.wav"}})
-    with patch("app.services.provider_registry.get_provider_registry") as mock_reg:
-        mock_reg.return_value.select.return_value = mock_provider
-        # Mock continuation
-        mock_cont = AsyncMock()
-        mock_cont.generate_long_music = AsyncMock(return_value={
-            "success": True,
-            "volume_files": {"full_wav": "combined.wav", "_local_path": "/tmp/combined.wav"},
-            "manifest": {"full_wav": "music/task/combined.wav", "full_mp3": "music/task/combined.mp3"},
-            "provider": "runpod+continuation"
-        })
-        with patch("app.services.continuation_service.continuation_service", mock_cont):
-            with patch("app.routers.ai_music._upload_and_finalize", new=AsyncMock()):
-                with patch("app.routers.ai_music._sign_for_playback", return_value="https://r2/test.mp3"):
-                    # Create temp task
-                    task_id = task_store.new_task(user_key="test_long")
-                    task_store.acquire_lock("test_long", task_id)
-                    req = GenerateRequest(prompt="test prompt for long song generation 300s", style="pop", duration=300)
-                    # Mock cdn
-                    await ai_music._run_generation(task_id, req, "test_long")
-                    # Verify continuation was called for 300
-                    assert mock_cont.generate_long_music.called, "300s should call continuation"
-                    # Verify short does not call continuation
-                    mock_cont.generate_long_music.reset_mock()
-                    # Need new task for short
-                    task_id2 = task_store.new_task(user_key="test_short")
-                    task_store.acquire_lock("test_short", task_id2)
-                    # For short, provider should be called directly, not continuation
-                    # Reset mocks
-                    mock_provider.generate.reset_mock()
-                    req2 = GenerateRequest(prompt="short prompt test", style="pop", duration=120)
-                    # Mock upload for short path
-                    with patch("app.routers.ai_music._try_hf_ace_step_fallback", new=AsyncMock(return_value=None)):
-                        await ai_music._run_generation(task_id2, req2, "test_short")
-                    # For short, continuation should NOT be called
-                    assert not mock_cont.generate_long_music.called, "120s should not call continuation"
-                    # Clean up
-                    task_store.delete(task_id)
-                    task_store.delete(task_id2)
-                    task_store.release_lock_for_task(task_id)
-                    task_store.release_lock_for_task(task_id2)
+    mock_provider.name = "yinchao"
+    mock_provider.generate = AsyncMock(return_value={
+        "success": True,
+        "volume_files": {"full_wav": "fake.wav", "_local_path": "/tmp/fake.wav",
+                         "_measured_duration_sec": 265.0},
+    })
+
+    reg = MagicMock()
+    reg.chain_for_operation.return_value = [mock_provider]
+    monkeypatch.setattr(ai_music, "get_provider_registry", lambda: reg)
+
+    # continuation 保留为独立续写入口：主链（含 300s）绝不调用它
+    cont_mock = AsyncMock(return_value={"success": True, "volume_files": {}})
+    monkeypatch.setattr(cont_mod.continuation_service, "generate_long_music", cont_mock)
+    monkeypatch.setattr(ai_music, "_upload_and_finalize", AsyncMock())
+    monkeypatch.setattr(ai_music, "_log_generation_cost", lambda *a, **k: None)
+    monkeypatch.setattr(ai_music, "_try_hf_ace_step_fallback", AsyncMock(return_value=None))
+
+    task_id = task_store.new_task(user_key="test_long")
+    task_store.acquire_lock("test_long", task_id)
+    try:
+        req = GenerateRequest(prompt="test prompt for long song generation 300s", style="pop", duration=300)
+        await ai_music._run_generation(task_id, req, "test_long")
+
+        cont_mock.assert_not_called()
+        reg.chain_for_operation.assert_called_once_with("normal")
+        reg.select.assert_not_called()
+        assert mock_provider.generate.await_count == 1
+        sent = mock_provider.generate.await_args.args[0]
+        assert sent["duration"] == 300, "≥MIN 应原样保留（阶段 B：normalize 只保留下限）"
+        assert sent["operation"] == "normal"
+        ai_music._upload_and_finalize.assert_awaited_once()
+
+        # 短请求同样单次生成：归一化抬到 240，仍不进 continuation
+        task_id2 = task_store.new_task(user_key="test_short")
+        task_store.acquire_lock("test_short", task_id2)
+        try:
+            req2 = GenerateRequest(prompt="short prompt test", style="pop", duration=120)
+            await ai_music._run_generation(task_id2, req2, "test_short")
+        finally:
+            task_store.delete(task_id2)
+            task_store.release_lock_for_task(task_id2)
+        cont_mock.assert_not_called()
+        assert mock_provider.generate.await_count == 2
+        assert mock_provider.generate.await_args_list[1].args[0]["duration"] == 240
+    finally:
+        task_store.delete(task_id)
+        task_store.release_lock_for_task(task_id)
 
 @pytest.mark.asyncio
-async def test_continuation_second_segment_retry():
+async def test_continuation_second_segment_retry(monkeypatch):
     """第二段独立重试，不重跑首段"""
     from app.services.continuation_service import continuation_service
+    # P6-B-C2：本用例桩的是 _stitch_with_crossfade（返回空文件），因此成品时长
+    # 硬闸的实测出口也必须桩掉，否则会被 gate 以"测不到=不合规"挡下。
+    from unittest.mock import AsyncMock as _AM
+    monkeypatch.setattr(continuation_service, "_measure_final_duration",
+                        _AM(return_value=271.0))
     # Mock first success, second fail then success
     call_count = {"second": 0}
     original_gen = continuation_service._generate_single_segment

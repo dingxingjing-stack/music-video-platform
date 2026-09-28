@@ -10,11 +10,16 @@
 
 import asyncio
 import os
+import tempfile
 import threading
+from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 
 from app.services import ai_limits, task_store
+import app.services.continuation_service as cont_mod
+from app.services.continuation_service import continuation_service as _cont
 from app.routers import ai_music
 
 
@@ -204,13 +209,34 @@ class _FakeProvider:
 
     async def generate(self, request):
         self.calls += 1
-        return self._result
+        res = self._result
+        # 阶段 B：成功 provider 需返回真实存在的本地文件（路径解析）+ 预实测时长
+        # （成品质量门 <MIN/测不到 → failed，桩位字节不可真实解码）。失败结果原样返回。
+        if res and res.get("success"):
+            fd, path = tempfile.mkstemp(suffix=f"_{self.name}.wav")
+            os.close(fd)
+            Path(path).write_bytes(b"RIFFfake")
+            res = {**res, "volume_files": {**(res.get("volume_files") or {}), "_local_path": path,
+                                           "_measured_duration_sec": 271.0}}
+        return res
 
 
 def _install_chain(monkeypatch, providers, hf_result=None):
     class _Reg:
         def fallback_chain(self, name=None):
             return providers
+
+        def chain_for_operation(self, operation):
+            # 阶段 B 路由唯一入口；本组测试的链内容由用例自定（fallback 语义断言不变）
+            return self.fallback_chain()
+
+        def get(self, name):
+            # C2 成功路径在 _run_generation 末尾用 registry.get(provider_name) 取 last_provider 计成本
+            for p in providers:
+                if getattr(p, "name", None) == name:
+                    return p
+            return providers[0] if providers else None
+
     monkeypatch.setattr(ai_music, "get_provider_registry", lambda: _Reg())
 
     async def _agnes(req):
@@ -230,9 +256,28 @@ def _install_chain(monkeypatch, providers, hf_result=None):
         return None
     monkeypatch.setattr(ai_music, "_upload_and_finalize", _upload)
 
+    # P6-B-C2：人声 270s 走 continuation；桩掉其重 IO（实测/参考截取/歌词续写/FFmpeg 拼接/R2），
+    # _measure_final_duration 桩为 271.0 以过 270s 硬闸，使「成功路径不退款→额度仍占用」可验证。
+    fd, combined_path = tempfile.mkstemp(suffix="_combined.wav")
+    os.close(fd)
+    Path(combined_path).write_bytes(b"RIFFfake")
+    monkeypatch.setattr(_cont, "_measure_final_duration", AsyncMock(return_value=271.0))
+    monkeypatch.setattr(
+        _cont, "_prepare_continuation_context",
+        AsyncMock(return_value=("cmViZA==", {"bpm": 120, "key": "C major"})),
+    )
+    monkeypatch.setattr(_cont, "_continue_lyrics", AsyncMock(return_value="ly2"))
+    monkeypatch.setattr(_cont, "_stitch_with_crossfade", AsyncMock(return_value=combined_path))
+    monkeypatch.setattr(_cont, "_upload_parts", AsyncMock(return_value={}))
+    monkeypatch.setattr(_cont, "_upload_final", AsyncMock(return_value={"full_wav": "music/t/full_wav.wav"}))
+
 
 def _run(monkeypatch, task_id, user, providers, hf_result=None):
     monkeypatch.setattr(ai_music, "MAX_AUTO_RETRIES", 0)
+    # C2：continuation 的 MAX_AUTO_RETRIES 是模块级独立绑定（导入自 ai_limits，默认 1），
+    # 与 ai_music.MAX_AUTO_RETRIES 不共享。同步置 0，保持本组「每段每家只试一次」原意，
+    # 使调用计数语义干净：成功 provider = 首段+第二段 = 2 次；失败 provider = 1 次。
+    monkeypatch.setattr(cont_mod, "MAX_AUTO_RETRIES", 0)
     _install_chain(monkeypatch, providers, hf_result=hf_result)
     req = ai_music.GenerateRequest(prompt="test song", style="pop", duration=60, type="song")
     asyncio.run(ai_music._run_generation(task_id, req, user))
@@ -249,6 +294,7 @@ def test_fallback_a_success_b_not_called(quota_loose, monkeypatch):
 
     _run(monkeypatch, tid, user, [A, B])
 
+    # 阶段 B：单次生成——A 链首成功 1 次即收尾，B 不被调用。
     assert A.calls == 1 and B.calls == 0
     # 成功不退款 → 额度仍占用 → 再次 reserve 失败
     assert ai_limits.reserve_generation(user, 60)["success"] is False
@@ -265,6 +311,7 @@ def test_fallback_a_fail_b_success(quota_loose, monkeypatch):
 
     _run(monkeypatch, tid, user, [A, B])
 
+    # 阶段 B：A 打满重试失败 1 次（MAX_AUTO_RETRIES=0）→ 切 B 单次成功；A 不回头。
     assert A.calls == 1 and B.calls == 1
     # 链最终成功 → 不退款 → 额度仍占用
     assert ai_limits.reserve_generation(user, 60)["success"] is False
@@ -281,6 +328,7 @@ def test_fallback_both_fail_refund_once(quota_loose, monkeypatch):
 
     _run(monkeypatch, tid, user, [A, B], hf_result=None)
 
+    # 阶段 B：两家各失败 1 次（MAX_AUTO_RETRIES=0）→ 链尽 → HF 桩返回 None → 退款一次。
     assert A.calls == 1 and B.calls == 1
     assert task_store.get(tid)["state"] == "failed"
     # 退款一次 → 额度恢复 → 再次 reserve 成功

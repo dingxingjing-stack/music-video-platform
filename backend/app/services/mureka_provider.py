@@ -2,15 +2,21 @@
 
 Phase API-2B：在现有 Provider 架构中新增 MurekaProvider 作为生产 PRIMARY。
 
+阶段 B：支持 instrumental operation（合同来源 docs/MUREKA_API_CONTRACT_AUDIT.md +
+官方 operations 页只读抓取）：
+    instrumental → POST /v1/instrumental/generate  {model: mureka-9|auto|..., prompt≤1024, n}
+                   GET  /v1/instrumental/query/{task_id}（独立轮询端点，非 /v1/song/query）
+    其他         → POST /v1/song/generate（lyrics 必填，既有路径）
+
 职责边界（严格）：
 - 只负责 Mureka 官方 API 两段式调用：
-    POST /v1/song/generate        → 提交，拿到 task_id
-    GET  /v1/song/query/{task_id} → 轮询，直到终态 → 下载音频
-- 失败/未知状态一律返回 success=False，交由上层 ProviderRegistry.fallback_chain()
-  与 ai_music.py 依次接管 RunPod → Fal → HF。
+    POST /v1/song/generate 或 /v1/instrumental/generate → 提交，拿到 task_id
+    GET  /v1/song/query/{task_id} 或 /v1/instrumental/query/{task_id} → 轮询 → 下载音频
+- 失败/未知状态一律返回 success=False，交由上层 chain_for_operation()
+  与 ai_music.py 依次接管。
 - **不 reserve / 不 refund / 不修改 quota**（额度全在上层 ai_limits）。
 - **不实现跨 Provider fallback**（严禁在 Provider 内部接 RunPod）。
-- **不发送 duration**（官方 /v1/song/generate 未确认该字段）。
+- **不发送 duration**（官方 generate 端点未确认该字段）。
 
 本文件不引用 legacy mureka_service.py / inference/mureka.py，二者继续保留。
 """
@@ -33,6 +39,9 @@ logger = logging.getLogger(__name__)
 # ── 环境变量（不做模块级 required，避免缺 Key 导致启动失败）──
 MUREKA_BASE_URL = (os.getenv("MUREKA_BASE_URL") or "https://api.mureka.ai").rstrip("/")
 MUREKA_MODEL = os.getenv("MUREKA_MODEL", "auto")
+# 阶段 B instrumental 链默认模型 = Mureka V9（官方 /v1/instrumental/generate 的
+# model 枚举含 mureka-9，见 docs/MUREKA_API_CONTRACT_AUDIT.md + operations 页）。
+MUREKA_INSTRUMENTAL_MODEL = os.getenv("MUREKA_INSTRUMENTAL_MODEL", "mureka-9")
 MUREKA_TIMEOUT_SECONDS = float(os.getenv("MUREKA_TIMEOUT_SECONDS", "300"))
 MUREKA_POLL_INTERVAL_SECONDS = float(os.getenv("MUREKA_POLL_INTERVAL_SECONDS", "3"))
 
@@ -135,12 +144,12 @@ def _extract_audio_url(data: dict) -> Optional[str]:
 
 
 class MurekaProvider(BaseProvider):
-    """Mureka 官方 API Provider（生产 PRIMARY，PHASE API-2B）。"""
+    """Mureka 官方 API Provider（阶段 B：instrumental 链第二跳 / lyrics_to_music 存量）。"""
 
     name = "mureka"
     provider_type = "api"
-    capabilities = ["lyrics_to_music"]
-    # 官方 /v1/song/generate 无 duration 参数，不声明 max_duration（保留基类默认 0）。
+    capabilities = ["lyrics_to_music", "instrumental"]
+    # 官方 generate 端点无 duration 参数，不声明 max_duration（保留基类默认 0）。
     gpu = "mureka"
     production = True
 
@@ -164,36 +173,56 @@ class MurekaProvider(BaseProvider):
     # ── 主逻辑 ──────────────────────────────────────────────
 
     async def generate(self, request: dict) -> dict:
-        """调用 Mureka 生成歌曲；失败返回 success=False，由上层 fallback 接管。"""
+        """按 operation 调用 Mureka 生成；失败返回 success=False，由上层 fallback 接管。"""
         api_key = self._api_key()
         if not api_key:
-            return {"success": False, "error": "MUREKA_API_KEY 未配置", "provider": self.name}
+            # 认证配置错误 → 禁止 fallback（阶段 B 路由协议）
+            return {"success": False, "non_retryable": True,
+                    "error": "MUREKA_API_KEY 未配置", "provider": self.name}
 
-        # ── 输入转换：只提取 Mureka 真正支持的字段 ──
-        lyrics = (request.get("lyrics") or "").strip()
-        if not lyrics:
-            return {"success": False, "error": "Mureka requires lyrics", "provider": self.name}
-        lyrics = lyrics[:LYRICS_MAX_CHARS]
+        operation = str(request.get("operation") or "").strip()
+        if operation and operation not in ("normal", "lyric_to_music", "instrumental"):
+            return {"success": False, "non_retryable": True,
+                    "error": f"Mureka unsupported operation: {operation}", "provider": self.name}
 
         prompt = (request.get("prompt") or "").strip()
-        prompt = prompt[:PROMPT_MAX_CHARS]
-
-        model = (request.get("model") or MUREKA_MODEL) or "auto"
-
-        # 第一版固定 n=1，不扩展成本（官方 n 最大 3，但默认请求 1 首）
-        payload: dict[str, Any] = {
-            "lyrics": lyrics,
-            "model": model,
-            "prompt": prompt,
-            "n": 1,
-        }
-
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
 
-        submit_url = f"{MUREKA_BASE_URL}/v1/song/generate"
+        if operation == "instrumental":
+            # ── 阶段 B instrumental：POST /v1/instrumental/generate（官方合同）──
+            if not prompt:
+                return {"success": False, "non_retryable": True,
+                        "error": "Mureka requires prompt for instrumental", "provider": self.name}
+            model = (request.get("model") or MUREKA_INSTRUMENTAL_MODEL) or "mureka-9"
+            payload: dict[str, Any] = {
+                "model": model,
+                "prompt": prompt[:PROMPT_MAX_CHARS],
+                "n": 1,
+            }
+            submit_url = f"{MUREKA_BASE_URL}/v1/instrumental/generate"
+            # 独立轮询端点（官方 operations：GET /v1/instrumental/query/{task_id}）
+            query_url_tpl = f"{MUREKA_BASE_URL}/v1/instrumental/query/{{task_id}}"
+        else:
+            # ── lyrics_to_music / normal：POST /v1/song/generate（既有路径）──
+            lyrics = (request.get("lyrics") or "").strip()
+            if not lyrics:
+                return {"success": False, "non_retryable": True,
+                        "error": "Mureka requires lyrics", "provider": self.name}
+            lyrics = lyrics[:LYRICS_MAX_CHARS]
+            prompt = prompt[:PROMPT_MAX_CHARS]
+            model = (request.get("model") or MUREKA_MODEL) or "auto"
+            # 第一版固定 n=1，不扩展成本（官方 n 最大 3，但默认请求 1 首）
+            payload = {
+                "lyrics": lyrics,
+                "model": model,
+                "prompt": prompt,
+                "n": 1,
+            }
+            submit_url = f"{MUREKA_BASE_URL}/v1/song/generate"
+            query_url_tpl = f"{MUREKA_BASE_URL}/v1/song/query/{{task_id}}"
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -213,7 +242,7 @@ class MurekaProvider(BaseProvider):
                 logger.info("[mureka] task=%s trace=%s 已提交", mureka_task_id, trace_id)
 
                 # 2) 轮询
-                query_url = f"{MUREKA_BASE_URL}/v1/song/query/{mureka_task_id}"
+                query_url = query_url_tpl.format(task_id=mureka_task_id)
                 deadline = time.monotonic() + MUREKA_TIMEOUT_SECONDS
                 while time.monotonic() < deadline:
                     await asyncio.sleep(MUREKA_POLL_INTERVAL_SECONDS)
@@ -291,4 +320,11 @@ class MurekaProvider(BaseProvider):
         elif resp.status_code == 503:
             err = "Mureka 引擎过载（503）"
         logger.warning("[mureka] %s body=%s", err, body)
-        return {"success": False, "error": err, "provider": self.name}
+        result = {"success": False, "error": err, "provider": self.name}
+        if resp.status_code == 400:
+            # 参数类错误：同错必现 → 禁止切换 Provider（阶段 B 路由协议）
+            result["non_retryable"] = True
+        elif resp.status_code in (401, 403):
+            # 认证/权限配置错误 → 禁止 fallback（阶段 B 路由协议）
+            result["non_retryable"] = True
+        return result

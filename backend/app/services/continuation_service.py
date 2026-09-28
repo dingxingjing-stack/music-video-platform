@@ -8,6 +8,7 @@ AI 续写核心服务
 
 import os
 import base64
+import math
 import time
 import logging
 import asyncio
@@ -19,7 +20,7 @@ from typing import Optional, Dict, Any, List, Callable, Tuple
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-from app.services.ai_limits import MAX_AUTO_RETRIES
+from app.services.ai_limits import MAX_AUTO_RETRIES, MIN_AUDIO_DURATION_SECONDS
 from app.services import task_store
 
 
@@ -29,6 +30,58 @@ MAX_CONTINUATION_DURATION = int(os.getenv("MAX_CONTINUATION_DURATION", "120"))
 REFERENCE_SEGMENT_DURATION = int(os.getenv("REFERENCE_SEGMENT_DURATION", "30"))  # 参考片段时长(秒)
 DEFAULT_SEGMENT_DURATION = 150
 CROSSFADE_DURATION = 1.5
+
+
+class DurationValidationError(RuntimeError):
+    """P6-B-C2 D1/D3：成品实测时长不足最低要求（或无法实测）时抛出的失败类型。
+
+    刻意不在本模块内退款：它只是向上冒泡，由 ai_music._run_generation 的既有
+    except Exception 统一走 failed + refund（避免第二套退款语义）。
+    """
+
+
+def _part_keys_of(task_id: str, manifest: Any) -> List[str]:
+    """从 _upload_parts 返回的 manifest 中提取本任务的 part R2 key（白名单前缀）。
+
+    只接受 music/{task_id}_part 前缀的值：parts 由 upload_music_package 上传，
+    manifest 值即真实 key；绝不接受 full_wav/full_mp3 等最终对象。
+    """
+    if not isinstance(manifest, dict):
+        return []
+    prefix = f"music/{task_id}_part"
+    return [v for v in manifest.values() if isinstance(v, str) and v.startswith(prefix)]
+
+
+def cleanup_continuation_artifacts(
+    task_id: str,
+    part_keys: Optional[List[str]] = None,
+    local_paths: Optional[List[Optional[str]]] = None,
+) -> None:
+    """C3-5-B best-effort 清理：continuation 中间分片（R2）+ 本地临时文件。
+
+    契约：
+    - 永不抛出任何异常（含每个 key/路径粒度的捕获）：清理失败绝不覆盖
+      原始 generation 结果，也不改变 timeout/cancel 语义。
+    - 只删除带 music/{task_id}_part 前缀的 R2 key —— 最终 full_wav/full_mp3
+      与用户下载对象绝不会进入删除列表。
+    - 幂等：对象不存在（NoSuchKey/404）由 cdn_uploader.delete_object 视为成功；
+      本地路径不存在则跳过，可安全重复执行。
+    同步实现（无 await 点）：在任务被取消（超时）时也能确定性跑完，不吞
+    CancelledError，不影响 _run_with_timeout 的既有超时退款语义。
+    """
+    for key in part_keys or []:
+        try:
+            if isinstance(key, str) and key.startswith(f"music/{task_id}_part"):
+                from app.services.cdn_uploader import cdn_uploader
+                cdn_uploader.delete_object(key)
+        except Exception as e:  # noqa: BLE001
+            print(f"[C3-5-B] part 清理失败(忽略): {key}: {type(e).__name__}: {e}")
+    for path in local_paths or []:
+        try:
+            if path and isinstance(path, str) and os.path.isfile(path):
+                os.remove(path)
+        except Exception as e:  # noqa: BLE001
+            print(f"[C3-5-B] 本地临时清理失败(忽略): {path}: {type(e).__name__}: {e}")
 
 
 @dataclass
@@ -597,53 +650,127 @@ class ContinuationService:
         user_key: str,
         mood: Optional[str] = None,
         vocal: Optional[str] = None,
+        provider_chain: Optional[List] = None,
     ) -> Dict[str, Any]:
-        """
-        150+150 300s 长生成 — 单任务视角，对外只暴露一个 task_id
+        """150+150 300s 长生成（对外唯一入口；C3-5-B 清理包装层）。
+
+        语义（与 _generate_long_music_impl 相同）：
         1. 首段 150s (真实 provider)
         2. 第二段 150s 基于首段末尾 30s 的 Audio2Audio (独立重试)
         3. FFmpeg 1.5s crossfade 拼接 (独立重试)
-        4. R2 上传最终 full_wav/full_mp3 + 中间段保留
+        4. duration gate 通过后只交付本地成品（final 上传唯一 owner = route）
+
+        C3-5-B 生命周期：
+        - 失败（含取消/超时）：finally best-effort 清理本任务已上传的 part 对象
+          与全部本地临时文件（first/second/combined），随后原样重抛原始异常，
+          绝不改变失败/退款/超时语义。
+        - 成功：清理 segment 本地文件；part R2 对象与 combined 留给
+          ai_music 路由在 _upload_and_finalize 完成 finalize 之后统一清理
+          （B1：final 已建立才删 parts，且清理失败不影响 completed）。
         """
-        # 限制目标
-        target = min(int(duration), 300)
+        state: Dict[str, Any] = {
+            "part_keys": [],
+            "first_local": None,
+            "second_local": None,
+            "combined_path": None,
+            "handed_off": False,
+        }
+        try:
+            return await self._generate_long_music_impl(
+                prompt, style, duration, lyrics, task_id, user_key,
+                mood=mood, vocal=vocal, provider_chain=provider_chain, state=state,
+            )
+        finally:
+            if state["handed_off"]:
+                # 成功：只清本地 segment；parts/combined 由 route finalize 后清理
+                cleanup_continuation_artifacts(
+                    task_id, None,
+                    [state["first_local"], state["second_local"]],
+                )
+            else:
+                # 失败/取消：parts + 全部本地临时（含 combined）best-effort 清理
+                cleanup_continuation_artifacts(
+                    task_id, state["part_keys"],
+                    [state["first_local"], state["second_local"], state["combined_path"]],
+                )
+
+    async def _generate_long_music_impl(
+        self,
+        prompt: str,
+        style: str,
+        duration: int,
+        lyrics: Optional[str],
+        task_id: str,
+        user_key: str,
+        mood: Optional[str] = None,
+        vocal: Optional[str] = None,
+        provider_chain: Optional[List] = None,
+        state: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """generate_long_music 的实现体（调用方必须经 generate_long_music 包装层）。"""
+        state = state if state is not None else {}
+        # 限制目标（P6-B-C2 D2：target 就是请求上限本身，不再预加 crossfade 补偿）
+        target = min(float(duration), 300)
         if target <= 180:
             raise ValueError("generate_long_music 仅用于 >180s，短时长请走单段")
 
         # 分段：240->150+90, 300->150+150
         first_dur = 150
-        second_dur = target - first_dur
+        second_dur = math.ceil(target - first_dur + CROSSFADE_DURATION)
 
         task_store.update(task_id, state="processing", progress=5)
-        from app.services.provider_registry import get_provider_registry, PROVIDER_ENV
-        registry = get_provider_registry()
-        # 首段 Provider fallback（production 自动模式）：Yinchao → TemPolor。
-        # 显式 AI_GENERATION_PROVIDER 保持单 provider 语义（Commit 4 contract），
-        # 失败不自动切换；非生产 fallback_chain() 本身即单元素链，不改变既有行为。
-        if (os.getenv(PROVIDER_ENV) or "").strip():
-            first_chain = [registry.select()]
+        # P6-B-C1：调用方可显式注入首段 chain，与 HTTP 路由共用同一份 provider 选择结果；
+        # 注入时不再解析全局 registry（否则调用方注入的链会被真实注册表旁路）。
+        # 未注入时行为与既有语义一致：
+        # 首段 Provider fallback（production 自动模式）：Yinchao → TemPolor；
+        # 显式 AI_GENERATION_PROVIDER 保持单 provider 语义（Commit 4 contract），失败不自动切换；
+        # 非生产 fallback_chain() 本身即单元素链，不改变既有行为。
+        if provider_chain is not None:
+            first_chain = list(provider_chain)
+            if not first_chain:
+                raise ValueError("provider_chain 为空时无法生成首段")
         else:
-            first_chain = registry.fallback_chain()
+            from app.services.provider_registry import get_provider_registry, PROVIDER_ENV
+            registry = get_provider_registry()
+            if (os.getenv(PROVIDER_ENV) or "").strip():
+                first_chain = [registry.select()]
+            else:
+                first_chain = registry.fallback_chain()
 
         # ── 第一段 150s (真实 provider, 首段失败才按链换家；不退款，交外层统一 refund) ──
+        # P6-B-C1-R：与 ai_music._run_generation 同一套 provider 失败语义——
+        # 每家共 1+MAX_AUTO_RETRIES 次，重试耗尽才换链中下一家；
+        # non_retryable（参数/内容/能力类错误）不重试、不换家：同一输入必再被判错，徒耗额度。
         provider = None
         first_result = None
         first_err = "unknown"
+        first_non_retryable = False
         for candidate in first_chain:
             provider = candidate
             task_store.update(task_id, state="generating", progress=10)
-            first_result = await self._generate_single_segment(
-                provider=provider,
-                prompt=prompt,
-                lyrics=lyrics or "",
-                duration=first_dur,
-                reference_b64=None,
-                enable_a2a=False,
-            )
-            if first_result and first_result.get("success"):
+            for attempt in range(1 + MAX_AUTO_RETRIES):
+                first_result = await self._generate_single_segment(
+                    provider=provider,
+                    prompt=prompt,
+                    lyrics=lyrics or "",
+                    duration=first_dur,
+                    reference_b64=None,
+                    enable_a2a=False,
+                )
+                if first_result and first_result.get("success"):
+                    break
+                first_err = first_result.get("error") if first_result else "unknown"
+                if first_result and first_result.get("non_retryable"):
+                    first_non_retryable = True
+                    task_store.update(task_id, error=f"首段 {provider.name} 不可重试错误，停止换家: {first_err}")
+                    break
+                task_store.update(
+                    task_id,
+                    error=f"首段 {provider.name} 第 {attempt + 1} 次尝试失败: {first_err}",
+                )
+            if (first_result and first_result.get("success")) or first_non_retryable:
                 break
-            first_err = first_result.get("error") if first_result else "unknown"
-            task_store.update(task_id, error=f"首段 {provider.name} 失败，尝试链中下一个 Provider: {first_err}")
+            task_store.update(task_id, error=f"首段 {provider.name} 重试耗尽，尝试链中下一个 Provider: {first_err}")
         if provider is None:
             raise RuntimeError("首段 150s 无可用 Provider")
         if not first_result or not first_result.get("success"):
@@ -653,10 +780,12 @@ class ContinuationService:
         first_local = self._resolve_local_path(first_files)
         if not first_local or not os.path.exists(first_local):
             raise RuntimeError("首段本地文件丢失")
+        state["first_local"] = first_local
 
         task_store.update(task_id, progress=40)
         # 中间段先上传 R2 保留（可选，但满足“中间片段保存到 R2”）
         part1_manifest = await self._upload_parts(task_id, {"part1_wav": first_local}, suffix="part1")
+        state["part_keys"].extend(_part_keys_of(task_id, part1_manifest))
 
         # ── 参考音频截取 + 分析 + 歌词续写 ──
         ref_b64, analysis = await self._prepare_continuation_context(
@@ -682,7 +811,7 @@ class ContinuationService:
         continuation_lyrics = await self._continue_lyrics(lyrics, style_hint)
 
         # ── 第二段 150s (独立重试，不重跑首段) ──
-        task_store.update(task_id, state="generating_continuation", progress=50)
+        task_store.update(task_id, state="generating", progress=50)
         second_result = None
         last_err = None
         for attempt in range(1 + MAX_AUTO_RETRIES):
@@ -712,11 +841,13 @@ class ContinuationService:
         second_local = self._resolve_local_path(second_files)
         if not second_local or not os.path.exists(second_local):
             raise RuntimeError("续写段本地文件丢失")
+        state["second_local"] = second_local
         task_store.update(task_id, progress=70)
         part2_manifest = await self._upload_parts(task_id, {"part2_wav": second_local}, suffix="part2")
+        state["part_keys"].extend(_part_keys_of(task_id, part2_manifest))
 
         # ── FFmpeg 拼接 (独立重试，不重跑 GPU) ──
-        task_store.update(task_id, state="stitching", progress=80)
+        task_store.update(task_id, state="generating", progress=80)
         combined_path = None
         last_ff_err = None
         for attempt in range(1 + MAX_AUTO_RETRIES + 1):
@@ -731,27 +862,37 @@ class ContinuationService:
                     await asyncio.sleep(1)
         if not combined_path or not os.path.exists(combined_path):
             raise RuntimeError(f"FFmpeg 合并失败: {last_ff_err}")
+        state["combined_path"] = combined_path
 
         task_store.update(task_id, progress=85)
-        # 验证时长接近目标（±5s）
+        # ── P6-B-C2 D1/N1 成品时长硬闸：必须在任何最终上传之前 ──
+        # 实测失败（librosa 异常）同样判失败：测不到 = 无法证明合规 = 不得交付。
         try:
-            import librosa
-            dur = librosa.get_duration(path=combined_path)
-            if abs(dur - target) > 5:
-                print(f"[Continuation] 警告：合并后时长 {dur:.1f}s 与目标 {target}s 偏差 >5s")
-        except Exception:
-            pass
+            measured = await self._measure_final_duration(combined_path)
+        except Exception as exc:  # noqa: BLE001
+            raise DurationValidationError(
+                f"final duration could not be measured: {type(exc).__name__}: {exc}"
+            ) from exc
+        if measured < MIN_AUDIO_DURATION_SECONDS:
+            raise DurationValidationError(
+                f"final duration {measured:.1f}s is below minimum {MIN_AUDIO_DURATION_SECONDS}s"
+            )
 
-        # ── R2 最终上传 ──
+        # C3-5-A：final R2 上传的唯一 owner 是 ai_music._upload_and_finalize。
+        # 此处通过 duration gate 后只交付本地成品 + 实测时长，不产生 final PUT、
+        # 不返回 manifest（route 侧 upload 才是真实 download manifest 的来源）。
         task_store.update(task_id, state="uploading", progress=90)
-        final_manifest = await self._upload_final(task_id, combined_path, part1_manifest, part2_manifest)
-        # task_store 写入最终 manifest，由 ai_music._upload_and_finalize 风格的 manifest 驱动播放
+        state["handed_off"] = True  # C3-5-B：combined/parts 交由 route finalize 后清理
         return {
             "success": True,
-            "volume_files": {"full_wav": os.path.basename(combined_path), "_local_path": combined_path},
-            "manifest": final_manifest,
+            "volume_files": {
+                "full_wav": os.path.basename(combined_path),
+                "_local_path": combined_path,
+                "_measured_duration_sec": measured,
+            },
             "provider": f"{provider.name}+continuation",
             "segments": 2,
+            "part_keys": list(state["part_keys"]),
 
         }
 
@@ -765,10 +906,15 @@ class ContinuationService:
             "reference_strength": 0.7,
         })
 
+    async def _measure_final_duration(self, path: str) -> float:
+        """成品时长实测的唯一出口（P6-B-C2）。异常一律向上抛，不在此吞掉。"""
+        import librosa
+        return float(librosa.get_duration(path=path))
+
     def _resolve_local_path(self, volume_files: Dict) -> Optional[str]:
         if not volume_files:
             return None
-        # 优先 _local_path（RunPod/Fal 已下载）
+        # 优先 _local_path（Fal 已下载）
         if volume_files.get("_local_path") and os.path.exists(volume_files["_local_path"]):
             return volume_files["_local_path"]
         # 尝试 full_wav
@@ -778,13 +924,6 @@ class ContinuationService:
                 return v
             # 尝试 GENERATED_DIR
             if v and isinstance(v, str):
-                try:
-                    from app.services.runpod_client import local_dir as runpod_local_dir
-                    cand = os.path.join(runpod_local_dir(), os.path.basename(v))
-                    if os.path.exists(cand):
-                        return cand
-                except Exception:
-                    pass
                 try:
                     from app.services.fal_client import local_dir as fal_local_dir
                     cand2 = os.path.join(fal_local_dir(), os.path.basename(v))
@@ -845,7 +984,7 @@ class ContinuationService:
         import tempfile
         fd, out_path = tempfile.mkstemp(suffix="_combined_300s.wav")
         os.close(fd)
-        # 使用 ffmpeg 的 acrossfade filter，1.5s 三角过渡
+        # 使用 ffmpeg acrossfade filter，1.5s 三角过渡
         cmd = [
             "ffmpeg", "-y",
             "-i", first_path,
@@ -855,14 +994,23 @@ class ContinuationService:
             "-c:a", "pcm_s16le",
             out_path
         ]
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            err = stderr.decode(errors="replace")[:800] if stderr else "unknown"
-            raise RuntimeError(f"ffmpeg acrossfade failed: {err}")
-        if not os.path.exists(out_path) or os.path.getsize(out_path) < 1000:
-            raise RuntimeError("ffmpeg 输出为空")
-        return out_path
+        try:
+            proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            stdout, stderr = await proc.communicate()
+            if proc.returncode != 0:
+                err = stderr.decode(errors="replace")[:800] if stderr else "unknown"
+                raise RuntimeError(f"ffmpeg acrossfade failed: {err}")
+            if not os.path.exists(out_path) or os.path.getsize(out_path) < 1000:
+                raise RuntimeError("ffmpeg 输出为空")
+            return out_path
+        except BaseException:
+            # C3-5-B/§17：失败或被取消时清掉本次半成品临时文件（成功路径保留给上层）
+            try:
+                if os.path.exists(out_path):
+                    os.remove(out_path)
+            except OSError:
+                pass
+            raise
 
     async def _upload_parts(self, task_id: str, files: Dict[str, str], suffix: str) -> Dict:
         """上传中间段到 R2 保留，key 带 part 前缀"""

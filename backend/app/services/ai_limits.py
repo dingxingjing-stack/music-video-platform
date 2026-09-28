@@ -25,8 +25,13 @@ from typing import Any, Optional
 DAILY_GENERATION_LIMIT = int(os.getenv("DAILY_GENERATION_LIMIT", "2"))
 MONTHLY_GENERATION_LIMIT = int(os.getenv("MONTHLY_GENERATION_LIMIT", "15"))
 GLOBAL_DAILY_GENERATION_LIMIT = int(os.getenv("GLOBAL_DAILY_GENERATION_LIMIT", "30"))
-# 第一版产品统一硬上限 270s（4分30秒）；环境变量可覆盖，恢复 300s 能力时改 env 即可
+# P6-B-C2 D2（阶段 B 修订）：该常量保留存档语义——「一次生成的目标时长上限」参考值，
+# 但自阶段 B 起不再参与 normalize_audio_duration 的上界钳制（见该函数）。
 MAX_AUDIO_DURATION_SECONDS = int(os.getenv("MAX_AUDIO_DURATION_SECONDS", "270"))
+# 阶段 B：人声完整成品的最低交付时长（Hard Minimum，270 → 240）。
+# 低于它的入参不返回 4xx，而是兼容式归一化到它；最终是否达标以生成完成后的
+# 成品实测时长判定（ai_music._enforce_duration_gate + continuation 的 gate 共用本常量）。
+MIN_AUDIO_DURATION_SECONDS = int(os.getenv("MIN_AUDIO_DURATION_SECONDS", "240"))
 MAX_CONCURRENT_JOBS_PER_USER = int(os.getenv("MAX_CONCURRENT_JOBS_PER_USER", "1"))
 MAX_AUTO_RETRIES = int(os.getenv("MAX_AUTO_RETRIES", "1"))
 MAX_TASK_RUNTIME_SECONDS = int(os.getenv("MAX_TASK_RUNTIME_SECONDS", "900"))
@@ -155,6 +160,20 @@ def check_and_log_download(user_id: str, job_id: str, file_type: str, ip_address
 def _init_db_pg(conn=None):
     # 由 database.Base.create_all 已处理，此函数保留兼容旧调用
     pass
+
+def normalize_audio_duration(duration) -> int:
+    """
+    把任意入参 duration 归一化为「本次完整成品的目标时长」。
+    None / 0 / 负数 / 非数字 / 低于 MIN 一律抬到 MIN；
+    阶段 B：取消 MAX 上界钳制——≥ MIN 原样保留（240 → 240、300 → 300、600 → 600），
+    MAX_AUDIO_DURATION_SECONDS 常量仅存档，不再参与本函数。
+    旧客户端传短时长不得因此被拒（产品决策 D1 的兼容面）。
+    """
+    try:
+        d = int(float(duration)) if duration is not None else 0
+    except (TypeError, ValueError):
+        d = 0
+    return max(MIN_AUDIO_DURATION_SECONDS, d)
 
 def get_duration_weight(duration: int | None) -> int:
     """时长权重：≤120s 1 credit，>120s 2 credits（180/240/300 均 2）"""

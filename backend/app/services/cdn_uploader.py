@@ -245,7 +245,46 @@ class CDNUploader:
             await self.upload_private(local_path, key, content_type)
             manifest[logical] = key
         return manifest
-    
+
+    def delete_object(self, key: str) -> bool:
+        """C3-5-B 最小 delete：删除一个私有 R2 对象（幂等）。
+
+        - 对象不存在 / 已删除（404/NoSuchKey/NotFound）视为已清理 → True。
+        - 其他任何错误只记录并返回 False，绝不抛出（调用方多为 best-effort 清理，
+          不得让清理失败覆盖原始 generation 结果）。
+        - 不改变任何上传/下载行为与公开 API；仅支持 R2（与 upload_private 一致）。
+        """
+        if self.provider != CDNProvider.R2:
+            print(f"[R2 删除] ⚠️ 非 R2 环境，跳过删除 {key}")
+            return False
+        import boto3
+        from botocore.config import Config
+        from botocore.exceptions import ClientError
+
+        try:
+            endpoint_url = f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=endpoint_url,
+                aws_access_key_id=self.r2_access_key,
+                aws_secret_access_key=self.r2_secret_key,
+                config=Config(signature_version='s3v4'),
+                region_name='auto'
+            )
+            s3_client.delete_object(Bucket=self.bucket, Key=key)
+            print(f"[R2 删除] ✅ {key}")
+            return True
+        except ClientError as e:
+            code = str((e.response or {}).get("Error", {}).get("Code", ""))
+            if code in ("404", "NoSuchKey", "NotFound"):
+                # 幂等：对象本来就不存在 = 已清理
+                return True
+            print(f"[R2 删除] ❌ {key}: {e}")
+            return False
+        except Exception as e:  # noqa: BLE001
+            print(f"[R2 删除] ❌ {key}: {type(e).__name__}: {e}")
+            return False
+
     async def _upload_s3(self, file_path: str, key: str, content_type: str) -> str:
         """上传到 AWS S3"""
         import boto3

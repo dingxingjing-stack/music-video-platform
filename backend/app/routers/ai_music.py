@@ -45,6 +45,8 @@ from app.services.ace_step_client import (
 from app.services.provider_registry import get_provider_registry, gpu_rate_usd_per_sec, PROVIDER_ENV
 from app.services.ai_limits import (
     MAX_AUDIO_DURATION_SECONDS,
+    MIN_AUDIO_DURATION_SECONDS,
+    normalize_audio_duration,
     MAX_AUTO_RETRIES,
     MAX_TASK_RUNTIME_SECONDS,
     reserve_generation,
@@ -58,6 +60,8 @@ from app.services import task_store
 from app.services.cdn_uploader import cdn_uploader
 from app.services import credits_service
 from app.services.credits_config import get_credit_cost
+# 阶段 B 统一成品时长质量门复用 continuation 的失败类型（不新增第二套退款语义）
+from app.services.continuation_service import DurationValidationError
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
 
@@ -205,6 +209,10 @@ class GenerateRequest(BaseModel):
     user_id: Optional[str] = None  # 已废弃：仅保留 schema 兼容，绝不参与身份/授权。身份只来自 X-User-ID 请求头。
     song_language: Optional[str] = None  # 歌曲生成语言（独立于 UI locale），如 zh/en/es/...；不影响身份/额度
     instrumental: bool = False  # 纯音乐（无人声）：透传给 Provider 的 is_instrumental
+    # 阶段 B：reference（仿写）操作输入。存在非空 → operation=reference。
+    # 合同：Yinchao upload(upload_type=reference) → task_type=reference（官方文档只读恢复）。
+    reference_audio_b64: Optional[str] = None  # base64 编码的参考音频（≤10MB，MP3/WAV）
+    similarity: Optional[float] = None  # 参考相似度，官方枚举 [0.2, 0.8, 1.3, 1.5]，缺省由 adapter 填 0.8
 
 
 class GenerateResponse(BaseModel):
@@ -249,9 +257,93 @@ def _log_generation_cost(task_id: str, user_key: str, provider, result: str, tot
         print(f"[CostLog] log_generation_cost failed: {exc}")
 
 
+def determine_generation_operation(request: GenerateRequest) -> str:
+    """阶段 B：生歌 operation 判定（路由唯一入口）。
+
+    优先级 reference > instrumental > lyric_to_music > normal：
+    - reference_audio_b64 非空 → "reference"（仿写，最高特异性输入）
+    - instrumental=True        → "instrumental"（纯音乐）
+    - lyrics 非空              → "lyric_to_music"（用户歌词原样透传，不切 AI 写词）
+    - 其余                     → "normal"
+    不再按 duration 分支（duration 只参与归一化与 quota 权重；continuation 保留
+    于 continuation_service，但主链不再依赖）。
+    """
+    ref = getattr(request, "reference_audio_b64", None)
+    if isinstance(ref, str) and ref.strip():
+        return "reference"
+    if request.instrumental:
+        return "instrumental"
+    if isinstance(request.lyrics, str) and request.lyrics.strip():
+        return "lyric_to_music"
+    return "normal"
+
+
+def _resolve_delivery_path(volume_result: dict) -> Optional[str]:
+    """交付文件本地路径解析（与 continuation._resolve_local_path 同策略）：_local_path 优先。"""
+    if not volume_result:
+        return None
+    lp = volume_result.get("_local_path")
+    if isinstance(lp, str) and lp and os.path.exists(lp):
+        return lp
+    gen_dir = os.getenv(
+        "GENERATED_DIR",
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "generated"),
+    )
+    for key in ("full_wav", "full_mp3"):
+        v = volume_result.get(key)
+        if not isinstance(v, str) or not v:
+            continue
+        if os.path.exists(v):
+            return v
+        cand = os.path.join(gen_dir, os.path.basename(v))
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+async def _enforce_duration_gate(volume_result: dict) -> float:
+    """阶段 B 统一成品时长质量门（唯一出口，所有 Provider 交付路径共用）。
+
+    必须在 _upload_and_finalize（R2 终对象）之前调用：
+    - 实测时长 < MIN_AUDIO_DURATION_SECONDS 或测不到 → 抛 DurationValidationError，
+      由 _run_generation 既有 except Exception 统一 failed + 恰好一次退款，
+      且不执行 _upload_and_finalize（无 R2 终对象）。
+    - 实测时长 ≥ MIN → 原样放行，绝不截断（240/300/600 均不裁剪）。
+    - provider 已带 _measured_duration_sec（continuation 实测结果）时直接采用，
+      否则实测本地文件。
+    """
+    measured: Optional[float] = None
+    pre = volume_result.get("_measured_duration_sec")
+    if isinstance(pre, (int, float)) and float(pre) > 0:
+        measured = float(pre)
+    else:
+        path = _resolve_delivery_path(volume_result)
+        if not path:
+            raise DurationValidationError(
+                "final duration could not be measured: no local deliverable file"
+            )
+        try:
+            import librosa
+            measured = float(librosa.get_duration(path=path))
+        except Exception as exc:  # noqa: BLE001
+            raise DurationValidationError(
+                f"final duration could not be measured: {type(exc).__name__}: {exc}"
+            ) from exc
+    if measured < MIN_AUDIO_DURATION_SECONDS:
+        raise DurationValidationError(
+            f"final duration {measured:.1f}s is below minimum {MIN_AUDIO_DURATION_SECONDS}s"
+        )
+    return measured
+
+
 async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
                           quota_weight: Optional[int] = None):
-    """后台执行完整生成链路：Agnes -> 150+150 continuation(>180) / 单段(<=180) -> R2
+    """后台执行完整生成链路：Agnes → operation 功能分链单次生成 → 成品质量门 → R2
+
+    阶段 B：路由按 determine_generation_operation 的结果走 chain_for_operation
+    （normal/lyric_to_music/instrumental/reference 四链），不再按 duration 分链；
+    交付前统一经 _enforce_duration_gate（<MIN 抛 DurationValidationError →
+    failed + 恰好一次退款，无 R2 终对象）。
 
     quota_weight：本次生成在 reserve_generation 中实际扣减的日/月额度权重，由
     generate_music 沿 _run_with_timeout 透传（F2）。绝不在此按 request.duration 重新
@@ -267,10 +359,13 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
     try:
         task_store.update(task_id, state="processing", progress=10)
 
+        # P6-B-C2 D1：整条链路只归一化这一次，Agnes 提示词与实际生成分支用同一个目标值。
+        duration_target = normalize_audio_duration(request.duration)
+
         agnes_request = AgnesSongRequest(
             prompt=request.prompt,
             style=request.style,
-            duration=request.duration or 180,
+            duration=duration_target,
             type=request.type,
             lyrics=request.lyrics,
         )
@@ -281,30 +376,25 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
 
         final_prompt = agnes_result.optimized_prompt or request.prompt
         lyrics = request.lyrics or agnes_result.generated_lyrics or final_prompt
-        duration = min(request.duration or 180, MAX_AUDIO_DURATION_SECONDS)
+        duration = duration_target
 
-        # ── Provider 选择（Zyvexo 生产策略，规则化）──
-        # 长歌曲（181–300s）：直接使用 TemPolor 单次生成。
-        #   不使用 Yinchao 150+150 continuation、不用 reference/audio2audio、不用 crossfade/拼接。
-        # Instrumental（纯音乐）：任意时长均强制 TemPolor 单跳。
-        #   Phase 2A 契约确认：Yinchao 无 instrumental 参数（task_type 固定 normal），进入即产出带人声。
-        # 普通歌曲（≤180s）：
-        #   自动模式：Yinchao → TemPolor（yinchao 失败才切 tempolor）。
-        #   显式 AI_GENERATION_PROVIDER=yinchao|tempolor：只用该 Provider，失败不自动切换。
+        # ── Provider 选择（阶段 B：按 operation 功能分链，路由唯一入口）──
+        # normal / lyric_to_music → Yinchao V4.0 → TemPolor V4.7
+        # instrumental            → Yinchao V4.0 Instrumental → Mureka V9（禁止 → TemPolor）
+        # reference               → Yinchao V3.5 Reference → TemPolor V4.7
+        # 显式 AI_GENERATION_PROVIDER 保持既有语义：单 Provider 链、失败不自动切换
+        # （生产下非法显式在 select() 抛错，留给外层统一处理）。
+        # 不再按 duration 混链：continuation 保留于 continuation_service，主链不依赖；
+        # 成品是否 ≥MIN 由统一质量门 _enforce_duration_gate 实测裁决。
+        operation = determine_generation_operation(request)
         registry = get_provider_registry()
-        exclusive = None
-        is_long = duration > 180
-        if is_long or request.instrumental:
-            provider_chain = [registry.select("tempolor")]
+        exclusive = os.getenv(PROVIDER_ENV) or ""
+        if exclusive:
+            provider_chain = [registry.select()]
         else:
-            exclusive = os.getenv(PROVIDER_ENV) or ""
-            if exclusive:
-                # select() 尊重显式 provider；生产若显式非策略 provider 会抛错（留给外层统一处理）
-                provider_chain = [registry.select()]
-            else:
-                provider_chain = registry.fallback_chain()
+            provider_chain = registry.chain_for_operation(operation)
 
-        # ── 单次生成（普通歌曲按 provider_chain 依次尝试；长歌曲仅 TemPolor）──
+        # ── 单次生成（按 provider_chain 依次尝试）──
         task_store.update(task_id, state="generating", progress=40, ai_provider=f"{ai_provider}+{provider_chain[0].name if provider_chain else 'provider'}")
         chain = provider_chain
         volume_result: Optional[dict] = None
@@ -312,6 +402,9 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         total_duration_ms = 0
         last_provider = None
         non_retryable = False
+
+        # 阶段 B：删除「duration ≥ MIN → continuation」混链分支；continuation_service
+        # 仍保留（独立续写入口使用），但主链统一走单次生成 + 成品质量门。
         for provider in chain:
             # 每个 Provider 按现有 MAX_AUTO_RETRIES 重试策略（共 1+MAX_AUTO_RETRIES 次），
             # 仍失败才切换链中下一个 Provider，避免「Mureka×N → RunPod×N → ...」的指数重试。
@@ -324,8 +417,10 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
                             "prompt": final_prompt,
                             "lyrics": lyrics,
                             "duration": duration,
-                            "reference_audio": None,
-                            "enable_audio2audio": False,
+                            "operation": operation,
+                            "reference_audio": request.reference_audio_b64,
+                            "similarity": request.similarity,
+                            "enable_audio2audio": bool(request.reference_audio_b64),
                             "reference_strength": 0.7,
                             "song_language": request.song_language,
                             "is_instrumental": request.instrumental,
@@ -348,6 +443,10 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
                 break
 
         if volume_result:
+            # 阶段 B：统一成品时长质量门——必须在 uploading 状态与 R2 finalize 之前；
+            # <MIN 或测不到 → DurationValidationError → 既有 except 统一 failed +
+            # 恰好一次退款，且 _upload_and_finalize 不执行（无 R2 终对象）。
+            await _enforce_duration_gate(volume_result)
             task_store.update(
                 task_id, state="uploading", progress=75,
                 volume_files=volume_result, ai_provider=f"{ai_provider}+{last_provider.name if last_provider else 'provider'}",
@@ -364,7 +463,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         _log_generation_cost(task_id, user_key, last_provider, "failed", total_duration_ms, retries_used)
         task_store.update(task_id, state="generating", progress=55)
         hf_audio = None
-        if not is_long and not non_retryable:
+        if operation in ("normal", "lyric_to_music") and not non_retryable:
             hf_audio = await _try_hf_ace_step_fallback(final_prompt, lyrics, duration)
         if hf_audio:
             task_store.update(
@@ -406,75 +505,148 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         task_store.release_lock_for_task(task_id)
 
 
+def _is_wav_file(path) -> bool:
+    """C3-5-C：可靠格式检测（magic bytes，不看扩展名）。RIFF/WAVE → True。"""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(12)
+        return len(head) == 12 and head[:4] == b"RIFF" and head[8:12] == b"WAVE"
+    except OSError:
+        return False
+
+
+def _is_mp3_bytes(path) -> bool:
+    """C3-5-C：可靠 MP3 检测 —— ID3 标签或 MPEG 帧同步（0xFFEx/Fx）。"""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(3)
+    except OSError:
+        return False
+    if head[:3] == b"ID3":
+        return True
+    return len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0
+
+
+async def _transcode_wav_to_mp3(wav_path: str, mp3_path: str) -> str:
+    """C3-5-C：把 WAV 编码成真正 MP3（ffmpeg + libmp3lame，固定 192k）。
+
+    - 不修改输入 WAV；输出时长/采样率跟随源（不截断）。
+    - 转码失败 / 输出为空 / 输出不是 MP3 容器 → RuntimeError，
+      由 _run_generation 既有 except Exception 统一 failed + refund（C7）。
+    """
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", wav_path,
+        "-vn",
+        "-codec:a", "libmp3lame",
+        "-b:a", "192k",
+        mp3_path,
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    if proc.returncode != 0 or not os.path.exists(mp3_path) or os.path.getsize(mp3_path) <= 0:
+        err = stderr.decode(errors="replace")[:800] if stderr else "unknown"
+        raise RuntimeError(f"MP3 转码失败: {err}")
+    if not _is_mp3_bytes(mp3_path):
+        raise RuntimeError("MP3 转码失败: 输出不是 MP3 容器")
+    return mp3_path
+
+
 async def _upload_and_finalize(task_id: str, volume_result: dict):
     """把生成产物取回本地、上传 R2 私有，写回任务元数据。
 
     兼容两种来源：
     - Modal 共享卷（volume_result 含末尾文件名，需 ace_step_download）
     - Fal（volume_result 含 _local_path 已在 GENERATED_DIR，download 直接命中本地）
+
+    C3-5-C 契约：上传的 full_wav 一定是 WAV（RIFF/WAVE），full_mp3 一定是真 MP3
+    （ffmpeg libmp3lame 转码，绝不复用 WAV 字节/路径）→ key、Content-Type
+    （audio/wav / audio/mpeg）、download 与预签名播放随之全部正确。
+    转码失败抛 RuntimeError → 走既有 generation failure/refund 路径（C7）。
     """
+    import shutil
     import tempfile
 
     tmp_dir = tempfile.mkdtemp(prefix="acestep_")
-    files_local: dict = {}
+    try:
+        files_local: dict = {}
 
-    # 优先使用 fal 已下载的本地路径（_local_path）
-    if volume_result.get("_local_path") and os.path.exists(volume_result["_local_path"]):
-        lp = volume_result["_local_path"]
-        # 统一映射为 full_wav / full_mp3
-        files_local["full_wav"] = lp
-        files_local["full_mp3"] = lp
-        # 若额外携带 _local_path 对应的 stems，也一并处理（当前 fal 无分轨）
-    else:
-        # full_wav 必需；full_mp3 可选（Modal 端可能转换失败）
-        full_wav_name = volume_result.get("full_wav")
-        if not full_wav_name:
-            raise RuntimeError("ACE-Step/Fal 未返回完整歌曲文件")
-        path = await ace_step_download(full_wav_name, tmp_dir)
-        if not path:
-            # fal 场景：尝试直接把文件名当本地路径（GENERATED_DIR 命中）
-            alt = os.path.join(tmp_dir, os.path.basename(full_wav_name))
-            # 也尝试 GENERATED_DIR
-            from app.services.fal_client import local_dir as fal_local_dir
-            alt2 = os.path.join(fal_local_dir(), os.path.basename(full_wav_name))
-            if os.path.exists(alt2):
-                path = alt2
-            elif os.path.exists(alt):
-                path = alt
-            else:
-                raise RuntimeError(f"下载 {full_wav_name} 失败")
-        files_local["full_wav"] = path
+        # 优先使用 fal 已下载的本地路径（_local_path）
+        if volume_result.get("_local_path") and os.path.exists(volume_result["_local_path"]):
+            lp = volume_result["_local_path"]
+            # 统一映射为 full_wav / full_mp3
+            files_local["full_wav"] = lp
+            files_local["full_mp3"] = lp
+            # 若额外携带 _local_path 对应的 stems，也一并处理（当前 fal 无分轨）
+        else:
+            # full_wav 必需；full_mp3 可选（Modal 端可能转换失败）
+            full_wav_name = volume_result.get("full_wav")
+            if not full_wav_name:
+                raise RuntimeError("ACE-Step/Fal 未返回完整歌曲文件")
+            path = await ace_step_download(full_wav_name, tmp_dir)
+            if not path:
+                # fal 场景：尝试直接把文件名当本地路径（GENERATED_DIR 命中）
+                alt = os.path.join(tmp_dir, os.path.basename(full_wav_name))
+                # 也尝试 GENERATED_DIR
+                from app.services.fal_client import local_dir as fal_local_dir
+                alt2 = os.path.join(fal_local_dir(), os.path.basename(full_wav_name))
+                if os.path.exists(alt2):
+                    path = alt2
+                elif os.path.exists(alt):
+                    path = alt
+                else:
+                    raise RuntimeError(f"下载 {full_wav_name} 失败")
+            files_local["full_wav"] = path
 
-        mp3_name = volume_result.get("full_mp3")
-        if mp3_name and mp3_name != volume_result.get("full_wav"):
-            p = await ace_step_download(mp3_name, tmp_dir)
+            mp3_name = volume_result.get("full_mp3")
+            if mp3_name and mp3_name != volume_result.get("full_wav"):
+                p = await ace_step_download(mp3_name, tmp_dir)
+                if p:
+                    files_local["full_mp3"] = p
+
+        for logical in ("vocals", "drums", "bass", "other"):
+            name = volume_result.get(logical)
+            if not name:
+                continue
+            # 若是 fal 场景的本地路径，已在上一步处理；此处仅处理额外 stems
+            if os.path.exists(name):
+                files_local[logical] = name
+                continue
+            p = await ace_step_download(name, tmp_dir)
             if p:
-                files_local["full_mp3"] = p
+                files_local[logical] = p
 
-    for logical in ("vocals", "drums", "bass", "other"):
-        name = volume_result.get(logical)
-        if not name:
-            continue
-        # 若是 fal 场景的本地路径，已在上一步处理；此处仅处理额外 stems
-        if os.path.exists(name):
-            files_local[logical] = name
-            continue
-        p = await ace_step_download(name, tmp_dir)
-        if p:
-            files_local[logical] = p
+        # ── C3-5-C：full_mp3 必须是真 MP3 ──
+        # full_wav 是 WAV 且 full_mp3 缺失 / 与 full_wav 同源 / 内容仍是 WAV
+        # → ffmpeg 转码出独立 MP3（写入 tmp_dir，上传后随目录一起清理）。
+        # 已是真 MP3（Modal 产物）或 full_wav 非 WAV（桩位输入）→ 保持既有行为。
+        wav_src = files_local.get("full_wav")
+        if wav_src and _is_wav_file(wav_src):
+            mp3_cur = files_local.get("full_mp3")
+            if not mp3_cur or mp3_cur == wav_src or _is_wav_file(mp3_cur):
+                base = os.path.splitext(os.path.basename(wav_src))[0] or "full"
+                dst = os.path.join(tmp_dir, f"{base}_c35c.mp3")
+                await _transcode_wav_to_mp3(wav_src, dst)
+                files_local["full_mp3"] = dst
 
-    manifest = await cdn_uploader.upload_music_package(task_id, files_local)
+        manifest = await cdn_uploader.upload_music_package(task_id, files_local)
 
-    stems_ok = all(s in manifest for s in ("vocals", "drums", "bass", "other"))
-    state = "completed" if stems_ok else "completed_with_stems_failed"
-    task_store.update(
-        task_id,
-        state=state,
-        progress=100,
-        download=manifest,
-        stems_state="ok" if stems_ok else "failed",
-        audio_url=_sign_for_playback(task_id, "full_mp3", manifest),
-    )
+        stems_ok = all(s in manifest for s in ("vocals", "drums", "bass", "other"))
+        state = "completed" if stems_ok else "completed_with_stems_failed"
+        task_store.update(
+            task_id,
+            state=state,
+            progress=100,
+            download=manifest,
+            stems_state="ok" if stems_ok else "failed",
+            audio_url=_sign_for_playback(task_id, "full_mp3", manifest),
+        )
+    finally:
+        # §17：本地临时目录（下载的分轨/成品副本 + 转码 MP3）成功/失败/异常路径
+        # 一律 best-effort 清理；ignore_errors 保证不覆盖原始异常。
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def _sign_for_playback(task_id: str, logical: str, manifest: Optional[dict]) -> Optional[str]:
@@ -553,7 +725,8 @@ async def generate_music(
     # 会让已扣的 Credits 永久损失。现在锁失败发生在任何扣费之前，天然无资金损失。
     # 日额度权重在预留之前就固化到任务行：退款方（惰性超时 / 重启对账）届时无需
     # 也不能再按 duration 推断，否则会出现「180s 扣 2、退 1」的少退。
-    quota_weight = get_duration_weight(req.duration)
+    normalized_duration = normalize_audio_duration(req.duration)
+    quota_weight = get_duration_weight(normalized_duration)
     task_id = task_store.new_task(user_key=user_key, generation_quota_weight=quota_weight)
 
     def _abandon(reason: str) -> None:
@@ -575,7 +748,7 @@ async def generate_music(
         )
 
     # 原子预留额度（GPU 启动前扣减）—— 不可通过重复 POST / 改 localStorage 绕过
-    reserved = reserve_generation(user_key, req.duration)
+    reserved = reserve_generation(user_key, normalized_duration)
     if not reserved["success"]:
         _abandon("limits_reserved_failed")
         # GPU 预算硬停线：达到 FAL_BUDGET_DAILY 后在 GPU 启动前返回 429（与 retry-stems 一致，兼容旧 MODAL_BUDGET_DAILY）
@@ -850,7 +1023,6 @@ async def delete_user_task(
     3. 清理 SQLite 任务记录和锁
     4. 删除失败时返回明确错误，不报告成功
     """
-    import json
     import boto3
     from botocore.config import Config
     from fastapi import HTTPException
@@ -887,26 +1059,16 @@ async def delete_user_task(
             )
 
             # 要删除的 R2 对象键
+            # C3-5-D：download manifest（task_store.get 已把 JSON 列解析为 dict）是实际
+            # R2 key 的唯一来源，其值形如 music/{task_id}/full_wav.wav，按原样删除。
+            # 不再 json.loads(dict)、不再拼接硬编码 full_mp3.mp3 / volume_files 文件名。
+            # parts（music/{tid}_part1|_part2/...）不在 manifest 内 → 本轮不删（C3-5-B 冻结）。
             keys_to_delete = []
-            # volume_files/download 列可能为 NULL（dict.get 带默认值仍返回 None），统一 or {} 防御
-            volume_files = task.get("volume_files") or {}
-            # full_mp3
-            if task.get("download"):
-                try:
-                    download = json.loads(task.get("download", "{}"))
-                    if "full_mp3" in download:
-                        keys_to_delete.append("music/{}/full_mp3.mp3".format(task_id))
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            # full_wav
-            full_wav = volume_files.get("full_wav")
-            if full_wav:
-                keys_to_delete.append("music/{}/{}".format(task_id, volume_files["full_wav"]))
-            # 4 个分轨
-            for stem in ["vocals", "drums", "bass", "other"]:
-                stem_name = volume_files.get(stem)
-                if stem_name:
-                    keys_to_delete.append("music/{}/{}".format(task_id, stem_name))
+            download = task.get("download") or {}
+            if isinstance(download, dict):
+                for key in download.values():
+                    if isinstance(key, str) and key.startswith("music/"):
+                        keys_to_delete.append(key)
 
             # 执行删除
             for key in keys_to_delete:

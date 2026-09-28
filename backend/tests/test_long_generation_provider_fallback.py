@@ -59,6 +59,11 @@ def _stub_heavy_io(monkeypatch, tmp_path):
     monkeypatch.setattr(
         continuation_service, "_stitch_with_crossfade", AsyncMock(return_value=combined)
     )
+    # P6-B-C2：桩掉成品时长实测出口——本文件锁的是 provider 选择/换家语义，
+    # 而 combined 只是 touch() 出来的空文件，真实 librosa 必然测不出。
+    monkeypatch.setattr(
+        continuation_service, "_measure_final_duration", AsyncMock(return_value=271.0)
+    )
     monkeypatch.setattr(continuation_service, "_upload_parts", AsyncMock(return_value={}))
     monkeypatch.setattr(
         continuation_service,
@@ -113,7 +118,12 @@ async def test_1_yinchao_first_segment_success_stays_yinchao(prod_auto, monkeypa
 
 
 async def test_2_first_segment_fallback_to_tempolor(prod_auto, monkeypatch, tmp_path):
-    """Yinchao 首段失败 → TemPolor 首段成功 → 第二段用 TemPolor，不切回 Yinchao。"""
+    """Yinchao 首段重试耗尽 → TemPolor 首段成功 → 第二段用 TemPolor，不切回 Yinchao。
+
+    C1-R 契约：首段每家共 1+MAX_AUTO_RETRIES 次，重试耗尽才换家（与 HTTP 路由一致）。
+    """
+    from app.services.continuation_service import MAX_AUTO_RETRIES
+    attempts = 1 + MAX_AUTO_RETRIES
     p1 = _touch(str(tmp_path / "t1.wav"))
     p2 = _touch(str(tmp_path / "t2.wav"))
     _stub_heavy_io(monkeypatch, tmp_path)
@@ -124,12 +134,17 @@ async def test_2_first_segment_fallback_to_tempolor(prod_auto, monkeypatch, tmp_
     })
     result = await _run_long()
     assert result["success"] is True
-    assert calls == [("yinchao", False), ("tempolor", False), ("tempolor", True)]
+    assert calls == ([("yinchao", False)] * attempts + [("tempolor", False), ("tempolor", True)])
     assert result["provider"] == "tempolor+continuation"
 
 
 async def test_3_both_first_segments_fail(prod_auto, monkeypatch, tmp_path):
-    """双败 → 抛最终异常（交外层统一 refund 一次）；只尝试两家，不碰 HF/Mureka/RunPod。"""
+    """双败（各家用尽重试）→ 抛最终异常（交外层统一 refund 一次）；只尝试两家，不碰 HF/Mureka/RunPod。
+
+    C1-R 契约：每家 1+MAX_AUTO_RETRIES 次重试耗尽后才换下一家。
+    """
+    from app.services.continuation_service import MAX_AUTO_RETRIES
+    attempts = 1 + MAX_AUTO_RETRIES
     _stub_heavy_io(monkeypatch, tmp_path)
     calls = _install_segment_router(monkeypatch, {
         ("yinchao", False): _fail("yinchao down"),
@@ -137,7 +152,7 @@ async def test_3_both_first_segments_fail(prod_auto, monkeypatch, tmp_path):
     })
     with pytest.raises(RuntimeError, match="首段 150s 生成失败"):
         await _run_long()
-    assert calls == [("yinchao", False), ("tempolor", False)]
+    assert calls == ([("yinchao", False)] * attempts + [("tempolor", False)] * attempts)
     assert {name for name, _ in calls} == {"yinchao", "tempolor"}
 
 
@@ -151,7 +166,9 @@ def test_3b_continuation_never_refunds_directly():
 
 
 async def test_4_explicit_yinchao_never_falls_back(monkeypatch, tmp_path):
-    """AI_GENERATION_PROVIDER=yinchao → 失败不切 TemPolor。"""
+    """AI_GENERATION_PROVIDER=yinchao → 用尽重试也不切 TemPolor（C1-R：单家共 1+MAX_AUTO_RETRIES 次）。"""
+    from app.services.continuation_service import MAX_AUTO_RETRIES
+    attempts = 1 + MAX_AUTO_RETRIES
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("AI_GENERATION_PROVIDER", "yinchao")
     import app.services.provider_registry as pr
@@ -161,13 +178,15 @@ async def test_4_explicit_yinchao_never_falls_back(monkeypatch, tmp_path):
         calls = _install_segment_router(monkeypatch, {("yinchao", False): _fail("boom")})
         with pytest.raises(RuntimeError, match="首段 150s 生成失败"):
             await _run_long()
-        assert calls == [("yinchao", False)]
+        assert calls == [("yinchao", False)] * attempts
     finally:
         pr._registry = None
 
 
 async def test_5_explicit_tempolor_never_falls_back(monkeypatch, tmp_path):
-    """AI_GENERATION_PROVIDER=tempolor → 失败不切 Yinchao。"""
+    """AI_GENERATION_PROVIDER=tempolor → 用尽重试也不切 Yinchao（C1-R：单家共 1+MAX_AUTO_RETRIES 次）。"""
+    from app.services.continuation_service import MAX_AUTO_RETRIES
+    attempts = 1 + MAX_AUTO_RETRIES
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("AI_GENERATION_PROVIDER", "tempolor")
     import app.services.provider_registry as pr
@@ -177,7 +196,7 @@ async def test_5_explicit_tempolor_never_falls_back(monkeypatch, tmp_path):
         calls = _install_segment_router(monkeypatch, {("tempolor", False): _fail("boom")})
         with pytest.raises(RuntimeError, match="首段 150s 生成失败"):
             await _run_long()
-        assert calls == [("tempolor", False)]
+        assert calls == [("tempolor", False)] * attempts
     finally:
         pr._registry = None
 

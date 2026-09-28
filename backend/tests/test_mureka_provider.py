@@ -287,7 +287,9 @@ async def test_16_fallback_mureka_success_runpod_not_called(isolated_db, monkeyp
 
     async def _mureka(req):
         calls["mureka"] += 1
-        return {"success": True, "volume_files": {"full_wav": "a.wav", "full_mp3": "a.mp3"}}
+        return {"success": True,
+                "volume_files": {"full_wav": "a.wav", "full_mp3": "a.mp3",
+                                 "_measured_duration_sec": 265.0}}
 
     async def _runpod(req):
         calls["runpod"] += 1
@@ -307,6 +309,9 @@ async def test_16_fallback_mureka_success_runpod_not_called(isolated_db, monkeyp
     class _Reg:
         def fallback_chain(self, name=None):
             return [_M(), _R()]
+
+        def chain_for_operation(self, operation):
+            return self.fallback_chain()
     monkeypatch.setattr(ai_music, "get_provider_registry", lambda: _Reg())
 
     async def _agnes(req):
@@ -354,6 +359,9 @@ async def test_17_fallback_both_fail_single_refund(isolated_db, monkeypatch):
     class _Reg:
         def fallback_chain(self, name=None):
             return [_F("mureka"), _F("runpod")]
+
+        def chain_for_operation(self, operation):
+            return self.fallback_chain()
     monkeypatch.setattr(ai_music, "get_provider_registry", lambda: _Reg())
 
     async def _agnes(req):

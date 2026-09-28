@@ -322,6 +322,20 @@ class KaggleCosyVoice2Provider(BaseProvider):
             return {"success": True, "volume_files": {"full_wav": str(out)}, "provider": self.name}
         except Exception as exc:  # noqa: BLE001
             return {"success": False, "error": str(exc), "provider": self.name}
+# ── 阶段 B（功能分链）：生歌 operation → 有序 Provider 链（生产路由表）──
+# - normal / lyric_to_music：Yinchao V4.0 → TemPolor V4.7
+# - instrumental：Yinchao V4.0 Instrumental → Mureka V9（禁止 instrumental → TemPolor）
+# - reference：Yinchao V3.5 Reference → TemPolor V4.7
+# - lyric_gen / stems / midi 不在此表：不进入生歌链（分别走 lyric_service /
+#   分离 / MIDI 独立 operation，由各自调用方负责）。
+# mureka 经直接查表进入 instrumental 链：select() 的 production 显式禁令只约束
+# AI_GENERATION_PROVIDER 显式选择，不约束按功能的生产路由表。
+_OPERATION_CHAINS: dict[str, tuple[str, ...]] = {
+    "normal": ("yinchao", "tempolor"),
+    "lyric_to_music": ("yinchao", "tempolor"),
+    "instrumental": ("yinchao", "mureka"),
+    "reference": ("yinchao", "tempolor"),
+}
 
 
 class ProviderRegistry:
@@ -402,6 +416,29 @@ class ProviderRegistry:
                 return yinchao
         assert self._default is not None, "ProviderRegistry 至少需要一个 production provider"
         return self._providers[self._default]
+
+    def chain_for_operation(self, operation: str) -> list:
+        """阶段 B 路由唯一入口：按 operation 返回功能化生歌 Provider 链。
+
+        与 fallback_chain() 的区别：fallback_chain 保持既有全局链不动（存量调用方
+        与测试兼容）；本方法按 _OPERATION_CHAINS 展开功能链，全环境统一（生产路由表
+        即功能路由表；development 的差异只保留在 select()/fallback_chain 的旧语义里）。
+
+        - 链中 Provider 未注册则跳过，保持剩余顺序（与 fallback_chain 同策略）；
+        - 链为空（两家都未注册）退回 select() 单元素链（与 fallback_chain 同策略）；
+        - 非生歌 operation（lyric_gen/stems/midi/未知）直接 ValueError：绝不静默
+          落到 normal 链。
+        """
+        names = _OPERATION_CHAINS.get(str(operation or "").strip())
+        if names is None:
+            raise ValueError(
+                f"operation {operation!r} 不进入生歌链"
+                f"（合法值：{'/'.join(sorted(_OPERATION_CHAINS))}）"
+            )
+        chain = [self._providers[n] for n in names if n in self._providers]
+        if not chain:
+            return [self.select()]
+        return chain
 
     def fallback_chain(self, name: Optional[str] = None) -> list:
         """返回有序 Provider fallback 链（复用现有 select() 语义，不另起一套）。

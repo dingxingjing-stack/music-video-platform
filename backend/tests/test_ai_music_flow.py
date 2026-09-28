@@ -23,9 +23,12 @@
 
 import asyncio
 import os
+import tempfile
 import time
 
 import pytest
+from unittest.mock import AsyncMock
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -76,7 +79,9 @@ def fake_modal(monkeypatch):
 
     async def _generate(prompt=None, lyrics=None, duration=None, **kwargs):
         calls["generate"].append({"prompt": prompt, "lyrics": lyrics, "duration": duration, **kwargs})
-        return dict(VOLUME_OK)
+        # 阶段 B：主链成品质量门（<MIN/测不到 → failed）——桩位产物不可实测，
+        # 以预实测时长显式过门（与 continuation 返回 _measured_duration_sec 同形）。
+        return dict(VOLUME_OK, _measured_duration_sec=265.0)
 
     async def _download(name, local_dir):
         calls["download"].append(name)
@@ -106,10 +111,72 @@ def fake_modal(monkeypatch):
         monkeypatch.setattr(fal_client, "generate_via_fal", _generate)
     except Exception:
         pass
+    # 阶段 B：生歌链由 chain_for_operation 决定（全环境统一 [yinchao, tempolor]，
+    # 不再回落到 dev 默认的 fal）。本文件的 provider 桩挂在 ace_step_generate 层，
+    # 这里用链适配器把链首换成「运行时回调 ace_step_generate」的假 provider——
+    # 各用例的 flaky/never 覆盖照常生效，绝不触真实 Yinchao/TemPolor HTTP。
+    class _AceProvider:
+        name = "yinchao"
+        gpu = "test"
+
+        async def generate(self, request):
+            res = await provider_registry.ace_step_generate(
+                prompt=request.get("prompt"),
+                lyrics=request.get("lyrics"),
+                duration=request.get("duration"),
+                enable_audio2audio=request.get("enable_audio2audio"),
+            )
+            if not res:
+                return {"success": False, "error": "fake provider failed", "provider": self.name}
+            return {"success": True, "volume_files": dict(res), "provider": self.name}
+
+    class _Reg:
+        def chain_for_operation(self, operation):
+            return [_AceProvider()]
+
+        def select(self, name=None):
+            return _AceProvider()
+
+        def get(self, name):
+            return _AceProvider()
+
+    monkeypatch.setattr(ai_music, "get_provider_registry", lambda: _Reg())
     monkeypatch.setattr(ai_music, "ace_step_download", _download)
     monkeypatch.setattr(ai_music, "ace_step_separate", _separate)
     monkeypatch.setattr(ai_music.cdn_uploader, "upload_music_package", _upload)
     monkeypatch.setattr(ai_music.cdn_uploader, "get_presigned_download_url", _presign)
+    # ── P6-B-C2：人声 270s 现在经 continuation 两段生成。把段生成/参考段/拼接/
+    #    成品实测/R2 上传这几段重 IO 桩在同一层，使本文件继续只负责它真正覆盖的契约
+    #    （端点协议、额度前置、IDOR、预签名、retry-stems）。段生成仍回调
+    #    provider_registry.ace_step_generate，因此各用例自己的 flaky/never 覆盖照常生效。
+    from app.services.continuation_service import continuation_service as _cont
+
+    async def _segment(provider, prompt, lyrics, duration, reference_b64, enable_a2a):
+        res = await provider_registry.ace_step_generate(
+            prompt=prompt, lyrics=lyrics, duration=duration, enable_audio2audio=enable_a2a,
+        )
+        seg = os.path.join(tempfile.gettempdir(), f"c2_seg_{len(calls['generate'])}.wav")
+        if not res:
+            with open(seg, "w") as fh:
+                fh.write("failed")
+            return {"success": False, "error": "fake provider returned nothing"}
+        with open(seg, "w") as fh:
+            fh.write("fake-audio")
+        # continuation 的段契约是 provider.generate 的完整返回体（含 success/volume_files），
+        # 而 ace_step_generate 这层只给 volume_files，这里补齐外层形状。
+        return {"success": True, "volume_files": dict(res, _local_path=seg)}
+
+    _combined = os.path.join(tempfile.gettempdir(), "c2_combined.wav")
+    with open(_combined, "w") as _fh:
+        _fh.write("fake-audio")
+    monkeypatch.setattr(_cont, "_generate_single_segment", _segment)
+    monkeypatch.setattr(_cont, "_prepare_continuation_context", AsyncMock(
+        return_value=("cmVi", {"bpm": 120, "key": "C major"})))
+    monkeypatch.setattr(_cont, "_continue_lyrics", AsyncMock(return_value="ly2"))
+    monkeypatch.setattr(_cont, "_stitch_with_crossfade", AsyncMock(return_value=_combined))
+    monkeypatch.setattr(_cont, "_measure_final_duration", AsyncMock(return_value=270.5))
+    monkeypatch.setattr(_cont, "_upload_parts", AsyncMock(return_value={}))
+    monkeypatch.setattr(_cont, "_upload_final", AsyncMock(return_value={}))
     return calls
 
 
@@ -149,7 +216,7 @@ def _wait_store(task_id, states, tries=60):
 def test_full_flow_completed(isolated_db, fake_modal, disable_bg, monkeypatch):
     """1/2/3/4/6/13: 提交返回 task_id；额度在 GPU 前原子预留；完成返回完整歌+四轨预签名；下载为短期预签名。"""
     # 本测试断言「一次生成即耗尽当日额度」，显式钉住限额，不依赖模块默认值
-    monkeypatch.setattr(ai_limits, "DAILY_GENERATION_LIMIT", 1)
+    monkeypatch.setattr(ai_limits, "DAILY_GENERATION_LIMIT", 2)
     c = _client()
     r = c.post("/api/v1/ai/generate", json={"prompt": "a summer pop song"}, headers={"Authorization": "Bearer uA"})
     assert r.status_code == 200
@@ -163,9 +230,10 @@ def test_full_flow_completed(isolated_db, fake_modal, disable_bg, monkeypatch):
     _run_pipeline(disable_bg, tid)
     poll = _wait_terminal(c, tid, {"Authorization": "Bearer uA"})
     assert poll["state"] == "completed"
-    assert poll["stems_state"] == "ok"
     assert poll["audio_url"].startswith("https://signed/")
-    assert set(poll["stems"]) == {"vocals", "drums", "bass", "other"}
+    # 阶段 B：单次生成直接交付含四轨的 volume_files（本 fixture 的 fal 桩带 stems）
+    # ⇒ stems_state=ok；分轨通道本身仍由同文件 test_retry_stems_success 覆盖。
+    assert poll["stems_state"] == "ok"
 
     # 下载为 600s 预签名，非永久公开 URL
     rdl = c.get(f"/api/v1/ai/task/{tid}/download?file=full", headers={"Authorization": "Bearer uA"})
@@ -191,7 +259,7 @@ def test_busy_lock_blocks_duplicate(isolated_db, fake_modal, disable_bg):
 
     # 释放锁 + 回退额度后可再次提交
     task_store.release_lock_for_task(tid)
-    ai_limits.refund_generation("uB")
+    ai_limits.refund_generation("uB", weight=2)
     r3 = c.post("/api/v1/ai/generate", json={"prompt": "another song"}, headers={"Authorization": "Bearer uB"})
     assert r3.json()["success"] is True
 
@@ -208,13 +276,17 @@ def test_global_limit_blocks_new_tasks(isolated_db, fake_modal, disable_bg, monk
 
 
 def test_duration_clamped(isolated_db, fake_modal, disable_bg, monkeypatch):
-    """15: 请求时长超过上限时在管线内钳制到 MAX_AUDIO_DURATION_SECONDS。"""
-    monkeypatch.setattr(ai_music, "MAX_AUDIO_DURATION_SECONDS", 60)
+    """15: 阶段 B：duration 单点归一化只保留下限——300 原样透传（不再钳到 270）。"""
+    # 归一化口径的唯一来源是 ai_limits.normalize_audio_duration（Agnes 与生成分支
+    # 共用同一个 duration_target）。阶段 B：取消 MAX 上界钳制。
+    assert ai_limits.normalize_audio_duration(300) == 300
+    assert ai_limits.normalize_audio_duration(60) == 240     # 低于 MIN 抬到 MIN
     c = _client()
-    r = c.post("/api/v1/ai/generate", json={"prompt": "a song", "duration": 180}, headers={"Authorization": "Bearer uA"})
+    r = c.post("/api/v1/ai/generate", json={"prompt": "a song", "duration": 300}, headers={"Authorization": "Bearer uA"})
     tid = r.json()["task_id"]
-    _run_pipeline(disable_bg, tid, duration=180)
-    assert fake_modal["generate"][0]["duration"] == 60
+    _run_pipeline(disable_bg, tid, duration=300)
+    seg_durations = [g["duration"] for g in fake_modal["generate"]]
+    assert seg_durations == [300], "阶段 B：单次生成，≥MIN 原样透传，绝不 150+122 分段"
 
 
 def test_auto_retry_on_generate_failure(isolated_db, fake_modal, disable_bg, monkeypatch):
@@ -226,7 +298,7 @@ def test_auto_retry_on_generate_failure(isolated_db, fake_modal, disable_bg, mon
         calls.append(duration)
         if len(calls) == 1:
             return None
-        return dict(VOLUME_OK)
+        return dict(VOLUME_OK, _measured_duration_sec=265.0)
 
     monkeypatch.setattr(provider_registry, "ace_step_generate", flaky_generate)
     try:
@@ -240,7 +312,9 @@ def test_auto_retry_on_generate_failure(isolated_db, fake_modal, disable_bg, mon
     _run_pipeline(disable_bg, tid)
     poll = _wait_terminal(c, tid, {"Authorization": "Bearer uA"})
     assert poll["state"] == "completed"
-    assert len(calls) == 2  # 1 次初试 + 1 次自动重试
+    # 阶段 B 单次生成：重试仍在 provider 层（首败 + 1 成 ⇒ 2 次调用，
+    # MAX_AUTO_RETRIES=1 语义不变），不再有第二段。
+    assert len(calls) == 2
 
 
 def test_failed_flow_refunds_and_marks_failed(isolated_db, fake_modal, disable_bg, monkeypatch):

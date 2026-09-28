@@ -10,7 +10,11 @@
 """
 
 import asyncio
+import os
+import tempfile
+from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
@@ -53,9 +57,15 @@ class FakeProvider(BaseProvider):
         if self.mode == "hang":
             await asyncio.sleep(30)
             return {"success": False, "error": "unreachable", "provider": self.name}
+        # P6-B-C2/阶段 B：写出真实临时文件供路径解析；成品质量门（<MIN/测不到 →
+        # failed）以预实测时长显式过门（桩位字节不可真实解码），不改 Credits 业务断言。
+        fd, path = tempfile.mkstemp(suffix="_fake_ok.wav")
+        os.close(fd)
+        Path(path).write_bytes(b"RIFFfake")
         return {
             "success": True,
-            "volume_files": {"full_wav": "fake.wav", "_local_path": "nonexistent-local-path"},
+            "volume_files": {"full_wav": os.path.basename(path), "_local_path": path,
+                             "_measured_duration_sec": 271.0},
             "provider": self.name,
         }
 
@@ -86,6 +96,23 @@ def cdb(tmp_path, monkeypatch):
         return SimpleNamespace(optimized_prompt="optimized", generated_lyrics=None)
 
     monkeypatch.setattr(ai_music.agnes_service, "generate_song", _agnes)
+
+    # P6-B-C2：人声归一化为 270s 后走 continuation（首段 + 第二段 + crossfade + 270s 硬闸）。
+    # 本文件只验 Credits 扣费/退款落账，故把 continuation 的重 IO（实测时长/参考截取/歌词续写/
+    # FFmpeg 拼接/R2 上传）一律桩掉，且 _measure_final_duration 桩为 271.0 以通过 D1 硬闸。
+    # 绝不桩 task_store.update（credits 终态断言依赖真实 task 行写入）。
+    from app.services.continuation_service import continuation_service as _cont
+    _combined = tmp_path / "combined.wav"
+    _combined.write_bytes(b"RIFFfake")
+    monkeypatch.setattr(_cont, "_measure_final_duration", AsyncMock(return_value=271.0))
+    monkeypatch.setattr(
+        _cont, "_prepare_continuation_context",
+        AsyncMock(return_value=("cmViZA==", {"bpm": 120, "key": "C major"})),
+    )
+    monkeypatch.setattr(_cont, "_continue_lyrics", AsyncMock(return_value="ly2"))
+    monkeypatch.setattr(_cont, "_stitch_with_crossfade", AsyncMock(return_value=str(_combined)))
+    monkeypatch.setattr(_cont, "_upload_parts", AsyncMock(return_value={}))
+    monkeypatch.setattr(_cont, "_upload_final", AsyncMock(return_value={"full_wav": "music/t/full_wav.wav"}))
     return tmp_path
 
 
