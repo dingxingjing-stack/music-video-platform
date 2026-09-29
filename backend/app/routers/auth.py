@@ -110,15 +110,65 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
     return UserResponse(**user)
 
 
+def _authorize_self_or_admin(
+    authorization: Optional[str],
+    x_admin_token: Optional[str],
+    user_id: str,
+) -> str:
+    """统一授权：本人 JWT 或 管理员 Token，二选一。
+
+    P0 收口背景：GET /{user_id} 与 GET /{user_id}/stats 原先**完全无鉴权**，
+    任何人只要枚举 user_id 就能批量拉取邮箱、额度、订阅等级等 PII。
+
+    规则（与 /credits/add 的 P0-1 收口同口径）：
+      - 管理员：X-Admin-Token 与环境变量 ADMIN_API_TOKEN 常量时间相等；
+        ADMIN_API_TOKEN 未配置则管理员路径不可用（fail-closed），只能走本人 JWT。
+      - 本人：Authorization 解析出的 supabase user id 必须等于目标 user_id。
+      - 无凭据 → 401；凭据有效但非本人且非管理员 → 403（不泄露目标用户是否存在）。
+
+    返回：调用者标识，仅用于日志/审计，不参与鉴权判定。
+    """
+    import hmac
+    import os
+
+    if not user_id or not user_id.strip():
+        raise HTTPException(status_code=400, detail="user_id required")
+    target = user_id.strip()
+
+    # 管理员路径（未配置 ADMIN_API_TOKEN 时自动不可用）
+    admin_token = (os.getenv("ADMIN_API_TOKEN") or "").strip()
+    if x_admin_token and admin_token and hmac.compare_digest(str(x_admin_token), admin_token):
+        return f"admin:{target}"
+
+    # 本人路径
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    caller_id = resolve_auth_user_id(authorization)
+    if not caller_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if caller_id != target:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return f"self:{caller_id}"
+
+
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user_by_id(user_id: str):
+async def get_user_by_id(
+    user_id: str,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+):
+    """根据 ID 获取用户信息（P0 收口：仅本人或管理员）。
+
+    原实现无任何鉴权，可枚举 user_id 拉取他人邮箱/额度等 PII。
     """
-    根据 ID 获取用户信息
-    """
-    user = get_user(user_id)
+    _authorize_self_or_admin(authorization, x_admin_token, user_id)
+
+    user = get_user(user_id.strip())
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     return UserResponse(**user)
 
 
@@ -214,10 +264,18 @@ async def consume_user_credits(
 
 
 @router.get("/{user_id}/stats")
-async def get_user_stats(user_id: str):
+async def get_user_stats(
+    user_id: str,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+):
+    """获取用户统计信息（P0 收口：仅本人或管理员，且不再回显 email）。
+
+    原实现无鉴权且返回 email，枚举 user_id 即可批量拿到他人邮箱与额度。
+    统计口径本身不需要 email，故一并裁剪（前端不依赖该字段）。
     """
-    获取用户统计信息
-    """
+    _authorize_self_or_admin(authorization, x_admin_token, user_id)
+
     from app.services.supabase_service import supabase
     
     # 获取歌曲数量
@@ -237,7 +295,7 @@ async def get_user_stats(user_id: str):
     
     return {
         "user_id": user_id,
-        "email": user["email"],
+        # 字段裁剪：统计接口不需要 email，避免不必要的 PII 暴露
         "credits": user["credits"],
         "total_songs": songs_response.count,
         "total_tasks": total_tasks,

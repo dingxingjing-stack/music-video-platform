@@ -11,6 +11,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '../i18n/useTranslation';
+// P0 收口：订阅购买必须带 Authorization，改用受保护请求（自动附加 Bearer token）
+import { authFetch } from '../api/http';
 
 interface Plan {
   id: string;
@@ -108,9 +110,11 @@ export function MembershipCenter({ userId, onClose }: Props) {
   }, [userId]);
 
   // 购买会员
+  // P0 收口：后端已要求鉴权且 user_id 以 token 为准（禁止 body 覆盖他人 ID），
+  // 付费套餐改由 Paddle 结账开通，本接口仅可激活免费套餐（付费会返回 402）。
   const purchasePlan = useCallback(async (planId: string) => {
     try {
-      const response = await fetch('/api/v1/subscription/purchase', {
+      await authFetch('/api/v1/subscription/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,20 +124,17 @@ export function MembershipCenter({ userId, onClose }: Props) {
           payment_method: 'alipay'
         })
       });
-      
-      const result = await response.json();
-      if (response.ok) {
-        alert(t('membership.buySuccess'));
-        loadSubscription();
-        setTab('status');
-      } else {
-        alert(t('membership.buyFailed', { detail: result.detail }));
-      }
+
+      alert(t('membership.buySuccess'));
+      loadSubscription();
+      setTab('status');
     } catch (error) {
       console.error('购买失败:', error);
-      alert(t('membership.buyFailedRetry'));
+      // authFetch 无 session 抛 AuthenticationError；402 表示需走 Paddle 结账
+      const detail = error instanceof Error ? error.message : String(error);
+      alert(t('membership.buyFailed', { detail }));
     }
-  }, [userId, billingCycle, loadSubscription]);
+  }, [userId, billingCycle, loadSubscription, t]);
 
   // {t('membership.cancelSub')}
   const cancelSubscription = useCallback(async () => {

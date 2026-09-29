@@ -22,8 +22,10 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional, List, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+
+from app.services.auth_identity import resolve_auth_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -165,12 +167,46 @@ async def get_plans(tier_filter: Optional[PlanTier] = None):
 
 
 @router.post("/purchase", response_model=SubscriptionResponse)
-async def purchase_subscription(request: PurchaseRequest):
-    """购买会员订阅"""
+async def purchase_subscription(
+    request: PurchaseRequest,
+    authorization: Optional[str] = Header(None),
+):
+    """购买会员订阅（P0 安全收口）。
+
+    原实现的两处致命问题：
+      1. **完全无鉴权**，且 `user_id` 取自请求体 —— 任何人可给任意 user_id 开通会员；
+      2. **没有任何真实收款**（下方原本是 `TODO: 实际支付流程`），付费套餐也会被
+         直接写入为 TRIAL/ACTIVE —— 等于一台「自助发 VIP」机器。
+         （真实支付走 Paddle 结账 + 本文件 /webhook 回调。）
+
+    收口规则：
+      - 必须携带有效 Authorization（401 否则）；
+      - user_id 一律以 token 解析结果为准，body 传入不一致直接 403；
+      - 付费套餐（price_monthly > 0）本接口不开通，返回 402 引导走 Paddle 结账；
+        仅免费套餐可在此直接激活（本就无需付款）。
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    caller_id = resolve_auth_user_id(authorization)
+    if not caller_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # user_id 以 token 为准，禁止 body 覆盖
+    if request.user_id and request.user_id.strip() and request.user_id.strip() != caller_id:
+        raise HTTPException(status_code=403, detail="user_id does not match authenticated user")
+
     plan = get_plan_by_id(request.plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail="计划不存在")
-    
+
+    # 付费套餐：本接口无收款能力，不得在此开通，否则等于白送会员
+    if plan.price_monthly > 0:
+        raise HTTPException(
+            status_code=402,
+            detail="paid plan requires checkout: use Paddle checkout (/api/v1/credits/packs), not this endpoint",
+        )
+
     if plan.price_monthly == 0:
         # 免费版直接激活
         end_date = datetime.now() + timedelta(days=365 * 10)  # 10 年
@@ -179,8 +215,9 @@ async def purchase_subscription(request: PurchaseRequest):
     else:
         end_date = datetime.now() + timedelta(days=30)
     
+    # user_id 一律写 token 解析出的身份，绝不写 body 传入值
     subscription = {
-        "user_id": request.user_id,
+        "user_id": caller_id,
         "plan_id": request.plan_id,
         "tier": plan.tier,
         "status": SubscriptionStatus.ACTIVE if plan.price_monthly == 0 else SubscriptionStatus.TRIAL,
@@ -192,13 +229,11 @@ async def purchase_subscription(request: PurchaseRequest):
         "trial_days_left": 7 if plan.price_monthly > 0 else None
     }
     
-    subscriptions_db[request.user_id] = subscription
-    
-    # TODO: 实际支付流程
-    # 1. 创建支付订单
-    # 2. 调起支付 (支付宝/微信/Stripe)
-    # 3. 处理支付回调
-    # 4. 激活订阅
+    subscriptions_db[caller_id] = subscription
+
+    # 注意：付费套餐已在上方 402 拦截，不会走到这里 —— 本接口无收款能力，
+    # 真实支付由 Paddle 结账 + /webhook 回调完成（见文件末尾 webhook 与
+    # paddle_service）。此处仅保留免费套餐激活路径。
     
     return SubscriptionResponse(**subscription)
 

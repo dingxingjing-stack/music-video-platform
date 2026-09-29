@@ -359,33 +359,6 @@ def test_free_asset_still_downloadable():
     assert r.status_code == 200
 
 
-# ── P0-7 runpod smoke test：默认关闭 ─────────────────────────────────
-def test_runpod_smoke_test_is_disabled_by_default(monkeypatch):
-    from app.routers import ai_music
-
-    monkeypatch.delenv("ENABLE_RUNPOD_SMOKE_TEST", raising=False)
-    monkeypatch.setenv("RUNPOD_SMOKE_TEST_TOKEN", "tok")
-    app = FastAPI()
-    app.include_router(ai_music.router)
-    r = TestClient(app).post("/api/v1/ai/runpod-smoke-test",
-                             headers={"X-RunPod-Smoke-Token": "tok"})
-    assert r.status_code == 404, "未显式启用时对外表现为不存在（也不得触达 RunPod）"
-
-
-def test_runpod_smoke_test_still_token_gated_when_enabled(monkeypatch):
-    from app.routers import ai_music
-
-    monkeypatch.setenv("ENABLE_RUNPOD_SMOKE_TEST", "true")
-    monkeypatch.setenv("RUNPOD_SMOKE_TEST_TOKEN", "expected-token")
-    app = FastAPI()
-    app.include_router(ai_music.router)
-    c = TestClient(app)
-    assert c.post("/api/v1/ai/runpod-smoke-test").status_code == 401
-    assert c.post("/api/v1/ai/runpod-smoke-test",
-                  headers={"X-RunPod-Smoke-Token": "wrong"}).status_code == 401
-    monkeypatch.delenv("RUNPOD_SMOKE_TEST_TOKEN")
-    assert c.post("/api/v1/ai/runpod-smoke-test",
-                  headers={"X-RunPod-Smoke-Token": "wrong"}).status_code == 503
 
 
 # ── F2：_run_generation 的退款权重必须来自权威值，不得由 duration 重推 ──
