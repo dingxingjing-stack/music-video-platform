@@ -78,7 +78,11 @@ def test_separate_audio_success(_quota_stub):
         # Verify mocks called
         mock_separate.assert_called_once()
         args, kwargs = mock_separate.call_args
-        assert args[0] == str(Path(tempfile.gettempdir()) / "audio_uploads" / "test.wav")
+        # 文件名净化（b99c699）：上传落盘名是 upload_<uuid>.<ext>，不再是原始 test.wav
+        upload_dir = Path(tempfile.gettempdir()) / "audio_uploads"
+        saved = Path(args[0])
+        assert saved.parent == upload_dir
+        assert saved.name.startswith("upload_") and saved.name.endswith(".wav")
         assert kwargs.get("model") == "htdemucs"
         assert mock_upload.call_count == 4
         

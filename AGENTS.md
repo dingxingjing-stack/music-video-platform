@@ -10,10 +10,16 @@
 |---|---|
 | 前端 | React 18 + TypeScript + Vite + Tailwind CSS |
 | 后端 | Python FastAPI + uvicorn |
-| 部署（前端） | Cloudflare Pages |
-| 部署（后端） | Render.com（免费实例，冷启动约 2 分钟）|
+| 部署（前端） | 阿里云 ECS（nginx 静态托管，melovar.com）|
+| 部署（后端） | 阿里云 ECS（uvicorn + nginx 反代，`releases/` + `current` 符号链接发布）|
 | 存储 | Cloudflare R2（音频/视频文件）|
 | 监控 | Sentry |
+
+> ⚠️ 部署事实（2026-09-29 校正）：真实生产在**阿里云 ECS**，不是 Render。
+> 本文件早前写的是 Render.com / Cloudflare Pages / Modal，均已作废。仓库里的
+> `render.yaml`、`deploy.sh`、`DEPLOYMENT.md`、`nginx.conf` 里的 Docker 方案也全部过期，
+> 不要照它们操作。真实环境变量落点（backend/.env 或 systemd/supervisor 的 Environment）
+> 需 SSH 上 ECS 探明后再改，**不要在 Render 面板做任何事**。
 
 ## 🧩 项目结构
 
@@ -58,7 +64,11 @@ SUPABASE_SERVICE_ROLE_KEY=xxx
 
 ## 🚀 部署命令
 
-### 后端（Render）
+> ⚠️ 生产部署在阿里云 ECS（`releases/` + `current` 符号链接 + nginx 反代）。
+> 以下命令仅用于本地开发/验证，不用于生产发布。生产发布流程需 SSH 上 ECS 探明
+> （先确认进程由 systemd 还是 supervisor 托管、env 落在 backend/.env 还是服务配置）。
+
+### 后端（本地开发）
 ```bash
 cd backend
 pip install -r requirements.txt
@@ -80,8 +90,9 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 
 ## 🌐 在线地址
 
-- 后端 API: https://ai-music-backend-8e85.onrender.com
-- 前端: https://music-video-platform.pages.dev
+- 生产: https://melovar.com（前后端同域，nginx 反代 `/api/` 到 ECS 后端）
+- 后端 API（生产）: https://melovar.com/api/...
+- （以下旧地址已作废：ai-music-backend-8e85.onrender.com、music-video-platform.pages.dev）
 
 ## 📐 编码规范
 

@@ -52,6 +52,10 @@ class FakeClient:
 def wired(monkeypatch):
     """key + callback + 轮询加速 + 下载桩。返回工厂：注入 submit/query 响应。"""
     monkeypatch.setenv("TEMPOLOR_API_KEY", "test-key-not-real")
+    # 回调签名加固后，provider 会把 TEMPOLOR_CALLBACK_SECRET 拼成 ?token= 附在
+    # callback_url 上。这里必须用哨兵值兜住，否则 callback_secret() 会读到真实 .env 的
+    # 密钥（经 load_dotenv 灌入），真实 key 就会随断言 diff 外泄。
+    monkeypatch.setenv("TEMPOLOR_CALLBACK_SECRET", "test-callback-secret-never-real")
     monkeypatch.delenv("TEMPOLOR_MODEL", raising=False)
     monkeypatch.setattr(tp, "TEMPOLOR_CALLBACK_URL", TEST_CB)
     monkeypatch.setattr(tp, "TEMPOLOR_POLL_INTERVAL_SECONDS", 0)
@@ -150,8 +154,15 @@ def test_6_missing_callback_config_zero_submission(monkeypatch):
 
 
 def test_callback_sent_when_configured(wired):
-    """配置存在时 payload.callback_url 必须原样非空发送。"""
+    """配置存在时 payload.callback_url 必须非空，并附上 ?token= 共享令牌。
+
+    只断言「以配置的 callback 开头 + 带 token=」而不是比整串 URL：令牌来自
+    TEMPOLOR_CALLBACK_SECRET，若误用真实 .env 密钥，比整串会把 key 打进测试 diff。
+    """
     fc = wired(OK_SUBMIT, OK_DONE)
     asyncio.run(tp.TempolorProvider().generate(_req()))
     _, payload = fc.posts[0]
-    assert payload["callback_url"] == TEST_CB
+    cb = payload["callback_url"]
+    assert cb.startswith(TEST_CB + "?token=")
+    # 令牌必须是哨兵值，绝不能是真实密钥（真实密钥不会是这串）
+    assert "test-callback-secret-never-real" in cb
