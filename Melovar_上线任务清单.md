@@ -82,7 +82,7 @@ python scripts/preflight_check.py
 
 ---
 
-## 四、【P0·阻塞】补部署环境变量
+## 四、【已完成 2026-09-29】补部署环境变量
 
 **为什么**：`render.yaml` 现在只是"声明了需要这些 key"，真正的值要你在 Render
 面板 Environment 里手工填。不填，对应能力会 fail-closed（分享 503、回调 503、管理端点 403）。
@@ -109,7 +109,7 @@ python scripts/preflight_check.py
 
 ---
 
-## 五、【P0】生产库跑 DDL
+## 五、【已完成 2026-09-29】生产库跑 DDL
 
 **为什么**：项目没有 Alembic，`create_all` 建不出新列/索引。退款幂等虽然代码层已修，
 但硬兜底（唯一索引）必须靠这条 DDL 落库。
@@ -275,7 +275,90 @@ python scripts/preflight_check.py
 ## 十、提交与发布纪律（每次动完都遵守）
 
 - 一次 commit 只做一件事，`git commit` 写清楚"为什么"。
-- **密钥永不进源码**：`backend/.env` 已被 gitignore，只写 `.env` 和 Render 面板。
+- **密钥永不进源码**：`backend/.env` 已被 gitignore，真实值只进 `.env` 与
+  ECS 的 `/opt/melovar/secrets/backend.env`（**不是** Render 面板）。
 - 提交前跑一遍相关测试：`pytest tests/<相关文件>.py`。
 - 上生产前跑 `preflight_check.py`，有 FAIL 不上线。
+- **push 前先确认仓库可见性**——本仓库 `https://github.com/dingxingjing-stack/music-video-platform`
+  经未认证 GET 实测返回 200，即**公开仓库**。任何 `git add -A` / `git add -f` 都可能把
+  env 文件推上公开可读的位置。
 - push / 部署前确认上面 P0（三/四/五）都绿。
+
+---
+
+## 十一、生产环境执行记录（2026-09-29 已完成）
+
+三项已在本机对生产实测执行完毕，含验证证据。
+
+### ① push 代码到远端 ✅
+
+```
+eeef9aa..bf7244e  main -> main     （18 个提交）
+```
+- 推送前逐条确认：18 个提交中现役密钥引入次数 = **0**（现役三把 key 在远端 `git log -S` 全 0 命中）。
+- 凭据通道：GCM 会弹窗阻塞，改用 `git -c credential.helper= -c credential.helper=store push`
+  走 `~/.git-credentials`。**这条以后会用到，记下来。**
+- 远端 `origin/main` 现为 `bf7244e`，本地未推送数 = 0。
+
+### ② 生产库跑 DDL ✅
+
+先只读复核（证实了独立核验的断言，也纠正了本清单原来的错误说法）：
+
+| 项 | 原清单说法 | 实测 |
+|---|---|---|
+| `ai_tasks.generation_quota_weight` | 缺 | **已存在**（生产 17 列） |
+| `ai_tasks.refunded_at` | 缺 | **确实缺** |
+| 后果 | "不跑 DDL 则生歌 INSERT 全挂" | **半错**：INSERT 一直通；真问题是 `ai_limits.py` 的
+退款 `UPDATE ai_tasks SET refunded_at=...` 会因列不存在而回滚 ⇒ **用户被扣的 Credits 退不回来**（当时 refund 仅 1 行、流量近零，未暴露） |
+| `uq_credits_refund_once` | 未建 | 确认未建 |
+| 重复退款 | 待查 | refund 行数 1、重复组 0 ⇒ 索引必能建上 |
+
+执行（逐条 autocommit，避开 pgbouncer 事务模式挂起；全部 `IF NOT EXISTS` 幂等）：
+
+```
+[ ok ] 1 refunded_at
+[ ok ] 2 generation_quota_weight
+[ ok ] 3 uq_credits_refund_once
+verify → ai_tasks cols: ['generation_quota_weight','refunded_at']
+         unique index: ['uq_credits_refund_once']
+         ai_tasks 2 行 / credits_transactions 3 行（数据未动）
+         ai_tasks 总列数 17 → 18
+```
+
+> 注：第一次用「单事务 `eng.begin()`」执行时挂起（pgbouncer transaction pooling），
+> 改成 **逐条 `execution_options(isolation_level="AUTOCOMMIT")`** 后秒过。这条经验记下来。
+
+### ③ 补全 3 个缺失环境变量 ✅
+
+- 目标文件：`/opt/melovar/secrets/backend.env`（**唯一落点**；
+  `/opt/melovar/src/backend/.env` 实测 ABSENT，往那儿写＝写进空气）。
+- 备份：`backend.env.bak.20260929-1135`（2795 bytes）。
+- 追加：键数 **49 → 52**，无重复键，末尾换行已确保，权限保持 `root:root 600`。
+- 三个键各 43 字符（`secrets.token_urlsafe(32)`，**未复用**曾进过测试输出的旧值）。
+- 生效：`cd /opt/melovar && sudo docker compose up -d backend`（env_file 只在启动注入）。
+- 验证：容器内 `printenv` 三个键 **PRESENT (len=43)**；容器内键总数 59；
+  `melovar.com/health` → **HTTP 200**，`database.healthy=true`。
+
+### 十一补、还剩两件才能真正"上线"
+
+当前跑的仍是 **P3-13 时代镜像**（容器内 `app/routers/share.py` 不存在、
+`chain_for_operation` 0 处），前端 `current → frontend-p3-11-20260926-193057`。
+所以下列两件不做，前面做的都白搭（新代码没跑起来）：
+
+| # | 动作 | 说明 |
+|---|---|---|
+| 1 | **后端重建镜像** | 源码同步到 `/opt/melovar/src/backend` → `docker compose build backend && docker compose up -d backend` |
+| 2 | **前端重建 dist** | `npm run build` → 产出同步到 nginx 站点目录（hi/id/ar 选择器与 RTL 在这个包里） |
+
+> ⚠️ 重建前提：**禁止 `docker commit` 正在运行的容器**——会把 49+3 个生产密钥
+> 永久烘进镜像 `Config.Env`。只允许在源码目录 `docker compose build`。
+
+### 十一补二、独立核验提出、仍待你拍板的三件
+
+1. **`amount_mismatch` 严格口径**：现为"实收整数分必须等于标价"。含税地区 LS 的
+   `total` 会大于标价 ⇒ 被 400 拒发 = 用户付钱拿不到 Credits。**收口前必须定。**
+2. **P2-4 发放代码是否真被批准过**：它是搭着"修支付漏洞"的 commit（`653cf87`）进来的，
+   而共享任务清单 #30 仍写"待授权"。若未批准，正确动作是从 `653cf87` 拆出来单独审。
+3. **LS webhook 那 3 条红**：已判定为**改测试不改实现**——`fulfill_credit_pack_order` 是
+   `653cf87` 有意引入的 P2-4 履约入口，`_claim_purchase` 写 `lemonsqueezy_purchases`
+   是它的幂等占位；P2-3 的"零发放"已被 P2-4 取代，测试该更新。
