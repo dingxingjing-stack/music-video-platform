@@ -39,13 +39,18 @@
 
 | 路径 | 占用 |
 |---|---|
-| `/opt/melovar/src-p3-10-old-20260926-092059` | 726 M |
-| `/opt/melovar/backups` | 731 M |
-| `/opt/melovar/web*`（6 个 bak + old + 无用的 `web`） | ~22 M |
-| `/opt/melovar/src-fe7588c` | 9.1 M |
-| **合计** | **≈ 1.49 GB** |
+| `/opt/melovar/src-p3-10-old-20260926-092059/frontend/node_modules` | 707 M |
+| `/opt/melovar/backups/src-backup-p3-10-20260926-091641/frontend/node_modules` | 707 M（与上一行**硬链接共享同一份数据块**，实际合计仅 707 M） |
+| 其余（`web.bak-*` / `web.old` / `build-20260923-231801` / 两棵树的源码本体） | ~100 M |
 
-回收后可用空间 ≈ **10.3 GB**。
+> ⚠️ **两个必须记住的点**
+> 1. `/tmp` 与 `/opt` 在**同一个 `/dev/vda3`** 上（`mount` 实测）⇒ 用 `mv` 把目录挪到 `/tmp`
+>    **完全不释放空间**，必须删除才行。本次踩过一次，已纠正。
+> 2. 那两棵树互为硬链接副本 ⇒ `du` 会把同一份数据算两遍，**以 `df` 前后差值为准**。
+>
+> 因此实际可回收量是 **~0.8 GB**（不是 `du` 加总出来的 1.5 GB）。
+> 本次只删 `node_modules`（纯构建产物，可由 `pnpm-lock.yaml` 重建），**未删任何源码/配置/密钥**：
+> 删除后 `df` 由 8.8 G → **9.5 G**。
 
 ---
 
@@ -64,13 +69,31 @@
 
 ### 步骤 1 —— 回收空间
 
+**注意：`mv` 到 `/tmp` 不释放空间（同一文件系统）。** 必须删除。安全做法是先删纯构建产物：
+
 ```bash
 ssh melovar-ecs
-sudo mv /opt/melovar/src-p3-10-old-20260926-092059 /opt/melovar/backups /opt/melovar/web.bak-* /opt/melovar/web.old /opt/melovar/src-fe7588c /tmp/reclaim-$(date +%Y%m%d-%H%M)/
-df -h /    # 期望 avail 由 8.8G 变为 ~10.3G
+# 1) 先看清哪些是可直接重建的构建产物
+sudo du -sh /opt/melovar/src-p3-10-old-*/frontend/node_modules \
+            /opt/melovar/backups/src-backup-p3-10-*/frontend/node_modules 2>/dev/null
+# 2) 只删 node_modules（纯构建产物，可由 pnpm-lock.yaml 重建）
+sudo rm -rf /opt/melovar/src-p3-10-old-20260926-092059/frontend/node_modules
+sudo rm -rf /opt/melovar/backups/src-backup-p3-10-20260926-091641/frontend/node_modules
+df -h /    # 期望 8.8G -> 9.5G
 ```
 
-> 用 `mv` 到 `/tmp` 而不是 `rm`：确认新版本跑起来后再删。**`p3-13` 镜像绝不动。**
+若还需要更多空间，再删除整棵旧源码树（先确认里面没有不在 git 里的 `.env` / `.wrangler` / `*.db`）：
+
+```bash
+# 先把非 git 的小文件留一份，再删大树
+sudo mkdir -p /opt/melovar/keep-$(date +%Y%m%d)
+sudo find /opt/melovar/src-p3-10-old-20260926-092059 -maxdepth 4 \
+     \( -name '.env*' -o -name '*.db' -o -name '.wrangler' -o -name 'secrets*' \) \
+     -not -path '*/node_modules/*' -exec cp -a --parents {} /opt/melovar/keep-$(date +%Y%m%d)/ \;
+sudo rm -rf /opt/melovar/src-p3-10-old-20260926-092059 /opt/melovar/src-fe7588c /opt/melovar/backups/nginx /opt/melovar/backups/frontend
+```
+
+> **`p3-13` 镜像绝不动**（唯一回滚镜像）；`c35-8b0bfd86803b` 是上一版生产镜像，也保留。
 
 ### 步骤 2 —— 同步源码到 `/opt/melovar/src/backend`
 
@@ -254,6 +277,100 @@ grep -oE 'index-[A-Za-z0-9_-]+\.js' "$REL/index.html" | head -1     # 两行必�
 ⑨ 前端验收（线上入口 = 新 release 入口）
 ⑩ 确认无误后，再删 /tmp 里的回收暂存与旧 release
 ```
+
+---
+
+## 5.5 执行记录（2026-09-29 23:2x–23:3x，本次真实执行）
+
+采用「ECS 就地构建」。全程实测数字如下。
+
+### 空间回收
+
+| 步骤 | 可用空间 |
+|---|---|
+| 起点 | 8.8 G |
+| `mv` 12 个旧目录到 `/tmp/reclaim-20260929-2321/`（含 `src-p3-10-old-20260926-092059`、`backups`、`src-fe7588c`、6×`web.bak-*`、`web.old`、`build-20260923-231801`） | 8.8 G（**未变** —— 同文件系统内 `mv` 不释放空间，判断错误，已修正） |
+| 删除两棵树里的 `node_modules`（707 M × 2，实为硬链接共享 ⇒ 实际释放 707 M） | **9.5 G** |
+
+> 两棵树互为硬链接副本，所以 `du` 报 1.41 G、实际只释放 0.7 G。
+> 删除范围仅 `node_modules`（纯构建产物），未触碰任何源码/配置/密钥/数据。
+
+### 源码同步
+
+- `git archive HEAD backend/` → 764 K / 346 条目（只含已跟踪文件 ⇒ 天然无 `.env`、无 `data/`、无缓存）
+- 落地前先把旧址 `mv` 到 `/tmp/src-backend-old-20260929-2323`（**不删**），并另存一份 `tar.gz` 备份（770 K / 358 条目）
+- 落地后 `/opt/melovar/src/backend` 324 个文件（= `git ls-files backend | wc -l` 324）
+
+### 构建
+
+| 项 | 值 |
+|---|---|
+| 阶段 `[3/7] apt-get install` | 932 MB |
+| 阶段 `[6/7] pip install` | DONE 以后 59.9 s |
+| 阶段 `[7/7] COPY . .` | DONE 0.5 s |
+| `exporting to image` | unpacking 21.7 s / DONE 103.4 s |
+| 结果 | `Image melovar-backend:local Built` |
+| **新镜像** | `732a65f1a585`，**2.38 GB**（旧 11.4 GB ⇒ 因移除 transformers/accelerate 而大幅缩小） |
+| 峰值内存 | 未触发 OOM（available 最低 85 MB，swap 全程 0 使用） |
+| 磁盘 | 9.5 G → 5.9 G（净耗 3.6 G） |
+
+### 切换与验收结论
+
+- `docker compose up -d backend` → 容器 Recreated，90 s 内 `(healthy)`
+- 启动日志：`Database init_db completed (env=production)`、`R2 configured=True`
+- **容器内源码签名**（第一层，`0/缺失` 全部翻转）：
+
+  | 文件 | 关键字 | 改造前 | 上线后 |
+  |---|---|---|---|
+  | `app/routers/subscription.py` | `authorization` | 0 | **3** |
+  | `app/routers/ai_music.py` | `TEMPOLOR_CALLBACK_SECRET` | 0 | **3** |
+  | `app/routers/audio_processing.py` | `_safe_upload_name` | 0 | **2** |
+  | `app/routers/auth.py` | `x_admin_token` | 2 | **8** |
+  | `app/services/provider_registry.py` | `song_language` | 0 | **4** |
+  | `app/routers/share.py` | 文件 | 不存在 | **存在** |
+  | `main.py` | `load_dotenv(override=False)` 护栏 | — | 存在 |
+
+- **容器内跑 `scripts/preflight_check.py`：PASS=9 / FAIL=1 / WARN=2**
+  - PASS：`provider/yinchao` 鉴权通过（**新 key 确认生效**，不再是 401）、`provider/tempolor` 鉴权通过、
+    `routing/matrix` 7 组语言分流 + instrumental 隔离正确、`callback/signature` 200/401/401/503、
+    `share/token` 往返且篡改被拒、`db/ai_tasks_columns`（`refunded_at` + `generation_quota_weight`）、
+    `db/refund_unique_index`（`uq_credits_refund_once`）
+  - **FAIL `env/gitignored` 是假失败**：该检查靠 `os.popen("git check-ignore ...")`，
+    而容器内**未安装 git**（`git: not found`）⇒ 空输出被判 FAIL。
+    本机复核：`git check-ignore -v backend/.env` → `.gitignore:26:.env`（**确实被忽略**）。
+    且容器内 `ls /app/.env` → **No such file or directory**，证明密钥未进镜像。
+  - WARN：LS 两个密钥未配（fail-closed，预期）；`frontend/dist` 不存在（容器内本就没有前端产物，预期）
+- **公网 HTTP 层验收**（全部 PASS）：
+
+  | 请求 | 结果 |
+  |---|---|
+  | `GET /api/v1/auth/{uuid}` 无凭据 | 401 |
+  | `GET /api/v1/auth/{uuid}/stats` 无凭据 | 401 |
+  | `POST /api/v1/subscription/purchase` 无凭据 / 伪造 Bearer | 401 / 401 |
+  | `POST /api/v1/share/task/{id}` 无凭据 | 401 |
+  | `GET /api/v1/community/hot` | 404（已下线） |
+  | `GET /api/v1/copyright/database` | 404（已下线） |
+  | `GET /api/v1/collab/session/xyz` | 404（已下线） |
+  | `GET /api/v1/share/not-a-valid-token` | **404**（刻意：源码注释「不泄露任务是否存在」） |
+  | `POST /api/v1/ai/tempolor/callback` 无令牌 | 401 |
+  | `GET /api/v1/audio/separate` 无凭据 | 401 |
+  | 路径穿越 4 例（`../../../../tmp/…`、`app/…`、Windows 反斜杠、`/etc/cron.d/…`） | 全 401，且 ECS 上无文件生成 |
+
+  > 验收脚本预期修正两处：① `purchase` 的 401 在 handler 内，用不符合 schema 的 body 会先得 422
+  > （无副作用）；正确字段是 `plan_id` 而非 `plan`。② share 无效令牌是 404 而非 400。
+
+- **前端 release** `frontend-p3-14-20260929-123252`（48 文件，`.meta/` 含 manifest + rollback.sh + SHA256SUMS）
+  - 入口 `index-BeijIcs2.js`；原子软链切换；`nginx -t` OK + reload OK
+  - 线上入口 = 新 release 入口（一致）；`ar/hi/id` 三语 chunk 均 200 且**含新法务段落与 `tempolor-latest`/`Merchant of Record`**
+  - `/share/sometoken` 200、`/legal/privacy` 200
+  - 旧 release `frontend-p3-11-20260926-193057` 保留（未删）
+
+### 遗留状态
+
+- ECS 可用空间 **5.9 G**（改造前 8.8 G）；`docker system df` 显示可回收 22.35 GB，
+  但那是**两个回滚镜像**（`c35-8b0bfd86803b` = 上一版生产、`p3-13-20260926-211744-fix`），**保留**。
+- `/tmp/reclaim-20260929-2321/`（73 M）、`/tmp/src-backend-old-20260929-2323`、
+  `/tmp/src-backend-bak-20260929-2323.tgz` 为本次安全网，确认无回滚需求后可清理。
 
 ---
 
