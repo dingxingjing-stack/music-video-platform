@@ -133,27 +133,33 @@ function drawCover(canvas: HTMLCanvasElement, title: string, brand: string) {
   ctx.fillText('✦ AI Generated Music', 80, 190);
 
   // 标题（自动换行，最多 3 行）
-  const text = (title || 'Untitled').trim();
-  ctx.font = 'bold 84px Inter, system-ui, sans-serif';
-  ctx.fillStyle = '#ffffff';
-  const maxWidth = W - 160;
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let cur = '';
-  for (const w of words) {
-    const test = cur ? `${cur} ${w}` : w;
-    if (ctx.measureText(test).width > maxWidth && cur) {
-      lines.push(cur);
-      cur = w;
-      if (lines.length === 3) break;
-    } else {
-      cur = test;
+  // ⚠️ 标题**可能为空**：系统里目前没有"歌名"这个概念 —— ai_tasks 无 title 列、
+  //    生成流程不接收标题，MyWorks 也是用 task_id 前 8 位当名字。所以空标题是
+  //    正常态，不能画 "Untitled"（那是把数据缺口当成歌曲名展示给陌生人）。
+  //    为空时整段跳过，封面只留品牌 + AI 标记 + 波形，视觉依然完整。
+  const text = (title || '').trim();
+  if (text) {
+    ctx.font = 'bold 84px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    const maxWidth = W - 160;
+    const words = text.split(/\s+/);
+    const lines: string[] = [];
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? `${cur} ${w}` : w;
+      if (ctx.measureText(test).width > maxWidth && cur) {
+        lines.push(cur);
+        cur = w;
+        if (lines.length === 3) break;
+      } else {
+        cur = test;
+      }
     }
+    if (cur && lines.length < 3) lines.push(cur);
+    lines.forEach((ln, i) => {
+      ctx.fillText(ln, 80, 420 + i * 110);
+    });
   }
-  if (cur && lines.length < 3) lines.push(cur);
-  lines.forEach((ln, i) => {
-    ctx.fillText(ln, 80, 420 + i * 110);
-  });
 
   // 底部引导：让人知道这是 AI 做的、可以自己做
   ctx.font = '600 40px Inter, system-ui, sans-serif';
