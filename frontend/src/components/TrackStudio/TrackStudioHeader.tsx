@@ -96,7 +96,7 @@ export function TrackStudioHeader({
             className="px-2 py-1 bg-[#262626] border border-[#2a2a38] rounded text-xs text-[#e0e0e0]"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            {['zh', 'en', 'ja', 'ko', 'es', 'fr', 'pt', 'ru', 'de'].map((l) => (
+            {['zh', 'en', 'ja', 'ko', 'es', 'fr', 'pt', 'ru', 'de', 'hi', 'id', 'ar'].map((l) => (
               <option key={l} value={l}>
                 {t(`common.localeNames.${l}`)}
               </option>

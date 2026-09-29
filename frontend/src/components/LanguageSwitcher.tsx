@@ -12,6 +12,9 @@ const LANGUAGES = [
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'pt', name: 'Português', flag: '🇵🇹' },
   { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'id', name: 'Bahasa', flag: '🇮🇩' },
+  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
 ] as const;
 
 // 防御性兜底：旧 i18n/index 误用同名 useTranslation 会导致 changeLocale 为 undefined，

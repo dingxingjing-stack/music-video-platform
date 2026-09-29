@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import './styles/rtl.css'; // RTL 镜像补充：仅在 <html dir="rtl">（阿拉伯语）下生效
 import './sentry'; // Sentry：仅在生产 + 已配置 VITE_SENTRY_DSN 时启用
 import App from './App';
 import { SoundProvider } from './context/SoundContext';

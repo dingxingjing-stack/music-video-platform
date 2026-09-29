@@ -156,7 +156,7 @@ export function CreateMusicPage() {
                 <>
                   <p className="text-xs text-[#8a8a8a] -mt-1">
                     {t('createMusic.creditsRule')}
-                    {balanceKnown && <span className="ml-2 text-[#b0b0b0]">{t('nav.credits', { n: credits.balance as number })}</span>}
+                    {balanceKnown && <span className="ms-2 text-[#b0b0b0]">{t('nav.credits', { n: credits.balance as number })}</span>}
                   </p>
                   {insufficient && (
                     <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300 flex items-center justify-between">
@@ -211,7 +211,7 @@ export function CreateMusicPage() {
               {history.length===0 ? (
                 <p className="mt-3 text-xs text-[#6a6a6a]">{t('createMusic.emptyHistory')}</p>
               ) : (
-                <div className="mt-3 space-y-2 max-h-[320px] overflow-auto pr-1">
+                <div className="mt-3 space-y-2 max-h-[320px] overflow-auto pe-1">
                   {history.map(h=> (
                     <div key={h.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f]">
                       <button onClick={()=> setAudioUrl(h.url)} className="w-8 h-8 rounded-lg bg-white text-[#0a0a0a] flex items-center justify-center text-xs shrink-0">▶</button>

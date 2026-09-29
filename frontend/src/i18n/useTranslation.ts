@@ -6,14 +6,22 @@ import { locales, defaultLocale, localeNames, type Locale } from './config';
 const LOCALE_EVENT = 'app:locale-change';
 
 function readStoredLocale(): Locale {
+  const apply = (locale: Locale): Locale => {
+    if (typeof document !== 'undefined') {
+      const el = document.documentElement;
+      el.setAttribute('lang', locale);
+      el.setAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+    }
+    return locale;
+  };
   const saved = localStorage.getItem('locale') as Locale | null;
-  if (saved && locales.includes(saved)) return saved;
+  if (saved && locales.includes(saved)) return apply(saved);
   const browserLang = navigator.language.split('-')[0] as Locale;
   if (locales.includes(browserLang)) {
     localStorage.setItem('locale', browserLang);
-    return browserLang;
+    return apply(browserLang);
   }
-  return defaultLocale;
+  return apply(defaultLocale);
 }
 
 export function useTranslation() {
@@ -60,6 +68,10 @@ export function useTranslation() {
     setLocaleState(newLocale);
     // 广播给所有 useTranslation 实例 — 实现全局实时切换
     window.dispatchEvent(new CustomEvent(LOCALE_EVENT, { detail: newLocale }));
+    // 同步 <html lang/dir>：阿拉伯语切 RTL
+    const el = document.documentElement;
+    el.setAttribute('lang', newLocale);
+    el.setAttribute('dir', newLocale === 'ar' ? 'rtl' : 'ltr');
   }, []);
 
   const lookup = (obj: Record<string, any>, key: string): string | undefined => {

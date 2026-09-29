@@ -48,26 +48,28 @@ export function AppLayout() {
       <BetaConsentModal />
 
       {/* 移动端汉堡 */}
-      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-3 left-3 z-50 p-2.5 bg-[#141414]/90 backdrop-blur rounded-xl border border-[#262626] text-white shadow-lg" aria-label={t('nav.openMenu')}>
+      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-3 start-3 z-50 p-2.5 bg-[#141414]/90 backdrop-blur rounded-xl border border-[#262626] text-white shadow-lg" aria-label={t('nav.openMenu')}>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
 
       {mobileMenuOpen && <div className="lg:hidden fixed inset-0 bg-black/60 z-40" onClick={() => setMobileMenuOpen(false)} />}
 
       {/* 侧边栏 */}
-      <aside className={`${sidebarCollapsed ? 'w-[68px]' : 'w-[264px]'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-auto flex flex-col border-r border-[#1f1f1f] bg-[#0f0f0f]/95 backdrop-blur-xl transition-all duration-300`}>
+      {/* 侧边栏 —— 用逻辑属性(start-0 / border-e)，RTL 时自动停靠右侧、边框换到左侧 */}
+      <aside className={`${sidebarCollapsed ? 'w-[68px]' : 'w-[264px]'} ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 start-0 z-50 lg:z-auto flex flex-col border-e border-[#1f1f1f] bg-[#0f0f0f]/95 backdrop-blur-xl transition-all duration-300`}>
         {/* Logo */}
         <div className="h-[56px] flex items-center px-3 gap-2 border-b border-[#1f1f1f] shrink-0">
           <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#888888] hover:text-white flex items-center justify-center transition" title={sidebarCollapsed ? t('nav.expand') : t('nav.collapse')}>
-            <span className="text-[11px] font-bold tracking-widest">{sidebarCollapsed ? '››' : '‹‹'}</span>
+            {/* rtl-mirror：RTL 下水平翻转，让折叠/展开箭头方向跟着镜像（见 styles/rtl.css） */}
+            <span className="text-[11px] font-bold tracking-widest rtl-mirror inline-block">{sidebarCollapsed ? '››' : '‹‹'}</span>
           </button>
           {!sidebarCollapsed && (
             <span className="font-black text-[17px] tracking-tight cursor-pointer" onClick={() => navigate('/')}>
               <span className="bg-gradient-to-r from-[#ff6a10] to-[#ee0979] bg-clip-text text-transparent">{t('common.appName')}</span>
-              <span className="ml-1.5 text-[10px] font-medium tracking-[0.14em] text-[#555555] align-middle">STUDIO</span>
+              <span className="ms-1.5 text-[10px] font-medium tracking-[0.14em] text-[#555555] align-middle">STUDIO</span>
             </span>
           )}
-          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden ml-auto w-8 h-8 flex items-center justify-center text-[#666666] hover:text-white">✕</button>
+          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden ms-auto w-8 h-8 flex items-center justify-center text-[#666666] hover:text-white">✕</button>
         </div>
 
         {!sidebarCollapsed && (
@@ -104,12 +106,12 @@ export function AppLayout() {
                 <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-[#141414] border border-[#262626]">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   <span className="text-xs text-[#b0b0b0] truncate">{user?.email}</span>
-                  <button onClick={logout} className="ml-auto text-[11px] text-[#666666] hover:text-red-400 transition">{t('common.logout')}</button>
+                  <button onClick={logout} className="ms-auto text-[11px] text-[#666666] hover:text-red-400 transition">{t('common.logout')}</button>
                 </div>
                 {credits.loading ? (
                   <div className="px-2.5 text-[11px] text-[#666666]">{t('common.loading')}</div>
                 ) : credits.balance !== null ? (
-                  <button onClick={() => navigate('/pricing')} className="block px-2.5 text-[11px] text-[#9a9a9a] hover:text-white transition text-left" title={t('pricing.title')}>
+                  <button onClick={() => navigate('/pricing')} className="block px-2.5 text-[11px] text-[#9a9a9a] hover:text-white transition text-start" title={t('pricing.title')}>
                     {t('nav.credits', { n: credits.balance })}
                   </button>
                 ) : null}

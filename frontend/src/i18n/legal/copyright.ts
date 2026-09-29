@@ -75,6 +75,19 @@ export const COPYRIGHT_DOC: LegalDocPair = {
           },
         ],
       },
+      {
+        title: '6. AI 生成服务与所用模型',
+        blocks: [
+          {
+            k: 'p',
+            t: '本平台用于生成音乐音频的是第三方 AI 音乐生成服务，当前为音潮（Yinchao）v4.0 与天谱乐（TemPolor）tempolor-latest；提示词优化、歌词等文本处理由第三方文本模型协助完成，当前包括 Agnes AI agnes-2.0-flash 与 Google Gemini gemini-2.0-flash，此类文本模型不直接生成最终音乐音频。',
+          },
+          {
+            k: 'p',
+            t: '上述型号名称仅用于说明本平台调用了哪些第三方服务。第三方服务的模型内部实现、训练数据与基础设施由相应服务提供商自行管理，本平台不控制上述内容，不声称拥有任何第三方模型的版权或许可，亦不对其作超出公开信息的声明；本平台对生成流程的调用方式与参数配置负责。所用服务与模型版本可能调整，具体以平台当时实际提供的功能为准。',
+          },
+        ],
+      },
     ],
     closing:
       '使用本平台即表示您已阅读并同意本「AI 音乐版权政策」。本政策与《服务条款》不一致时，以《服务条款》为准。',
@@ -145,6 +158,19 @@ export const COPYRIGHT_DOC: LegalDocPair = {
           {
             k: 'p',
             t: 'If you intend to use AI-generated content commercially, publish it, or use it in a situation that needs legal certainty, consult a qualified lawyer first, confirm that the content does not breach the laws of your region, and accept responsibility for the legal consequences yourself. The platform provides information and technical description only, not legal advice.',
+          },
+        ],
+      },
+      {
+        title: '6. AI generation services and models',
+        blocks: [
+          {
+            k: 'p',
+            t: 'The music audio you receive is produced by third-party AI music generation services, currently Yinchao v4.0 and TemPolor tempolor-latest. Text stages such as prompt optimisation and lyrics are assisted by third-party text models, currently Agnes AI agnes-2.0-flash and Google Gemini gemini-2.0-flash; these text models do not generate the final music audio.',
+          },
+          {
+            k: 'p',
+            t: 'The model designations above state only which third-party services the platform calls. Each provider manages its own model implementation, training data and infrastructure; the platform does not control those matters, claims no copyright or licence in any third-party model, and makes no statement about them beyond the information its providers publish. The platform remains responsible for how the services are invoked and configured. The services and model versions used may change, and the features actually offered at the time prevail.',
           },
         ],
       },

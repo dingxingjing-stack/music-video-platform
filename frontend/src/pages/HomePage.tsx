@@ -62,7 +62,7 @@ export function HomePage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {cards.map((c) => (
-            <button key={c.key} onClick={() => navigate(c.to)} className="text-left rounded-[20px] p-6 bg-[#141414] border border-[#1f1f1f] hover:border-[#2a2a2a] hover:bg-[#171717] transition group relative overflow-hidden">
+            <button key={c.key} onClick={() => navigate(c.to)} className="text-start rounded-[20px] p-6 bg-[#141414] border border-[#1f1f1f] hover:border-[#2a2a2a] hover:bg-[#171717] transition group relative overflow-hidden">
               <div className={`absolute -right-10 -top-10 w-28 h-28 rounded-full bg-gradient-to-br ${c.accent} opacity-[0.08] blur-2xl group-hover:opacity-[0.14] transition`} />
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.accent} flex items-center justify-center text-white text-lg shadow-lg`}>{c.icon}</div>
               <h3 className="mt-4 text-[18px] font-semibold text-white">{c.title}</h3>

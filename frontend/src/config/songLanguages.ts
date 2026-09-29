@@ -38,6 +38,9 @@ export const SONG_LANGUAGES: SongLanguage[] = [
   { code: 'fr', name: 'French', nativeName: 'Français' },
   { code: 'it', name: 'Italian', nativeName: 'Italiano' },
   { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+  { code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia' },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
 ];
 
 /** 根据 code 取语言对象；未知 code 返回 undefined（调用方决定回退）。 */

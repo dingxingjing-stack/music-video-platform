@@ -1,0 +1,95 @@
+/* RTL 镜像补充 —— 仅对 [dir="rtl"]（阿拉伯语）生效。
+ *
+ * 背景：Tailwind 的 left/right、ml/mr、pl/pr、text-left/right、border-l/r
+ * 都是「物理方向」工具类，不会随 dir="rtl" 自动镜像。此前 <html dir="rtl">
+ * 已经由 useTranslation.ts 动态设置，但仓库里 0 条 RTL 规则 —— 结果是
+ * "文字右到左了、布局仍停在左到右"，比不切阿拉伯语更糟。
+ *
+ * 处理方式（不做全站改写）：
+ *   1. 应用外壳与活动路由页的物理类已改为逻辑属性
+ *      （start-*/end-*、ms-*/me-*、ps-*/pe-*、text-start、border-e），
+ *      它们天生随 dir 镜像，无需任何覆盖。
+ *   2. 本文件只补「逻辑属性表达不了」的少数情况 + 一层轻量兜底，
+ *      覆盖尚未逐个审计的组件，避免遗漏导致半镜像状态。
+ */
+
+/* ── 1. 逻辑属性表达不了的情况 ───────────────────────── */
+
+/* 侧栏：start-0 已让它在 RTL 停靠右侧；收起时须向「右」滑出屏幕，
+   而 -translate-x-full 是物理的负值 → RTL 下取正 100%。
+   Tailwind 3 用 --tw-translate-x 变量驱动 transform，故只改变量即可。 */
+[dir="rtl"] .-translate-x-full {
+  --tw-translate-x: 100%;
+}
+
+/* 折叠/展开箭头（›› / ‹‹）等需要水平翻转的图标 */
+[dir="rtl"] .rtl-mirror {
+  transform: scaleX(-1);
+}
+
+/* ── 2. 轻量兜底：镜像剩余物理方向工具类 ───────────────── */
+
+/* 文本对齐 */
+[dir="rtl"] .text-left {
+  text-align: right;
+}
+[dir="rtl"] .text-right {
+  text-align: left;
+}
+
+/* 绝对定位 */
+[dir="rtl"] .left-0 {
+  left: auto;
+  right: 0;
+}
+[dir="rtl"] .left-3 {
+  left: auto;
+  right: 0.75rem;
+}
+[dir="rtl"] .right-0 {
+  right: auto;
+  left: 0;
+}
+[dir="rtl"] .right-3 {
+  right: auto;
+  left: 0.75rem;
+}
+
+/* 外边距 / 内边距（含 auto 与常用 .5 步进） */
+[dir="rtl"] .ml-auto {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .mr-auto {
+  margin-right: 0;
+  margin-left: auto;
+}
+[dir="rtl"] .ml-1 { margin-left: 0; margin-right: 0.25rem; }
+[dir="rtl"] .ml-1\.5 { margin-left: 0; margin-right: 0.375rem; }
+[dir="rtl"] .ml-2 { margin-left: 0; margin-right: 0.5rem; }
+[dir="rtl"] .ml-3 { margin-left: 0; margin-right: 0.75rem; }
+[dir="rtl"] .ml-4 { margin-left: 0; margin-right: 1rem; }
+[dir="rtl"] .mr-1 { margin-right: 0; margin-left: 0.25rem; }
+[dir="rtl"] .mr-1\.5 { margin-right: 0; margin-left: 0.375rem; }
+[dir="rtl"] .mr-2 { margin-right: 0; margin-left: 0.5rem; }
+[dir="rtl"] .mr-3 { margin-right: 0; margin-left: 0.75rem; }
+[dir="rtl"] .mr-4 { margin-right: 0; margin-left: 1rem; }
+
+[dir="rtl"] .pl-1 { padding-left: 0; padding-right: 0.25rem; }
+[dir="rtl"] .pl-2 { padding-left: 0; padding-right: 0.5rem; }
+[dir="rtl"] .pl-3 { padding-left: 0; padding-right: 0.75rem; }
+[dir="rtl"] .pl-4 { padding-left: 0; padding-right: 1rem; }
+[dir="rtl"] .pr-1 { padding-right: 0; padding-left: 0.25rem; }
+[dir="rtl"] .pr-2 { padding-right: 0; padding-left: 0.5rem; }
+[dir="rtl"] .pr-3 { padding-right: 0; padding-left: 0.75rem; }
+[dir="rtl"] .pr-4 { padding-right: 0; padding-left: 1rem; }
+
+/* 单边边框 */
+[dir="rtl"] .border-l {
+  border-left-width: 0;
+  border-right-width: 1px;
+}
+[dir="rtl"] .border-r {
+  border-right-width: 0;
+  border-left-width: 1px;
+}
