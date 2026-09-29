@@ -14,6 +14,21 @@ interface TaskSummary {
   updated_at: number;
 }
 
+// 后端 ai_tasks.state 的内部取值 → 用户可读状态词。
+// 内部状态标识（completed_with_stems_failed 等）绝不直出；
+// 刻意复用通用词，不用 aiStage.generating / aiStage.separating（那两条带模型名）。
+const STATE_TEXT_KEY: Record<string, string> = {
+  pending: 'aiStage.pending',
+  processing: 'aiStage.processing',
+  generating: 'aiStage.processing',
+  separating: 'aiStage.processing',
+  uploading: 'aiStage.uploading',
+  completed: 'aiStage.completed',
+  completed_with_stems_failed: 'aiStage.completed',
+  failed: 'aiStage.failed',
+  cancelled: 'aiStage.cancelled',
+};
+
 export default function MyWorks() {
   const { t, loading: i18nLoading } = useTranslation();
   const navigate = useNavigate();
@@ -22,9 +37,13 @@ export default function MyWorks() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
   const [stemRetrying, setStemRetrying] = useState<Set<string>>(new Set());
+  // 正在生成分享链接的任务（飞轮：分享按钮的 in-flight 状态）
+  const [sharing, setSharing] = useState<Set<string>>(new Set());
 
   // completed_with_stems_failed 也是可播放/可下载的完成态（仅缺分轨）
   const isDone = (s: string) => s === 'completed' || s === 'completed_with_stems_failed';
+
+  const stateText = (s: string) => t(STATE_TEXT_KEY[s] ?? 'aiStage.processing');
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -118,6 +137,38 @@ export default function MyWorks() {
     }
   };
 
+  // 分享（PLG 病毒飞轮）：向后端申请签名令牌 → 拼出公开分享链接。
+  // 后端会校验作品归属，只能分享自己的作品；令牌为 HMAC 签名，不含 PII。
+  const handleShare = async (taskId: string) => {
+    setSharing((prev) => new Set(prev).add(taskId));
+    try {
+      const data = await authFetch<{ token: string }>(
+        api.url(`/api/v1/share/task/${taskId}`),
+        { method: 'POST' }
+      );
+      const url = `${window.location.origin}/share/${data.token}`;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'Melovar', text: '我用 AI 做了一首歌', url });
+          return;
+        }
+        await navigator.clipboard.writeText(url);
+        alert('分享链接已复制');
+      } catch {
+        // 用户取消分享或剪贴板不可用：静默忽略，不打扰
+      }
+    } catch (e) {
+      console.error('生成分享链接失败:', e);
+      alert('生成分享链接失败，请稍后重试');
+    } finally {
+      setSharing((prev) => {
+        const ns = new Set(prev);
+        ns.delete(taskId);
+        return ns;
+      });
+    }
+  };
+
   // 文案包是异步 chunk：未就绪时 t() 会原样返回 key（myCreations.empty），
   // 页面就会把 "myCreations.empty" 当成空状态标题显示出来 —— 必须一起等。
   if (loading || i18nLoading) {
@@ -176,13 +227,13 @@ export default function MyWorks() {
               <h3 className="text-white text-sm font-medium truncate">
                 {t('myCreations.taskPrefix')} {task.task_id.substring(0, 8)}
                 {isDone(task.state) && (
-                  <span className="ml-2 inline-block align-middle px-1.5 py-0.5 rounded-md bg-[#ff6a10]/15 border border-[#ff6a10]/30 text-[#ff8a3d] text-[10px] font-semibold tracking-wide">
+                  <span className="ms-2 inline-block align-middle px-1.5 py-0.5 rounded-md bg-[#ff6a10]/15 border border-[#ff6a10]/30 text-[#ff8a3d] text-[10px] font-semibold tracking-wide">
                     {t('common.aiGenerated')}
                   </span>
                 )}
               </h3>
               <p className="text-xs text-[#6a6a6a]">
-                {task.state} · {formatTime(task.progress)} · {new Date(task.created_at * 1000).toLocaleDateString()}
+                {stateText(task.state)} · {formatTime(task.progress)} · {new Date(task.created_at * 1000).toLocaleDateString()}
               </p>
               {isDone(task.state) && (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -195,15 +246,11 @@ export default function MyWorks() {
                       {t(`aiStem.${s}`)} ↓
                     </button>
                   ))}
+                  {/* 分轨失败：production 无可用分轨能力，重试必然失败，故只陈述事实不提供操作 */}
                   {task.stems_state === 'failed' && (
-                    <button
-                      onClick={() => handleRetryStems(task.task_id)}
-                      disabled={stemRetrying.has(task.task_id)}
-                      title={t('aiGen.stemsFailedHint')}
-                      className="px-2 py-0.5 rounded-lg bg-[#0f0f0f] border border-[#262626] text-[#b0b0b0] text-[11px] hover:text-white disabled:opacity-40"
-                    >
-                      {stemRetrying.has(task.task_id) ? t('aiGen.statusSeparating') : t('aiGen.retryStems')}
-                    </button>
+                    <span className="px-2 py-0.5 rounded-lg bg-[#0f0f0f] border border-[#262626] text-[#8a8a8a] text-[11px]">
+                      {t('aiGen.stemsFailedHint')}
+                    </span>
                   )}
                 </div>
               )}
@@ -221,6 +268,15 @@ export default function MyWorks() {
                 onClick={() => handleDownload(task.task_id, 'full')}>
                 {t('myCreations.download')}
               </button>
+              {isDone(task.state) && (
+                <button
+                  className="px-3 py-1.5 bg-[#1a1a1a] border border-[#262626] text-white rounded-xl text-xs hover:bg-[#222222] disabled:opacity-40"
+                  disabled={sharing.has(task.task_id)}
+                  onClick={() => handleShare(task.task_id)}
+                >
+                  {sharing.has(task.task_id) ? '...' : t('myCreations.share')}
+                </button>
+              )}
               <button
                 className="px-3 py-1.5 bg-[#1a1a1a] border border-[#262626] text-[#ff6b6b] rounded-xl text-xs hover:bg-[#1f1a1a] disabled:opacity-40"
                 disabled={!isDone(task.state) && !deleting.has(task.task_id) && task.state !== 'separating'}

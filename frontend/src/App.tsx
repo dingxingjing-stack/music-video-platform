@@ -11,7 +11,6 @@ const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.H
 const CreateMusicPage = lazy(() => import('./pages/CreateMusicPage').then(m => ({ default: m.CreateMusicPage })));
 const AudioToolsPage = lazy(() => import('./pages/AudioToolsPage').then(m => ({ default: m.AudioToolsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const TrackStudio = lazy(() => import('./pages/TrackStudio').then(m => ({ default: m.TrackStudio })));
 const MyWorks = lazy(() => import('./pages/MyWorks'));
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService').then(m => ({ default: m.TermsOfService })));
 const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
@@ -22,6 +21,8 @@ const P2AudioSeparationPage = lazy(() => import('./pages/P2AudioSeparationPage')
 const P2AudioMasteringPage = lazy(() => import('./pages/P2AudioMasteringPage').then(m => ({ default: m.P2AudioMasteringPage })));
 const P2LyricPage = lazy(() => import('./pages/P2LyricPage').then(m => ({ default: m.P2LyricPage })));
 const PricingPage = lazy(() => import('./pages/PricingPage').then(m => ({ default: m.PricingPage })));
+// 公开分享落地页（PLG 病毒飞轮承接点）：无需登录、不套 AppLayout、不过 ConsentGuard
+const SharePage = lazy(() => import('./pages/SharePage').then(m => ({ default: m.SharePage })));
 
 const Loading = () => {
   const { t } = useTranslation();
@@ -41,6 +42,8 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         {/* 定价页（公开，无需登录） */}
         <Route path="/pricing" element={<PricingPage />} />
+        {/* 分享落地页（公开，凭签名令牌；病毒飞轮的入口） */}
+        <Route path="/share/:token" element={<SharePage />} />
 
         <Route element={<AppLayout />}>
           {/* New primary navigation */}
@@ -53,8 +56,6 @@ export default function App() {
           <Route path="/audio-tools/lyrics" element={<ConsentGuard><PageTransition><P2LyricPage /></PageTransition></ConsentGuard>} />
           <Route path="/my-works" element={<ConsentGuard><PageTransition><MyWorks /></PageTransition></ConsentGuard>} />
           <Route path="/settings" element={<ConsentGuard><PageTransition><SettingsPage /></PageTransition></ConsentGuard>} />
-          {/* Legacy hidden capability：Track Studio（stems/task client 宿主，不导航不宣传，保留可达） */}
-          <Route path="/track-studio" element={<ConsentGuard><PageTransition><TrackStudio /></PageTransition></ConsentGuard>} />
 
           {/* 政策页面对外公开：无需登录、无需同意公测协议即可访问（支付服务商审核与合规要求） */}
           <Route path="/legal/terms" element={<PageTransition><TermsOfService /></PageTransition>} />

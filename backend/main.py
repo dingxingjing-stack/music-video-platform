@@ -191,7 +191,7 @@ from app.services.inference import (
     TaskStatus,
 )
 from app.services.inference.gpt_sovits import GPTSovitsService
-from app.services.inference.factory import _SERVICE_REGISTRY, _ALIASES
+from app.services.inference.factory import _SERVICE_REGISTRY  # 仅 tts/run 与启动日志使用（predict 派发已于 P5-B.7 退休）
 from app.services.inference.mock import MockInferenceService
 from app.services.inference.llm_factory import llm_factory
 # Note: WorkflowEngine, batch_queue, RemixService are now loaded via dedicated routers
@@ -287,13 +287,27 @@ factory = InferenceServiceFactory(_config)
 # FastAPI app
 # ---------------------------------------------------------------------------
 
+# P5-B.14：production 不再匿名公开内部 API 地图。
+# 依据：P5-A 实测前端对 /docs、/redoc、/openapi.json 引用均为 0；仓库内亦无运维/监控端引用。
+_IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
+
 app = FastAPI(
-    title="Inference Service API",
-    description="AI-powered TTS, Music, and Video generation via HF Spaces",
+    title="Melovar API",
+    description="Melovar AI music platform API",
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
+    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
 )
+
+
+def _reject_in_production() -> None:
+    """P5-B：运维/调试端点在 production 一律对外表现为「端点不存在」。
+
+    与 P0-7 `runpod-smoke-test` 的默认 404 形态保持一致，不给匿名探测者任何区分信息。
+    """
+    if _IS_PRODUCTION:
+        raise HTTPException(status_code=404, detail="Not Found")
 
 # Generated output directories (ACE-Step/MusicGen/MV 写入共享卷；不再公开静态挂载，下载走 R2 预签名)
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
@@ -346,8 +360,6 @@ _setup_sentry_lazy()
 # ---------- router 挂载 ----------
 # 开发阶段：使用 Gemini 临时方案（免费额度）
 # 生产阶段：使用 ai_music (Agnes AI 主力 + Gemini 备用 + Mureka 音频)
-# HeartMuLa 本地推理（HF Spaces / RunPod / Kaggle T4）
-from app.routers import heartmula
 from app.routers import ai_music
 from app.routers import hf_music
 from app.routers import stems_export
@@ -363,6 +375,7 @@ from app.routers import ai_lyrics
 from app.routers import audio_processing
 from app.routers import song_continuation
 from app.routers import subtitle_recognition
+from app.routers import share as share_router
 # from app.routers import one_click_publish  # P1: disabled (OAuth URLs are placeholder stubs)
 from app.routers import feedback
 # app.include_router(mv_app,       prefix="/api/v1/mv")  # P0-3: disabled MV router (MusicGen/MV)
@@ -370,7 +383,6 @@ app.include_router(workflow_app, prefix="/api/v1/workflow")
 app.include_router(batch_app,    prefix="/api/v1/batch")
 # app.include_router(hf_music.router, prefix="/api/v1/ai-hf")  # P0-2: disabled HF music router (MusicGen/Mock fallback)
 app.include_router(ai_music.router)
-app.include_router(heartmula.router)  # HeartMuLa 本地推理 /api/v1/heartmula
 app.include_router(user_app,    prefix="/api/v1/user")
 app.include_router(audio_app,   prefix="/api/v1/audio")
 app.include_router(stems_export.router)
@@ -392,6 +404,8 @@ app.include_router(audio_processing.router, prefix="/api/v1/audio")
 # song_continuation.py 与 continuation_service.py 均保留，仅停止路由注册。
 # app.include_router(song_continuation.router)
 app.include_router(subtitle_recognition.router)
+# 公开分享（PLG 病毒飞轮）：凭 HMAC 签名令牌读取作品，无需登录、不返回 PII
+app.include_router(share_router.router)
 # app.include_router(one_click_publish.router)  # P1: disabled (scaffold one-click publish)
 app.include_router(social_app)
 app.include_router(collab_app)
@@ -519,7 +533,11 @@ async def services_status():
     获取所有外部服务的配置和连通性状态。
 
     用于前端/运维快速排查：哪些服务已配置、哪些正常、哪些降级。
+
+    P5-B.1 安全收口：production 下返回 404。本端点会回传 10 个外部服务的
+    configured/not_configured 与其环境变量名，属生产配置指纹，不得匿名可读。
     """
+    _reject_in_production()
     services = [
             {"name": "agnes", "label": "Agnes AI (主力文本模型)", "env_var": "AGNES_API_KEY",
              "description": "歌词生成、文案优化、MV 概念生成（主力，永久免费无限额度）", "category": "llm"},
@@ -597,7 +615,11 @@ class LLMResponse(BaseModel):
 
 
 @app.post("/api/v1/llm/generate", tags=["llm"], response_model=LLMResponse)
-async def llm_generate(request: LLMRequest):
+async def llm_generate(
+    request: LLMRequest,
+    user_id: str = Depends(get_verified_user_id),
+):
+    """P5-B.3 安全收口：需有效 Supabase JWT（production 匿名 → 401）。"""
     """
     Generate text using LLM (NVIDIA Nemotron / Gemini with auto-fallback).
 
@@ -626,7 +648,11 @@ async def llm_generate(request: LLMRequest):
 
 
 @app.post("/api/v1/llm/stream", tags=["llm"])
-async def llm_stream(request: LLMRequest):
+async def llm_stream(
+    request: LLMRequest,
+    user_id: str = Depends(get_verified_user_id),
+):
+    """P5-B.3 安全收口：需有效 Supabase JWT（production 匿名 → 401）。"""
     """
     Stream LLM response as Server-Sent Events (SSE).
 
@@ -655,7 +681,12 @@ async def llm_stream(request: LLMRequest):
 
 @app.get("/api/v1/llm/health", tags=["llm"])
 async def llm_health():
-    """Check LLM provider availability."""
+    """Check LLM provider availability.
+
+    P5-B.2 安全收口：production 下返回 404。本端点会对每个已配置 LLM provider
+    各发一次真实补全请求（"hi"），匿名即可驱动外部付费/配额调用。
+    """
+    _reject_in_production()
     await llm_factory._ensure_initialized()
     results = {}
     for name, client in llm_factory.clients.items():
@@ -681,143 +712,20 @@ from app.services.inference.llm_factory import MODELS
 
 
 @app.post("/api/v1/predict/{service_type}", tags=["predictions"])
-async def predict(
-    service_type: str,
-    request: Request,
-    user_id: Optional[str] = Depends(get_verified_user_id_optional),
-):
+async def predict(service_type: str):
+    """P5-B.7：旧 HF-Space inference-factory 端点族已退休（410 Gone）。
+
+    原实现按 `_SERVICE_REGISTRY` 分派 tts / music / video / midi / mureka
+    （GPT-SoVITS、MusicGen、CogVideoX 等 Hugging Face Space 后端），
+    既不属于当前 Melovar 生产架构（.env.example 里根本没有 *_SPACE_URL 变量），
+    又对失败结果仍返回 HTTP 200。真实生歌请改用 POST /api/v1/ai/generate。
     """
-    Submit a prediction request to an inference service.
-
-    Args:
-        service_type: One of "tts", "music", "video", or "mock".
-
-    Body (Mock example):
-        {
-            "task_id": "abc123",
-            "duration": 10.0,
-            "tick_interval": 1.0
-        }
-
-    Body (TTS example):
-        {
-            "text": "Hello world",
-            "reference_audio": "<base64 encoded wav bytes>",
-            "language": "zh"
-        }
-
-    Returns:
-        PredictResult serialized as JSON.
-    """
-    canonical = _ALIASES.get(service_type.lower(), service_type.lower())
-
-    if canonical not in _SERVICE_REGISTRY:
-        # Check if it's the special "mock" type
-        if service_type.lower() != "mock":
-            available = ", ".join(_SERVICE_REGISTRY.keys())
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown service type '{service_type}'. Available: {available}",
-            )
-
-    # Parse request body
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=422, detail="Invalid JSON body")
-
-    # P0: Quota protection for non-mock predict (GPU cost)
-    if service_type.lower() != "mock":
-        from app.services.ai_limits import reserve_generation, refund_generation, budget_hard_stop_reached
-        if budget_hard_stop_reached():
-            raise HTTPException(status_code=429, detail="今日 GPU 预算已用尽，请明天再试")
-        # 身份唯一可信来源 = Authorization Bearer JWT → verified auth.users.id；
-        # 绝不接受 X-User-ID / body.user_id / client.host。缺 JWT → 401。
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid or missing Authorization token")
-        user_key = user_id
-        reserved = reserve_generation(user_key)
-        if not reserved["success"]:
-            raise HTTPException(status_code=429, detail=reserved["error"])
-    else:
-        user_key = None
-        reserved = False  # type: ignore
-
-    # Build PredictRequest
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    payload = body.get("payload", {})
-
-    pred_request = PredictRequest(
-        service_type=canonical,
-        task_id=task_id,
-        payload=payload,
-        extra=body,  # forward all fields as extra
-    )
-
-    # Dispatch: mock → real service
-    if service_type.lower() == "mock":
-        duration = float(body.get("duration", 10.0))
-        tick_interval = float(body.get("tick_interval", 1.0))
-
-        # Allow tests to inject a broadcast collector via app.state
-        test_collector = getattr(request.app.state, "broadcast_collector", None)
-
-        if test_collector is not None:
-            async def _cb(tid: str, result: PredictResult) -> None:
-                await test_collector(tid, result)
-        else:
-            _cb = _websocket_broadcast
-
-        svc = MockInferenceService(
-            service_type="mock",
-            duration=duration,
-            tick_interval=tick_interval,
-            broadcast=_cb,
-        )
-
-        pred_request = PredictRequest(
-            service_type="mock",
-            task_id=task_id,
-            payload=payload,
-            extra=body,
-        )
-    else:
-        # Create service and run prediction — wire broadcast callback
-        try:
-            svc = factory.create(
-                canonical,
-                broadcast=_websocket_broadcast,
-            )
-        except Exception as exc:
-            logger.error("Failed to create service '%s': %s", canonical, exc)
-            if service_type.lower() != "mock" and 'user_key' in locals() and 'reserved' in locals() and reserved:
-                try:
-                    from app.services.ai_limits import refund_generation
-                    refund_generation(user_key)
-                except Exception:
-                    pass
-            raise HTTPException(status_code=503, detail=f"Service unavailable: {exc}")
-
-    try:
-        result = await svc.predict(pred_request)
-    except Exception as exc:
-        logger.exception("Prediction failed for task %s", task_id)
-        if service_type.lower() != "mock" and 'user_key' in locals() and 'reserved' in locals() and reserved:
-            try:
-                from app.services.ai_limits import refund_generation
-                # Only refund if final result is failed (predict returns FAILED status instead of raising)
-                # For exception case, always refund
-                refund_generation(user_key)
-            except Exception:
-                pass
-        raise HTTPException(
-            status_code=500,
-            detail=f"Prediction error: {exc}",
-        )
-
-    return JSONResponse(
-        content=result.to_dict(),
-        status_code=200 if result.status != TaskStatus.FAILED else 200,
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            f"Predict service '{service_type}' has been retired. "
+            "Use POST /api/v1/ai/generate."
+        ),
     )
 
 
@@ -874,55 +782,19 @@ async def websocket_progress(websocket: WebSocket, task_id: str):
 
 
 @app.post("/api/v1/mock/run", tags=["mock"])
-async def mock_run(request: Request):
+async def mock_run():
+    """P5-B.6：模拟推理端点已退休（410 Gone）。
+
+    原实现匿名接受 duration / tick_interval 且不做上限约束，可在后台创建
+    近乎无限的广播任务，并在终态回传伪造的 http://localhost:8000/... result_url。
     """
-    Start a simulated inference task in the background and return the task_id.
-
-    Connect to ``/ws/progress/{task_id}`` to receive real-time progress updates.
-
-    Body::
-        {
-            "duration": 10.0,
-            "tick_interval": 1.0
-        }
-
-    Returns::
-        {
-            "task_id": "abc123",
-            "status": "started",
-            "websocket": "/ws/progress/abc123"
-        }
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    task_id = body.get("task_id") or str(uuid.uuid4())[:8]
-    duration = float(body.get("duration", 10.0))
-    tick_interval = float(body.get("tick_interval", 1.0))
-
-    svc = MockInferenceService(
-        service_type="mock",
-        duration=duration,
-        tick_interval=tick_interval,
-        broadcast=_websocket_broadcast,
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Mock inference endpoint has been retired. "
+            "Use POST /api/v1/ai/generate."
+        ),
     )
-
-    # Run predict in background; it will broadcast progress to WebSocket clients
-    asyncio.create_task(svc.predict(PredictRequest(
-        service_type="mock",
-        task_id=task_id,
-        payload={},
-        extra=body,
-    )))
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "duration": duration,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -1364,80 +1236,8 @@ async def watermark_apply(request: Request):
                 pass
 
 
-# ---------------------------------------------------------------------------
-# AI Lyrics generation endpoint
-# ---------------------------------------------------------------------------
 
 
-@app.post("/api/v1/lyrics/generate", tags=["lyrics"])
-async def generate_lyrics(request: Request):
-    """Generate structured lyrics via LLM. Body: prompt, style, language, line_count."""
-    body = await request.json()
-    prompt = body.get("prompt", "")
-    style = body.get("style", "pop")
-    language = body.get("language", "zh")
-    line_count = int(body.get("line_count", 24))
-
-    if not prompt:
-        raise HTTPException(status_code=422, detail="'prompt' is required")
-
-    system_prompt = (
-        f"You are a lyricist. Write lyrics as JSON. Language: {language}. Style: {style}. "
-        "Return ONLY: {\"lines\":[{\"time\":<seconds>,\"text\":\"...\"}]}. "
-        "Make time values evenly spaced across ~3-4 minutes. Include [Verse], [Chorus] markers."
-    )
-    user_prompt = f"Write a {style} song about: {prompt}. ~{line_count} lines. Language: {language}."
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-    # generate_safe 永不抛异常：单个/全部大模型失败时返回 mock 占位文本，
-    # 保证 /lyrics/generate 始终 200，不阻断前端。
-    result = await llm_factory.generate_safe(
-        messages=messages, temperature=0.8, max_tokens=2048
-    )
-    return _parse_lyric_response(result["text"], style, language)
-
-
-def _parse_lyric_response(raw: str, style: str, language: str) -> dict:
-    import json as _json, re
-    cleaned = raw.strip()
-    cleaned = re.sub(r'^```(?:json)?\s*\n', '', cleaned)
-    cleaned = re.sub(r'\n```\s*$', '', cleaned)
-    try:
-        parsed = _json.loads(cleaned)
-        if isinstance(parsed, dict) and "lines" in parsed:
-            return {"lyric_lines": parsed["lines"], "metadata": {"style": style, "language": language, "generated_by": "llm"}, "raw_lrc": _lines_to_lrc(parsed["lines"])}
-    except (_json.JSONDecodeError, KeyError):
-        pass
-    # Fallback plain text
-    lyric_lines: list[dict] = []
-    for i, line in enumerate(raw.strip().split("\n")):
-        line = line.strip()
-        if not line: continue
-        m = re.match(r'\[(\d{2}):(\d{2})(?:\.(\d+))?\]\s*(.+)', line)
-        if m:
-            t = int(m.group(1))*60 + int(m.group(2)) + (int(m.group(3).ljust(3,"0")[:3])/1000 if m.group(3) else 0)
-            lyric_lines.append({"time": t, "text": m.group(4).strip()})
-        elif re.match(r'\[[A-Za-z ]+\]', line):
-            lyric_lines.append({"time": None, "text": line})
-        else:
-            lyric_lines.append({"time": i * 5.0, "text": line})
-    return {"lyric_lines": lyric_lines, "metadata": {"style": style, "language": language, "generated_by": "llm", "parsed_from": "text"}, "raw_lrc": _lines_to_lrc(lyric_lines)}
-
-
-def _lines_to_lrc(lines: list[dict]) -> str:
-    parts: list[str] = []
-    for line in lines:
-        t = line.get("time")
-        text = line.get("text", "")
-        if t is not None:
-            m = int(t // 60); s = int(t % 60); ms = int((t - int(t)) * 100)
-            parts.append(f"[{m:02d}:{s:02d}.{ms:02d}]{text}")
-        else:
-            parts.append(text)
-    return "\n".join(parts)
 async def mix_render(request: Request):
     """
     Render a multi-track stereo mix with per-track volume, pan, 3-band EQ,
