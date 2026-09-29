@@ -221,9 +221,11 @@ from app.middleware.privacy import PrivacyMiddleware
 from app.routers.social import router as social_app
 
 # ---------- Collaboration system router ----------
+# 导入保留（未注册）：P1 disabled，见下方 include_router 处注释
 from app.routers.collaboration import router as collab_app
 
 # ---------- Copyright check router ----------
+# 导入保留（未注册）：P1 disabled，见下方 include_router 处注释
 from app.routers.copyright import router as copyright_app
 
 # ---------- Notification system router ----------
@@ -238,8 +240,7 @@ from app.routers.subscription import router as sub_app
 # ---------- Asset store router ----------
 # from app.routers.asset_store import router as store_app  # P1: disabled (mock Asset Store surface)
 
-# ---------- Copyright detection router ----------
-from app.routers.copyright import router as copyright_app
+# 注：copyright 路由已在上面 227 行导入（此处原有重复导入，2026-09-29 清理）。
 
 # ---------- Audio quality test router ----------
 from app.routers.audio_quality import router as audio_quality_app
@@ -395,7 +396,10 @@ app.include_router(ai_music.router)
 app.include_router(user_app,    prefix="/api/v1/user")
 app.include_router(audio_app,   prefix="/api/v1/audio")
 app.include_router(stems_export.router)
-app.include_router(community.router)
+# P1: disabled community router —— community_service._generate_mock_tracks() 用 random 生成
+#   全部曲目（播放量/点赞/评论/时长/创建时间全是随机数），不读任何数据库；且榜单端点为公开无鉴权。
+#   对外提供随机假榜单会误导用户，故停止注册。前端 Community/PathDPage 均不在路由表内（本就不可达）。
+# app.include_router(community.router)
 app.include_router(pitch_correction.router)
 app.include_router(chord_track.router)
 app.include_router(comping.router)
@@ -416,9 +420,15 @@ app.include_router(subtitle_recognition.router)
 # 公开分享（PLG 病毒飞轮）：凭 HMAC 签名令牌读取作品，无需登录、不返回 PII
 app.include_router(share_router.router)
 # app.include_router(one_click_publish.router)  # P1: disabled (scaffold one-click publish)
-app.include_router(social_app)
-app.include_router(collab_app)
-app.include_router(copyright_app)
+app.include_router(social_app)  # 保留：social_storage 为 SQLite 真实持久化 + 写端点强制 JWT
+# P1: disabled collaboration router —— 会话/操作历史全部存在进程内 dict（"Mock Storage"），
+#   多副本部署下不共享、重启即丢；且全仓零调用方（前端无 collaboration 引用）。
+# app.include_router(collab_app)
+# P1: disabled copyright router —— 版权检测为纯随机实现（np.random 生成特征向量与相似度，
+#   再据此给出 safe/low/medium/high 风险等级），会把随机结果当版权结论展示给用户；
+#   另有未净化 file.filename 直接拼 /tmp 路径（路径穿越）且端点无鉴权。
+#   重新启用前必须先接真实指纹库 + 加鉴权 + 修文件名净化。
+# app.include_router(copyright_app)
 app.include_router(notif_app)
 app.include_router(msg_app)
 app.include_router(sub_app)

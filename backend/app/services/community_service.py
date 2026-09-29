@@ -7,8 +7,11 @@
 - 趋势算法 (新歌 + 热门)
 - 用户作品展示
 
-注意：当前使用内存 Mock 数据
+注意：当前使用内存 Mock 数据（全部字段由 random 生成，不读任何数据库）。
 正式版本需要数据库支持 (PostgreSQL/SQLite)
+
+⛔ 已停用（2026-09-29）：community router 不再在 main.py 中注册（见其中 P1 注释）。
+   本模块保留但无任何已注册路由引用它，重新启用前必须先接真实数据源。
 """
 
 from typing import List, Dict, Optional

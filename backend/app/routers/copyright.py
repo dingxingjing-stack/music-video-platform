@@ -1,6 +1,16 @@
 """
 版权检测系统 - 音频指纹服务
 
+⛔ 已停用（2026-09-29）：本 router 不再在 main.py 中注册。
+   原因（三项，重新启用前必须全部修掉）：
+     1. 纯随机实现 —— extract_audio_features() 返回 np.random.rand(128)，
+        calculate_similarity() 返回 np.random.uniform(0.3, 1.0)，
+        再据此输出 safe/low/medium/high 版权风险等级。会把随机数当版权结论展示给用户，
+        属"危险型假功能"（可能误报"安全"而放过侵权，也可能误报"高风险"）。
+     2. 未净化 file.filename 直接拼成 /tmp/{filename} 写盘 → 路径穿越。
+     3. 全部端点无鉴权（无 get_verified_user_id）。
+   详见 main.py 中 P1 注释。
+
 功能:
 - 音频特征提取 ( chroma, mel, tempogram)
 - 指纹生成 (基于 spectral peaks)

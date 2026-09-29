@@ -1,6 +1,12 @@
 """
 社区排行榜路由 (Community Charts Router)
 
+⛔ 已停用（2026-09-29）：本 router 不再在 main.py 中注册。
+   原因：community_service._generate_mock_tracks() 用 random 生成全部曲目
+   （播放量/点赞/评论/时长/创建时间均为随机数），不读任何数据库；且榜单端点公开无鉴权。
+   对外提供随机假榜单会误导用户。
+   重新启用前必须先接真实数据源（PostgreSQL/SQLite）。详见 main.py 中 P1 注释。
+
 API 端点:
 GET  /api/v1/community/hot — 热门排行榜
 GET  /api/v1/community/new — 新歌榜

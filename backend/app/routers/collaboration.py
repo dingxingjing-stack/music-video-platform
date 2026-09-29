@@ -1,6 +1,11 @@
 """
 协作编辑路由 (Collaboration Router)
 
+⛔ 已停用（2026-09-29）：本 router 不再在 main.py 中注册。
+   原因：会话与操作历史全部存在进程内 dict（源码内标注 "Mock Storage"），
+   多副本部署下不共享、进程重启即丢失；且全仓零调用方（前端无 collaboration 引用）。
+   详见 main.py 中 P1 注释。
+
 功能:
 - 创建/加入协作会话
 - 实时同步项目状态 (WebSocket)
