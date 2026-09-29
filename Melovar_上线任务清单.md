@@ -34,7 +34,7 @@ python scripts/preflight_check.py
 |---|---|---|
 | env/required | PASS | 6 项齐全 |
 | env/optional | WARN | 缺 `LEMONSQUEEZY_WEBHOOK_SECRET`、`ADMIN_API_TOKEN` |
-| provider/yinchao | **FAIL** | 音潮 key 探针 401，见任务三 |
+| provider/yinchao | **假 FAIL → 已解决** | 401 是本地用户级环境变量里的旧 key 遮蔽所致，新 key 实测 404（有效），见任务三 |
 | provider/tempolor | PASS | 200000 |
 | routing / callback / share / frontend | PASS | preflight 进程内静态断言，非 pytest |
 | db/refund_columns | SKIP | 本地是 sqlite，需生产连接串下重跑 |
@@ -48,25 +48,37 @@ python scripts/preflight_check.py
 
 ---
 
-## 三、【P0·阻塞】确认音潮 key 是否真失效
+## 三、【已解决·不再是阻塞】音潮 key 没有失效，是本地环境变量遮蔽造成的假象
 
-**为什么**：体检里 `provider/yinchao` 返回 401。但这是我探针脚本的控制组逻辑，
-存在假阳性可能——所以**不能直接判死刑，先人工确认**。
+**结论（2026-09-29 实测，已闭环）**：音潮新 key `sk_Nvp2X...` **是有效的**。
+之前体检报 401 是**假阳性**，根因与 key 本身无关。
 
-**怎么做（三选一，从省事到彻底）**：
+**根因**：Windows **用户级环境变量**（注册表 `HKCU\Environment`）里残留了一把
+**旧的** `YINCHAO_API_KEY`（`sk_7stS9...`）。而 `main.py` 用的是
+`load_dotenv(override=False)`——已存在的环境变量不会被 `.env` 覆盖，
+于是这把旧 key **永久遮蔽**了 `backend/.env` 里的新 key。
 
-1. **看后台**：登录音潮控制台，看 key 状态是否"已停用/已过期/额度为 0"。
-2. **用真实生歌试**（最直接，会产生少量费用）：在网站前端选一首中文歌生成，
-   观察是"正常出歌"还是"秒失败并走天谱乐"。
-   - 出歌 → key 正常，是我脚本误报，**不用管**。
-   - 失败 → key 真有问题，走第 3 步。
-3. **换 key**：在音潮后台重新生成一把 key，替换 `backend/.env` 的
-   `YINCHAO_API_KEY`（以及 Render 面板同名字段），重跑体检。
+**对照实验（零成本：查一个不存在的 task_id，不产生生歌费用）**：
 
-**验证**：`preflight_check.py` 里 `provider/yinchao` 变 PASS。
+| key 来源 | 前缀 | `GET /api/v1/task/query` 结果 |
+|---|---|---|
+| 用户级环境变量（旧） | `sk_7stS9...` | **HTTP 401 `invalid API Key`** |
+| `backend/.env`（你给的） | `sk_Nvp2X...` | **HTTP 404 `任务ID不存在或无权限访问`** ← 鉴权已通过 |
 
-**风险**：音潮是 11 种语言的主力 Provider。如果它真挂了，当前**只有天谱乐兜底**
-（且天谱乐对 hi/id/ar 之外的语种能力未实测）。别带着一把失效的 key 上线。
+404 = 鉴权通过、只是任务不存在，这正是"key 有效"的判据（401 才是失效）。
+
+**已执行的修复**：删除 `HKCU\Environment` 里的 `YINCHAO_API_KEY`，并广播
+`WM_SETTINGCHANGE`。已验证：删除后 `load_dotenv` 取到的就是 `.env` 的新 key。
+
+> ⚠️ **当前已开的终端/IDE 仍持有旧值**（环境变量在进程启动时继承）。
+> **必须重开终端 / 重启 IDE** 才能让新进程看到变化。判断方法：
+> 新终端里 `echo %YINCHAO_API_KEY%` 应为空。
+
+**若需回滚**：`setx YINCHAO_API_KEY "<旧的sk_7stS9...>"`（旧值实测已失效，通常无需回滚）。
+
+**推论**：这条也说明——**凡是 `.env` 里配了、但同名环境变量也在系统里存在过的键，
+都会出现"改了 .env 却没生效"的诡异现象**。以后排查配置不生效，先看
+`os.environ` 里是不是已经有同名键。
 
 ---
 
@@ -122,15 +134,56 @@ python scripts/preflight_check.py
 
 ## 五补、已知的非本轮回归（跑全量会红，但不是我这几轮引入的）
 
+> **本节结论已经基线对照证实，不再只是推测。**（对照方法见下）
+
 独立全量测试（70 failed / 1109 passed）里，除了我已修的 31 条，剩下这些是**历史遗留**，
 不用为它们阻塞上线，但要知道它们的存在：
 
 | 数量 | 文件 | 根因 | 性质 |
 |---|---|---|---|
-| 14 | `test_voice_clone_task_local.py` 等 | `ai_tasks` 无 `generation_quota_weight` 列 | 见任务五，跑 DDL 后本地重建 db 可解 |
 | 14 | `test_poyo_voice_clone.py` | `RuntimeError: no current event loop` | Python 版本/测试写法，非本轮 |
-| ~4 | `test_ai_music_flow.py` / `test_phase_api2a.py` | Provider 退役后主链注入失效 | 指向 900eedf，归属未完全确定 |
-| 1 | `test_db_hardening.py::test_pool_params_converged` | 本地 venv **没装 `psycopg2`**，子进程 `create_engine` 直接 `ModuleNotFoundError` | 本地环境缺依赖，非代码问题；`pip install psycopg2-binary` 即绿 |
+| 14 | `test_voice_clone_task_local.py` 等 | `ai_tasks` 无 `generation_quota_weight` 列 | 见任务五，跑 DDL 后本地重建 db 可解 |
+| 8 | `test_p6b_c1_continuation_semantics.py` | **单独跑 9 passed 全绿**，全量里红 | 测试间状态污染（顺序依赖），非代码缺陷 |
+| 8 | `test_p6b_c2_duration_gate.py` | **单独跑 28 passed 全绿**，全量里红 | 同上，污染 |
+| 5 | `test_p6b_c3_5_r2_lifecycle.py` | **单独跑 9 passed 全绿**，全量里红 | 同上，污染 |
+| 2 | `test_db_production.py` | 本地 venv 没装 `psycopg2` | 环境缺依赖 |
+| 1 | `test_db_hardening.py::test_pool_params_converged` | 同上，`psycopg2` 缺失 | 环境缺依赖，`pip install psycopg2-binary` 即绿 |
+| 1 | `test_task_count.py` | `AttributeError: 'Header' object has no attribute 'strip'` | 依赖库版本/测试写法，历史 |
+| 1 | `test_separation_service.py` | 期望消息含 `Production environment`，实际返回英文兜底文案 | 文案断言过期，历史 |
+
+> 补充（2026-09-29 实测）：`test_db_hardening.py` 这条红**与密钥护栏改动无关**——
+> 它的子进程只 `import app.db.database`，根本不 `import main`，`load_dotenv` 不会触发。
+> 护栏改动的直接受影响面是 14 个 `from main import app` 的测试文件，
+
+---
+
+## 五补二、基线对照（已做，结论：本轮新引入回归 = 0）
+
+之前一直没做基线对照，导致"哪些是历史红、哪些是我打红的"只能靠猜。现已实测：
+
+| 跑批 | commit | 结果 |
+|---|---|---|
+| **基线** | `351d1f4`（护栏修复前，核验 70 failed 时的状态） | **70 failed / 1112 passed** |
+| 修复后 | `b684361`（护栏改为 `sys.modules`） | **62 failed / 1120 passed** |
+
+> 基线复现方式：`git worktree add /c/tmp/mv_base 351d1f4`，把 `backend/.env`
+> 复制进 worktree 以还原当时的环境，同参数跑全量。跑完立即删除 `.env` 副本并移除 worktree。
+
+**逐条 diff 结论：**
+
+- ✅ 基线有、当前无：**8 条**（全部是 `test_lemon_squeezy_webhook_route.py`）
+- ❌ **当前有、基线无：0 条** ← 这是关键：护栏与密钥改动**没有引入任何新失败**
+- ➖ 两边都有：62 条（即上表的历史遗留）
+
+**顺带修掉的我早期引入的 11 条回归**（在 6 组 commit 里埋的，本轮一并修完，见 `b94613d`）：
+`chain_for_operation` 加了 `song_language` 关键字后，部分测试 stub/断言没跟上，
+报 `TypeError: ... unexpected keyword argument 'song_language'`。
+上一轮 `e25fe2f` 只对齐了 `test_p6b_c2_duration_gate`，漏了
+`test_ai_music_flow`(4)、`test_phase_api2a`(3)、`test_p6b_c3_1`(2)、
+`test_mureka_provider`(1)、`test_long_duration`(1)。修后这 5 个文件合跑 45 passed。
+
+> ⚠️ 跑全量注意事项：整轮约 **18–19 分钟**，且必须给足超时（我第一次给 900s
+> 被 kill 在 73%）。接 CI 时 `timeout` 至少设 1800s。
 
 > 补充（2026-09-29 实测）：`test_db_hardening.py` 这条红**与密钥护栏改动无关**——
 > 它的子进程只 `import app.db.database`，根本不 `import main`，`load_dotenv` 不会触发。
