@@ -2,7 +2,8 @@
 
 > 本清单承接 2026-09-29 的代码固化（已完成，见下方"已完成"）。剩余每项都给了：
 > 做什么、为什么、怎么验证（判断标准）、风险/坑。
-> 目标环境：生产 = Render（`render.yaml`）+ Supabase Postgres + Cloudflare R2。
+> 目标环境：生产 = **阿里云 ECS + docker compose**（不是 Render）+ Supabase Postgres + Cloudflare R2。
+> 后端 env 唯一落点：`/opt/melovar/secrets/backend.env`（改完必须 `docker compose up -d backend`）。
 
 ---
 
@@ -11,6 +12,12 @@
 - ✅ 代码固化：6 组 commit 落在 `main`（未 push），并留了完整快照
   `refs/snapshots/2026-09-29-pre-consolidation`（可一键回滚）。
 - ✅ 零成本体检脚本 `backend/scripts/preflight_check.py` 已就绪，7 组检查可接 CI。
+- ✅ 密钥不进测试输出：`main.py` 的 `.env` 加载加了 `"pytest" not in sys.modules`
+  护卫（`b684361`），测试 fixture 用哨兵值，断言改 `startswith` 不比整串 URL。
+- ✅ 部署真相写进 `AGENTS.md`：阿里云 ECS + docker compose，附 env 落点与两条硬纪律
+  （禁止 `docker commit` 运行容器、不要在 Render 面板操作）。
+- ✅ 文档脱敏：`docs/RENDER_DEPLOYMENT.md`、`docs/RENDER_ONE_CLICK_DEPLOY.md` 里
+  硬编码的 Supabase `service_role` 真实值已改为占位符（`97e9dd0`）。
 
 ---
 
@@ -123,6 +130,12 @@ python scripts/preflight_check.py
 | 14 | `test_voice_clone_task_local.py` 等 | `ai_tasks` 无 `generation_quota_weight` 列 | 见任务五，跑 DDL 后本地重建 db 可解 |
 | 14 | `test_poyo_voice_clone.py` | `RuntimeError: no current event loop` | Python 版本/测试写法，非本轮 |
 | ~4 | `test_ai_music_flow.py` / `test_phase_api2a.py` | Provider 退役后主链注入失效 | 指向 900eedf，归属未完全确定 |
+| 1 | `test_db_hardening.py::test_pool_params_converged` | 本地 venv **没装 `psycopg2`**，子进程 `create_engine` 直接 `ModuleNotFoundError` | 本地环境缺依赖，非代码问题；`pip install psycopg2-binary` 即绿 |
+
+> 补充（2026-09-29 实测）：`test_db_hardening.py` 这条红**与密钥护栏改动无关**——
+> 它的子进程只 `import app.db.database`，根本不 `import main`，`load_dotenv` 不会触发。
+> 护栏改动的直接受影响面是 14 个 `from main import app` 的测试文件，
+> 实测 **105 passed / 1 failed（即上面这条 psycopg2）**。
 
 **要彻底 settle 哪些是历史红、哪些是这 6 个提交打红的**，唯一办法是跑一次基线对照：
 在 worktree 里 checkout `404ba4f`（这 6 个提交的父提交）跑全量。这个我没做，因为
