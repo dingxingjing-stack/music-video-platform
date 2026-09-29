@@ -393,6 +393,11 @@ class YinchaoProvider(BaseProvider):
             body = resp.text[:300]
         except Exception:  # noqa: BLE001
             body = ""
+        # quota_exhausted：额度/配额类耗尽。与 non_retryable 不同 —— 它只表示
+        # 「在本 Provider 上重试无意义」，上层会立即切到链中下一个 Provider
+        # （天谱乐），实现「音潮额度用完 → 走天谱乐」。绝不标 non_retryable，
+        # 否则会中止整条链、连天谱乐都到不了。
+        quota_exhausted = False
         if resp.status_code == 401:
             err = "YINCHAO_API_KEY 无效或未授权（401）"
         elif resp.status_code == 400:
@@ -401,10 +406,12 @@ class YinchaoProvider(BaseProvider):
             err = "Yinchao 区域/权限限制（403）"
         elif resp.status_code == 402:
             err = "Yinchao 余额不足（402）"
+            quota_exhausted = True
         elif resp.status_code == 429:
             low = body.lower()
             if any(k in low for k in ("quota", "credit", "balance", "余额", "额度")):
                 err = "Yinchao 配额耗尽（429 quota）"
+                quota_exhausted = True
             else:
                 err = "Yinchao 限流（429 rate limit）"
         elif resp.status_code == 503:
@@ -418,4 +425,6 @@ class YinchaoProvider(BaseProvider):
         elif resp.status_code in (401, 403):
             # 认证/权限配置错误（阶段 B）：切换 Provider 属于掩盖配置问题 → 禁止 fallback
             result["non_retryable"] = True
+        if quota_exhausted:
+            result["quota_exhausted"] = True
         return result

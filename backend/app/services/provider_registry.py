@@ -47,13 +47,6 @@ except Exception:  # noqa: BLE001
     _fal_client_mod = None  # type: ignore
     generate_via_fal = None  # type: ignore
 
-# runpod 客户端为可选依赖：未安装 httpx 或未配置 RUNPOD_API_KEY 时回退
-try:
-    from app.services import runpod_client as _runpod_client_mod  # type: ignore
-    from app.services.runpod_client import generate_via_runpod  # type: ignore
-except Exception:  # noqa: BLE001
-    _runpod_client_mod = None  # type: ignore
-    generate_via_runpod = None  # type: ignore
 
 # 显式选择 Provider 的环境变量；未设置/非法时回退 production 默认。
 PROVIDER_ENV = "AI_GENERATION_PROVIDER"
@@ -63,7 +56,6 @@ GPU_RATE_USD_PER_SEC: dict[str, float] = {
     "L40S": 0.000542,
     "fal-stable-audio": 0.00035,  # 估算：fal 按秒计费约 $0.021/分钟
     "fal": 0.00035,
-    "runpod": 0.0004,  # 估算：RunPod A100 40GB 约 $0.024/分钟
 }
 
 
@@ -148,77 +140,6 @@ class FalStableAudioProvider(BaseProvider):
             return {"success": False, "error": str(exc), "provider": self.name}
 
 
-class RunPodProvider(BaseProvider):
-    """RunPod Serverless — 第一生产 Provider（Step 6 接入）。
-
-    基于 RunPod Serverless API（https://api.runpod.ai/v2），不依赖 Modal Volume。
-    单段最长 300s（HeartMuLa/ACE-Step 均支持），长任务由上层 150+150 分段实现。
-    """
-
-    name = "runpod"
-    provider_type = "runpod"
-    capabilities = ["text_to_music", "lyrics_to_music", "audio2audio"]
-    max_duration = 300
-    gpu = "runpod"
-    production = True
-
-    async def generate(self, request: dict) -> dict:
-        # 优先通过模块对象动态获取，以便测试 monkeypatch app.services.runpod_client.generate_via_runpod 生效
-        runpod_fn = None
-        if _runpod_client_mod is not None:
-            runpod_fn = getattr(_runpod_client_mod, "generate_via_runpod", None)
-        runpod_fn = runpod_fn or generate_via_runpod
-        if runpod_fn is None:
-            return {"success": False, "error": "runpod_client 未可用（缺 httpx 或模块加载失败）", "provider": self.name}
-        try:
-            result = await runpod_fn(
-                prompt=request.get("prompt", ""),
-                lyrics=request.get("lyrics", ""),
-                duration=int(request.get("duration", 30)),
-                reference_audio_b64=request.get("reference_audio"),
-                enable_audio2audio=bool(request.get("enable_audio2audio")),
-            )
-            if result:
-                return {"success": True, "volume_files": result, "provider": self.name}
-            # RunPod 失败时：生产环境回退到 Fal，开发环境兼容 ace_step_generate
-            env = os.getenv("ENVIRONMENT", "development").lower()
-            if env != "production":
-                # 开发环境：兼容旧测试 mock ace_step_generate
-                try:
-                    fallback = await ace_step_generate(
-                        prompt=request.get("prompt", ""),
-                        lyrics=request.get("lyrics", ""),
-                        duration=int(request.get("duration", 30)),
-                    )
-                    if fallback:
-                        return {"success": True, "volume_files": fallback, "provider": self.name}
-                except Exception:
-                    pass
-            else:
-                # 生产环境：RunPod 失败时回退到 Fal
-                fal_fn = None
-                if _fal_client_mod is not None:
-                    fal_fn = getattr(_fal_client_mod, "generate_via_fal", None)
-                fal_fn = fal_fn or generate_via_fal
-                if fal_fn is not None:
-                    try:
-                        fallback = await fal_fn(
-                            prompt=request.get("prompt", ""),
-                            lyrics=request.get("lyrics", ""),
-                            duration=int(request.get("duration", 30)),
-                            reference_audio_b64=request.get("reference_audio"),
-                            enable_audio2audio=bool(request.get("enable_audio2audio")),
-                        )
-                        if fallback:
-                            return {"success": True, "volume_files": fallback, "provider": f"{self.name}->fal_fallback"}
-                    except Exception:
-                        pass
-            return {"success": False, "error": "RunPod generation failed", "provider": self.name}
-        except Exception as exc:  # noqa: BLE001
-            # 鉴权错误直接透出，便于上层返回 500 + 提示配置 RUNPOD_API_KEY
-            if "401" in str(exc) or "RunPodAuthError" in type(exc).__name__:
-                return {"success": False, "error": f"RUNPOD_API_KEY 无效或未配置: {exc}", "provider": self.name}
-            return {"success": False, "error": str(exc), "provider": self.name}
 
 
 class ModalACEStepProvider(BaseProvider):
@@ -260,68 +181,10 @@ class ModalACEStepProvider(BaseProvider):
             return {"success": False, "error": str(exc), "provider": self.name}
 
 
-class KaggleMusicGenSmallProvider(BaseProvider):
-    """Kaggle 本地 MusicGen-Small (300M) — 实验 Provider，不影响生产默认。"""
-
-    name = "musicgen_small"
-    provider_type = "musicgen_small"
-    capabilities = ["text_to_music"]
-    max_duration = 30
-    gpu = "T4"
-    production = False
-
-    async def generate(self, request: dict) -> dict:
-        try:
-            from app.services.inference.musicgen_local import MusicGenSmallLocalService
-
-            svc = MusicGenSmallLocalService()
-            if not svc.is_available():
-                return {"success": False, "error": "MusicGen-small 模型未就绪，请先运行 download_mvp_models.py", "provider": self.name}
-            import asyncio
-
-            def _run():
-                return svc.generate(
-                    prompt=request.get("prompt", ""),
-                    duration=float(request.get("duration", 10)),
-                    temperature=float(request.get("temperature", 1.0)),
-                )
-
-            out = await asyncio.to_thread(_run)
-            return {"success": True, "volume_files": {"full_wav": str(out)}, "provider": self.name}
-        except Exception as exc:  # noqa: BLE001
-            return {"success": False, "error": str(exc), "provider": self.name}
 
 
-class KaggleCosyVoice2Provider(BaseProvider):
-    """Kaggle 本地 CosyVoice2-0.5B — 实验 Provider (TTS/克隆)。"""
 
-    name = "cosyvoice2"
-    provider_type = "cosyvoice2"
-    capabilities = ["tts", "voice_clone", "cross_lingual"]
-    max_duration = 60
-    gpu = "T4"
-    production = False
 
-    async def generate(self, request: dict) -> dict:
-        try:
-            from app.services.inference.cosyvoice_local import CosyVoice2LocalService
-
-            svc = CosyVoice2LocalService()
-            if not svc.is_available():
-                return {"success": False, "error": "CosyVoice2 模型未就绪，请先运行 download_mvp_models.py", "provider": self.name}
-            import asyncio
-
-            def _run():
-                return svc.tts(
-                    text=request.get("text") or request.get("prompt") or "",
-                    reference_audio=request.get("reference_audio"),
-                    reference_text=request.get("reference_text"),
-                )
-
-            out = await asyncio.to_thread(_run)
-            return {"success": True, "volume_files": {"full_wav": str(out)}, "provider": self.name}
-        except Exception as exc:  # noqa: BLE001
-            return {"success": False, "error": str(exc), "provider": self.name}
 # ── 阶段 B（功能分链）：生歌 operation → 有序 Provider 链（生产路由表）──
 # - normal / lyric_to_music：Yinchao V4.0 → TemPolor V4.7
 # - instrumental：Yinchao V4.0 Instrumental → Mureka V9（禁止 instrumental → TemPolor）
@@ -336,6 +199,27 @@ _OPERATION_CHAINS: dict[str, tuple[str, ...]] = {
     "instrumental": ("yinchao", "mureka"),
     "reference": ("yinchao", "tempolor"),
 }
+
+# ── 歌曲语言分流（2026-09-28）──────────────────────────────
+# 音潮 Yinchao V4.0 负责既有的 10 种歌曲语言；
+# 印地语 / 印尼语 / 阿拉伯语 交由天谱乐 TemPolor（tempolor-latest）生成。
+# 注意：这里按 song_language 判定，不是 UI locale —— 两套清单刻意解耦，
+# 与前端 config/songLanguages.ts 的 code 保持一致。
+_TEMPOLOR_SONG_LANGUAGES = frozenset({"hi", "id", "ar"})
+
+
+def _tempolor_usable() -> bool:
+    """天谱乐当前是否可用（能否安全地排到链首）。
+
+    天谱乐官方强制 callback_url 非空；tempolor_provider.generate() 在
+    TEMPOLOR_CALLBACK_URL 缺失时返回 **non_retryable** 错误，而上层
+    ai_music 的链循环遇到 non_retryable 会「中止整条链」—— 即连链中后面的
+    音潮都不会再试，该语言直接生成失败。
+
+    因此：回调未配置时绝不把 tempolor 排到链首，保持既有「音潮优先」行为，
+    避免这三种语言从「能出歌」退化成「必然失败」；回调配好后自动生效。
+    """
+    return bool((os.getenv("TEMPOLOR_CALLBACK_URL") or "").strip())
 
 
 class ProviderRegistry:
@@ -417,8 +301,14 @@ class ProviderRegistry:
         assert self._default is not None, "ProviderRegistry 至少需要一个 production provider"
         return self._providers[self._default]
 
-    def chain_for_operation(self, operation: str) -> list:
+    def chain_for_operation(self, operation: str, song_language: Optional[str] = None) -> list:
         """阶段 B 路由唯一入口：按 operation 返回功能化生歌 Provider 链。
+
+        song_language（可选）：歌曲语言代码。命中 _TEMPOLOR_SONG_LANGUAGES
+        （hi/id/ar）时，把天谱乐 tempolor 提到链首，由 tempolor-latest 生成。
+        仅在天谱乐可用（回调已配置）时生效，详见 _tempolor_usable()。
+        instrumental 链不含 tempolor，且既有规则明令「禁止 instrumental → TemPolor」，
+        故纯音乐不受语言分流影响。
 
         与 fallback_chain() 的区别：fallback_chain 保持既有全局链不动（存量调用方
         与测试兼容）；本方法按 _OPERATION_CHAINS 展开功能链，全环境统一（生产路由表
@@ -436,6 +326,15 @@ class ProviderRegistry:
                 f"（合法值：{'/'.join(sorted(_OPERATION_CHAINS))}）"
             )
         chain = [self._providers[n] for n in names if n in self._providers]
+
+        # 语言分流：hi/id/ar → 天谱乐优先（仅当该链本来就有 tempolor，
+        # 因此不会把 tempolor 塞进 instrumental 链，遵守既有禁令）
+        lang = (song_language or "").strip().lower()
+        if lang in _TEMPOLOR_SONG_LANGUAGES and "tempolor" in names and _tempolor_usable():
+            tempolor = self._providers.get("tempolor")
+            if tempolor is not None:
+                chain = [tempolor] + [p for p in chain if p.name != "tempolor"]
+
         if not chain:
             return [self.select()]
         return chain
@@ -486,29 +385,25 @@ def get_provider_registry() -> ProviderRegistry:
         # 顶层 import 会循环依赖）。注册放在最后，避免其 production=True 抢占 _default
         # （register() 以首个 production provider 为默认值；若 Mureka 先注册会改变
         # development/test 的 select()/fallback_chain() 默认，破坏存量测试）。
-        # fallback_chain() 按 name 显式取 mureka→runpod，与注册顺序无关。
         _registry.register(FalStableAudioProvider())
-        _registry.register(RunPodProvider())
         _registry.register(ModalACEStepProvider())
-        _registry.register(KaggleMusicGenSmallProvider())
-        _registry.register(KaggleCosyVoice2Provider())
         try:
             from app.services.mureka_provider import MurekaProvider
             _registry.register(MurekaProvider())
         except Exception as exc:  # noqa: BLE001
-            # Mureka 注册失败（缺依赖等）不能阻断启动：生产仍可回退 RunPod。
-            print(f"[Provider] MurekaProvider 注册失败（不影响 RunPod/Fal 兜底）: {exc}")
+            # Mureka 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Fal/Mureka。
+            print(f"[Provider] MurekaProvider 注册失败（不影响 Fal 兜底）: {exc}")
         try:
             from app.services.yinchao_provider import YinchaoProvider
             _registry.register(YinchaoProvider())
         except Exception as exc:  # noqa: BLE001
-            # Yinchao 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Mureka/RunPod。
-            print(f"[Provider] YinchaoProvider 注册失败（不影响 Mureka/RunPod 兜底）: {exc}")
+            # Yinchao 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Mureka。
+            print(f"[Provider] YinchaoProvider 注册失败（不影响 Mureka 兜底）: {exc}")
         try:
             from app.services.tempolor_provider import TempolorProvider
             _registry.register(TempolorProvider())
         except Exception as exc:  # noqa: BLE001
-            # Tempolor 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Yinchao/Mureka/RunPod。
-            print(f"[Provider] TempolorProvider 注册失败（不影响 Yinchao/Mureka/RunPod 兜底）: {exc}")
+            # Tempolor 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Yinchao/Mureka。
+            print(f"[Provider] TempolorProvider 注册失败（不影响 Yinchao/Mureka 兜底底）: {exc}")
         print("[Provider] Registry initialized:", list(_registry._providers.keys()))
     return _registry

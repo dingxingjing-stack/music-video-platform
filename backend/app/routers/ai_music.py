@@ -24,6 +24,7 @@ GET  /api/v1/ai/limits                 额度/成本保护状态
 """
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -84,6 +85,8 @@ MAX_SONG_DURATION_SECONDS = 300
 
 # 参考音频默认截取长度（秒）
 REFERENCE_SECONDS = 30
+# P1：HF 兜底产物下载上限（默认 512MB：600s 高采样 WAV 也足够）；超限判失败，防失控写盘
+HF_DOWNLOAD_MAX_BYTES = int(os.getenv("HF_DOWNLOAD_MAX_BYTES", str(512 * 1024 * 1024)))
 
 
 async def _try_hf_ace_step_fallback(
@@ -199,6 +202,94 @@ async def _try_hf_ace_step_fallback(
         return None
 
 
+def _cleanup_hf_temp_file(path: Optional[str]) -> None:
+    """P1：HF 下载临时文件 best-effort 清理（成功/门失败/收尾异常路径一律执行）。"""
+    if not path:
+        return
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except OSError:
+        pass
+
+
+async def _transcode_mp3_to_wav(src: str, dst: str) -> str:
+    """P1：HF MP3 产物归一为 WAV（C3-5 契约：full_wav 必为真 WAV 容器）。
+
+    转码失败 / 输出非 WAV → RuntimeError → _download_hf_audio 统一按 provider
+    failure 返回 None（不产生 R2 终对象）。不修改输入文件。
+    """
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", src,
+        "-vn",
+        "-codec:a", "pcm_s16le",
+        dst,
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await proc.communicate()
+    if proc.returncode != 0 or not os.path.exists(dst) or os.path.getsize(dst) <= 0:
+        err = stderr.decode(errors="replace")[:800] if stderr else "unknown"
+        raise RuntimeError(f"HF MP3→WAV 转码失败: {err}")
+    if not _is_wav_file(dst):
+        raise RuntimeError("HF MP3→WAV 转码失败: 输出不是 WAV 容器")
+    return dst
+
+
+async def _download_hf_audio(url: str) -> Optional[str]:
+    """P1：把 HF 兜底远端产物取回本地——下载 → HTTP/内容校验 → 魔数校验 → 归一 WAV。
+
+    返回本地临时文件路径（直接作为 volume_result["_local_path"]：先交
+    _enforce_duration_gate 实测真实时长，再交 _upload_and_finalize 进 R2）。
+    下载失败 / HTTP 非 2xx / 非音频内容 / 归一失败 → None（provider failure：
+    调用方走统一 failed + 恰好一次退款，不产生 R2 终对象）。
+    临时文件由调用方在 finalize 后经 _cleanup_hf_temp_file 清理。
+    远端 HF URL 永不作为交付地址（P1：只交付经门实测、进 R2 后的自控 URL）。
+    """
+    if not url or not str(url).startswith(("http://", "https://")):
+        return None
+    if "soundhelix.com" in url:
+        return None
+    import tempfile
+
+    fd, path = tempfile.mkstemp(prefix="hf_dl_", suffix=".bin")
+    os.close(fd)
+    wav_path: Optional[str] = None
+    try:
+        written = 0
+        content_type = ""
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            async with client.stream("GET", url) as resp:
+                if resp.status_code // 100 != 2:
+                    raise RuntimeError(f"HF 下载非 2xx（HTTP {resp.status_code}）")
+                content_type = (resp.headers.get("content-type") or "").lower()
+                with open(path, "wb") as f:
+                    async for chunk in resp.aiter_bytes():
+                        written += len(chunk)
+                        if written > HF_DOWNLOAD_MAX_BYTES:
+                            raise RuntimeError("HF 下载超过大小上限")
+                        f.write(chunk)
+        if "text/html" in content_type or "application/json" in content_type:
+            raise RuntimeError(f"HF 下载非音频 Content-Type: {content_type}")
+        if written < 1024:
+            raise RuntimeError("HF 下载内容为空/过短")
+        if _is_wav_file(path):
+            return path
+        if _is_mp3_bytes(path):
+            wav_path = path + ".wav"
+            await _transcode_mp3_to_wav(path, wav_path)
+            _cleanup_hf_temp_file(path)
+            return wav_path
+        raise RuntimeError("HF 下载内容不是 WAV/MP3 容器")
+    except Exception as e:  # noqa: BLE001
+        print(f"[HF 下载] 失败（按 provider failure 处理）: {type(e).__name__}: {e}")
+        _cleanup_hf_temp_file(path)
+        _cleanup_hf_temp_file(wav_path)
+        return None
+
+
 class GenerateRequest(BaseModel):
     """AI 生成请求"""
     prompt: str
@@ -255,6 +346,17 @@ def _log_generation_cost(task_id: str, user_key: str, provider, result: str, tot
         )
     except Exception as exc:  # noqa: BLE001
         print(f"[CostLog] log_generation_cost failed: {exc}")
+
+
+class _HFCostProvider:
+    """P3：HF 成本观测占位 provider（HF 成功过门后也记 cost=success）。
+
+    无自有 GPU 规格 → gpu 空串、单价 0（gpu_rate_usd_per_sec 对未知型号返回
+    0.0，不虚构成本）；命名与任务 ai_provider 的 "+hf" 后缀一致。
+    """
+
+    name = "hf_ace_step"
+    gpu = ""
 
 
 def determine_generation_operation(request: GenerateRequest) -> str:
@@ -392,7 +494,11 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         if exclusive:
             provider_chain = [registry.select()]
         else:
-            provider_chain = registry.chain_for_operation(operation)
+            # 传入 song_language：hi/id/ar 交由天谱乐（tempolor-latest）优先生成；
+            # 其余语言维持音潮 V4.0 优先。天谱乐未配回调时自动保持音潮优先，不退化。
+            provider_chain = registry.chain_for_operation(
+                operation, song_language=request.song_language
+            )
 
         # ── 单次生成（按 provider_chain 依次尝试）──
         task_store.update(task_id, state="generating", progress=40, ai_provider=f"{ai_provider}+{provider_chain[0].name if provider_chain else 'provider'}")
@@ -437,6 +543,16 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
                 if gen_result and gen_result.get("non_retryable"):
                     non_retryable = True
                     break
+                # 额度/配额耗尽（音潮 402 / 429 quota）：在本 Provider 上重试没有意义，
+                # 立即停止重试并交给链中下一个 Provider —— 即「音潮额度用完 → 走天谱乐」。
+                # 注意：此处绝不置 non_retryable，否则会中止整条链、连天谱乐都到不了。
+                if gen_result and gen_result.get("quota_exhausted"):
+                    retries_used = attempt
+                    task_store.update(
+                        task_id, retries=retries_used,
+                        error=f"{provider.name} 额度/配额耗尽，切换到下一个 Provider",
+                    )
+                    break
                 retries_used = attempt
                 task_store.update(task_id, retries=retries_used, error=f"{provider.name} 第 {attempt + 1} 次尝试失败，自动重试")
             if volume_result or non_retryable:
@@ -458,19 +574,46 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
             return
 
         # 整个 Provider 链失败（此处不退款），进入 router 层 HF 兜底；HF 也失败才退款一次。
-        # 长歌曲为 TemPolor 直出，不提供 HF 兜底（生产 HF 本就门控关闭）。
-        # non_retryable（参数/内容/能力错误）同样跳过 HF：同一输入必再被判错，徒耗算力。
-        _log_generation_cost(task_id, user_key, last_provider, "failed", total_duration_ms, retries_used)
+        # 阶段 B：HF 仅 normal / lyric_to_music（instrumental/reference 不走 HF）；
+        # non_retryable（参数/内容/认证/能力错误）同样跳过 HF：同一输入必再被判错，徒耗算力。
+        # （HF 为 development/test 专属路径，生产在 _try_hf_ace_step_fallback 内门控关闭。）
+        # P3：cost 状态不再在 HF 之前提前定死——HF 成功过门记 success，
+        # 其余（链尽失败/HF 下载失败/HF 门失败）恰记一次 failed。
         task_store.update(task_id, state="generating", progress=55)
         hf_audio = None
         if operation in ("normal", "lyric_to_music") and not non_retryable:
             hf_audio = await _try_hf_ace_step_fallback(final_prompt, lyrics, duration)
         if hf_audio:
-            task_store.update(
-                task_id, state="completed", progress=100,
-                audio_url=hf_audio, stems_state="skipped", ai_provider=f"{ai_provider}+hf",
-            )
-            return
+            # P1：HF 产物纳入统一成品生命周期：下载到本地临时文件 → 实测真实时长 →
+            # _enforce_duration_gate（≥MIN=240 才放行；requested/normalized duration
+            # 不作时长证据，只认 actual_duration）→ _upload_and_finalize（R2 终对象）。
+            # 远端 HF URL 绝不直接交付；下载失败/非音频 → hf_local=None → 下方统一
+            # failed + 恰好一次退款，无 R2 终对象。
+            hf_local = await _download_hf_audio(hf_audio)
+            if hf_local:
+                hf_volume = {"_local_path": hf_local}
+                try:
+                    await _enforce_duration_gate(hf_volume)
+                    _log_generation_cost(task_id, user_key, _HFCostProvider, "success",
+                                          total_duration_ms, retries_used)
+                    task_store.update(
+                        task_id, state="uploading", progress=75,
+                        volume_files=hf_volume, ai_provider=f"{ai_provider}+hf",
+                    )
+                    await _upload_and_finalize(task_id, hf_volume)
+                    return
+                except DurationValidationError:
+                    # <MIN / 测不到：不交付、不产生 R2 终对象；与 provider 门失败同
+                    # 一条既有路径——交外层统一 except failed + 恰好一次退款
+                    # （quota 与 credits 各恰一次，不会二次 reserve/refund）。
+                    _log_generation_cost(task_id, user_key, _HFCostProvider, "failed",
+                                          total_duration_ms, retries_used)
+                    raise
+                finally:
+                    # 本地临时文件在成功/门失败/收尾异常路径一律清理
+                    _cleanup_hf_temp_file(hf_local)
+
+        _log_generation_cost(task_id, user_key, last_provider, "failed", total_duration_ms, retries_used)
 
         task_store.update(
             task_id, state="failed",
@@ -1101,187 +1244,6 @@ async def delete_user_task(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 临时 RunPod Smoke Test Endpoint
-# 用途：验证 Render → RunPod Endpoint → Worker → handler → CUDA 连通性
-# 保护：需 Header X-RunPod-Smoke-Token 与环境变量 RUNPOD_SMOKE_TEST_TOKEN 一致
-# 环境变量依赖：RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID, RUNPOD_SMOKE_TEST_TOKEN
-# 不影响生产生成链路，不记成本，不占额度
-# ──────────────────────────────────────────────────────────────────────────────
-class RunPodSmokeTestResponse(BaseModel):
-    success: bool
-    runpod_api_status: int
-    job_id: Optional[str] = None
-    final_status: Optional[str] = None
-    worker_started: bool = False
-    handler_success: Optional[bool] = None
-    cuda_available: Optional[bool] = None
-    gpu_info: Optional[dict] = None
-    error: Optional[str] = None
-    message: str = "RunPod smoke test completed"
-
-
-def _smoke_test_enabled() -> bool:
-    """P0-7：生产方向不使用 RunPod，该端点默认关闭。
-
-    仅当显式设置 ENABLE_RUNPOD_SMOKE_TEST=true/1/yes 才开放；
-    且仍要求 X-RunPod-Smoke-Token 与 RUNPOD_SMOKE_TEST_TOKEN 常量时间比较通过。
-    """
-    return (os.getenv("ENABLE_RUNPOD_SMOKE_TEST") or "").strip().lower() in ("1", "true", "yes", "on")
-
-
-def _verify_smoke_token(x_token: Optional[str]) -> bool:
-    import hmac
-    expected = os.getenv("RUNPOD_SMOKE_TEST_TOKEN")
-    if not expected or not x_token:
-        return False
-    return hmac.compare_digest(str(x_token), str(expected))
-
-
-@router.post("/runpod-smoke-test", response_model=RunPodSmokeTestResponse)
-async def runpod_smoke_test(
-    x_runpod_smoke_token: str = Header(None, alias="X-RunPod-Smoke-Token"),
-):
-    """RunPod Serverless 连通性 Smoke Test（临时端点，仅内部验证用）。
-
-    固定测试载荷：
-      {"input": {"prompt": "smoke test", "duration": 10, "test_mode": "smoke"}}
-
-    返回 RunPod API 调用链路关键指标，不返回任何密钥。
-    """
-    # P0-7：未显式启用 → 对外表现为「端点不存在」，不给探测者任何信息
-    if not _smoke_test_enabled():
-        raise HTTPException(status_code=404, detail="Not Found")
-    # 鉴权：X-RunPod-Smoke-Token → RUNPOD_SMOKE_TEST_TOKEN（常量时间比较）
-    if not os.getenv("RUNPOD_SMOKE_TEST_TOKEN"):
-        raise HTTPException(status_code=503, detail="RUNPOD_SMOKE_TEST_TOKEN not configured")
-    if not _verify_smoke_token(x_runpod_smoke_token):
-        raise HTTPException(status_code=401, detail="Invalid X-RunPod-Smoke-Token")
-
-    api_key = os.getenv("RUNPOD_API_KEY")
-    endpoint_id = os.getenv("RUNPOD_ENDPOINT_ID")
-
-    if not api_key:
-        return RunPodSmokeTestResponse(
-            success=False,
-            runpod_api_status=0,
-            error="RUNPOD_API_KEY not configured in environment",
-        )
-    if not endpoint_id:
-        return RunPodSmokeTestResponse(
-            success=False,
-            runpod_api_status=0,
-            error="RUNPOD_ENDPOINT_ID not configured in environment",
-        )
-
-    runpod_base = "https://api.runpod.ai/v2"
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"input": {"prompt": "smoke test", "duration": 10, "test_mode": "smoke"}}
-
-    # 1. Submit job
-    submit_url = f"{runpod_base}/{endpoint_id}/run"
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(submit_url, headers=headers, json=payload)
-    except Exception as e:
-        return RunPodSmokeTestResponse(
-            success=False,
-            runpod_api_status=0,
-            error=f"Submit request failed: {e}",
-        )
-
-    runpod_api_status = resp.status_code
-    if resp.status_code not in (200, 201, 202):
-        return RunPodSmokeTestResponse(
-            success=False,
-            runpod_api_status=runpod_api_status,
-            error=f"RunPod submit failed: {resp.text[:500]}",
-        )
-
-    try:
-        data = resp.json()
-    except Exception:
-        return RunPodSmokeTestResponse(
-            success=False,
-            runpod_api_status=runpod_api_status,
-            error="RunPod submit response not JSON",
-        )
-
-    job_id = data.get("id") or data.get("request_id")
-    if not job_id:
-        return RunPodSmokeTestResponse(
-            success=False,
-            runpod_api_status=runpod_api_status,
-            error="No job_id in RunPod response",
-        )
-
-    # 2. Poll status
-    status_url = f"{runpod_base}/{endpoint_id}/status/{job_id}"
-    worker_started = False
-    final_status = "UNKNOWN"
-    handler_success = None
-    cuda_available = None
-    gpu_info = None
-    error_detail = None
-
-    max_polls = 60  # ~5 minutes max
-    poll_interval = 5
-
-    for _ in range(max_polls):
-        await asyncio.sleep(poll_interval)
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                s_resp = await client.get(status_url, headers=headers)
-        except Exception:
-            continue
-
-        if s_resp.status_code != 200:
-            continue
-
-        try:
-            s_data = s_resp.json()
-        except Exception:
-            continue
-
-        status = s_data.get("status", "").upper()
-        if s_data.get("worker_id"):
-            worker_started = True
-
-        if status in ("IN_QUEUE", "IN_PROGRESS"):
-            worker_started = True
-            continue
-
-        if status in ("COMPLETED", "SUCCEEDED"):
-            final_status = "COMPLETED"
-            output = s_data.get("output")
-            if output and isinstance(output, dict):
-                handler_success = output.get("success") is True
-                if handler_success:
-                    gpu_info = output.get("output", {}).get("gpu_info", {})
-                    cuda_available = gpu_info.get("cuda_available")
-            break
-
-        if status in ("FAILED", "ERROR"):
-            final_status = "FAILED"
-            error_detail = s_data.get("output") or s_data.get("error") or str(s_data)[:500]
-            worker_started = True
-            break
-
-    else:
-        final_status = "TIMEOUT"
-
-    success = (final_status == "COMPLETED" and handler_success is True)
-    return RunPodSmokeTestResponse(
-        success=success,
-        runpod_api_status=runpod_api_status,
-        job_id=job_id,
-        final_status=final_status,
-        worker_started=worker_started,
-        handler_success=handler_success,
-        cuda_available=cuda_available,
-        gpu_info=gpu_info,
-        error=str(error_detail)[:500] if error_detail else None,
-        message="RunPod smoke test completed",
-    )
 
 
 @router.get("/styles")
@@ -1321,9 +1283,50 @@ def _safe_item_id(raw: str) -> str:
     return "".join(printable)[:_CALLBACK_ID_CHARS]
 
 
+def _tempolor_callback_secret() -> str:
+    """回调共享密钥。函数内读取，保证测试可 monkeypatch 环境变量。"""
+    return (os.getenv("TEMPOLOR_CALLBACK_SECRET") or "").strip()
+
+
+def _tempolor_callback_authorized(request: Request) -> Optional[bool]:
+    """校验天谱乐回调来源。
+
+    官方回调协议不带任何签名，而 `/api/v1/ai/tempolor/callback` 是公网可写端点——
+    不加校验等于任何人都能投递假的 item_id。这里用「提交任务时写进 callback_url
+    query 的共享令牌」做来源校验（同时接受 X-Callback-Token 头，便于手工补投/排障），
+    常量时间比对。
+
+    返回 True=通过 / False=令牌错 / None=我方未配密钥（部署缺失，由调用方按 503 处理）。
+    """
+    secret = _tempolor_callback_secret()
+    if not secret:
+        return None
+    supplied = (request.query_params.get("token")
+                or request.headers.get("X-Callback-Token")
+                or "").strip()
+    return hmac.compare_digest(supplied, secret)
+
+
 @router.post("/tempolor/callback")
 async def tempolor_callback(request: Request):
-    """接收天谱乐生成回调：解析 songs[].item_id 并记录，恒返回 200 + "success"。"""
+    """接收天谱乐生成回调：解析 songs[].item_id 并记录，恒返回 200 + "success"。
+
+    公网可写端点，必须先过来源校验：
+      503 我方未配 TEMPOLOR_CALLBACK_SECRET（fail-closed，与 LS webhook 一致）；
+      401 令牌错 —— 不解析 body、不落日志内容，只记来源 IP。
+    终态仍由 TempolorProvider 的轮询决定，所以这里拒绝一次回调不会丢结果。
+    """
+    authorized = _tempolor_callback_authorized(request)
+    if authorized is None:
+        _callback_logger.error(
+            "[tempolor] callback 拒绝：TEMPOLOR_CALLBACK_SECRET 未配置（fail-closed）。"
+            "请在部署环境补该密钥，tempolor_provider 会自动把它附加到 callback_url")
+        raise HTTPException(503, "tempolor_callback_not_configured")
+    if not authorized:
+        client = request.client.host if request.client else "unknown"
+        _callback_logger.warning("[tempolor] callback 令牌校验失败 from=%s", client)
+        raise HTTPException(401, "invalid callback token")
+
     body = await request.body()
     item_ids: list[str] = []
 

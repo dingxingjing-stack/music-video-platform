@@ -75,3 +75,42 @@ services:
       # Budgets
       - key: FAL_BUDGET_DAILY
         value: "30"
+      # ── 音乐生成 Provider ──────────────────────────────────────────────
+      # 注意：以下密钥都必须在 Render 面板（Environment）手工填值；本文件只声明「需要它」，
+      # 不存明文。缺任一项对应的能力会按 fail-closed 关闭，不会静默降级。
+      - key: YINCHAO_API_KEY          # 音潮（主：11 种语言）
+        sync: false
+      - key: TEMPOLOR_API_KEY         # 天谱乐（hi/id/ar 首选；音潮额度耗尽时兜底）
+        sync: false
+      - key: TEMPOLOR_CALLBACK_URL    # 天谱乐官方要求 callback_url 非空，缺失则该 Provider 直接拒绝提交
+        value: "https://ai-music-backend.onrender.com/api/v1/ai/tempolor/callback"
+      - key: TEMPOLOR_MODEL
+        value: "tempolor-latest"
+      - key: TEMPOLOR_CALLBACK_SECRET # 回调共享密钥；缺失则回调端点 503（fail-closed），生歌仍走轮询
+        sync: false
+      - key: MUREKA_API_KEY           # 纯音乐（instrumental）链路
+        sync: false
+      # ── 分享飞轮 ───────────────────────────────────────────────────────
+      - key: SHARE_LINK_SECRET        # 分享链接 HMAC 签名密钥；缺失则分享端点 503
+        sync: false
+      # ── 管理端点 ───────────────────────────────────────────────────────
+      - key: ADMIN_API_TOKEN          # X-Admin-Token；不配置时管理端点一律拒绝（fail-closed）
+        sync: false
+      # ── 收款 ───────────────────────────────────────────────────────────
+      # Paddle 为主通道（Merchant of Record，代开发票/代缴 VAT）；
+      # Lemon Squeezy 为备通道，其 WEBHOOK_SECRET 缺失时建单入口会自动关闭，
+      # 避免「能收钱但发不了积分」。
+      - key: PADDLE_API_KEY
+        sync: false
+      - key: PADDLE_CLIENT_TOKEN
+        sync: false
+      - key: PADDLE_WEBHOOK_SECRET
+        sync: false
+      - key: PADDLE_ENV
+        value: "production"
+      - key: LEMONSQUEEZY_API_KEY
+        sync: false
+      - key: LEMONSQUEEZY_STORE_ID
+        sync: false
+      - key: LEMONSQUEEZY_WEBHOOK_SECRET
+        sync: false

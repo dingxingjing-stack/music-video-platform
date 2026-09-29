@@ -162,7 +162,9 @@ def route(monkeypatch, tmp_path):
         if record_ops is None:
             reg.chain_for_operation.return_value = list(providers)
         else:
-            def _side(effect_op):
+            def _side(effect_op, song_language=None):
+                # song_language 由路由按请求传入（hi/id/ar 走天谱乐链首），
+                # mock 必须接受该关键字，否则路由调用直接 TypeError。
                 record_ops.append(effect_op)
                 return list(providers)
             reg.chain_for_operation.side_effect = _side

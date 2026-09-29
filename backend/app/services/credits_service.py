@@ -29,9 +29,21 @@ from app.services.credits_config import (
 _DB_LOCK = threading.RLock()
 
 
-def _ensure_row(user_id: str) -> None:
-    """幂等确保 user_credits 存在一行（余额 0，未领取任何奖励）。"""
+def _ensure_row(user_id: str, session: Optional[Any] = None) -> None:
+    """幂等确保 user_credits 存在一行（余额 0，未领取任何奖励）。
+
+    session: 传入已有 Session 时复用该连接（不新建、不提交、不关闭）。调用方持有写事务
+    时必须走这条路径 —— 另开连接去写同一张表会在 SQLite 上撞 "database is locked"，
+    在 PG 上也白占一个连接。
+    """
     from sqlalchemy import text
+    if session is not None:
+        session.execute(text(
+            "INSERT INTO user_credits (user_id, balance, lifetime_earned, lifetime_spent, "
+            "welcome_bonus_claimed, email_verification_bonus_claimed, first_song_bonus_claimed) "
+            "VALUES (:u, 0, 0, 0, FALSE, FALSE, FALSE) ON CONFLICT(user_id) DO NOTHING"
+        ), {"u": user_id})
+        return
     sess = None
     try:
         sess = SessionLocal()
@@ -47,21 +59,27 @@ def _ensure_row(user_id: str) -> None:
 
 
 def _apply(user_id: str, amount: int, txn_type: str, reference_id: Optional[str] = None,
-           description: Optional[str] = None, require_sufficient: bool = True) -> dict[str, Any]:
+           description: Optional[str] = None, require_sufficient: bool = True,
+           session: Optional[Any] = None) -> dict[str, Any]:
     """原子执行一笔账目：扣减（amount<0，要求余额充足）或入账（amount>0）。
 
     单事务内：写入 transactions + 更新 balance/lifetime；扣减用条件 UPDATE 保证不超扣。
     返回 {"success", "balance", "amount", "error?"}。
+
+    session: 传入已有 Session 时，本函数不自建连接、不 BEGIN、不 COMMIT、不 close，
+    由调用方把「前置查重 + 记账」包进同一个事务（退款幂等需要，否则查重与入账之间
+    存在可被其它 worker 插入的窗口）。未传时保持原有自管事务行为。
     """
     if txn_type not in TRANSACTION_TYPES:
         return {"success": False, "error": f"未知 transaction_type: {txn_type}"}
-    sess = None
+    sess = session
     try:
         from sqlalchemy import text
         with _DB_LOCK:
-            sess = SessionLocal()
-            sess.execute(text("BEGIN"))
-            _ensure_row(user_id)
+            if sess is None:
+                sess = SessionLocal()
+                sess.execute(text("BEGIN"))
+            _ensure_row(user_id, session=sess)
 
             if amount < 0:
                 # 条件扣减：余额必须足够，否则 rowcount==0 回滚
@@ -87,17 +105,20 @@ def _apply(user_id: str, amount: int, txn_type: str, reference_id: Optional[str]
             ), {"u": user_id, "a": amount, "t": txn_type, "r": reference_id, "d": description,
                 "ts": datetime.now(timezone.utc)})
 
-            sess.commit()
+            if session is None:
+                sess.commit()
             bal = sess.execute(text("SELECT balance FROM user_credits WHERE user_id=:u"), {"u": user_id}).fetchone()
             return {"success": True, "balance": int(bal[0]) if bal else 0, "amount": amount}
     except Exception as e:
         try:
-            sess.rollback()
+            # 共享 session 时不在这里回滚：交给调用方决定（它可能要连带回滚前置查重）。
+            if session is None and sess is not None:
+                sess.rollback()
         except Exception:
             pass
         return {"success": False, "error": f"credits 操作失败: {e}"}
     finally:
-        if sess:
+        if session is None and sess is not None:
             sess.close()
 
 
@@ -152,12 +173,30 @@ def refund_generation_credits(user_id: str, task_id: str) -> dict[str, Any]:
     try:
         with _DB_LOCK:
             sess = SessionLocal()
-            _ensure_row(user_id)
+            # 关键：查重与入账必须在同一个事务里。拆成两次独立提交时，
+            # 「查到没退过 → 正要入账」之间存在窗口，多 worker 并发会各退一次，
+            # 等于给用户重复送钱。
+            sess.execute(text("BEGIN"))
+            _ensure_row(user_id, session=sess)
+
+            # 生产 PG：锁住该用户的余额行，把并发的退款真正串行化。
+            # 拿不到行锁的那一方会等到前一个事务提交后再执行查重，于是能看到刚写的 refund 流水。
+            # SQLite 不支持 FOR UPDATE（且本地单进程已有 _DB_LOCK 兜底），直接跳过。
+            try:
+                if sess.get_bind().dialect.name == "postgresql":
+                    sess.execute(text(
+                        "SELECT balance FROM user_credits WHERE user_id=:u FOR UPDATE"
+                    ), {"u": user_id})
+            except Exception:
+                # 行锁只是加固手段，拿不到不应让退款整体失败
+                pass
+
             # 幂等查重：该 task 是否已有 refund 流水
             existing = sess.execute(text(
                 "SELECT 1 FROM credits_transactions WHERE user_id=:u AND reference_id=:r AND transaction_type='refund'"
             ), {"u": user_id, "r": task_id}).fetchone()
             if existing:
+                sess.rollback()
                 return {"success": True, "already_refunded": True}
             # 反查本 task 的 generation 扣费金额（保证退款金额 = 原扣款金额，不多退不少退）
             gen = sess.execute(text(
@@ -165,10 +204,22 @@ def refund_generation_credits(user_id: str, task_id: str) -> dict[str, Any]:
             ), {"u": user_id, "r": task_id}).fetchone()
             if not gen:
                 # 没有 generation 扣费记录 → 无需退款
+                sess.rollback()
                 return {"success": True, "already_refunded": True, "nothing_to_refund": True}
             cost = abs(int(gen[0]))
-            return _apply(user_id, cost, "refund", task_id, f"refund {task_id}")
+            result = _apply(user_id, cost, "refund", task_id, f"refund {task_id}", session=sess)
+            if not result.get("success"):
+                sess.rollback()
+                return result
+            sess.commit()
+            result["already_refunded"] = False
+            return result
     except Exception as e:
+        try:
+            if sess is not None:
+                sess.rollback()
+        except Exception:
+            pass
         return {"success": False, "error": f"退款失败: {e}"}
     finally:
         if sess:
