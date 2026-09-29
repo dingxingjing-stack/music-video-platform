@@ -57,9 +57,11 @@ git push -u origin main
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 5. 添加环境变量（5 个）：
    ```
-   SUPABASE_URL = https://gdowyyvzvseheccisdfhl.supabase.co
-   SUPABASE_ANON_KEY = sb_publishable_HgKv9LIR0-_CPK1sASyzWw_W_vvaOda
-   SUPABASE_SERVICE_ROLE_KEY = sb_secret_rETZ_hbLnEdJvr_-IEZPyA_nZv6HMzd
+   SUPABASE_URL = <你的 Supabase 项目 URL>
+   SUPABASE_ANON_KEY = <sb_publishable_... 公开键>
+   SUPABASE_SERVICE_ROLE_KEY = <sb_secret_... 后端专用，禁止入库>
+   # 🔒 2026-09-29 脱敏：此处曾直接写真实 service_role 密钥，已移除。
+   # 真实值只存 backend/.env（已 gitignore）。若复制过旧值，请到 Supabase 后台轮换。
    R2_BUCKET_NAME = music-audio-storage
    MUREKA_API_KEY = <在 Render Dashboard 注入；本机用 backend/secrets.local.json>
    ```

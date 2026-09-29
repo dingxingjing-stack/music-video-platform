@@ -10,16 +10,25 @@
 |---|---|
 | 前端 | React 18 + TypeScript + Vite + Tailwind CSS |
 | 后端 | Python FastAPI + uvicorn |
-| 部署（前端） | 阿里云 ECS（nginx 静态托管，melovar.com）|
-| 部署（后端） | 阿里云 ECS（uvicorn + nginx 反代，`releases/` + `current` 符号链接发布）|
+| 部署（前端） | 阿里云 ECS（nginx 静态托管 dist，melovar.com）|
+| 部署（后端） | 阿里云 ECS（**docker compose** 容器，nginx 反代 `/api/`）|
 | 存储 | Cloudflare R2（音频/视频文件）|
 | 监控 | Sentry |
 
-> ⚠️ 部署事实（2026-09-29 校正）：真实生产在**阿里云 ECS**，不是 Render。
-> 本文件早前写的是 Render.com / Cloudflare Pages / Modal，均已作废。仓库里的
-> `render.yaml`、`deploy.sh`、`DEPLOYMENT.md`、`nginx.conf` 里的 Docker 方案也全部过期，
-> 不要照它们操作。真实环境变量落点（backend/.env 或 systemd/supervisor 的 Environment）
-> 需 SSH 上 ECS 探明后再改，**不要在 Render 面板做任何事**。
+> ⚠️ 部署事实（2026-09-29 二次校正，已 SSH 探明）：真实生产在**阿里云 ECS + docker compose**，
+> 不是 Render、也不是裸 uvicorn + `releases/current` 符号链接。
+>
+> | 项 | 真实值 |
+> |---|---|
+> | compose 文件 | `/opt/melovar/docker-compose.yml`（`env_file:` → `secrets/backend.env`）|
+> | 后端环境变量**唯一**落点 | `/opt/melovar/secrets/backend.env`（49 键，`root:root 600`）|
+> | 后端源码 | `/opt/melovar/src/backend/`（**该目录下 `.env` 不存在**，不要在那儿找/写 env）|
+> | 生效条件 | `env_file` 只在**容器启动时**注入 → 改完 env 必须 `docker compose up -d backend` 才生效 |
+>
+> 两条硬纪律：
+> 1. **禁止 `docker commit` 运行中的容器**——会把 `backend.env` 烘进镜像 `Config.Env`，密钥随镜像扩散。
+> 2. **不要在 Render / Cloudflare Pages / Modal 面板做任何事**，`render.yaml`、`deploy.sh`、
+>    `DEPLOYMENT.md` 全部过期作废。
 
 ## 🧩 项目结构
 
@@ -64,9 +73,9 @@ SUPABASE_SERVICE_ROLE_KEY=xxx
 
 ## 🚀 部署命令
 
-> ⚠️ 生产部署在阿里云 ECS（`releases/` + `current` 符号链接 + nginx 反代）。
-> 以下命令仅用于本地开发/验证，不用于生产发布。生产发布流程需 SSH 上 ECS 探明
-> （先确认进程由 systemd 还是 supervisor 托管、env 落在 backend/.env 还是服务配置）。
+> ⚠️ 生产部署在阿里云 ECS（**docker compose**）。以下命令仅用于本地开发/验证。
+> 生产发布是四件事：① 后端重建镜像 ② 前端重建 dist ③ 补 `/opt/melovar/secrets/backend.env`
+> 并 `docker compose up -d` ④ 跑 DDL。详见 `Melovar_上线任务清单.md`。
 
 ### 后端（本地开发）
 ```bash
@@ -106,8 +115,8 @@ npm run build  # 注：已改为 vite build（无 tsc 检查）
 
 ## ⚠️ 已知限制
 
-- Render 免费实例冷启动约 2 分钟
-- SQLite 部署重启后数据重置（灰度阶段可接受）
+- 生产库为 Supabase Postgres，但**无 Alembic**：新增列必须手工执行 DDL（见 `backend/scripts/supabase_add_refund_idempotency.sql`），`create_all` 建不出
+- 改 `secrets/backend.env` 后必须 `docker compose up -d backend` 才生效（env_file 只在启动时注入）
 - 旧文件存在 TS 错误（已禁用 tsc 检查，Vite esbuild 直接编译）
 - antd 已安装但部分组件未使用，按需清理
 

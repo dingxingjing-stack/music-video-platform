@@ -65,11 +65,15 @@
 
 #### 3.1 Supabase 数据库
 
+> 🔒 **2026-09-29 脱敏**：以下曾直接写着真实 Supabase service_role 密钥，已从正文移除。
+> 真实值**只**存在于 `backend/.env`（已 gitignore）；文档一律写占位。
+> 若你复制过此处的旧值，请到 Supabase 后台轮换该 key。
+
 | Key | Value |
 |-----|-------|
-| `SUPABASE_URL` | `https://gdowyyvzvseheccisdfhl.supabase.co` |
-| `SUPABASE_ANON_KEY` | `sb_publishable_HgKv9LIR0-_CPK1sASyzWw_W_vvaOda` |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_rETZ_hbLnEdJvr_-IEZPyA_nZv6HMzd` |
+| `SUPABASE_URL` | `<你的 Supabase 项目 URL>` |
+| `SUPABASE_ANON_KEY` | `<sb_publishable_... 公开键，可前端暴露>` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `<sb_secret_... 后端专用，禁止入库/禁止前端引用>` |
 
 #### 3.2 Cloudflare R2 存储
 
