@@ -386,6 +386,7 @@ from app.routers import audio_processing
 from app.routers import song_continuation
 from app.routers import subtitle_recognition
 from app.routers import share as share_router
+from app.routers import share_page
 # from app.routers import one_click_publish  # P1: disabled (OAuth URLs are placeholder stubs)
 from app.routers import feedback
 # app.include_router(mv_app,       prefix="/api/v1/mv")  # P0-3: disabled MV router (MusicGen/MV)
@@ -419,6 +420,10 @@ app.include_router(audio_processing.router, prefix="/api/v1/audio")
 app.include_router(subtitle_recognition.router)
 # 公开分享（PLG 病毒飞轮）：凭 HMAC 签名令牌读取作品，无需登录、不返回 PII
 app.include_router(share_router.router)
+# 分享链路的服务端渲染页：/share/{token} 的 og:title/og:image 唯一来源。
+# nginx 按 UA 把**爬虫**分流到这里（人走 SPA），详见 app/routers/share_page.py。
+# 单独 import 模块（而非 share.xxx）：share_page 单向依赖 share，避免循环导入。
+app.include_router(share_page.router)
 # app.include_router(one_click_publish.router)  # P1: disabled (scaffold one-click publish)
 app.include_router(social_app)  # 保留：social_storage 为 SQLite 真实持久化 + 写端点强制 JWT
 # P1: disabled collaboration router —— 会话/操作历史全部存在进程内 dict（"Mock Storage"），

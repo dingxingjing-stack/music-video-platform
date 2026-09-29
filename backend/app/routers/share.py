@@ -13,7 +13,11 @@
 
 路由：
   POST /api/v1/share/task/{task_id}        登录 + 所有者 → 生成分享令牌
+  GET  /api/v1/share/cover.png             公开 → 品牌封面图（og:image 的唯一来源）
   GET  /api/v1/share/{token}               公开 → 返回作品（不含 PII）
+
+注意：`/cover.png` 必须在 `/{token}` **之前**注册 —— FastAPI 按声明顺序匹配，
+`{token}` 是无约束的 str 路径参数，声明在前会把 "cover.png" 当成令牌吃掉。
 """
 
 from __future__ import annotations
@@ -23,20 +27,30 @@ import hashlib
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 
 from app.services.auth_identity import get_verified_user_id
-from app.services import task_store
+from app.services import share_card, task_store
 
 router = APIRouter(prefix="/api/v1/share", tags=["share"])
 
 # 预签名音频有效期（秒）：与既有 download 端点同口径
 AUDIO_URL_EXPIRES_IN = 600
 
+# 封面图缓存时长：图内**无 per-song 数据**（见 share_card.py docstring），
+# 所有歌曲共用同一张图 ⇒ 可以长缓存，端点近乎零成本。
+COVER_CACHE_SECONDS = 86400
+
 
 def _secret() -> str:
     """分享签名密钥；未配置则 fail-closed（调用方返回 503）。"""
     return (os.getenv("SHARE_LINK_SECRET") or "").strip()
+
+
+def share_configured() -> bool:
+    """分享功能是否已配置（供分享页降级判断，避免它 import 下划线私有函数）。"""
+    return bool(_secret())
 
 
 def _sign(task_id: str) -> str:
@@ -66,8 +80,7 @@ def parse_token(token: str) -> Optional[str]:
 @router.post("/task/{task_id}")
 async def create_share_link(task_id: str, user_id: str = Depends(get_verified_user_id)):
     """为本人作品生成分享令牌（需登录 + 所有者校验）。"""
-    secret = _secret()
-    if not secret:
+    if not share_configured():
         raise HTTPException(status_code=503, detail="share_not_configured")
 
     task = task_store.get(task_id)
@@ -84,11 +97,34 @@ async def create_share_link(task_id: str, user_id: str = Depends(get_verified_us
     return {"token": make_token(task_id), "task_id": task_id}
 
 
+@router.get("/cover.png")
+async def share_cover(
+    variant: str = Query(share_card.DEFAULT_VARIANT, description="og | square"),
+):
+    """公开的品牌封面图 —— og:image 的唯一来源（微信/X/FB/WhatsApp/TG 卡片用）。
+
+    为什么必须服务端提供：平台爬虫**不执行 JS**，前端 canvas 画的封面它们永远看不到。
+
+    无需登录、无需令牌：图里没有任何 per-song 数据，泄露不了东西；
+    且 og:image 若要求带令牌，平台缓存/预取会更容易失败。
+    """
+    png = share_card.render_cover(variant)
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={
+            # immutable：内容由 variant 完全决定，客户端可长期复用
+            "Cache-Control": f"public, max-age={COVER_CACHE_SECONDS}, immutable",
+            "Content-Length": str(len(png)),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/{token}")
 async def get_shared_work(token: str):
     """公开读取分享作品（无需登录）。只返回展示所需字段，不含任何 PII。"""
-    secret = _secret()
-    if not secret:
+    if not share_configured():
         raise HTTPException(status_code=503, detail="share_not_configured")
 
     task_id = parse_token(token)

@@ -5,9 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melovar</title>
   <meta name="description" content="Melovar — AI Music Studio. Generate songs and lyrics in your browser." />
+  <!--
+    站点级 OG 默认值。原先这里**没有 og:image**，导致任何页面被分享到微信/X/FB 时
+    卡片都是无图状态。这里指向后端生成的品牌封面（公开、匿名可 GET、长缓存）。
+    ⚠️ /share/<token> 走的是后端服务端渲染页（动态 og:title/og:image），
+       见 backend/app/routers/share_page.py；本文件只负责站点级兜底。
+  -->
+  <meta property="og:site_name" content="Melovar" />
+  <meta property="og:type" content="website" />
   <meta property="og:title" content="Melovar" />
   <meta property="og:description" content="Melovar — AI Music Studio. Generate songs and lyrics in your browser." />
   <meta property="og:url" content="https://melovar.com" />
+  <meta property="og:image" content="https://melovar.com/api/v1/share/cover.png?variant=og" />
+  <meta property="og:image:secure_url" content="https://melovar.com/api/v1/share/cover.png?variant=og" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Melovar — AI generated music" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://melovar.com/api/v1/share/cover.png?variant=og" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <!-- PWA manifest 由 vite.config.ts 的 VitePWA 注入（唯一来源 /manifest.webmanifest） -->
   <meta name="theme-color" content="#121212" />
