@@ -1,5 +1,8 @@
 fastapi==0.115.0
 uvicorn==0.30.6
+# uvicorn WebSocket protocol impl; previously only transitive via supabase->realtime.
+# websockets 16 drops the legacy API uvicorn 0.30.6 uses -> keep upper bound <16.
+websockets>=11,<16
 python-dotenv==1.0.1
 pydantic==2.11.7
 email-validator==2.3.0
@@ -26,8 +29,6 @@ pillow>=10.0.0
 # musicgen-small: transformers + accelerate (走 transformers 路径，不装 audiocraft 避免 torch 2.10 冲突)
 # cosyvoice2 本阶段 BLOCKED，不安装（HF Space 亦 stub）
 # Kaggle T4 中建议: pip install -r requirements-mvp.txt
-transformers>=4.44.0
-accelerate>=0.26.0
 # audiocraft 不安装（可选，Kaggle 已验 transformers 路径可用）
 # encodec==0.1.1 仅当显式需要 EnCodec 时启用
 # cosyvoice>=0.1.0  # BLOCKED 本阶段

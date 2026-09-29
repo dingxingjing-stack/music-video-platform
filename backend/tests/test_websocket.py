@@ -53,23 +53,20 @@ def client():
 class TestMockEndpoint:
     """Test the /api/v1/mock/run endpoint."""
 
-    def test_mock_run_returns_task_id(self, client):
+    def test_mock_run_is_retired(self, client):
+        """P5-B.6：/api/v1/mock/run 已退休，必须 410 且不再创建后台任务。"""
         resp = client.post("/api/v1/mock/run", json={
+            "task_id": "ws-001",
             "duration": 2.0,
             "tick_interval": 0.5,
         })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "task_id" in data
-        assert data["status"] == "started"
-        assert data["websocket"] == f"/ws/progress/{data['task_id']}"
-        assert data["duration"] == 2.0
+        assert resp.status_code == 410
 
-    def test_mock_run_defaults(self, client):
-        resp = client.post("/api/v1/mock/run", json={})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["duration"] == 10.0  # default
+    def test_mock_run_defaults_retired(self, client):
+        """空 body 也必须是 410（原实现会接受并起任务）。"""
+        assert client.post("/api/v1/mock/run", json={}).status_code == 410
+
+
 
 
 # ---------------------------------------------------------------------------

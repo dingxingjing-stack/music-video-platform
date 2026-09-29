@@ -25,11 +25,11 @@ Phase B 及其他工作区内容。
 |---|---|---|
 | **Early Baseline 提交** | `b31ad3a2f0b1276405c31fff3add4b98206f7f8b`（22 文件 / +3838 −345） | 已验收（`POST_COMMIT_VERIFICATION = PASS`），**未推送远程** |
 | **本地轻量标签** | `early-baseline-20260928` → 指向上面那个提交 | 已创建并核验通过；**仅存在于本地仓库，尚未推送远程** |
-| **当前 HEAD** | `main` = `b31ad3a2f0b1276405c31fff3add4b98206f7f8b` | HEAD 未因标签创建而改变；但 HEAD **不等于**仓库全部内容：工作区仍有 107 条未提交状态（本文件创建后为 108 条） |
+| **当前 HEAD** | `main` = `404ba4f007ec11dddf7615fff36d07969e700db4`（本文件自己的定向提交，父提交为 Early Baseline `b31ad3a`） | 建标签轮 HEAD 曾为 `b31ad3a`，标签创建未改变它；P6-C 的定向提交使 HEAD 前进一次。HEAD **不等于**仓库全部内容：本文件创建前工作区 107 条（本文件为 `??`，108 条），本文件被提交后回到 107 条，本次快照修订后为 108 条（唯一差异 = ` M P6B_EARLY_BASELINE_PROTECTION_REPORT.md`） |
 | **尚未提交的 Phase B 内容** | `continuation_service.py` 的 index blob `8187bf07` + staged 新增文件 `backend/tests/test_phase_b_hf_gate.py`（`d50f8264`） | **不属于**已接受的 Early Baseline，须继续保护，不得被覆盖或误提交 |
 
-补充：`origin/main` 仍为 `eeef9aa13c1a1a1393fad9ad5be40898992e4648`，本地 `main` 领先 2 个提交
-（`bb92275` + `b31ad3a`）。因此**基线提交与标签都还没有成为远端事实**。
+补充：`origin/main` 仍为 `eeef9aa13c1a1a1393fad9ad5be40898992e4648`，本地 `main` 领先 3 个提交
+（`bb92275` + `b31ad3a` + `404ba4f`，最后一个是本文件的定向提交）。因此**基线提交与标签都还没有成为远端事实**。
 
 ---
 
@@ -80,10 +80,21 @@ git rev-parse early-baseline-20260928
 ## 4. 工作区保护状态（建标签前后实测一致）
 
 ```text
-HEAD 未改变
-.git/index 字节与纳秒级 mtime 未改变
+HEAD 未改变（建标签轮）
+.git/index 字节与纳秒级 mtime 未改变（建标签轮实测）
                       sha256 = 0b96e726366188f2424f964df5d7e17c9a783058556d148eefe03e73b96bab95
                       mtime  = 2026-09-28 11:24:35.907360400 -0300
+                      ★ 重新核验（P6-C3 修订本快照时实测）：index 字节已随 P6-C 对本文件的定向提交
+                        （git add + git commit --only）推进为新值，此后本文件的编辑与多次 git status
+                        均未再改写它：
+                      sha256 = da98f731d0ef7d3eb5ef0873492bd7091012be05a97ceffc2cbeaf3fc520bfd7
+                      mtime  = 2026-09-28 14:29:32.355438700 -0300 / size = 81809 B
+                      该推进只涉及本文件 ?? → 已跟踪并已提交，23 条 staged 内容零变化；
+                      保护性断言以内容层指纹为准（与建标签轮及 P6-C 执行前逐项相同）：
+                      git diff --cached --raw sha256 =
+                        2e9a1555eb757272704c318dd44659d674cd1a28909830e1fd37ffdcc434c449（23 条逐行未变）
+                      git ls-files -s         sha256 =
+                        3af6941d4aeaf7aa7f83f8d84e0920d390f8eecd4c45a03ba514dfe29fbd5d1e（全表项未变）
 staged 项目            = 23 条，保持不变
 未跟踪文件             = 19 项，保持不变
 git status --porcelain = 107 行，sorted sha e3b90739d59545647f0c1e23fa33a0bd1be5397d6dd4ec0731301341a47b8b41
@@ -160,10 +171,13 @@ Baseline Cleanup Report`），其 "Baseline" 指当时的依赖/镜像清理，*
 ## 附：本文件创建时的核验基线
 
 ```text
-HEAD                        = b31ad3a2f0b1276405c31fff3add4b98206f7f8b
+HEAD                        = b31ad3a2f0b1276405c31fff3add4b98206f7f8b（本文件创建时）
+                              → 404ba4f007ec11dddf7615fff36d07969e700db4（P6-C 定向提交本文件之后）
 tags                        = early-baseline-20260928（唯一标签，本地）
 refs 总数                    = 18
-.git/index sha256           = 0b96e726366188f2424f964df5d7e17c9a783058556d148eefe03e73b96bab95
+.git/index sha256           = 0b96e726366188f2424f964df5d7e17c9a783058556d148eefe03e73b96bab95（本文件创建时）
+                              → da98f731d0ef7d3eb5ef0873492bd7091012be05a97ceffc2cbeaf3fc520bfd7
+                                （P6-C 定向提交之后；23 条 staged 内容未变，内容层指纹见 §4）
 porcelain（本文件创建前）    = 107 行，sorted sha e3b90739d59545647f0c1e23fa33a0bd1be5397d6dd4ec0731301341a47b8b41
 porcelain（本文件创建后）    = 108 行（唯一差异 = ?? P6B_EARLY_BASELINE_PROTECTION_REPORT.md）
 本轮授权写操作               = 1（仅创建本 Markdown 文件）

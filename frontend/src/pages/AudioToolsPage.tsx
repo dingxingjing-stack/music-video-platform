@@ -6,7 +6,8 @@ export function AudioToolsPage() {
   const { t } = useTranslation();
 
   const tools = [
-    { key:'separation', title: t('audioTools.separation'), desc: t('audioTools.separationDesc'), icon:'⬢', to:'/audio-tools/separation', available: true },
+    // 生产后端当前没有可用的分轨能力（P3-3 审计），卡片入口保留但走现有不可用态。
+    { key:'separation', title: t('audioTools.separation'), desc: t('audioTools.separationDesc'), icon:'⬢', to:'/audio-tools/separation', available: false },
     { key:'mastering', title: t('audioTools.mastering'), desc: t('audioTools.masteringDesc'), icon:'◈', to:'/audio-tools/mastering', available: true },
     { key:'lyric', title: t('audioTools.lyricTool'), desc: t('audioTools.lyricDesc'), icon:'≡', to:'/audio-tools/lyrics', available: true },
     { key:'conversion', title: t('audioTools.conversion'), desc: t('audioTools.conversionDesc'), icon:'⇄', to:'#', available: false },

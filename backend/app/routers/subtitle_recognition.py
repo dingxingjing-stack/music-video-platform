@@ -204,210 +204,32 @@ async def get_supported_languages():
 
 
 @router.post("/recognize", response_model=RecognizeResponse)
-async def recognize_subtitles(
-    file: UploadFile = File(..., description="音频文件 (mp3/wav/flac/m4a)"),
-    language: str = Form("auto", description="语言代码: zh/en/ja/ko/auto"),
-    model_size: str = Form("base", description="Whisper 模型大小: tiny/base/small/medium/large"),
-):
+async def recognize_subtitles():
+    """P5-B.5：语音识别已退休（410 Gone）。
+
+    whisper / faster-whisper 均未安装（不在 backend/requirements.txt），
+    原实现在 ImportError 后返回 HTTP 200 + success=True + model="mock"，
+    并伪造 11 条中文歌词的时间轴 —— 属把不存在的能力报告为成功。
     """
-    语音识别 — 上传音频文件，返回带时间戳的字幕片段
+    raise HTTPException(
+        status_code=410,
+        detail=("Subtitle recognition has been retired (no ASR model installed). "
+              "GET /api/v1/subtitles/health reports the real availability."),
+    )
 
-    - 使用 openai/whisper 进行语音转文字并附带时间戳
-    - 当 Whisper 不可用时自动降级为 Mock 模式 (均匀分配时间)
-    - 支持中文/英文/日文/韩文/自动检测
-    """
-    # 验证语言参数
-    if language not in LANGUAGE_MAP:
-        raise HTTPException(
-            status_code=400,
-            detail=f"不支持的语言 '{language}'。可选: {', '.join(LANGUAGE_MAP.keys())}",
-        )
 
-    # 验证模型大小
-    if model_size not in WHISPER_MODELS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"不支持的模型 '{model_size}'。可选: {', '.join(WHISPER_MODELS)}",
-        )
-
-    # 保存上传文件到临时目录
-    suffix = Path(file.filename or "audio.mp3").suffix or ".mp3"
-    temp_dir = Path(tempfile.gettempdir()) / "subtitle_uploads"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    input_path = temp_dir / f"subtitle_{int(time.time())}{suffix}"
-
-    try:
-        content = await file.read()
-        input_path.write_bytes(content)
-
-        duration = _get_audio_duration(str(input_path))
-
-        # 尝试 Whisper
-        wm = _try_load_whisper(model_size)
-        if wm is not None:
-            try:
-                # Whisper 语言参数: auto → None (让模型自动检测)
-                whisper_lang = None if language == "auto" else language
-                result = wm.transcribe(
-                    str(input_path),
-                    language=whisper_lang,
-                    verbose=False,
-                )
-                segments = _whisper_to_segments(result)
-                detected = result.get("language", language)
-                return RecognizeResponse(
-                    success=True,
-                    segments=segments,
-                    language=detected,
-                    duration=round(duration, 3),
-                    model=f"whisper-{model_size}",
-                    message=f"Whisper 识别完成，共 {len(segments)} 段",
-                )
-            except Exception as exc:
-                logger.exception("Whisper 转写失败，降级为 Mock")
-                # 降级到 mock
-                segments = _mock_recognize(duration, language)
-                return RecognizeResponse(
-                    success=True,
-                    segments=segments,
-                    language=language,
-                    duration=round(duration, 3),
-                    model=f"mock (whisper-{model_size} 失败: {str(exc)[:100]})",
-                    message=f"Whisper 转写出错，使用 Mock 数据。错误: {exc}",
-                )
-        else:
-            # Mock 模式
-            segments = _mock_recognize(duration, language)
-            return RecognizeResponse(
-                success=True,
-                segments=segments,
-                language=language,
-                duration=round(duration, 3),
-                model="mock",
-                message=f"Mock 模式 (Whisper 不可用: {_whisper_error or '未知原因'})。均匀分配 {len(segments)} 段",
-            )
-    finally:
-        # 清理临时文件
-        try:
-            input_path.unlink(missing_ok=True)
-        except Exception:
-            pass
 
 
 @router.post("/align", response_model=AlignResponse)
-async def align_subtitles(
-    file: UploadFile = File(..., description="音频文件 (mp3/wav/flac/m4a)"),
-    lyrics: str = Form(..., description="歌词文本 (每行一句)"),
-    language: str = Form("auto", description="语言代码: zh/en/ja/ko/auto"),
-    model_size: str = Form("base", description="Whisper 模型大小"),
-):
-    """
-    歌词对齐 — 上传音频+歌词文本，返回每行歌词的时间戳
+async def align_subtitles():
+    """P5-B.5：歌词对齐已退休（410 Gone，原 mock 分支同样返回 success=True）。"""
+    raise HTTPException(
+        status_code=410,
+        detail=("Subtitle alignment has been retired (no ASR model installed). "
+              "GET /api/v1/subtitles/health reports the real availability."),
+    )
 
-    - 利用 Whisper 的强制对齐能力 (segment-level) 与歌词行做时间映射
-    - Mock 模式: 将歌词行均匀分配到音频时长上
-    """
-    if language not in LANGUAGE_MAP:
-        raise HTTPException(
-            status_code=400,
-            detail=f"不支持的语言 '{language}'。可选: {', '.join(LANGUAGE_MAP.keys())}",
-        )
 
-    if not lyrics or not lyrics.strip():
-        raise HTTPException(status_code=400, detail="歌词文本不能为空")
-
-    # 解析歌词行 (按换行分割，去空行)
-    lines = [ln.strip() for ln in lyrics.strip().splitlines() if ln.strip()]
-    if not lines:
-        raise HTTPException(status_code=400, detail="歌词文本中没有有效行")
-
-    # 保存上传文件
-    suffix = Path(file.filename or "audio.mp3").suffix or ".mp3"
-    temp_dir = Path(tempfile.gettempdir()) / "subtitle_uploads"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    input_path = temp_dir / f"align_{int(time.time())}{suffix}"
-
-    try:
-        content = await file.read()
-        input_path.write_bytes(content)
-
-        duration = _get_audio_duration(str(input_path))
-
-        # 尝试 Whisper 做 forced-align 级别的对齐
-        wm = _try_load_whisper(model_size)
-        if wm is not None:
-            try:
-                whisper_lang = None if language == "auto" else language
-                result = wm.transcribe(
-                    str(input_path),
-                    language=whisper_lang,
-                    verbose=False,
-                )
-                whisper_segs = _whisper_to_segments(result)
-
-                # 简易对齐: 将歌词行按顺序映射到 Whisper 分段
-                # 若分段数与歌词行数接近则一一对应；否则按比例分配
-                if len(whisper_segs) >= len(lines):
-                    # 取前 N 段
-                    segments = [
-                        SubtitleSegment(
-                            index=i,
-                            text=lines[i],
-                            start=whisper_segs[i].start,
-                            end=whisper_segs[min(i + 1, len(whisper_segs) - 1)].start
-                            if i < len(lines) - 1
-                            else whisper_segs[-1].end,
-                        )
-                        for i in range(len(lines))
-                    ]
-                else:
-                    # Whisper 分段少于歌词行 → 在_whisper分段范围内均匀分配
-                    total_start = whisper_segs[0].start if whisper_segs else 0.0
-                    total_end = whisper_segs[-1].end if whisper_segs else duration
-                    span = max(total_end - total_start, 0.1)
-                    seg_dur = span / len(lines)
-                    segments = [
-                        SubtitleSegment(
-                            index=i,
-                            text=lines[i],
-                            start=round(total_start + i * seg_dur, 3),
-                            end=round(total_start + (i + 1) * seg_dur, 3),
-                        )
-                        for i in range(len(lines))
-                    ]
-
-                return AlignResponse(
-                    success=True,
-                    segments=segments,
-                    duration=round(duration, 3),
-                    model=f"whisper-{model_size}",
-                    message=f"对齐完成，共 {len(segments)} 行",
-                )
-            except Exception as exc:
-                logger.exception("Whisper 对齐失败，降级为 Mock")
-                segments = _mock_align(lines, duration)
-                return AlignResponse(
-                    success=True,
-                    segments=segments,
-                    duration=round(duration, 3),
-                    model=f"mock (whisper-{model_size} 失败)",
-                    message=f"Whisper 对齐出错，使用 Mock 均匀分配。错误: {exc}",
-                )
-        else:
-            # Mock 模式: 均匀分配
-            segments = _mock_align(lines, duration)
-            return AlignResponse(
-                success=True,
-                segments=segments,
-                duration=round(duration, 3),
-                model="mock",
-                message=f"Mock 模式均匀分配 {len(segments)} 行",
-            )
-    finally:
-        try:
-            input_path.unlink(missing_ok=True)
-        except Exception:
-            pass
 
 
 @router.get("/health")

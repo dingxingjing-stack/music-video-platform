@@ -714,7 +714,10 @@ class ContinuationService:
         if target <= 180:
             raise ValueError("generate_long_music 仅用于 >180s，短时长请走单段")
 
-        # 分段：240->150+90, 300->150+150
+        # 分段：crossfade 会吃掉 CROSSFADE_DURATION 秒，因此补偿只加在第二段上，
+        # 使 首段 + 次段 - 交叉淡化 ≥ target（例：target=300 → 150 + 152 - 1.5 =
+        # 300.5 ≥ 300；ceil 必需：int() 截断会得到 299.5）。成品是否 ≥MIN=240
+        # 由统一质量门 _enforce_duration_gate 实测裁决（不再有 270 上限语义）。
         first_dur = 150
         second_dur = math.ceil(target - first_dur + CROSSFADE_DURATION)
 

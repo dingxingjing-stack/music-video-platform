@@ -19,7 +19,7 @@ from typing import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, JSON, UniqueConstraint
 from datetime import datetime
 
 # ── 环境判定 ────────────────────────────────────────
@@ -325,6 +325,98 @@ class PaddleSubscription(Base):
     last_event_type = Column(String(60), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# ── Lemon Squeezy 台账（Phase 2 P2-2：只建结构，本阶段无任何代码读写）────────
+# 与 Paddle 的 credit_pack_purchases / user_memberships / paddle_* 并列存在、
+# 互不写入，也不给那些既有表加任何列。设计依据全部来自 2026-09-25 真实
+# Test Mode 投递实测：
+#   · ls_event_id = payload 的 meta.webhook_id，LS 自动重试（5/25/125s）时保持
+#     不变 ⇒ 投递层幂等锚点；去重必须由数据库 UNIQUE 保证，不能靠"先 SELECT 再
+#     INSERT"（并发重投会双双通过应用层检查）。
+#   · 业务唯一键各自独立：order 用 ls_order_id、订阅用 ls_subscription_id、
+#     会员发放用 (ls_subscription_id, ls_invoice_id) 复合键 —— 实测
+#     subscription_payment_success 与 subscription_payment_recovered 会指向
+#     **同一个 invoice id**，单存 invoice id 会把两件事混成一件。
+#   · 刻意不存 interval / plan_id / pack_id / credits / credits_per_month：
+#     LS 的 subscription 与 invoice payload 都没有 interval，档位与积分真值的
+#     唯一来源是 credits_config，由 variant id 反查（item_id_for_variant）。
+#     存一份副本只会制造第二个真值源与漂移。
+#   · test_mode 落库：同一张表要能明确区分 LS Test 与 Live 数据，不靠分库或
+#     改表名；生产据此拒绝为 test_mode=true 的事件发放权益。
+#   · 无外键：LS 表之间、LS 表与 users/credits 之间都不建 FK，与既有商业表同风格。
+class LemonSqueezyWebhookDelivery(Base):
+    """LS webhook 投递记录：重试去重 + 审计。"""
+    __tablename__ = "lemonsqueezy_webhook_deliveries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ls_event_id = Column(String(64), nullable=False, unique=True)   # meta.webhook_id
+    event_name = Column(String(60), nullable=False, index=True)
+    object_type = Column(String(40), nullable=False)                # data.type
+    object_id = Column(String(64), nullable=True)                   # data.id
+    test_mode = Column(Boolean, nullable=False, default=False)
+    # 原始请求体。含买家邮箱/姓名 ⇒ 只用于事后排障与重放，禁止进日志、禁止回显。
+    payload = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LemonSqueezyPurchase(Base):
+    """LS 一次性购买流水（order 对象）。幂等核心：ls_order_id 数据库 UNIQUE。"""
+    __tablename__ = "lemonsqueezy_purchases"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ls_order_id = Column(String(64), nullable=False, unique=True)
+    ls_event_id = Column(String(64), nullable=True)                 # 产生该行的投递，留痕非约束
+    user_id = Column(String(255), nullable=False, index=True)
+    test_mode = Column(Boolean, nullable=False, default=False)
+    product_id = Column(String(64), nullable=True)
+    variant_id = Column(String(64), nullable=True, index=True)
+    price_id = Column(String(64), nullable=True)
+    quantity = Column(Integer, nullable=True)
+    currency = Column(String(8), nullable=True)
+    subtotal_cents = Column(Integer, nullable=True)
+    tax_cents = Column(Integer, nullable=True)
+    discount_cents = Column(Integer, nullable=True)
+    total_cents = Column(Integer, nullable=True)                    # LS 实收（最小货币单位）
+    refunded_amount_cents = Column(Integer, nullable=True)          # 本阶段只记录，不回收
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LemonSqueezyMembership(Base):
+    """LS 订阅状态（subscription 对象）。一个 LS subscription 一行。"""
+    __tablename__ = "lemonsqueezy_memberships"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ls_subscription_id = Column(String(64), nullable=False, unique=True)
+    ls_order_id = Column(String(64), nullable=True)                 # 首开订单（实测在 subscription 对象上）
+    ls_event_id = Column(String(64), nullable=True)                 # 最后一次同步该行的投递
+    user_id = Column(String(255), nullable=False, index=True)
+    test_mode = Column(Boolean, nullable=False, default=False)
+    product_id = Column(String(64), nullable=True)
+    variant_id = Column(String(64), nullable=True, index=True)
+    price_id = Column(String(64), nullable=True)
+    status = Column(String(30), nullable=False, default="active", index=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LemonSqueezyMembershipGrant(Base):
+    """订阅权益发放台账：每个计费周期（invoice）一行，是幂等的数据库底线。"""
+    __tablename__ = "lemonsqueezy_membership_grants"
+    __table_args__ = (
+        UniqueConstraint("ls_subscription_id", "ls_invoice_id",
+                         name="uq_ls_membership_grants_subscription_invoice"),
+    )
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ls_subscription_id = Column(String(64), nullable=False, index=True)
+    ls_invoice_id = Column(String(64), nullable=False)
+    ls_event_id = Column(String(64), nullable=True)
+    user_id = Column(String(255), nullable=False, index=True)
+    test_mode = Column(Boolean, nullable=False, default=False)
+    billing_reason = Column(String(30), nullable=True)              # 实测 initial / renewal …
+    amount_cents = Column(Integer, nullable=True)                   # invoice 实收
+    currency = Column(String(8), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 # ── 工具 ────────────────────────────────────────────
 def init_db() -> None:

@@ -1,143 +1,83 @@
-"""P2-2 修复验证：voice_clone HTTP 路由身份边界（X-User-ID）。
+"""P5-B.4：/api/v1/voice/* 端点族退休守卫。
 
-用户资源接口（voices / clone-quota / upload / clone）：
-  - 无 X-User-ID → 401
-  - 空白 X-User-ID → 401
-  - query/body 伪造 user_id → 不能绕过
-  - client.host/IP → 不能作为身份
-  - 合法 X-User-ID → 进入原业务逻辑
-/ presets 为静态公开接口，仍无需认证。
+本文件原用于验证 `/api/v1/voice/*`（旧声音克隆 v2）的身份只能来自 Authorization
+Bearer JWT。P5-B.4 起整族在 HTTP 边界返回 410 Gone，原因见下：
 
-全部用 stub service，不触真实 GPU/provider。
+  - 前端对 /api/v1/voice/* 引用为 0（含 dist 产物）。
+  - POST /clone 由 voice_clone_service.clone_voice **恒返回 success=True**，
+    audio_url 拼的是第三方教学站 www2.cs.uic.edu/~i101/SoundFiles/ 的演示音频
+    （StarWars / PinkPanther / BabyElephantWalk），message 还写"合成成功"。
+  - GET /presets 匿名返回同一批第三方样本，并伪装成 created_at 产品资产。
+  - 该族从未接入真实 RVC/GPT-SoVITS 能力。
+
+未删除的部分：`app/services/voice_clone_service.py` 仍被
+`app/services/voice_clone_task.py` 引用（实验链，faster-whisper 未安装），
+其演示样本数据物理清理归 P5-C/P6。
+
+真正的商业声音克隆是另一族 `/api/v1/voice-clone/*`（PoYo），由
+`VOICE_CLONE_ENABLED` fail-closed 门禁控制，本文件同时锁定其默认不可用状态。
 """
+
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
 
-import main as main_mod
-from app.services import voice_clone_service as _vcs
-from app.services import auth_identity
+try:
+    from fastapi.testclient import TestClient
+    from main import app
+except (ImportError, ModuleNotFoundError) as exc:  # pragma: no cover
+    pytest.skip(f"Skipping voice retirement tests: {exc}", allow_module_level=True)
 
-# 完整路径（voice_clone.router 以 /api/v1 前缀挂载）
+
 BASE = "/api/v1/voice"
 
-
-@pytest.fixture(autouse=True)
-def _jwt_stub(monkeypatch):
-    """Phase 3B-4B：身份改为 Authorization Bearer JWT。打桩 resolve_auth_user_id。"""
-    def _resolve(auth):
-        if isinstance(auth, str) and auth.startswith("Bearer "):
-            return auth[len("Bearer "):] or None
-        return None
-    monkeypatch.setattr(auth_identity, "resolve_auth_user_id", _resolve)
+# 任何身份头都不应改变结果：端点已退休
+_HEADERS = [
+    {},
+    {"Authorization": "Bearer whatever"},
+    {"X-User-ID": "someone"},
+    {"Authorization": "Bearer whatever", "X-User-ID": "someone"},
+]
 
 
-@pytest.fixture(autouse=True)
-def _stub_service(monkeypatch):
-    """stub 业务方法，禁止真实逻辑/GPU；并记录调用到的 user_key。"""
-    rec = {"list": [], "quota": [], "upload": [], "clone": []}
-
-    # VoiceSample 结构：id, name, audio_url, duration, created_at, is_private, owner_id, prompt_text, prompt_language
-    monkeypatch.setattr(_vcs.voice_clone_service, "list_voices",
-                        lambda uid: rec["list"].append(uid) or [])
-    
-    # QuotaInfo: used, limit, can_clone
-    monkeypatch.setattr(_vcs.voice_clone_service, "get_quota",
-                        lambda uid: rec["quota"].append(uid) or {"used": 0, "limit": 1, "can_clone": True})
-    
-    # VoiceSample for upload
-    monkeypatch.setattr(_vcs.voice_clone_service, "upload_voice",
-                        lambda url, name, uid: rec["upload"].append(uid) or {
-                            "id": "v1", "name": name or "test", "audio_url": url,
-                            "duration": 30.0, "created_at": "2024-01-01T00:00:00",
-                            "is_private": True, "owner_id": uid, "prompt_text": "", "prompt_language": ""
-                        })
-    
-    # VoiceCloneResponse for clone
-    async def _mock_clone(req):
-        rec["clone"].append(None)
-        return {"success": True, "audio_url": "https://mock/clone.wav", "duration": 5.0,
-                "voice_id": req.voice_id, "error": None, "message": "ok"}
-    
-    monkeypatch.setattr(_vcs.voice_clone_service, "clone_voice", _mock_clone)
-    
-    # presets - static list of VoiceSample
-    monkeypatch.setattr(_vcs.voice_clone_service, "presets", [], raising=False)
-    return rec
-
-
-@pytest.fixture()
+@pytest.fixture
 def client():
-    return TestClient(main_mod.app)
+    return TestClient(app)
 
 
-def _req(client, path, method="get", headers=None):
-    if path == "/upload":
-        # /upload 必须带必需的 audio_url query 参数，才能到达身份检查
-        return client.post(f"{BASE}{path}?audio_url=https://x/a.wav", headers=headers)
-    if method == "get":
-        return client.get(BASE + path, headers=headers)
-    return client.post(BASE + path, headers=headers, json={"text": "hi"})
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("get", "/voices"),
+        ("get", "/clone-quota"),
+        ("get", "/presets"),
+        ("post", "/upload"),
+        ("post", "/clone"),
+    ],
+)
+def test_legacy_voice_endpoints_are_retired(client, method, path):
+    for headers in _HEADERS:
+        resp = client.request(
+            method.upper(), BASE + path, headers=headers, json={}
+        )
+        assert resp.status_code == 410, (
+            f"{method.upper()} {path} with {sorted(headers)} -> {resp.status_code}: {resp.text}"
+        )
 
 
-# ── 无 Authorization → 401（用户资源接口） ─────────────────────────────
-@pytest.mark.parametrize("path", ["/voices", "/clone-quota", "/upload", "/clone"])
-def test_no_x_user_id_401(client, path):
-    method = "post" if path in ("/upload", "/clone") else "get"
-    r = _req(client, path, method)
-    assert r.status_code == 401, f"{path} 应 401, got {r.status_code}"
+def test_retired_voice_endpoints_never_return_demo_audio(client):
+    """410 响应体不得再携带第三方演示音频 URL。"""
+    body = client.post(BASE + "/clone", json={"text": "hi", "voice_id": "preset_male_01"}).text
+    assert "cs.uic.edu" not in body
+    assert "soundhelix" not in body.lower()
+    assert "success" not in body.lower() or "False" in body
 
 
-# ── 空 Bearer token → 401 ──────────────────────────────────────────────
-@pytest.mark.parametrize("path", ["/voices", "/clone-quota", "/upload", "/clone"])
-def test_blank_x_user_id_401(client, path):
-    method = "post" if path in ("/upload", "/clone") else "get"
-    r = _req(client, path, method, headers={"Authorization": "Bearer "})
-    assert r.status_code == 401
-
-
-# ── query 伪造 user_id 不能绕过（仍看 JWT） ────────────────────────────
-def test_query_user_id_cannot_bypass(client):
-    # upload 带 query user_id=attacker，无 Authorization → 401
-    r = client.post(f"{BASE}/upload?user_id=attacker&audio_url=https://x/y.wav")
-    assert r.status_code == 401
-    # voices 带 query user_id → 401
-    r = client.get(f"{BASE}/voices?user_id=attacker")
-    assert r.status_code == 401
-
-
-# ── body 伪造 user_id 不能绕过（clone 有 body） ────────────────────────
-def test_body_user_id_cannot_bypass(client):
-    r = client.post(f"{BASE}/clone", json={"text": "hi", "user_id": "attacker"})
-    assert r.status_code == 401
-
-
-# ── 合法 JWT → 进入业务逻辑，且身份即 verified id ─────────────────────
-def test_valid_x_user_id_reaches_business(client, _stub_service):
-    h = {"Authorization": "Bearer legit-user"}
-    r = client.get(f"{BASE}/voices", headers=h)
-    assert r.status_code == 200
-    assert _stub_service["list"] == ["legit-user"]
-
-    r = client.get(f"{BASE}/clone-quota", headers=h)
-    assert r.status_code == 200
-    assert _stub_service["quota"] == ["legit-user"]
-
-    r = client.post(f"{BASE}/upload?audio_url=https://x/a.wav", headers=h)
-    assert r.status_code == 200
-    assert _stub_service["upload"] == ["legit-user"]
-
-
-# ── 有 JWT 时 X-User-ID 不参与身份（JWT 优先） ─────────────────────────
-def test_header_beats_query_user_id(client, _stub_service):
-    r = client.get(f"{BASE}/voices?user_id=attacker",
-                   headers={"Authorization": "Bearer real", "X-User-ID": "forged"})
-    assert r.status_code == 200
-    assert _stub_service["list"] == ["real"]
-
-
-# ── presets 公开，无需认证 ────────────────────────────────────────────
-def test_presets_public(client, _stub_service):
-    r = client.get(f"{BASE}/presets")
-    assert r.status_code == 200
+@pytest.mark.parametrize(
+    "path",
+    ["/validate", "/generate", "/check", "/regenerate"],
+)
+def test_poyo_voice_clone_stays_gated(client, path):
+    """未退休的 PoYo 族：默认必须仍然是 401（无 JWT）或 503（开关关闭），绝不可 200。"""
+    resp = client.post("/api/v1/voice-clone" + path, json={})
+    assert resp.status_code in (401, 503), f"{path} -> {resp.status_code}: {resp.text}"

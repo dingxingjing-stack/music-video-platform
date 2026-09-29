@@ -7,15 +7,18 @@ only available for a different Python version (e.g. venv cp311 vs system cp312),
 these tests are skipped gracefully.
 
 Tests the complete flow:
-  1. POST /api/v1/predict/mock -> creates MockInferenceService with broadcast
-  2. Mock service runs predict() -> calls _report() at each phase
-  3. _report() -> calls broadcast callback -> manager.broadcast()
-  4. WebSocket subscriber receives PredictResult JSON messages
+  1. MockInferenceService.predict() -> calls _report() at each phase
+  2. _report() -> calls broadcast callback -> manager.broadcast()
+  3. WebSocket subscriber receives PredictResult JSON messages
+
+P5-B.7：HTTP 入口 POST /api/v1/predict/mock 已退休（410 Gone），故广播链契约
+改为直接驱动 MockInferenceService 验证，并新增端点退休守卫。
 """
 
 from __future__ import annotations
 
 import sys
+import asyncio
 import pytest
 
 # Graceful skip when fastapi/pydantic are not importable (e.g. cp311 venv
@@ -55,37 +58,48 @@ class _BroadcastCollector:
         self.calls.append((task_id, result))
 
 
-class TestFullBroadcastChain:
-    """
-    Validate the complete broadcast chain without relying on WebSocket
-    client libraries (which have compatibility issues in this test env).
+class TestMockServiceBroadcastChain:
+    """Validate the broadcast chain contract by driving MockInferenceService directly.
 
-    We inject a mock broadcast callback that records calls, then verify
-    the service produces the expected sequence of status updates.
+    P5-B.7 之前这一组用例是经由 `POST /api/v1/predict/mock` 间接触发的；该端点
+    已退休，因此保留同等断言（生命周期 / 注入 / task_id 一致性 / payload 契约），
+    只把驱动方式换成 service 层直调，另加一条端点退休守卫。
     """
 
-    def test_mock_predict_triggers_broadcast_lifecycle(self, client):
-        """
-        POST /api/v1/predict/mock should trigger the full predict lifecycle
-        with broadcast at each phase.
-        """
+    @staticmethod
+    def _run(collector, task_id: str, duration: float, tick: float):
+        from app.services.inference.base import PredictRequest
+        from app.services.inference.mock import MockInferenceService
+
+        svc = MockInferenceService(
+            service_type="mock",
+            duration=duration,
+            tick_interval=tick,
+            broadcast=collector,
+        )
+        return asyncio.run(
+            svc.predict(PredictRequest(
+                service_type="mock", task_id=task_id, payload={}, extra={},
+            ))
+        )
+
+    def test_predict_endpoint_is_retired(self, client):
+        """P5-B.7：predict 端点族对任何 service_type 都必须返回 410。"""
+        for st in ("mock", "tts", "music", "video", "midi", "mureka", "voice", "bogus"):
+            resp = client.post(f"/api/v1/predict/{st}", json={"text": "hi"})
+            assert resp.status_code == 410, f"{st} -> {resp.status_code}"
+
+    def test_mock_run_endpoint_is_retired(self, client):
+        """P5-B.6：/api/v1/mock/run 必须返回 410，不再匿名创建后台任务。"""
+        assert client.post("/api/v1/mock/run", json={}).status_code == 410
+
+    def test_mock_service_triggers_broadcast_lifecycle(self):
         collector = _BroadcastCollector()
-        # Store collector so it persists beyond the request
-        client.app.state.broadcast_collector = collector
+        result = self._run(collector, "e2e-001", 2.0, 0.5)
 
-        resp = client.post("/api/v1/predict/mock", json={
-            "task_id": "e2e-001",
-            "duration": 2.0,
-            "tick_interval": 0.5,
-        })
+        assert result.status == TaskStatus.COMPLETED
+        assert result.progress == 100
 
-        assert resp.status_code == 200
-        result = resp.json()
-        assert result["task_id"] == "e2e-001"
-        assert result["status"] == "completed"
-        assert result["progress"] == 100
-
-        # Verify broadcast was called at each phase
         calls = collector.calls
         assert len(calls) >= 4, f"Expected >= 4 broadcast calls, got {len(calls)}"
 
@@ -95,96 +109,52 @@ class TestFullBroadcastChain:
         assert TaskStatus.RUNNING in statuses
         assert statuses[-1] == TaskStatus.COMPLETED
 
-        # Verify progress is monotonically increasing during RUNNING
         running_progs = [c[1].progress for c in calls if c[1].status == TaskStatus.RUNNING]
         for i in range(1, len(running_progs)):
             assert running_progs[i] >= running_progs[i - 1]
 
-        # Verify last message is COMPLETED with 100%
         last_call = calls[-1]
         assert last_call[1].status == TaskStatus.COMPLETED
         assert last_call[1].progress == 100
         assert last_call[1].result_url is not None
 
-    def test_real_service_injects_broadcast(self, client):
-        """
-        Verify that factory-created services receive the broadcast callback.
-        """
+    def test_broadcast_callback_is_injected(self):
         collector = _BroadcastCollector()
-        client.app.state.broadcast_collector = collector
+        self._run(collector, "inject-001", 1.0, 0.5)
 
-        # The mock endpoint wires the broadcast callback
-        resp = client.post("/api/v1/predict/mock", json={
-            "task_id": "inject-001",
-            "duration": 1.0,
-            "tick_interval": 0.5,
-        })
-        assert resp.status_code == 200
+        assert len(collector.calls) >= 1
+        assert collector.calls[0][0] == "inject-001"
 
-        # Verify callback received calls
-        calls = collector.calls
-        assert len(calls) >= 1
-        assert calls[0][0] == "inject-001"
-
-    def test_broadcast_preserves_task_id_consistency(self, client):
-        """All broadcast calls for a task must share the same task_id."""
+    def test_broadcast_preserves_task_id_consistency(self):
         collector = _BroadcastCollector()
-        client.app.state.broadcast_collector = collector
+        self._run(collector, "consistency-001", 1.0, 0.5)
 
-        resp = client.post("/api/v1/predict/mock", json={
-            "task_id": "consistency-001",
-            "duration": 1.0,
-            "tick_interval": 0.5,
-        })
-        assert resp.status_code == 200
+        task_ids = {c[0] for c in collector.calls}
+        assert task_ids == {"consistency-001"}, f"got {task_ids}"
 
-        task_ids = set(c[0] for c in collector.calls)
-        assert task_ids == {"consistency-001"}, \
-            f"All calls must share task_id, got: {task_ids}"
-
-    def test_broadcast_payload_has_required_fields(self, client):
-        """Each broadcast message must have the PredictResult contract fields."""
+    def test_broadcast_payload_has_required_fields(self):
         collector = _BroadcastCollector()
-        client.app.state.broadcast_collector = collector
-
-        resp = client.post("/api/v1/predict/mock", json={
-            "task_id": "fields-001",
-            "duration": 1.0,
-            "tick_interval": 0.5,
-        })
-        assert resp.status_code == 200
+        self._run(collector, "fields-001", 1.0, 0.5)
 
         required = {"task_id", "status", "progress", "message", "updated_at"}
+        assert collector.calls, "broadcast 未被调用"
         for task_id, result in collector.calls:
             d = result.to_dict()
-            assert required.issubset(d.keys()), \
-                f"Missing keys: {required - d.keys()}"
+            assert required.issubset(d.keys()), f"Missing keys: {required - d.keys()}"
             assert 0 <= d["progress"] <= 100
             assert isinstance(d["status"], str)
 
-    def test_failed_task_broadcasts_error_state(self, client):
-        """When a task fails, broadcast must deliver FAILED status."""
+    def test_completed_task_broadcasts_terminal_state(self):
         collector = _BroadcastCollector()
-        client.app.state.broadcast_collector = collector
+        result = self._run(collector, "error-001", 0.5, 0.2)
 
-        # Mock service always succeeds, but verify the contract
-        # by checking that the broadcast chain handles all status types
-        resp = client.post("/api/v1/predict/mock", json={
-            "task_id": "error-001",
-            "duration": 0.5,
-            "tick_interval": 0.2,
-        })
-        assert resp.status_code == 200
-        result = resp.json()
-        assert result["status"] == "completed"
-
-        # Verify the last broadcast was COMPLETED
-        last = collector.calls[-1]
-        assert last[1].status == TaskStatus.COMPLETED
+        assert result.status == TaskStatus.COMPLETED
+        assert collector.calls[-1][1].status == TaskStatus.COMPLETED
 
 
 # ---------------------------------------------------------------------------
-# WebSocket connection manager integration
+
+
 # ---------------------------------------------------------------------------
 
 

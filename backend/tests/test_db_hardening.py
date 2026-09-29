@@ -161,8 +161,8 @@ def test_anonymous_protected_api_401_when_db_error(client, monkeypatch):
             raise RuntimeError("db down")
     monkeypatch.setattr("app.db.database.engine", _BadEngine())
 
-    # predict/music 无身份：budget_hard_stop_reached 读 DB（mock 它返回 False）→ 401
+    # tts/run 无身份：身份校验先于 DB 与配额（predict/* 已于 P5-B.7 退休为 410，改用仍在线的 tts/run 验证同一不变量）
     from app.services import ai_limits
     monkeypatch.setattr(ai_limits, "budget_hard_stop_reached", lambda: False)
-    r = client.post("/api/v1/predict/music", json={"prompt": "x"})
+    r = client.post("/api/v1/tts/run", json={"text": "hi", "reference_audio": "AAAA"})
     assert r.status_code == 401, f"expected 401 got {r.status_code}: {r.text}"

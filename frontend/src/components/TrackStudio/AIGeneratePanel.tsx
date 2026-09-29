@@ -2,7 +2,7 @@
  * AIGeneratePanel v3 — AI 生成音频面板（异步任务版）
  *
  * 对接后端异步协议（POST /ai/generate -> task_id -> 轮询 /ai/task/{id}），
- * 展示完整阶段：排队中/准备中/生成中(ACE-Step)/分轨中(Demucs)/上传中/完成/失败。
+ * 展示完整阶段：排队中/准备中/生成中/分轨中/上传中/完成/失败。
  * 完成后展示 {t('aiGen.fullSong')} + vocals/drums/bass/other 四轨，均可播放与下载；
  * 分轨失败时{t('aiGen.fullSong')}仍可播放/下载，并提供「重试分轨」（不重复扣额度）。
  * 下载统一走后端授权接口返回的短期预签名 URL（X-User-ID 归属校验）。

@@ -1,9 +1,8 @@
 /**
- * 音频分离组件 (Demucs)
+ * 音频分离组件
  * 
  * 功能:
  * - 上传音频文件
- * - 选择{t('separation.model')}
  * - 实时进度显示
  * - 四轨播放预览 (人声/鼓/贝斯/其他)
  * - 分轨下载
@@ -14,13 +13,18 @@ import { api } from '../config/api';
 import { supabase } from '../lib/supabase';
 import { useTranslation } from '../i18n/useTranslation';
 
+// 当前生产没有可用的 stem separation（后端在 ENVIRONMENT=production 直接返回不可用），
+// 因此这个页面上的 Start 必须始终不可执行。将来接上真实能力时改回 true 即可。
+const SEPARATION_AVAILABLE: boolean = false;
+
 export function AudioSeparationPanel() {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [isSeparating, setIsSeparating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stems, setStems] = useState<string[]>([]);
-  const [model, setModel] = useState('htdemucs');
+  // 后端 production 分离实现从不读取该参数（P3-3 审计），保留发送以维持既有请求契约。
+  const [model] = useState('htdemucs');
   const [error, setError] = useState('');
   
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
@@ -63,6 +67,11 @@ export function AudioSeparationPanel() {
       if (response.status === 401) throw new Error(t('auth.pleaseLogin'));
       if (response.status === 429) throw new Error(t('errors.rateLimited'));
       if (!response.ok || !data.success) {
+        // 机器可读错误码优先：映射到前端既有的不可用文案，不回显后端英文 message。
+        if (data?.error_code === 'stem_separation_unavailable') {
+          throw new Error(t('audioTools.separationDesc'));
+        }
+        // 未知 error_code / 无 error_code：保留原有 detail→message→本地兜底顺序。
         throw new Error(data.detail || data.message || t('separation.failed'));
       }
 
@@ -108,6 +117,14 @@ export function AudioSeparationPanel() {
           🎵 {t('separation.title')}
         </h2>
 
+        {/* 生产后端当前没有可用的分轨能力：页面级明示（复用既有 i18n，不新增 key） */}
+        <div className="mb-6 p-4 rounded-lg bg-gray-800/60 border border-gray-600 flex items-center gap-3">
+          <span className="shrink-0 px-3 py-1 rounded-full bg-gray-700 border border-gray-600 text-xs text-gray-300">
+            {t('audioTools.comingSoon')}
+          </span>
+          <span className="text-sm text-gray-300">{t('audioTools.separationDesc')}</span>
+        </div>
+
         {/* 上传区域 */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -135,28 +152,12 @@ export function AudioSeparationPanel() {
           </div>
         </div>
 
-        {/* 模型选择 */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            {t('separation.model')}
-          </label>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-orange-500"
-          >
-            <option value="htdemucs">{t('separation.modelHtdemucs')}</option>
-            <option value="htdemucs_ft">{t('separation.modelFt')}</option>
-            <option value="htdemucs_6s">{t('separation.model6s')}</option>
-          </select>
-        </div>
-
-        {/* 分离按钮 */}
+        {/* 分离按钮：能力开关为 false 时始终禁用，避免呈现一个必然失败的操作 */}
         <button
           onClick={handleSeparate}
-          disabled={!file || isSeparating}
+          disabled={!file || isSeparating || !SEPARATION_AVAILABLE}
           className={`w-full py-3 rounded-lg font-semibold transition-all ${
-            !file || isSeparating
+            !file || isSeparating || !SEPARATION_AVAILABLE
               ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:opacity-90'
           }`}

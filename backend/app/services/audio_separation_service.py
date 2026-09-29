@@ -112,7 +112,8 @@ class DemucsService:
                     "success": False,
                     "stems": [],
                     "duration": 0,
-                    "message": "Production environment: Stem separation unavailable (Modal Spleeter disabled)"
+                    "message": "Stem separation is not available right now.",
+                    "error_code": "stem_separation_unavailable",
                 }
             # 非生产环境允许 Mock 用于开发/测试
             return self._mock_separate(input_path, progress_callback)

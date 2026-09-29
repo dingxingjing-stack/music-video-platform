@@ -124,7 +124,7 @@ def test_2_no_key_registry_still_ok():
     import app.services.provider_registry as pr
     pr._registry = None
     reg = pr.get_provider_registry()
-    assert "runpod" in reg._providers  # 兜底仍在
+    assert "fal_stable_audio" in reg._providers  # 兜底仍在（RunPod 已于 P5-C 退出注册）
     assert "mureka" in reg._providers or True  # mureka 注册失败也被捕获，不阻断
 
 

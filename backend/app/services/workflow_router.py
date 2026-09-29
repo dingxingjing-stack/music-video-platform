@@ -75,257 +75,78 @@ async def _run_workflow_async(coroutine_fn, *args, **kwargs) -> None:
 
 
 @router.post("/a", tags=["workflows"])
-async def workflow_path_a(request: Request, user_id: str = Depends(get_verified_user_id)):
-    """Path A: Suno-style �?one-click music generation."""
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+async def workflow_path_a():
+    """P5-B.8：Workflow Path A 已退休（410 Gone）。
 
-    prompt = body.get("prompt", "")
-    if not prompt:
-        raise HTTPException(status_code=422, detail="'prompt' is required")
-
-    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。禁止 X-User-ID / body.user_id / IP fallback。
-    user_key = str(user_id)
-
-    # Skip quota check in mock mode
-    duration = float(body.get("duration", 10.0))
-    if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key, duration)
-        if not reserved_result["success"]:
-            raise HTTPException(status_code=429, detail=reserved_result["error"])
-        reserved = True
-    else:
-        reserved = False
-
-    task_id = task_store.new_task(user_key=user_key)
-    if not task_store.acquire_lock(user_key, task_id):
-        if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
-        task_store.delete(task_id)
-        raise HTTPException(
-            status_code=429,
-            detail="您有一个生成任务正在进行中，请完成后再试",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_a,
-            task_id,
-            prompt=prompt,
-            duration=duration,
-            temperature=float(body.get("temperature", 0.8)),
-            user_key=user_key,
-            reserved=reserved,
-        )
+    原链路 prompt -> MusicGen (HF Space)，依赖已退出 Melovar 当前架构的 Hugging Face Space 后端；
+    其所需的 MUSICGEN_SPACE_URL / GPT_SOVITS_SPACE_URL / DEMUCS_SPACE_URL
+    在 backend/.env.example 中根本不存在，端点过去只会"先返回 started、
+    再在后台断言失败"。真实生歌请用 POST /api/v1/ai/generate（Yinchao -> TemPolor）。
+    """
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Workflow path 'a' has been retired. "
+            "Use POST /api/v1/ai/generate.",
+        ),
     )
 
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "a",
-    }
 
-
-# ---------------------------------------------------------------------------
-# Workflow Path B �?Hybrid music + TTS
-# ---------------------------------------------------------------------------
 
 
 @router.post("/b", tags=["workflows"])
-async def workflow_path_b(request: Request, user_id: str = Depends(get_verified_user_id)):
-    """Path B: Hybrid �?MusicGen background + TTS vocals."""
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+async def workflow_path_b():
+    """P5-B.8：Workflow Path B 已退休（410 Gone）。
 
-    prompt = body.get("prompt", "")
-    tts_text = body.get("tts_text", "")
-    if not prompt or not tts_text:
-        raise HTTPException(
-            status_code=422,
-            detail="'prompt' and 'tts_text' are required",
-        )
-
-    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
-    user_key = str(user_id)
-
-    # Skip quota check in mock mode
-    duration = float(body.get("duration", 10.0))
-    if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key, duration)
-        if not reserved_result["success"]:
-            raise HTTPException(status_code=429, detail=reserved_result["error"])
-        reserved = True
-    else:
-        reserved = False
-
-    task_id = task_store.new_task(user_key=user_key)
-    if not task_store.acquire_lock(user_key, task_id):
-        if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
-        task_store.delete(task_id)
-        raise HTTPException(
-            status_code=429,
-            detail="您有一个生成任务正在进行中，请完成后再试",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_b,
-            task_id,
-            prompt=prompt,
-            tts_text=tts_text,
-            duration=duration,
-            tts_language=body.get("tts_language", "zh"),
-            reference_audio_b64=body.get("reference_audio"),
-            user_key=user_key,
-            reserved=reserved,
-        )
+    原链路 MusicGen + GPT-SoVITS TTS (HF Space)，依赖已退出 Melovar 当前架构的 Hugging Face Space 后端；
+    其所需的 MUSICGEN_SPACE_URL / GPT_SOVITS_SPACE_URL / DEMUCS_SPACE_URL
+    在 backend/.env.example 中根本不存在，端点过去只会"先返回 started、
+    再在后台断言失败"。真实生歌请用 POST /api/v1/ai/generate（Yinchao -> TemPolor）。
+    """
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Workflow path 'b' has been retired. "
+            "Use POST /api/v1/ai/generate.",
+        ),
     )
 
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "b",
-    }
 
-
-# ---------------------------------------------------------------------------
-# Workflow Path C �?Remix (Demucs stem separation)
-# ---------------------------------------------------------------------------
 
 
 @router.post("/c", tags=["workflows"])
-async def workflow_path_c(request: Request, user_id: str = Depends(get_verified_user_id)):
-    """Path C: Remix �?upload audio -> Demucs stem separation."""
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+async def workflow_path_c():
+    """P5-B.8：Workflow Path C 已退休（410 Gone）。
 
-    audio_b64 = body.get("audio_base64", "")
-    if not audio_b64:
-        raise HTTPException(
-            status_code=422,
-            detail="'audio_base64' is required",
-        )
-
-    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
-    user_key = str(user_id)
-
-    # Skip quota check in mock mode
-    duration = 10.0  # Path C uses fixed weight=1 for stem separation
-    if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key, duration)
-        if not reserved_result["success"]:
-            raise HTTPException(status_code=429, detail=reserved_result["error"])
-        reserved = True
-    else:
-        reserved = False
-
-    task_id = task_store.new_task(user_key=user_key)
-    if not task_store.acquire_lock(user_key, task_id):
-        if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
-        task_store.delete(task_id)
-        raise HTTPException(
-            status_code=429,
-            detail="您有一个生成任务正在进行中，请完成后再试",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_c,
-            task_id,
-            audio_base64=audio_b64,
-            stem_count=body.get("stem_count", "4"),
-            remove_reverb=bool(body.get("remove_reverb", False)),
-            user_key=user_key,
-            reserved=reserved,
-            duration=duration,
-        )
+    原链路 MusicGen + Demucs remix stems (HF Space)，依赖已退出 Melovar 当前架构的 Hugging Face Space 后端；
+    其所需的 MUSICGEN_SPACE_URL / GPT_SOVITS_SPACE_URL / DEMUCS_SPACE_URL
+    在 backend/.env.example 中根本不存在，端点过去只会"先返回 started、
+    再在后台断言失败"。真实生歌请用 POST /api/v1/ai/generate（Yinchao -> TemPolor）。
+    """
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Workflow path 'c' has been retired. "
+            "Use POST /api/v1/ai/generate.",
+        ),
     )
 
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "c",
-    }
 
-
-# ---------------------------------------------------------------------------
-# Workflow Path D �?MIDI render
-# ---------------------------------------------------------------------------
 
 
 @router.post("/d", tags=["workflows"])
-async def workflow_path_d(request: Request, user_id: str = Depends(get_verified_user_id)):
-    """Path D: Original Creation �?MIDI project -> render to audio."""
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
+async def workflow_path_d():
+    """P5-B.8：Workflow Path D 已退休（410 Gone）。
 
-    midi_project = body.get("midi_project")
-    if not midi_project:
-        raise HTTPException(
-            status_code=422,
-            detail="'midi_project' is required",
-        )
-
-    # 身份唯一可信来源：Authorization Bearer JWT → verified auth.users.id。
-    user_key = str(user_id)
-
-    # Skip quota check in mock mode
-    duration = 10.0  # Path D uses fixed weight=1 for MIDI render
-    if os.getenv("WORKFLOW_MODE", "mock").lower() != "mock":
-        reserved_result = ai_limits.reserve_generation(user_key, duration)
-        if not reserved_result["success"]:
-            raise HTTPException(status_code=429, detail=reserved_result["error"])
-        reserved = True
-    else:
-        reserved = False
-
-    task_id = task_store.new_task(user_key=user_key)
-    if not task_store.acquire_lock(user_key, task_id):
-        if reserved:
-            ai_limits.refund_generation(user_key, duration, reason="request_not_sent", task_id=task_id)
-        task_store.delete(task_id)
-        raise HTTPException(
-            status_code=429,
-            detail="您有一个生成任务正在进行中，请完成后再试",
-        )
-
-    engine = _get_workflow_engine()
-
-    asyncio.create_task(
-        _run_workflow_async(
-            engine.run_path_d,
-            task_id,
-            midi_project=midi_project,
-            output_format=body.get("outputFormat", "wav"),
-            soundfont_path=body.get("soundfontPath"),
-            user_key=user_key,
-            reserved=reserved,
-            duration=duration,
-        )
+    原链路 MIDI render workflow，依赖已退出 Melovar 当前架构的 Hugging Face Space 后端；
+    其所需的 MUSICGEN_SPACE_URL / GPT_SOVITS_SPACE_URL / DEMUCS_SPACE_URL
+    在 backend/.env.example 中根本不存在，端点过去只会"先返回 started、
+    再在后台断言失败"。真实生歌请用 POST /api/v1/ai/generate（Yinchao -> TemPolor）。
+    """
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Workflow path 'd' has been retired. "
+            "Use POST /api/v1/ai/generate.",
+        ),
     )
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-        "path": "d",
-    }

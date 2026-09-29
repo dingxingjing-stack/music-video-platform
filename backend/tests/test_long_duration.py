@@ -1,31 +1,22 @@
-"""300s 长生成测试 — 验证 150+150 分段、截断移除、重试、R2"""
+"""300s 长生成测试 — 单发无截断（NO HARD MAX）、continuation 独立续写重试、R2"""
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 import asyncio
 
 from tests.test_ai_music_flow import isolated_db  # noqa: F401  独立 SQLite（新 schema）+ HF 关闭
 
-def test_max_duration_caps_270():
-    """第一版产品统一硬上限 270s（2026-09-18 批准，替代旧 300s 政策）。"""
+def test_max_duration_constant_archived_270():
+    """阶段 B：MAX 常量仅存档（270），已退出 normalize，无任何运行时钳制。"""
     from app.services.ai_limits import MAX_AUDIO_DURATION_SECONDS, MAX_TASK_RUNTIME_SECONDS
-    assert MAX_AUDIO_DURATION_SECONDS == 270, f"MAX 270 expected got {MAX_AUDIO_DURATION_SECONDS}"
+    assert MAX_AUDIO_DURATION_SECONDS == 270, f"存档常量应为 270 got {MAX_AUDIO_DURATION_SECONDS}"
     assert MAX_TASK_RUNTIME_SECONDS == 900
 
 def test_provider_max_300():
     from app.services.provider_registry import get_provider_registry
     reg = get_provider_registry()
-    assert reg.get("runpod").max_duration == 300
     assert reg.get("fal_stable_audio").max_duration == 300
     assert reg.get("modal_ace_step").max_duration == 300
 
-def test_runpod_client_allows_300():
-    from app.services import runpod_client
-    # 300 should not be truncated to 180
-    # We test the clamping logic directly via generate_via_runpod internals is private,
-    # so verify the provider limit via runtime
-    import app.services.runpod_client as rc
-    # seconds_total calc is inside generate_via_runpod, but we verify provider cap
-    assert rc._resolve_timeout() == 600
 
 def test_duration_weight():
     from app.services.ai_limits import get_duration_weight
@@ -35,16 +26,16 @@ def test_duration_weight():
     assert get_duration_weight(300) == 2
 
 def test_no_truncation_270():
-    """270s（第一版上限）不被截断；超过 270 的请求按政策截断到 270。"""
+    """阶段 B NO HARD MAX：normalize 只保留下限，300/600 原样保留，绝不截断为 270。"""
     from app.routers.ai_music import MAX_SONG_DURATION_SECONDS
-    from app.services.ai_limits import MAX_AUDIO_DURATION_SECONDS
+    from app.services.ai_limits import MAX_AUDIO_DURATION_SECONDS, normalize_audio_duration
     # 死常量按本轮指令保持 300 原值（无运行时引用，仅此处记录现状）
     assert MAX_SONG_DURATION_SECONDS == 300
-    assert MAX_AUDIO_DURATION_SECONDS == 270
-    duration = min(270, MAX_AUDIO_DURATION_SECONDS)
-    assert duration == 270, "270 不应被截断"
-    duration_over = min(300, MAX_AUDIO_DURATION_SECONDS)
-    assert duration_over == 270, "第一版政策：300 请求应截断为 270"
+    assert MAX_AUDIO_DURATION_SECONDS == 270, "MAX 常量存档（已退出 normalize）"
+    assert normalize_audio_duration(270) == 270
+    assert normalize_audio_duration(300) == 300, "300 请求绝不截断为 270"
+    assert normalize_audio_duration(600) == 600, "600 请求原样保留"
+    assert normalize_audio_duration(60) == 240, "短请求只被抬到 MIN=240 下限"
 
 @pytest.mark.asyncio
 async def test_long_generation_single_shot_no_continuation(monkeypatch, isolated_db):

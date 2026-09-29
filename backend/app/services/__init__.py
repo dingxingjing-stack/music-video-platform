@@ -5,8 +5,8 @@ Provides lazy `mv_app / workflow_app / batch_app / dmca_router / user_app` so th
     from app.services import mv_app, workflow_app, batch_app, dmca_router, user_app
 
 still works exactly as before for `backend/main.py` (production API unchanged),
-while importing a *submodule* (e.g. `from app.services.heartmula_service import ...`
-on the RunPod GPU worker) does NOT eagerly import the FastAPI routers / full
+while importing a *submodule* (e.g. `from app.services.task_store import ...`)
+does NOT eagerly import the FastAPI routers / full
 FastAPI dependency chain.
 
 This keeps the worker image light and avoids pulling FastAPI into the GPU worker.

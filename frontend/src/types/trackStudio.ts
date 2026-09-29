@@ -390,7 +390,7 @@ export const PATHS: PathDefinition[] = [
   {
     id: 'a',
     label: 'Path A — AI Quick Create',
-    desc: 'Prompt → MusicGen → Full Audio',
+    desc: 'Prompt → AI Music Generation → Full Audio',
     icon: '🎵',
     prompt: 'upbeat electronic dance music with synth lead',
     inputLabel: 'Music Prompt',
@@ -398,7 +398,7 @@ export const PATHS: PathDefinition[] = [
   {
     id: 'b',
     label: 'Path B — Hybrid',
-    desc: 'Music Gen + TTS Vocals → Combined Track',
+    desc: 'Instrumental Bed + Synthesized Vocals → Combined Track',
     icon: '🎤',
     prompt: 'chill lofi hip hop beat',
     musicLabel: 'Music Prompt',
@@ -408,7 +408,7 @@ export const PATHS: PathDefinition[] = [
   {
     id: 'c',
     label: 'Path C — Remix',
-    desc: 'Upload Audio → Demucs Stem Separation',
+    desc: 'Upload Audio → Stem Separation',
     icon: '🎛️',
     inputLabel: 'Audio File',
   },
