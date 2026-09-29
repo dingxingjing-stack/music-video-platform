@@ -200,6 +200,34 @@ python scripts/preflight_check.py
 > 3. 全量结果会随临时目录状态浮动（我实测同代码 51 vs 60），
 >    所以**判断回归必须做基线对照 + 逐条 diff，不要只看总数**。
 
+### 五补三、真正的参照点：`404ba4f`（6 组提交的父提交）
+
+`351d1f4` 只能证明"密钥护栏修复无回归"。要证明"**这 6 组提交整体**引入了什么"，
+参照点必须是它们的父提交 `404ba4f`（独立核验指出我此前选错了参照点，这个批评成立）：
+
+| 跑批 | commit | failed | passed |
+|---|---|---|---|
+| 真基线 | `404ba4f` | 49 | 964 |
+| 当前（修复前） | `c872d49` | 60 | 1122 |
+| 当前（修复后） | `9461b1c` | 应为 58 | — |
+
+**新引入 11 条 = 9 条环境假失败 + 2 条真实回归**：
+
+- 9 条假失败：`test_long_generation_provider_fallback`(4) + `test_phase_b_hf_gate`(5)，
+  全量红、**单独跑全绿**，真因是清理数百个音频临时文件时被执行环境的批量删除保护拦截
+  （`[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":818,"threshold":50}`）。
+  **不是代码缺陷。**
+- 2 条真实回归（已修，commit `9461b1c`）：
+  1. `test_task_count::test_get_user_stats_uses_task_store`
+     —— 把端函数当普通函数调，`asyncio.run(auth.get_user_stats("user-x"))` 未传
+     `authorization/x_admin_token`；P0 收口加了 `Header(None)` 后，
+     **直接调用拿到的是 `Header(None)` 对象（不是 `None`）** ⇒ `.strip()` 抛
+     `AttributeError`。已改显式传参 + 走管理员路径，
+     **并补 3 条 HTTP 层鉴权测试**（P0 收口当时缺 HTTP 覆盖，正是回归溜过去的原因）。
+  2. `test_separation_service::..._production_blocks_mock`
+     —— 断言冻结了用户可见文案 `"Production environment"`，实现返回产品文案
+     + `error_code`。已改为断言结构化 `error_code == "stem_separation_unavailable"`。
+
 > 补充（2026-09-29 实测）：`test_db_hardening.py` 这条红**与密钥护栏改动无关**——
 > 它的子进程只 `import app.db.database`，根本不 `import main`，`load_dotenv` 不会触发。
 > 护栏改动的直接受影响面是 14 个 `from main import app` 的测试文件，
