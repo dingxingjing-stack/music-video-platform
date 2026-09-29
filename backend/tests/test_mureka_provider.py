@@ -310,7 +310,7 @@ async def test_16_fallback_mureka_success_runpod_not_called(isolated_db, monkeyp
         def fallback_chain(self, name=None):
             return [_M(), _R()]
 
-        def chain_for_operation(self, operation):
+        def chain_for_operation(self, operation, song_language=None):
             return self.fallback_chain()
     monkeypatch.setattr(ai_music, "get_provider_registry", lambda: _Reg())
 
@@ -360,7 +360,7 @@ async def test_17_fallback_both_fail_single_refund(isolated_db, monkeypatch):
         def fallback_chain(self, name=None):
             return [_F("mureka"), _F("runpod")]
 
-        def chain_for_operation(self, operation):
+        def chain_for_operation(self, operation, song_language=None):
             return self.fallback_chain()
     monkeypatch.setattr(ai_music, "get_provider_registry", lambda: _Reg())
 

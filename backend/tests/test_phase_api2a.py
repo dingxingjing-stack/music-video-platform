@@ -226,7 +226,7 @@ def _install_chain(monkeypatch, providers, hf_result=None):
         def fallback_chain(self, name=None):
             return providers
 
-        def chain_for_operation(self, operation):
+        def chain_for_operation(self, operation, song_language=None):
             # 阶段 B 路由唯一入口；本组测试的链内容由用例自定（fallback 语义断言不变）
             return self.fallback_chain()
 

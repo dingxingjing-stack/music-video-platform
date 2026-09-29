@@ -341,7 +341,7 @@ class FakeCdnUploader:
 def _stub_route(monkeypatch, provider):
     reg = SimpleNamespace(
         fallback_chain=lambda: [provider],
-        chain_for_operation=lambda operation: [provider],
+        chain_for_operation=lambda operation, song_language=None: [provider],
         select=lambda name=None: provider,
         get=lambda name: provider,
     )

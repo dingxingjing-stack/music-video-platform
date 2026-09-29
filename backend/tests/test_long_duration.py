@@ -76,7 +76,7 @@ async def test_long_generation_single_shot_no_continuation(monkeypatch, isolated
         await ai_music._run_generation(task_id, req, "test_long")
 
         cont_mock.assert_not_called()
-        reg.chain_for_operation.assert_called_once_with("normal")
+        reg.chain_for_operation.assert_called_once_with("normal", song_language=None)
         reg.select.assert_not_called()
         assert mock_provider.generate.await_count == 1
         sent = mock_provider.generate.await_args.args[0]

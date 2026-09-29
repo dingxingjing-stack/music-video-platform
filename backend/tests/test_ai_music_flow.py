@@ -131,7 +131,7 @@ def fake_modal(monkeypatch):
             return {"success": True, "volume_files": dict(res), "provider": self.name}
 
     class _Reg:
-        def chain_for_operation(self, operation):
+        def chain_for_operation(self, operation, song_language=None):
             return [_AceProvider()]
 
         def select(self, name=None):
