@@ -175,9 +175,12 @@ def _setup_sentry_lazy():
 # 两道护栏，杜绝真实密钥泄进测试进程/输出：
 # 1) override=False —— 不覆盖进程已显式设置的环境变量（systemd Environment / 测试 fixture）。
 # 2) 测试环境跳过 —— `from main import app` 会被 14+ 个测试文件广泛导入，若这里无条件
-#    load_dotenv()，真实 .env（含 API Key）会在会话中途灌进 os.environ，随断言 diff 外泄。
-#    因此测试进程（pytest 运行时）一律不加载 .env；fixture 需要什么自己 monkeypatch。
-if "PYTEST_CURRENT_TEST" not in os.environ:
+#    load_dotenv()，真实 .env（含密钥）会在会话中途灌进 os.environ，随断言 diff 外泄。
+#    因此测试进程一律不加载 .env；fixture 需要什么自己 monkeypatch。
+#    判断用 `"pytest" in sys.modules`：它在 collection 期（模块 import 那一刻）就已为 True，
+#    而 PYTEST_CURRENT_TEST 要等到用例真正开始跑才被 pytest 设置 —— 用后者会在唯一真实的
+#    泄露路径（collection 期 import main）上失效（2026-09-29 实测确认）。
+if "pytest" not in sys.modules:
     load_dotenv(override=False)
 
 # TTS backend mode: "real" uses GPT-SoVITS HF Space, "mock" uses simulated TTS
