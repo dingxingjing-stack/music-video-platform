@@ -56,7 +56,13 @@ TEMPOLOR_CALLBACK_URL = (os.getenv("TEMPOLOR_CALLBACK_URL") or "").strip()
 # 回调共享密钥：天谱乐官方回调协议不带签名，而回调端点是公网可写的。把密钥附加在
 # callback_url 的 query 上，是我们在不改 provider 协议的前提下验证回调来源的唯一手段。
 # 未配置时回调端 fail-closed（503），但生成终态走轮询，功能不受影响。
-TEMPOLOR_CALLBACK_SECRET = (os.getenv("TEMPOLOR_CALLBACK_SECRET") or "").strip()
+# 注意：不得做成 import 期常量 —— 端点侧是按请求读 env，若这里在 import 时固化，
+# 进程启动后才补 env 会两边不一致（提交时不带 token、端点却开始校验 → 永久 401）。
+
+
+def callback_secret() -> str:
+    """回调共享密钥，每次调用读 env，与端点侧 _tempolor_callback_secret() 保持一致。"""
+    return (os.getenv("TEMPOLOR_CALLBACK_SECRET") or "").strip()
 
 # 官方歌词/提示词上限（超出安全截断）
 PROMPT_MAX_CHARS = 1000
@@ -94,11 +100,12 @@ def effective_callback_url() -> str:
     已存在的同名 query 参数会被替换，其余 query 原样保留。
     未配置密钥时原样返回配置地址（此时回调端 503 fail-closed，但生成仍走轮询）。
     """
-    if not TEMPOLOR_CALLBACK_URL or not TEMPOLOR_CALLBACK_SECRET:
+    secret = callback_secret()
+    if not TEMPOLOR_CALLBACK_URL or not secret:
         return TEMPOLOR_CALLBACK_URL
     parts = urlsplit(TEMPOLOR_CALLBACK_URL)
     query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k != "token"]
-    query.append(("token", TEMPOLOR_CALLBACK_SECRET))
+    query.append(("token", secret))
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 

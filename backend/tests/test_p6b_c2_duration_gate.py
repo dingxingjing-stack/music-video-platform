@@ -327,7 +327,7 @@ def route_env(monkeypatch):
     monkeypatch.setattr(ai_music, "task_store", store)
     reg = MagicMock()
     y, t, m = OkProvider("yinchao"), OkProvider("tempolor"), OkProvider("mureka")
-    reg.chain_for_operation.side_effect = lambda op: (
+    reg.chain_for_operation.side_effect = lambda op, song_language=None: (
         [y, m] if op == "instrumental" else [y, t]
     )
     reg.get.side_effect = lambda name: {"yinchao": y, "tempolor": t, "mureka": m}.get(name)
@@ -362,7 +362,7 @@ async def test_c2_route_human_generation_uses_operation_chain(route_env, monkeyp
     cont_mock = await _drive_route(monkeypatch, duration=60, song_language="zh")
 
     cont_mock.assert_not_called()                               # 阶段 B：主链绝不进 continuation
-    route_env.reg.chain_for_operation.assert_called_once_with("normal")
+    route_env.reg.chain_for_operation.assert_called_once_with("normal", song_language="zh")
     route_env.reg.select.assert_not_called()                    # 未设显式 provider env → 不走单跳
     # 显式设定一个 <MIN 的入参：归一化抬到 240，仍单次生成、不得 4xx
     assert route_env.y.requests[0]["duration"] == 240
@@ -376,11 +376,11 @@ async def test_c2_route_human_generation_uses_operation_chain(route_env, monkeyp
 
 async def test_c2_route_instrumental_stays_on_operation_chain(route_env, monkeypatch):
     y_fail = FakeProvider("yinchao")                              # 链首失败 → 换链尾
-    route_env.reg.chain_for_operation.side_effect = lambda op: [y_fail, route_env.m]
+    route_env.reg.chain_for_operation.side_effect = lambda op, song_language=None: [y_fail, route_env.m]
     cont_mock = await _drive_route(monkeypatch, duration=240, instrumental=True)
 
     cont_mock.assert_not_called()                               # 器乐绝不进 continuation
-    route_env.reg.chain_for_operation.assert_called_once_with("instrumental")
+    route_env.reg.chain_for_operation.assert_called_once_with("instrumental", song_language=None)
     assert len(y_fail.requests) == 1 + ai_limits.MAX_AUTO_RETRIES  # 按既有策略打满再换家
     assert route_env.m.requests, "instrumental 链第二跳必须是 mureka"
     assert route_env.m.requests[0]["is_instrumental"] is True
@@ -392,7 +392,7 @@ async def test_c2_route_instrumental_stays_on_operation_chain(route_env, monkeyp
 async def test_c2_route_short_final_uses_existing_full_refund_path(route_env, monkeypatch):
     short = OkProvider("yinchao")
     short.measured = 239.0                                      # 低于 MIN=240 → 质量门拒绝
-    route_env.reg.chain_for_operation.side_effect = lambda op: [short, route_env.t]
+    route_env.reg.chain_for_operation.side_effect = lambda op, song_language=None: [short, route_env.t]
     await _drive_route(monkeypatch, duration=240)
 
     route_env.store.update.assert_any_call(
@@ -414,7 +414,7 @@ async def test_c2_route_short_final_uses_existing_full_refund_path(route_env, mo
 
 async def test_c2_route_missing_provider_result_fails_without_delivery(route_env, monkeypatch):
     y, t = FakeProvider("yinchao"), FakeProvider("tempolor")   # 恒失败（retryable）
-    route_env.reg.chain_for_operation.side_effect = lambda op: [y, t]
+    route_env.reg.chain_for_operation.side_effect = lambda op, song_language=None: [y, t]
     await _drive_route(monkeypatch, duration=240)
 
     assert y.requests and t.requests, "链首打满重试后应切到链尾"

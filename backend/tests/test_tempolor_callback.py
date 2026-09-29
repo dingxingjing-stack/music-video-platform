@@ -21,6 +21,9 @@ from app.services import ai_limits, credits_service, task_store
 CALLBACK_PATH = "/api/v1/ai/tempolor/callback"
 CB_LOGGER = "app.routers.ai_music.tempolor_callback"
 USER = "tempolor-cb-user"
+# 回调共享密钥：端点侧 _tempolor_callback_secret() 按请求读 env。
+# 用固定哨兵值即可，本测试不需要真实的密钥。
+CALLBACK_SECRET = "tempolor-cb-secret-for-tests-only"
 
 # 哨兵值：不是任何真实凭据，只用于证明这些字符串绝不会进日志
 SENTINELS = {
@@ -49,6 +52,9 @@ def env(tmp_path, monkeypatch):
     credits_service.add_credits(USER, 1000, "admin_adjustment", description="grant")
     for key, value in SENTINELS.items():
         monkeypatch.setenv(key, value)
+    # 回调签名加固：端点现在是 fail-closed（未配密钥 503 / 令牌错 401）。
+    # 测试必须显式配置密钥，否则全部回调都会被打 503。
+    monkeypatch.setenv("TEMPOLOR_CALLBACK_SECRET", CALLBACK_SECRET)
     return eng
 
 
@@ -60,9 +66,12 @@ def client(env):
 
 
 def _post(client, payload, **kw):
+    # 合法回调必须携带共享令牌（与 provider 拼进 callback_url 的 ?token= 一致）。
+    params = {"token": CALLBACK_SECRET}
+    params.update(kw.pop("params", {}))
     if isinstance(payload, (bytes, bytearray)):
-        return client.post(CALLBACK_PATH, content=payload, **kw)
-    return client.post(CALLBACK_PATH, json=payload, **kw)
+        return client.post(CALLBACK_PATH, content=payload, params=params, **kw)
+    return client.post(CALLBACK_PATH, json=payload, params=params, **kw)
 
 
 def _snapshot(eng, table):
@@ -101,11 +110,32 @@ def test_valid_callback_returns_plain_text_success(client):
     _assert_acked(_post(client, MP3_CB))
 
 
-def test_callback_requires_no_auth(client):
-    # 天谱乐不携带我们的 JWT；本端点只留痕、不改状态，故必须匿名可达
+def test_callback_requires_token(client):
+    # 加固后的契约：公网可写端点必须校验来源。匿名（无 token）不得被确认，
+    # 且响应必须拒绝，绝不能像旧实现那样恒 200。
     resp = client.post(CALLBACK_PATH, json=MP3_CB)
+    assert resp.status_code == 401, "无 token 的回调必须被拒绝（401）"
+
+
+def test_callback_wrong_token_rejected(client):
+    resp = client.post(CALLBACK_PATH, json=MP3_CB, params={"token": "wrong-token"})
+    assert resp.status_code == 401
+
+
+def test_callback_accepts_header_token(client):
+    # 排障通道：也接受 X-Callback-Token 头（与 query token 等价）。
+    resp = client.post(CALLBACK_PATH, json=MP3_CB, headers={"X-Callback-Token": CALLBACK_SECRET})
     _assert_acked(resp)
-    assert resp.status_code != 401
+
+
+def test_callback_fails_closed_without_secret(env, monkeypatch):
+    monkeypatch.delenv("TEMPOLOR_CALLBACK_SECRET")
+    # 复用 client fixture：显式构造一个无密钥环境下的客户端
+    app = FastAPI()
+    app.include_router(ai_music.router)
+    c = TestClient(app)
+    resp = c.post(CALLBACK_PATH, json=MP3_CB, params={"token": CALLBACK_SECRET})
+    assert resp.status_code == 503, "未配置密钥必须 fail-closed（503），不得降级放行"
 
 
 # ── 不可信输入：一律确认收到，不得 500 ────────────────────────────────
