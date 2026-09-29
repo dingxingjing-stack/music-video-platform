@@ -161,19 +161,29 @@ python scripts/preflight_check.py
 
 之前一直没做基线对照，导致"哪些是历史红、哪些是我打红的"只能靠猜。现已实测：
 
-| 跑批 | commit | 结果 |
-|---|---|---|
-| **基线** | `351d1f4`（护栏修复前，核验 70 failed 时的状态） | **70 failed / 1112 passed** |
-| 修复后 | `b684361`（护栏改为 `sys.modules`） | **62 failed / 1120 passed** |
+| 跑批 | commit | 临时目录 | 结果 |
+|---|---|---|---|
+| 基线 A | `351d1f4` | 默认 | 70 failed / 1112 passed |
+| 当前 A | `b684361` | 默认 | 62 failed / 1120 passed |
+| **基线 B** | `351d1f4` | 独立 `--basetemp` | **79 failed / 1103 passed** |
+| **当前 B** | `b94613d` | 独立 `--basetemp` | **60 failed / 1122 passed** |
 
 > 基线复现方式：`git worktree add /c/tmp/mv_base 351d1f4`，把 `backend/.env`
 > 复制进 worktree 以还原当时的环境，同参数跑全量。跑完立即删除 `.env` 副本并移除 worktree。
+> **A/B 两组必须用同一套临时目录策略才可比**，所以又补跑了 B 组。
 
-**逐条 diff 结论：**
+**B 组逐条 diff 结论（最终）：**
 
-- ✅ 基线有、当前无：**8 条**（全部是 `test_lemon_squeezy_webhook_route.py`）
-- ❌ **当前有、基线无：0 条** ← 这是关键：护栏与密钥改动**没有引入任何新失败**
-- ➖ 两边都有：62 条（即上表的历史遗留）
+- ✅ 基线有、当前无：**19 条**（8 条 Lemon Squeezy webhook + 11 条 stub 回归）
+- ❌ **当前有、基线无：0 条** ← 关键结论：**本轮没有引入任何新失败**
+- ➖ 两边都有：60 条（历史遗留 + 环境假失败）
+
+> ⚠️ **一个必须知道的坑：约 9 条失败是"假失败"，与代码无关。**
+> 表现为 `test_long_generation_provider_fallback`(4) 与 `test_phase_b_hf_gate`(5) 在全量里红、
+> **单独跑却全绿**（8 passed / 12 passed）。真实根因是这些测试要清理数百个音频临时文件，
+> 被执行环境的批量删除保护拦截：
+> `[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":818,"threshold":50}`
+> 单独跑时删除数量少、不触发拦截，所以绿。**判定：环境问题，不是代码缺陷，也不是我引入。**
 
 **顺带修掉的我早期引入的 11 条回归**（在 6 组 commit 里埋的，本轮一并修完，见 `b94613d`）：
 `chain_for_operation` 加了 `song_language` 关键字后，部分测试 stub/断言没跟上，
@@ -182,8 +192,13 @@ python scripts/preflight_check.py
 `test_ai_music_flow`(4)、`test_phase_api2a`(3)、`test_p6b_c3_1`(2)、
 `test_mureka_provider`(1)、`test_long_duration`(1)。修后这 5 个文件合跑 45 passed。
 
-> ⚠️ 跑全量注意事项：整轮约 **18–19 分钟**，且必须给足超时（我第一次给 900s
-> 被 kill 在 73%）。接 CI 时 `timeout` 至少设 1800s。
+> ⚠️ 跑全量注意事项：
+> 1. 整轮 **13–19 分钟**（用独立 `--basetemp` 明显更快，13 分；默认临时目录 19 分），
+>    必须给足超时——我第一次给 900s 被 kill 在 73%。接 CI 时 `timeout` 至少设 1800s。
+> 2. 建议固定 `--basetemp=<独立目录>`：既更快，也避免累积的临时目录让
+>    pytest 收尾时报 `SAFE_DELETE_BULK_CONFIRM_REQUIRED` 而**吞掉汇总行**。
+> 3. 全量结果会随临时目录状态浮动（我实测同代码 51 vs 60），
+>    所以**判断回归必须做基线对照 + 逐条 diff，不要只看总数**。
 
 > 补充（2026-09-29 实测）：`test_db_hardening.py` 这条红**与密钥护栏改动无关**——
 > 它的子进程只 `import app.db.database`，根本不 `import main`，`load_dotenv` 不会触发。
