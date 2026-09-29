@@ -87,9 +87,89 @@ def test_get_user_stats_uses_task_store(monkeypatch, isolated_db):
     monkeypatch.setattr(task_store, "count_user_tasks",
                         lambda uk: 2)
 
-    result = asyncio.run(auth.get_user_stats("user-x"))
+    # P0 收口（b99c699）后该端点要求鉴权：本人 JWT 或 X-Admin-Token。
+    # 直接调用端函数必须显式传参——否则 authorization 会拿到 FastAPI 的
+    # Header(None) 对象本身（不是 None），在 extract_bearer_token 里 .strip()
+    # 抛 AttributeError。这里走管理员路径，保持本用例原意（只验 total_tasks 口径）。
+    monkeypatch.setenv("ADMIN_API_TOKEN", "test-admin-token-task-count")
+    result = asyncio.run(auth.get_user_stats(
+        "user-x",
+        authorization=None,
+        x_admin_token="test-admin-token-task-count",
+    ))
 
     assert result["total_tasks"] == 2          # 来自 task_store.count_user_tasks
     assert result["total_songs"] == 5          # songs 仍走 supabase
     assert result["user_id"] == "user-x"
     assert "ai_tasks" not in accessed          # 确认未经 supabase 读 ai_tasks
+
+
+# ---------------------------------------------------------------------------
+# HTTP 层鉴权覆盖（P0 收口 b99c699 新增了鉴权，但当时只有进程内调用测试，
+# 没有走 HTTP 层——导致 b99c699 的签名改动打红上面那条却无人察觉）
+# ---------------------------------------------------------------------------
+
+_FAKE_USER = {"id": "user-x", "email": "x@x.com", "credits": 10,
+              "subscription_tier": "free"}
+
+
+def _client(monkeypatch):
+    """构造走完依赖的 TestClient：桩掉 get_user / supabase / task_store。"""
+    from fastapi.testclient import TestClient
+    from app.routers import auth as auth_module
+    import app.services.supabase_service as supabase_service
+    from app.services import task_store
+    from main import app
+
+    monkeypatch.setattr(auth_module, "get_user", lambda uid: dict(_FAKE_USER))
+    monkeypatch.setattr(task_store, "count_user_tasks", lambda uk: 2)
+
+    class _Resp:
+        count = 5
+
+    class _Table:
+        def select(self, *a, **k):
+            return self
+
+        def eq(self, *a, **k):
+            return self
+
+        def execute(self):
+            return _Resp()
+
+    class _FakeSupabase:
+        def table(self, name):
+            return _Table()
+
+    monkeypatch.setattr(supabase_service, "supabase", _FakeSupabase())
+    return TestClient(app)
+
+
+def test_stats_endpoint_no_credentials_returns_401(monkeypatch, isolated_db):
+    """HTTP 层：无任何凭据访问 /stats 必须 401（P0：不可枚举他人 PII）。"""
+    client = _client(monkeypatch)
+    monkeypatch.delenv("ADMIN_API_TOKEN", raising=False)
+
+    r = client.get("/api/v1/auth/user-x/stats")
+    assert r.status_code == 401, r.text
+
+
+def test_stats_endpoint_admin_token_passes(monkeypatch, isolated_db):
+    """HTTP 层：带正确 X-Admin-Token 应放行（不是 401/403）。"""
+    client = _client(monkeypatch)
+    monkeypatch.setenv("ADMIN_API_TOKEN", "test-admin-token-http")
+
+    r = client.get("/api/v1/auth/user-x/stats",
+                   headers={"X-Admin-Token": "test-admin-token-http"})
+    # 200 = 端点打通；5xx 说明有其他问题（不应出现）
+    assert r.status_code == 200, r.text
+    assert "email" not in r.json(), "P0 收口要求 /stats 不再回显 email"
+
+
+def test_get_user_by_id_no_credentials_returns_401(monkeypatch, isolated_db):
+    """HTTP 层：无凭据访问 /{user_id} 必须 401。"""
+    client = _client(monkeypatch)
+    monkeypatch.delenv("ADMIN_API_TOKEN", raising=False)
+
+    r = client.get("/api/v1/auth/user-x")
+    assert r.status_code == 401, r.text

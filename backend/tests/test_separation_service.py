@@ -418,7 +418,12 @@ def test_audio_separation_service_production_blocks_mock(wav_file, tmp_path, mon
     # 在生产环境中必须返回失败，不能是 mock 成功
     assert res["success"] is False, "生产环境不得返回 success=True 的 mock 结果"
     assert res["stems"] == [], "生产环境不得返回任何 stems"
-    assert "Production environment" in res["message"], "错误消息必须明确指出生产环境限制"
+    # 断言结构化错误码，而不是用户可见文案：
+    # 文案是产品文案（"Stem separation is not available right now."），会变，
+    # 且不该向用户暴露 "Production environment" 这类内部信息；
+    # error_code 才是稳定契约。
+    assert res.get("error_code") == "stem_separation_unavailable", \
+        "必须给出结构化错误码，明确是生产环境 fail-closed 而非静默失败"
     assert res["duration"] == 0
 
 def test_audio_separation_service_development_allows_mock(wav_file, tmp_path, monkeypatch):
