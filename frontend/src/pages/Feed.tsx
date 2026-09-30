@@ -155,7 +155,7 @@ export function Feed() {
                     </button>
                     {/* 播放状态 */}
                     {currentPlaying === item.work_id && (
-                      <div className="absolute bottom-2 right-2 flex gap-0.5">
+                      <div className="absolute bottom-2 end-2 flex gap-0.5">
                         {[1, 2, 3, 4].map((bar) => (
                           <div
                             key={bar}

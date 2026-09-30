@@ -303,7 +303,7 @@ export function MessagingPanel({ userId, onClose }: Props) {
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[#777777] hover:text-white transition"
+          className="absolute top-4 end-4 text-[#777777] hover:text-white transition"
         >
           ✕
         </button>

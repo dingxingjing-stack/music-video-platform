@@ -214,7 +214,7 @@ export function CommunityFeed() {
                     </div>
                   </button>
                   {/* 时长 */}
-                  <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-xs text-white">
+                  <div className="absolute bottom-2 end-2 px-2 py-1 bg-black/70 rounded text-xs text-white">
                     {formatDuration(post.duration)}
                   </div>
                 </div>

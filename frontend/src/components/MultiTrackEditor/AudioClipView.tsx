@@ -102,6 +102,8 @@ export function AudioClipView({ clip, zoom, isSelected, onSelect, onChange }: Pr
 
   return (
     <div
+      /* 剪辑内部为物理时间轴坐标系：显式声明 LTR，避免其内部元素随界面 RTL 翻转 */
+      dir="ltr"
       className={`absolute top-1 h-16 rounded-md cursor-pointer transition-all
         ${isSelected
           ? 'bg-gradient-to-r from-orange-500 to-pink-500 ring-2 ring-white'
@@ -130,7 +132,10 @@ export function AudioClipView({ clip, zoom, isSelected, onSelect, onChange }: Pr
       {/* 左侧淡入控制 */}
       {(clip.fadeIn || 0) > 0 && (
         <div
-          className="absolute left-0 top-0 bottom-0 w-5 bg-gradient-to-r from-black/20 to-transparent cursor-ew-resize"
+          className="absolute top-0 bottom-0 w-5 bg-gradient-to-r from-black/20 to-transparent cursor-ew-resize"
+          /* 手柄必须钉在剪辑体的物理左边缘：用内联物理定位，避免被 rtl.css 的
+             [dir="rtl"] .left-0 交换到右侧（该规则是祖先选择器，节点 dir="ltr" 无法中和） */
+          style={{ left: 0 }}
           title={t('mt.fadeIn')}
           onMouseDown={handleFadeInStart}
         />
@@ -138,7 +143,9 @@ export function AudioClipView({ clip, zoom, isSelected, onSelect, onChange }: Pr
 
       {/* 右侧调整大小手柄 */}
       <div
-        className="absolute right-0 top-0 bottom-0 w-3 cursor-e-resize bg-white/20 hover:bg-white/40 rounded-r-md"
+        className="absolute top-0 bottom-0 w-3 cursor-e-resize bg-white/20 hover:bg-white/40 rounded-r-md"
+        /* 同上：钉在物理右边缘（时间轴恒为 LTR），不随界面 RTL 交换 */
+        style={{ right: 0 }}
         onMouseDown={handleResizeStart}
       />
 

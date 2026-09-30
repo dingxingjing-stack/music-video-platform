@@ -119,7 +119,7 @@ export function PlatformSelector({ selectedPlatforms, onPlatformToggle }: Props)
               
               {/* 选择指示器 */}
               {isSelected && (
-                <div className="absolute top-2 right-2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                <div className="absolute top-2 end-2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs">✓</span>
                 </div>
               )}

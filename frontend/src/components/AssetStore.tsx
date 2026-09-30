@@ -253,12 +253,12 @@ export function AssetStore({ userId, onClose }: Props) {
                       {t('assetstore.previewLabel')}
                     </div>
                     {asset.is_premium && (
-                      <div className="absolute top-2 left-2 px-2 py-1 text-xs bg-orange-500 text-white rounded">
+                      <div className="absolute top-2 start-2 px-2 py-1 text-xs bg-orange-500 text-white rounded">
                         {t('assetstore.paid')}
                       </div>
                     )}
                     {purchased.includes(asset.id) && (
-                      <div className="absolute top-2 right-2 px-2 py-1 text-xs bg-green-500 text-white rounded">
+                      <div className="absolute top-2 end-2 px-2 py-1 text-xs bg-green-500 text-white rounded">
                         {t('assetstore.purchased')}
                       </div>
                     )}
