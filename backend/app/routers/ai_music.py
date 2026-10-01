@@ -968,7 +968,10 @@ async def get_task(
     if state in ("completed", "completed_with_stems_failed"):
         manifest = task.get("download")
         if manifest:
-            audio_url = audio_url or _sign_for_playback(task_id, "full_mp3", manifest)
+            # W2 fix: stored playback URLs are short-lived (600s presigned) and
+            # must be re-signed on every read, otherwise the player receives an
+            # expired URL once 10 minutes have passed since completion.
+            audio_url = _sign_for_playback(task_id, "full_mp3", manifest)
 
     return TaskResponse(
         task_id=task["task_id"],
@@ -1151,6 +1154,13 @@ async def list_user_tasks_endpoint(user_id: str = Depends(get_verified_user_id))
 
     user_key = user_id
     tasks = list_user_tasks(user_key)
+    # W2 fix: re-sign short-lived playback URLs on every list read so the
+    # player never receives an expired presigned URL.
+    for task in tasks:
+        if task.get("state") in ("completed", "completed_with_stems_failed"):
+            manifest = task.get("download")
+            if manifest:
+                task["audio_url"] = _sign_for_playback(task["task_id"], "full_mp3", manifest)
     return {"tasks": tasks, "count": len(tasks)}
 
 

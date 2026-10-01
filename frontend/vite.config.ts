@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -8,27 +7,10 @@ const isProd = process.env.NODE_ENV === 'production';
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'zyvexo-mark.svg'],
-      manifest: {
-        name: 'Melovar',
-        short_name: 'Melovar',
-        description: 'Melovar — AI Music Studio',
-        theme_color: '#121212',
-        background_color: '#121212',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        ],
-      },
-      workbox: { globPatterns: [], runtimeCaching: [] },
-    }),
+    // L2: VitePWA injection disabled — main.tsx unregisters all service
+    // workers on boot, so the injected SW/manifest created a register-then-
+    // unregister conflict. Product is intentionally non-PWA for now.
+    // (import { VitePWA } kept out; public/sw.js & utils/pwa.ts untouched.)
     // 打包体积分析（仅 build --mode analyze 时生成）
     process.env.ANALYZE && visualizer({
       filename: 'dist/stats.html',

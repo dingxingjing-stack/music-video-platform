@@ -217,16 +217,17 @@ export function AudioMasteringPanel() {
               : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white hover:opacity-90'
           }`}
         >
-          {isMastering ? t('mastering.processing', { progress: progress.toFixed(0) }) : t('mastering.start')}
+          {isMastering ? t('mastering.processing', { progress: '' }).replace('%', '').trim() : t('mastering.start')}
         </button>
 
-        {/* 进度条 */}
+        {/* L1 fix: indeterminate progress — the mastering endpoint is
+            synchronous and exposes no real progress source, so a fake
+            percentage bar was removed in favour of a pulsing bar. */}
         {isMastering && (
           <div className="mt-4">
             <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-orange-500 to-pink-500 transition-all duration-300"
-                style={{ width: `${progress}%` }}
+                className="h-full w-full bg-gradient-to-r from-orange-500 to-pink-500 animate-pulse"
               />
             </div>
           </div>

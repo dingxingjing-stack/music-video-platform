@@ -152,18 +152,10 @@ export function AILyricGenerator() {
     }
   };
   
-  // 应用到歌曲
-  const handleApplyToSong = () => {
-    if (!generatedLyrics) return;
-    
-    window.dispatchEvent(new CustomEvent('apply-lyrics', {
-      detail: { lyrics: generatedLyrics }
-    }));
-    
-    console.log('✅ 已应用到歌曲');
-    alert(t('lyricGen.applied'));
-  };
-  
+  // M2 fix: "apply to song" removed — the apply-lyrics event had no listener
+  // anywhere, so the button reported success without any real effect.
+  // 应用到歌曲（已移除假成功入口，见 P8-B 审计）
+
   // 复制歌词
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedLyrics);
@@ -310,12 +302,6 @@ export function AILyricGenerator() {
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-300 transition-all"
               >
                 {t('lyricGen.copy')}
-              </button>
-              <button
-                onClick={handleApplyToSong}
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 rounded-lg text-sm text-white font-medium transition-all"
-              >
-                {t('lyricGen.apply')}
               </button>
             </div>
           </div>

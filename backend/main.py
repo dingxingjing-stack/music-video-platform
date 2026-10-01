@@ -434,9 +434,12 @@ app.include_router(social_app)  # 保留：social_storage 为 SQLite 真实持�
 #   另有未净化 file.filename 直接拼 /tmp 路径（路径穿越）且端点无鉴权。
 #   重新启用前必须先接真实指纹库 + 加鉴权 + 修文件名净化。
 # app.include_router(copyright_app)
-app.include_router(notif_app)
-app.include_router(msg_app)
-app.include_router(sub_app)
+# P1/M1: notifications / messages / subscription legacy routers removed from
+# the public API surface (no auth + client-supplied user_id + in-memory mock
+# storage; zero frontend callers — see P8-B audit).
+# app.include_router(notif_app)
+# app.include_router(msg_app)
+# app.include_router(sub_app)
 # app.include_router(store_app)  # P1: disabled (mock Asset Store: ASSETS 常量 + 内存 purchases_db，付费恒 501)
 app.include_router(audio_quality_app)
 # app.include_router(ugc_app)  # P1: disabled (mock_submissions 内存 list + 无鉴权 earnings/marketplace)
