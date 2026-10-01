@@ -33,7 +33,7 @@
     "aiGenerated": "Dihasilkan AI"
   },
   "nav": {
-    "workbench": "Workbench",
+    "workbench": "Meja Kerja",
     "aiCompose": "Komposisi AI",
     "hybrid": "Mode Hibrida",
     "originalCompose": "Aransemen Asli",
@@ -493,5 +493,39 @@
     "hook": "Lagu ini dibuat oleh AI. Tulis satu kalimat dan kamu bisa membuat lagumu sendiri.",
     "cta": "Buat lagu serupa gratis",
     "shareText": "{title}\nMusik buatan AI · Bikin lagumu sendiri dalam satu kalimat di Melovar\n{url}"
+  },
+  "aiGen": {
+    "stemsFailedHint": "Pemisahan stem saat ini tidak tersedia; lagu utuh tetap dapat diputar dan diunduh."
+  },
+  "aiStem": {
+    "vocals": "Vokal",
+    "drums": "Drum",
+    "bass": "Bas",
+    "other": "Lainnya"
+  },
+  "ageVerify": {
+    "title": "Verifikasi Usia",
+    "body": "Sesuai peraturan setempat, Anda harus memverifikasi usia sebelum melanjutkan penggunaan layanan ini.",
+    "continue": "Saya 13 tahun atau lebih, lanjutkan",
+    "exit": "Keluar"
+  },
+  "beta": {
+    "heading": "Pengumuman Uji Beta",
+    "consentHint": "Dengan mengklik setuju, Anda mengonfirmasi telah membaca dan menerima aturan beta di atas",
+    "agreeButton": "✓ Sudah Baca dan Setuju",
+    "r1Title": "Kuota Gratis Harian",
+    "r1Text": "Pengguna biasa dapat membuat 10 item gratis setiap hari; penguji senior mendapat 30/hari",
+    "r2Title": "Buka Fitur Gray-Scale",
+    "r2Text": "Capai 100 poin aktivitas dengan total minimal 50 generasi untuk mengajukan akses gray-scale dan membuka fitur lanjutan seperti penyuntingan kolaboratif",
+    "r3Title": "Watermark Beta",
+    "r3Text": "Karya yang dibuat selama beta otomatis disematkan watermark beta. Apakah konten yang dibuat boleh digunakan secara komersial diatur oleh Bagian 5 Ketentuan Layanan dan ketentuan penggunaan model yang mendasarinya",
+    "r4Title": "Cakupan beta dan fitur berbayar",
+    "r4Text": "Pembelian Kredit dan keanggotaan diproses oleh penyedia pembayaran pihak ketiga kami, Paddle; fitur seperti toko aset dan penarikan pendapatan UGC tidak tersedia selama beta",
+    "r5Title": "Verifikasi sendiri penggunaan komersial",
+    "r5Text": "Anda bertanggung jawab memastikan apakah konten yang dibuat boleh digunakan secara komersial, serta mematuhi hukum yang berlaku, ketentuan penggunaan model yang mendasarinya, dan Ketentuan Layanan",
+    "agreementVersion": "Perjanjian Uji Beta · v2.0"
+  },
+  "aiTask": {
+    "retryFailed": "Percobaan ulang gagal ({status})"
   }
 }

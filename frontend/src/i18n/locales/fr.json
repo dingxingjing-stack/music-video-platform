@@ -1706,7 +1706,7 @@
     "statusFailed": "❌ Échec",
     "statusStarting": "⏳ Démarrage…",
     "elapsed": "Écoulé :",
-    "live": "● LIVE",
+    "live": "● EN DIRECT",
     "trackDetail": "Détail de la piste : {name}",
     "close": "✕ Fermer",
     "type": "Type :",
