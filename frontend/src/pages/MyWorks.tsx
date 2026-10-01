@@ -55,7 +55,8 @@ export default function MyWorks() {
       if (e instanceof AuthenticationError) {
         setTasks([]);
       } else {
-        setError(e?.message || t('myCreations.loadFailed'));
+        // 不直出 e.message：底层异常消息是日志性质（可能为英文），UI 一律走 i18n。
+        setError(t('myCreations.loadFailed'));
         setTasks([]);
       }
     } finally {
@@ -82,7 +83,10 @@ export default function MyWorks() {
       );
       if (data.url) window.open(data.url, '_blank');
     } catch (e: any) {
-      setError(e?.message || t('myCreations.deleteFailed'));
+      // 不直出 e.message：下载失败复用 aiTask.downloadFailed（带 {status} 插值），
+      // 网络类走 errors.networkError；均为现有 key（hi/id/ar 按回退链显示英文）。
+      const m = /^HTTP (\d{3})/.exec(e?.message ?? '');
+      setError(m ? t('aiTask.downloadFailed', { status: m[1] }) : t('errors.networkError'));
     }
   };
 
@@ -107,7 +111,10 @@ export default function MyWorks() {
       }, 2000);
     } catch (e: any) {
       setStemRetrying(prev => { const n = new Set(prev); n.delete(taskId); return n; });
-      setError(e?.message || t('aiTask.retryFailed'));
+      // 不直出 e.message：HTTP 错误按 http.ts 既有 'HTTP {status}' 契约解析状态码走插值；
+      // 会话/超时/网络类（无该前缀）统一走 network 文案。两个 key 均为现有 aiTask.*。
+      const m = /^HTTP (\d{3})/.exec(e?.message ?? '');
+      setError(m ? t('aiTask.retryFailed', { status: m[1] }) : t('aiTask.retryFailedNetwork'));
     }
   };
 
@@ -127,7 +134,8 @@ export default function MyWorks() {
       await authFetch(api.url(`/api/v1/ai/task/${taskId}`), { method: 'DELETE' });
       setTasks(prev => prev.filter(tt => tt.task_id !== taskId));
     } catch (e: any) {
-      setError(e?.message || t('myCreations.deleteError'));
+      // 不直出 e.message：删除失败统一走现有本地化文案。
+      setError(t('myCreations.deleteError'));
     } finally {
       setDeleting(prev => {
         const ns = new Set(prev);
@@ -149,17 +157,17 @@ export default function MyWorks() {
       const url = `${window.location.origin}/share/${data.token}`;
       try {
         if (navigator.share) {
-          await navigator.share({ title: 'Melovar', text: '我用 AI 做了一首歌', url });
+          await navigator.share({ title: 'Melovar', text: t('myCreations.shareText'), url });
           return;
         }
         await navigator.clipboard.writeText(url);
-        alert('分享链接已复制');
+        alert(t('myCreations.shareCopied'));
       } catch {
         // 用户取消分享或剪贴板不可用：静默忽略，不打扰
       }
     } catch (e) {
       console.error('生成分享链接失败:', e);
-      alert('生成分享链接失败，请稍后重试');
+      alert(t('myCreations.shareFailed'));
     } finally {
       setSharing((prev) => {
         const ns = new Set(prev);

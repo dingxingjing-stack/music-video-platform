@@ -32,7 +32,8 @@ export class TimeoutError extends Error {
  * 报成 AuthenticationError，UI 就显示"请先登录"——用户明明刚用 Google 登录过。
  */
 export class SessionUnavailableError extends Error {
-  constructor(message = '登录状态异常，请重新登录后再试。') {
+  // 默认消息仅作日志用途；UI 展示必须走调用方 i18n key，不得直接把 e.message 渲染给用户。
+  constructor(message = 'Session unavailable, please sign in again.') {
     super(message);
     this.name = 'SessionUnavailableError';
   }
@@ -73,7 +74,8 @@ async function rawFetch(url: string, opts: RequestOptions = {}): Promise<Respons
     return await fetch(url, { ...init, signal: ctrl.signal });
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') {
-      throw new TimeoutError(`请求超过 ${Math.round(timeoutMs / 1000)} 秒未响应`);
+      // 消息仅作日志用途；UI 展示走调用方 i18n key，不得直接渲染 e.message。
+      throw new TimeoutError(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
     }
     throw e;
   } finally {
