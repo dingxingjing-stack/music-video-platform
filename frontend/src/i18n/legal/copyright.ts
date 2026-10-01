@@ -80,7 +80,7 @@ export const COPYRIGHT_DOC: LegalDocPair = {
         blocks: [
           {
             k: 'p',
-            t: '本平台用于生成音乐音频的是第三方 AI 音乐生成服务，当前为音潮（Yinchao）v4.0 与天谱乐（TemPolor）tempolor-latest；提示词优化、歌词等文本处理由第三方文本模型协助完成，当前包括 Agnes AI agnes-2.0-flash 与 Google Gemini gemini-2.0-flash，此类文本模型不直接生成最终音乐音频。',
+            t: '本平台用于生成音乐音频的是第三方 AI 音乐生成服务，当前为音潮（Yinchao）v4.0、天谱乐（TemPolor）tempolor-latest 与 Mureka mureka-9（Mureka 用于纯音乐生成）；提示词优化、歌词等文本处理由第三方文本模型协助完成，当前包括 Agnes AI agnes-2.0-flash 与 Google Gemini gemini-2.0-flash，此类文本模型不直接生成最终音乐音频。',
           },
           {
             k: 'p',
@@ -166,7 +166,7 @@ export const COPYRIGHT_DOC: LegalDocPair = {
         blocks: [
           {
             k: 'p',
-            t: 'The music audio you receive is produced by third-party AI music generation services, currently Yinchao v4.0 and TemPolor tempolor-latest. Text stages such as prompt optimisation and lyrics are assisted by third-party text models, currently Agnes AI agnes-2.0-flash and Google Gemini gemini-2.0-flash; these text models do not generate the final music audio.',
+            t: 'The music audio you receive is produced by third-party AI music generation services, currently Yinchao v4.0, TemPolor tempolor-latest and Mureka mureka-9 (Mureka is used for instrumental generation). Text stages such as prompt optimisation and lyrics are assisted by third-party text models, currently Agnes AI agnes-2.0-flash and Google Gemini gemini-2.0-flash; these text models do not generate the final music audio.',
           },
           {
             k: 'p',

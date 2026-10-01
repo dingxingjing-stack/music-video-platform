@@ -160,9 +160,9 @@
   },
   "landing": {
     "heroBadge": "공개 베타 진행 중 · 가입 시 무료 크레딧 제공",
-    "heroTitle1": "올인원 AI",
+    "heroTitle1": "올인원",
     "heroTitle2": "AI 뮤직 스튜디오",
-    "heroSub": "영감부터 제작까지 — AI가 함께하는 스튜디오.",
+    "heroSub": "Melovar는 모든 창작자를 위한 AI 음악 제작 SaaS입니다. 아이디어를 설명하면 곡을 생성하고, 바로 듣고 다운로드하며 공유할 수 있습니다. 구매 항목은 창작 도구와 Credits이며, 성공한 생성에 사용됩니다.",
     "ctaStart": "🎵 지금 창작 시작",
     "featuresTitle": "5가지 핵심 기능",
     "featuresSub": "아이디어부터 완성까지 한곳에서 해결하세요.",
