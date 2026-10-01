@@ -24,7 +24,10 @@
       "fr": "French",
       "pt": "Portuguese",
       "ru": "Russian",
-      "de": "German"
+      "de": "German",
+      "hi": "Hindi",
+      "id": "Indonesian",
+      "ar": "Arabic"
     },
     "cancelled": "Cancelled",
     "aiGenerated": "AI Generated"
@@ -160,9 +163,9 @@
   },
   "landing": {
     "heroBadge": "Public beta · Free Credits on signup",
-    "heroTitle1": "All-in-one AI",
+    "heroTitle1": "All-in-one",
     "heroTitle2": "AI Music Studio",
-    "heroSub": "From inspiration to composition and final production — your AI-powered studio.",
+    "heroSub": "Melovar is an AI music creation SaaS for every creator: describe your idea, generate a track, then listen, download and share it. You get the creation tools plus Credits that pay for each successful generation.",
     "ctaStart": "🎵 Start Creating",
     "featuresTitle": "Five Core Features",
     "featuresSub": "From inspiration to finished work, all in one place.",
@@ -250,7 +253,7 @@
       "sec4i3": "Our error-monitoring provider may retain diagnostic data for a limited period.",
       "sec5Title": "Sharing and third parties",
       "sec5Lead": "We do not sell your personal data. To deliver the service we must pass the necessary data to:",
-      "sec5i1": "To provide AI music generation and related features, we may pass the user input that a given feature needs to process — typically prompts and lyrics, and audio where a feature requires it — to third-party AI service providers. The providers that generate audio are third-party AI music generation services, currently Yinchao (音潮) v4.0 and TemPolor (天谱乐) tempolor-latest. Providers used for text assistance — prompt optimisation and lyrics-related processing — are Agnes AI agnes-2.0-flash and Google Gemini gemini-2.0-flash, with NVIDIA available as auxiliary text-processing capacity; these are text models and they do not generate the final music audio. Which provider is actually used depends on the feature, its availability and our system configuration, and each receives the input needed for the function it performs. The model designations above identify the services we call, and each provider manages its own models, training data and infrastructure. Third-party AI service providers and the model versions they offer may change as our product features, technical requirements or service availability evolve; material changes will be addressed through updates to this policy and any other notice required by applicable law.",
+      "sec5i1": "To provide AI music generation and related features, we may pass the user input that a given feature needs to process — typically prompts and lyrics, and audio where a feature requires it — to third-party AI service providers. The providers that generate audio are third-party AI music generation services, currently Yinchao (音潮) v4.0, TemPolor (天谱乐) tempolor-latest and Mureka mureka-9. Providers used for text assistance — prompt optimisation and lyrics-related processing — are Agnes AI agnes-2.0-flash and Google Gemini gemini-2.0-flash, with NVIDIA available as auxiliary text-processing capacity; these are text models and they do not generate the final music audio. Which provider is actually used depends on the feature, its availability and our system configuration, and each receives the input needed for the function it performs. The model designations above identify the services we call, and each provider manages its own models, training data and infrastructure. Third-party AI service providers and the model versions they offer may change as our product features, technical requirements or service availability evolve; material changes will be addressed through updates to this policy and any other notice required by applicable law.",
       "sec5i2": "Infrastructure, hosting, storage and error-monitoring providers that operate the platform on our behalf.",
       "sec5i3": "Authorities, where required by law or a valid legal request; or a successor in a merger or asset transfer, which remains bound by this policy.",
       "sec5i4": "Our payment provider Paddle, which acts as Merchant of Record for payments, receipts and invoices, refunds and the related taxes, and which collects your payment credentials directly.",
@@ -395,6 +398,9 @@
     "download": "Download",
     "delete": "Delete",
     "share": "Share",
+    "shareCopied": "Share link copied",
+    "shareFailed": "Failed to generate share link, please try again later",
+    "shareText": "I made a song with AI",
     "loadFailed": "Failed to load works",
     "retry": "Retry",
     "confirmDelete": "Are you sure you want to delete this work? This will remove database records and stored audio.",
