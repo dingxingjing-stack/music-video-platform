@@ -629,14 +629,17 @@ async def paddle_webhook(request: Request,
 
 @router.post("/bonus/welcome")
 async def welcome_bonus(user_id: str = Depends(get_verified_user_id)):
-    return credits_service.claim_welcome_bonus(user_id)
+    """已退役（410 Gone，2026-10-03 裁定）：注册奖励改由注册流程自动发放（+30）。"""
+    raise HTTPException(status_code=410, detail="Bonus endpoint 'welcome' has been retired (Signup Reward = 30 Credits is granted automatically at registration).")
 
 
 @router.post("/bonus/email-verification")
 async def email_verification_bonus(user_id: str = Depends(get_verified_user_id)):
-    return credits_service.claim_email_verification_bonus(user_id)
+    """已退役（410 Gone，2026-10-03 裁定）。"""
+    raise HTTPException(status_code=410, detail="Bonus endpoint 'email-verification' has been retired (Signup Reward = 30 Credits is granted automatically at registration).")
 
 
 @router.post("/bonus/first-song")
 async def first_song_bonus(user_id: str = Depends(get_verified_user_id)):
-    return credits_service.claim_first_song_bonus(user_id)
+    """已退役（410 Gone，2026-10-03 裁定）。"""
+    raise HTTPException(status_code=410, detail="Bonus endpoint 'first-song' has been retired (Signup Reward = 30 Credits is granted automatically at registration).")

@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import os
 
-# ── 免费赠送（注册后自动发放，总计 100）──
-WELCOME_BONUS = 50
-EMAIL_VERIFICATION_BONUS = 25
-FIRST_SONG_BONUS = 25
-FREE_TOTAL = WELCOME_BONUS + EMAIL_VERIFICATION_BONUS + FIRST_SONG_BONUS  # 100
+# ── 免费赠送（注册后自动发放，总计 30）──
+# 2026-10-03 产品裁定：Signup Reward = 30 Credits（替代旧 50/25/25 体系）。
+# 历史 transaction type welcome_bonus 保留（新用户流水沿用该 type，不重写历史）。
+# email/first-song 两项退役（常量归 0，端点 410），存量已领用户不受影响。
+WELCOME_BONUS = 30
+EMAIL_VERIFICATION_BONUS = 0
+FIRST_SONG_BONUS = 0
+FREE_TOTAL = WELCOME_BONUS + EMAIL_VERIFICATION_BONUS + FIRST_SONG_BONUS  # 30
 
 # ── 付费套餐（价格/$，含 Credits）──
 # 注意：购买当前未接入支付，POST /purchase 会返回 payment_not_configured，
@@ -198,7 +201,7 @@ CREDIT_COSTS = {
     # P4-B2 Phase A-17：Cover（TemPolor tempolor-latest，供应商 70 创作点 ¥0.70/首
     # + 空歌词自动写词 +7 点）。产品定价 2026-10-03 裁定：Cover = 60 Credits
     # （fail-closed 解除：get_credit_cost("cover_song") 返回 60，端点不再 503）。
-    "cover_song":       {"credit_cost": 60, "enabled": True,  "description_key": "pricing.cost_cover"},
+    "cover_song":       {"credit_cost": 120, "enabled": True,  "description_key": "pricing.cost_cover"},
     "midi":             {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_midi"},
     "voice_clone":      {"credit_cost": 0, "enabled": False, "description_key": "pricing.cost_voice"},
     # ── 产品定价 2026-10-03（一次性充值制）：预留计费条目 ──

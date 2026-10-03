@@ -52,7 +52,7 @@ def test_credit_costs_match_product_decision():
     cc = credits_config.CREDIT_COSTS
     expected = {
         "standard_song": 30,
-        "cover_song": 60,
+        "cover_song": 120,
         "stem_separation": 60,          # Stems V2
         "stem_separation_v3": 30,       # Stems V3
         "stem_separation_v1": 15,       # 预留（NOT_WIRED）
@@ -68,8 +68,8 @@ def test_credit_costs_match_product_decision():
 
 
 def test_cover_fail_closed_is_lifted():
-    """Cover=60 → get_credit_cost 返回 60（503 cover_not_priced 解除）。"""
-    assert credits_config.get_credit_cost("cover_song") == 60
+    """Cover=120 → get_credit_cost 返回 120（503 cover_not_priced 解除）。"""
+    assert credits_config.get_credit_cost("cover_song") == 120
 
 
 def test_midi_stays_fail_closed():

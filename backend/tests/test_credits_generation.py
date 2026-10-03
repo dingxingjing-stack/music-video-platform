@@ -193,7 +193,7 @@ def test_1b_other_types_pricing_2026_10_03():
     stem_separation=60、cover_song=60（fail-closed 解除）、其余类型仍不得被顺带扣费
     （返回 None = 禁止扣费）。"""
     assert get_credit_cost("stem_separation") == 60
-    assert get_credit_cost("cover_song") == 60
+    assert get_credit_cost("cover_song") == 120
     assert get_credit_cost("instrumental") is None
 
 
