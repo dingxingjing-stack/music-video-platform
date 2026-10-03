@@ -7,9 +7,10 @@
 - GET /api/v1/audio/quality-stats - 音质统计
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Optional
+from app.services.auth_identity import get_verified_user_id
 from app.services.prompt_enhancer import prompt_enhancer
 import random
 
@@ -40,7 +41,10 @@ class ABTestResponse(BaseModel):
 
 
 @router.post("/enhance-prompt", response_model=PromptEnhanceResponse)
-async def test_prompt_enhancement(request: PromptEnhanceRequest):
+async def test_prompt_enhancement(
+    request: PromptEnhanceRequest,
+    user_id: str = Depends(get_verified_user_id),
+):
     """
     测试 Prompt 增强效果
     
@@ -68,7 +72,10 @@ async def test_prompt_enhancement(request: PromptEnhanceRequest):
 
 
 @router.post("/compare", response_model=ABTestResponse)
-async def ab_test_generation(request: ABTestRequest):
+async def ab_test_generation(
+    request: ABTestRequest,
+    user_id: str = Depends(get_verified_user_id),
+):
     """
     A/B 测试 - 生成多个变体用于对比
     """

@@ -12,6 +12,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../config/api';
+import { authFetch } from '../api/http';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface MasteringPreset {
@@ -69,12 +70,10 @@ export function AudioMasteringPanel() {
     formData.append('stereo_width', customStereoWidth.toString());
 
     try {
-      const response = await fetch(api.url('/api/v1/audio/master'), {
+      const data = await authFetch(api.url('/api/v1/audio/master'), {
         method: 'POST',
         body: formData,
       });
-
-      const data = await response.json();
 
       if (!data.success) {
         throw new Error(data.message || t('mastering.failed'));

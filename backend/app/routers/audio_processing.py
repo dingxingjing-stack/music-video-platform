@@ -131,7 +131,8 @@ async def get_separation_models():
 async def master_audio(
     file: UploadFile = File(...),
     target_loudness: float = Form(-14.0),
-    stereo_width: float = Form(0.3)
+    stereo_width: float = Form(0.3),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """
     自动母带处理

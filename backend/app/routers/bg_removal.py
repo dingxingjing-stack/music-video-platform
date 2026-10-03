@@ -8,12 +8,13 @@
 - GET /bg/pricing - 价格方案
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 import tempfile
 import os
 
+from app.services.auth_identity import get_verified_user_id
 from app.services.bg_removal import bg_removal_service, remove_background, batch_remove_background
 
 router = APIRouter(prefix="/api/v1/bg", tags=["智能抠图"])
@@ -45,7 +46,8 @@ async def remove_bg_endpoint(
     bg_image_url: Optional[str] = Form(None, description="背景图片 URL"),
     size: str = Form("auto", description="输出尺寸 (auto/preview/full)"),
     format: str = Form("png", description="输出格式 (png/jpg)"),
-    type: str = Form("auto", description="抠图类型 (auto/person/product/car/graphics)")
+    type: str = Form("auto", description="抠图类型 (auto/person/product/car/graphics)"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """
     智能抠图 - 移除图片背景
@@ -110,6 +112,7 @@ async def remove_bg_batch_endpoint(
     images: List[UploadFile] = File(..., description="图片列表"),
     size: str = Form("auto", description="输出尺寸"),
     format: str = Form("png", description="输出格式"),
+    user_id: str = Depends(get_verified_user_id),
 ):
     """
     批量抠图
