@@ -190,17 +190,26 @@ CREDIT_COSTS = {
     "long_song":        {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_long_song"},
     "instrumental":     {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_instrumental"},
     "vocals":           {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_vocals"},
-    "stem_separation":  {"credit_cost": 35, "enabled": True,  "description_key": "pricing.cost_stems"},
-    # P4-B2 Phase A-17（2026-10-02 裁定）：Stems V3（8 轨）独立计价 100 Credits
-    # （供应商 100 创作点 ¥1.00/次）；V2 的 stem_separation=35 保持不动。
-    # 注意：V3 提交另有 MODEL_ID_UNVERIFIED 双重 env 门禁（见 ai_music /stems/separate）。
-    "stem_separation_v3": {"credit_cost": 100, "enabled": True, "description_key": "pricing.cost_stems_v3"},
-    # P4-B2 Phase A-17：Cover 恢复（TemPolor tempolor-latest，供应商 70 创作点 ¥0.70/首
-    # + 空歌词自动写词 +7 点）。Melovar Credits 无现有产品定价 → credit_cost=0 保持
-    # fail-closed（端点 503 cover_not_priced），绝不猜价；产品定价后改此值自动激活。
-    "cover_song":       {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_cover"},
+    "stem_separation":  {"credit_cost": 60, "enabled": True,  "description_key": "pricing.cost_stems"},
+    # P4-B2 Phase A-17（2026-10-02 裁定）：Stems V3（8 轨）独立条目。产品定价
+    # 2026-10-03 裁定：Stems V3 = 30 Credits（原 100）。V3 提交另有 MODEL_ID_UNVERIFIED
+    # 双重 env 门禁（见 ai_music /stems/separate）——credit_cost 变更不影响该 fail-closed。
+    "stem_separation_v3": {"credit_cost": 30, "enabled": True, "description_key": "pricing.cost_stems_v3"},
+    # P4-B2 Phase A-17：Cover（TemPolor tempolor-latest，供应商 70 创作点 ¥0.70/首
+    # + 空歌词自动写词 +7 点）。产品定价 2026-10-03 裁定：Cover = 60 Credits
+    # （fail-closed 解除：get_credit_cost("cover_song") 返回 60，端点不再 503）。
+    "cover_song":       {"credit_cost": 60, "enabled": True,  "description_key": "pricing.cost_cover"},
     "midi":             {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_midi"},
     "voice_clone":      {"credit_cost": 0, "enabled": False, "description_key": "pricing.cost_voice"},
+    # ── 产品定价 2026-10-03（一次性充值制）：预留计费条目 ──
+    # 以下类型当前无生产端点消费（NOT_WIRED）：仅声明定价真值，供未来功能接线时
+    # 直接生效。条目本身不产生任何行为（get_credit_cost 无人调用 = 零运行影响）。
+    "stem_separation_v1": {"credit_cost": 15, "enabled": True,  "description_key": "pricing.cost_stems_v1"},
+    "song_extend":        {"credit_cost": 30, "enabled": True,  "description_key": "pricing.cost_extend"},
+    "remix":              {"credit_cost": 60, "enabled": True,  "description_key": "pricing.cost_remix"},
+    "song_identification": {"credit_cost": 10, "enabled": True, "description_key": "pricing.cost_identification"},
+    "song_analysis":      {"credit_cost": 15, "enabled": True,  "description_key": "pricing.cost_analysis"},
+    "music_transcription": {"credit_cost": 40, "enabled": True, "description_key": "pricing.cost_transcription"},
 }
 
 # 允许的 transaction_type（账本语义）

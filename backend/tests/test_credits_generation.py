@@ -188,9 +188,12 @@ def test_1_standard_song_priced_30_regardless_of_duration():
     assert get_credit_cost("standard_song", 270) == COST
 
 
-def test_1b_other_types_remain_unpriced():
-    """本轮只给完整歌曲定价，其余类型不得被顺带扣费（返回 None = 禁止扣费）。"""
-    assert get_credit_cost("stem_separation") is None
+def test_1b_other_types_pricing_2026_10_03():
+    """P2 起 stem_separation 定价 35；2026-10-03 产品裁定（一次性充值制）：
+    stem_separation=60、cover_song=60（fail-closed 解除）、其余类型仍不得被顺带扣费
+    （返回 None = 禁止扣费）。"""
+    assert get_credit_cost("stem_separation") == 60
+    assert get_credit_cost("cover_song") == 60
     assert get_credit_cost("instrumental") is None
 
 
