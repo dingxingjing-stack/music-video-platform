@@ -40,7 +40,7 @@ const PRICING_V1 = [
   { id: 'pro', name: 'Pro', price_usd: 19.99, credits: 1200, description_key: 'pricing.pro_desc', badge: 'best_value' },
   { id: 'creator', name: 'Creator', price_usd: 39.99, credits: 2800, description_key: 'pricing.creator_desc', badge: null },
 ];
-const FREE_CREDITS = 100;
+const FREE_CREDITS = 30;
 const CREATION_COST_CREDITS = 30;
 
 /**
