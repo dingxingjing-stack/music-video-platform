@@ -24,6 +24,44 @@ TERMINAL_STATES = ("completed", "completed_with_stems_failed", "failed")
 # text() 不能把 tuple 绑进 IN，这里内联固定字面量（无任何外部输入）
 _TERMINAL_LIST = "(" + ", ".join(f"'{s}'" for s in TERMINAL_STATES) + ")"
 
+# ── P4-B2 Phase 1（Gate A ⑥ 裁定）：update() 显式字段白名单 ──
+# 白名单 = 全部可更新 ORM 列。state 不在内——走既有条件更新专用路径。
+# 明确排除：task_id（主键）、user_key（所有权字段，绝不可通过 update 改写）、
+# created_at / updated_at（系统维护列，由函数内部统一写入）。
+# 未知字段必须 raise ValueError 拒绝，不得静默忽略。
+_UPDATABLE_FIELDS = frozenset({
+    "progress", "audio_url", "video_url", "ai_provider", "error",
+    "download", "volume_files", "stems_state", "stems",
+    "retries", "stem_retries", "generation_quota_weight", "refunded_at",
+    "title", "lyrics", "lyrics_timed",
+})
+
+def _validate_lyrics_timed(value: Any) -> None:
+    """P4-B2（Gate A ① 锁定结构）：lyrics_timed 必须为 JSON array，
+    每项至少含 start:number / end:number / text:string。
+
+    - None 合法（字段允许 NULL）。
+    - 不接受 {lines:[...]} 结构；不做 LRC 转换；不推算/伪造时间。
+    - 校验失败 raise ValueError（与白名单拒绝同语义）。
+    """
+    if value is None:
+        return
+    if not isinstance(value, list):
+        raise ValueError("lyrics_timed must be a JSON array (list)")
+    for i, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"lyrics_timed[{i}] must be an object")
+        start = item.get("start")
+        end = item.get("end")
+        text = item.get("text")
+        # bool 是 int 的子类，显式排除
+        if not isinstance(start, (int, float)) or isinstance(start, bool):
+            raise ValueError(f"lyrics_timed[{i}].start must be a number")
+        if not isinstance(end, (int, float)) or isinstance(end, bool):
+            raise ValueError(f"lyrics_timed[{i}].end must be a number")
+        if not isinstance(text, str):
+            raise ValueError(f"lyrics_timed[{i}].text must be a string")
+
 _DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
 _DB_PATH = os.path.join(_DB_DIR, "beta.db")
 _DEFAULT_DB_PATH = _DB_PATH
@@ -59,7 +97,7 @@ def _row_to_task(row) -> Dict[str, Any]:
         d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
     else:
         d = dict(row)
-    for col in ("download", "volume_files", "stems"):
+    for col in ("download", "volume_files", "stems", "lyrics_timed"):
         v = d.get(col)
         if isinstance(v, str):
             try:
@@ -119,12 +157,23 @@ def update(task_id: str, **kw: Any) -> None:
     import json
     if not kw:
         return
+    # P4-B2 Phase 1（Gate A ⑥）：显式白名单校验先行——未知/禁止字段 raise ValueError
+    # 拒绝（绝不静默忽略），任何 DB 会话都不开启。
+    for k, v in kw.items():
+        if k == "state":
+            continue  # state 走下方条件更新专用路径
+        if k not in _UPDATABLE_FIELDS:
+            raise ValueError(f"task_store.update: unknown/forbidden field: {k}")
+        if k == "lyrics_timed":
+            _validate_lyrics_timed(v)
     now = time.time()
     sess = _get_session()
     try:
         from sqlalchemy import text
         sess.execute(text("BEGIN"))
-        json_columns = {"download", "volume_files", "stems"}
+        # lyrics_timed 为 JSONB（生产）/JSON（SQLite）：raw SQL 绑定 dict/list
+        # 必须先 json.dumps，否则 psycopg2 无法适配。
+        json_columns = {"download", "volume_files", "stems", "lyrics_timed"}
         fields = []
         params: Dict[str, Any] = {}
         for k, v in kw.items():
@@ -215,7 +264,7 @@ def get(task_id: str) -> Optional[Dict[str, Any]]:
             return None
         task = dict(row._mapping) if hasattr(row, "_mapping") else dict(row)  # type: ignore
         import json
-        for col in ("download", "volume_files", "stems"):
+        for col in ("download", "volume_files", "stems", "lyrics_timed"):
             if task.get(col) and isinstance(task[col], str):
                 try:
                     task[col] = json.loads(task[col])

@@ -10,13 +10,12 @@ AI 作词服务
 """
 
 from typing import Optional, List
-from pydantic import BaseModel
-import httpx
-import os
 
-# 歌词生成由 LLMFactory 统一调度：AGNES 优先 -> Gemini 兜底（无 Mock）
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your_gemini_key")
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+from fastapi import HTTPException
+from pydantic import BaseModel
+
+from app.services.lyrics_engine import lyrics_engine
+
 
 
 class LyricStyle(BaseModel):
@@ -121,35 +120,43 @@ class LyricService:
         return list(MOOD_KEYWORDS.keys())
     
     async def generate_lyrics(self, request: LyricRequest) -> LyricResponse:
-        """生成歌词"""
-        try:
-            # 构建提示词
-            prompt = self._build_prompt(request)
-            
-            # 调用 Gemini API
-            lyrics = await self._call_gemini(prompt)
-            
-            # 解析歌词结构
-            structure = self._parse_structure(lyrics)
-            
-            # 押韵分析
-            rhyme_analysis = self._analyze_rhyme(lyrics, request.language)
-            
-            return LyricResponse(
-                success=True,
-                lyrics=lyrics,
-                structure=structure,
-                message="✅ 歌词生成成功",
-                rhyme_analysis=rhyme_analysis
+        """生成歌词（P4-B2 Phase B-3：双 Provider 引擎——Yinchao primary → TemPolor Lyric v1 backup）"""
+        # 构建提示词
+        prompt = self._build_prompt(request)
+
+        # Phase B-3 裁定 2：最终组合 prompt 超过 Yinchao 官方上限（2000 字符）
+        # → 显式失败（HTTP 400 语义），不调用任何 Provider、不静默截断、
+        #   不产生 Credits 变化。
+        if len(prompt) > 2000:
+            raise HTTPException(
+                status_code=400,
+                detail="歌词主题或内容过长（上限 2000 字符），请精简后重试",
             )
-        
-        except Exception as e:
+
+        # 双 Provider 编排（45s 全局 hard deadline 由 lyrics_engine 约束）
+        result = await lyrics_engine.generate(prompt)
+
+        if result.status != "succeeded":
             return LyricResponse(
                 success=False,
                 lyrics="",
-                structure="",
-                message=f"❌ 歌词生成失败：{str(e)}"
+                structure=request.structure,
+                message=f"❌ 歌词生成失败：{result.error or '未知原因'}",
             )
+
+        # 解析歌词结构
+        structure = self._parse_structure(result.lyric)
+
+        # 押韵分析
+        rhyme_analysis = self._analyze_rhyme(result.lyric, request.language)
+
+        return LyricResponse(
+            success=True,
+            lyrics=result.lyric,
+            structure=structure,
+            message="✅ 歌词生成成功",
+            rhyme_analysis=rhyme_analysis,
+        )
     
     async def continue_lyrics(self, existing_lyrics: str, style: str = "pop") -> LyricResponse:
         """续写歌词"""
@@ -219,106 +226,6 @@ class LyricService:
             "fr": "法文",
         }
         return lang_map.get(lang_code, "中文")
-    
-    async def _call_gemini(self, prompt: str) -> str:
-        """调用 LLM 生成歌词：AGNES 优先，Gemini 兜底（已关闭 Mock，全失败明确报错）"""
-        try:
-            from app.services.inference.llm_factory import llm_factory
-        except Exception:
-            llm_factory = None
-
-        # AGNES 优先（llm_factory 内部按 agnes -> gemini -> nvidia 顺序降级）
-        if llm_factory is not None:
-            messages = [
-                {"role": "system", "content": "你是一位专业的歌词创作人，输出结构化的歌曲歌词。"},
-                {"role": "user", "content": prompt},
-            ]
-            try:
-                text = await llm_factory.call(
-                    messages=messages,
-                    provider="auto",
-                    temperature=0.7,
-                    max_tokens=2048,
-                )
-                if text and text.strip():
-                    return text
-            except Exception as e:
-                # llm_factory 全部失败，降级到直连 Gemini
-                import logging
-                logging.warning("LLMFactory 歌词生成失败，降级直连 Gemini: %s", e)
-
-        # Gemini 直连兜底
-        if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_key":
-            raise RuntimeError("GEMINI_API_KEY 未配置，无法生成真实歌词（Mock 兜底已关闭）")
-
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    GEMINI_API_URL,
-                    headers={"Content-Type": "application/json"},
-                    json={
-                        "contents": [{
-                            "parts": [{"text": prompt}]
-                        }],
-                        "generationConfig": {
-                            "temperature": 0.7,
-                            "topK": 40,
-                            "topP": 0.95,
-                            "maxOutputTokens": 2048,
-                        }
-                    },
-                    params={"key": GEMINI_API_KEY}
-                )
-
-                if response.status_code == 200:
-                    data = response.json()
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                else:
-                    raise Exception(f"Gemini API error: {response.status_code}")
-
-        except RuntimeError:
-            raise
-        except Exception as e:
-            # 不再降级到 Mock，直接抛出
-            raise RuntimeError(f"Gemini API 调用失败（Mock 兜底已关闭）: {e}") from e
-    
-    def _mock_lyrics(self, prompt: str) -> str:
-        """Mock 歌词生成 (当 API 不可用时)"""
-        return """[Verse 1]
-阳光洒在窗台 微风轻轻吹来
-心中的梦想 从未曾离开
-一步一脚印 走向未来
-相信总有一天 会绽放光彩
-
-[Chorus]
-追逐梦想的路上 有你有我相伴
-风雨再多也不怕 勇敢向前闯
-心中的火焰 永远不会熄灭
-让我们一起飞翔 在梦想的天空
-
-[Verse 2]
-回忆里的笑容 温暖我的心房
-每一次跌倒 都是成长的力量
-握紧双手 不放弃希望
-明天会更好 我们相信
-
-[Chorus]
-追逐梦想的路上 有你有我相伴
-风雨再多也不怕 勇敢向前闯
-心中的火焰 永远不会熄灭
-让我们一起飞翔 在梦想的天空
-
-[Bridge]
-就算世界变得复杂
-我们依然保持初心
-手牵手一起走下去
-这就是最美好的旅程
-
-[Chorus]
-追逐梦想的路上 有你有我相伴
-风雨再多也不怕 勇敢向前闯
-心中的火焰 永远不会熄灭
-让我们一起飞翔 在梦想的天空"""
     
     def _parse_structure(self, lyrics: str) -> str:
         """解析歌词结构"""

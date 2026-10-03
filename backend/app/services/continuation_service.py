@@ -910,9 +910,10 @@ class ContinuationService:
         })
 
     async def _measure_final_duration(self, path: str) -> float:
-        """成品时长实测的唯一出口（P6-B-C2）。异常一律向上抛，不在此吞掉。"""
-        import librosa
-        return float(librosa.get_duration(path=path))
+        """成品时长实测的唯一出口（P6-B-C2；ffprobe 实现，2026-10-01 替换 librosa）。
+        异常一律向上抛，不在此吞掉。"""
+        from app.services.audio_duration import measure_duration
+        return float(measure_duration(path))
 
     def _resolve_local_path(self, volume_files: Dict) -> Optional[str]:
         if not volume_files:
@@ -944,8 +945,8 @@ class ContinuationService:
         # 截取末尾 30s 作为参考
         ref_start = 0
         try:
-            import librosa
-            total = librosa.get_duration(path=first_local)
+            from app.services.audio_duration import measure_duration
+            total = measure_duration(first_local)
             ref_start = max(0, total - 30)
             ref_end = total
         except Exception:

@@ -187,17 +187,19 @@ class ModalACEStepProvider(BaseProvider):
 
 # ── 阶段 B（功能分链）：生歌 operation → 有序 Provider 链（生产路由表）──
 # - normal / lyric_to_music：Yinchao V4.0 → TemPolor V4.7
-# - instrumental：Yinchao V4.0 Instrumental → Mureka V9（禁止 instrumental → TemPolor）
+# - instrumental：Yinchao V4.0 Instrumental（单家；Mureka 已删除，且明令禁止 → TemPolor）
 # - reference：Yinchao V3.5 Reference → TemPolor V4.7
 # - lyric_gen / stems / midi 不在此表：不进入生歌链（分别走 lyric_service /
 #   分离 / MIDI 独立 operation，由各自调用方负责）。
-# mureka 经直接查表进入 instrumental 链：select() 的 production 显式禁令只约束
-# AI_GENERATION_PROVIDER 显式选择，不约束按功能的生产路由表。
 _OPERATION_CHAINS: dict[str, tuple[str, ...]] = {
     "normal": ("yinchao", "tempolor"),
     "lyric_to_music": ("yinchao", "tempolor"),
-    "instrumental": ("yinchao", "mureka"),
-    "reference": ("yinchao", "tempolor"),
+    "instrumental": ("yinchao",),
+    # P4-B2 Phase A-17（2026-10-02 裁定）：Cover 恢复，锁定 TemPolor tempolor-latest
+    # （action=upload_cover），单供应商链、无兜底；Reference 保持下线（永久不恢复），
+    # chain_for_operation 对 "reference" 仍抛 ValueError。
+    "cover": ("tempolor",),
+    # P4-B2 Phase A-11：Reference 操作已随功能撤销移除（2026-10-02 产品决策）。
 }
 
 # ── 歌曲语言分流（2026-09-28）──────────────────────────────
@@ -381,24 +383,16 @@ def get_provider_registry() -> ProviderRegistry:
     global _registry
     if _registry is None:
         _registry = ProviderRegistry()
-        # 注意：MurekaProvider 惰性导入（mureka_provider 反向 import 本模块的 BaseProvider，
-        # 顶层 import 会循环依赖）。注册放在最后，避免其 production=True 抢占 _default
-        # （register() 以首个 production provider 为默认值；若 Mureka 先注册会改变
-        # development/test 的 select()/fallback_chain() 默认，破坏存量测试）。
+        # 注意：Mureka 已删除（2026-10-01 第一阶段重构）。Yinchao/Tempolor 惰性导入
+        # （二者反向 import 本模块的 BaseProvider，顶层 import 会循环依赖）。
         _registry.register(FalStableAudioProvider())
         _registry.register(ModalACEStepProvider())
-        try:
-            from app.services.mureka_provider import MurekaProvider
-            _registry.register(MurekaProvider())
-        except Exception as exc:  # noqa: BLE001
-            # Mureka 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Fal/Mureka。
-            print(f"[Provider] MurekaProvider 注册失败（不影响 Fal 兜底）: {exc}")
         try:
             from app.services.yinchao_provider import YinchaoProvider
             _registry.register(YinchaoProvider())
         except Exception as exc:  # noqa: BLE001
-            # Yinchao 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Mureka。
-            print(f"[Provider] YinchaoProvider 注册失败（不影响 Mureka 兜底）: {exc}")
+            # Yinchao 注册失败（缺依赖等）不能阻断启动：生产仍可回退 Tempolor。
+            print(f"[Provider] YinchaoProvider 注册失败（不影响 Tempolor 兜底）: {exc}")
         try:
             from app.services.tempolor_provider import TempolorProvider
             _registry.register(TempolorProvider())

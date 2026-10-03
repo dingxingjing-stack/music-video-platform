@@ -20,6 +20,7 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 
 # ── 环境判定 ────────────────────────────────────────
@@ -140,6 +141,17 @@ class AiTask(Base):
     # NULL = 字段上线前的旧任务，权重不可知 → 退款按保守值 1（宁可少退不多退）。
     # 生产需人工执行：ALTER TABLE ai_tasks ADD COLUMN IF NOT EXISTS generation_quota_weight INTEGER;
     generation_quota_weight = Column(Integer, nullable=True)
+    # ── P4-B2 Phase 1（Gate A 裁定）：歌曲分享/歌词三字段 ──
+    # 生产 DDL 已执行（2026-10-01，ai_tasks 21 列）；此处 ORM 同步仅为 create_all
+    # 一致性（新库/测试库）。三列均 NULLable、无 DEFAULT/INDEX/FK/CHECK。
+    # title：写入来源 = OPEN / NOT DECIDED，当前无任何代码路径写入。
+    # lyrics：仅存真实歌词（request.lyrics / agnes 生成词），提示词兜底绝不落库。
+    # lyrics_timed：逐句时间轴 [{"start": number, "end": number, "text": string}]；
+    #   生产为 JSONB、SQLite 测试库为 JSON（with_variant 保证 create_all 兼容）；
+    #   无真实时间戳数据源（UNKNOWN-1）前零写入调用。
+    title = Column(String(200), nullable=True)
+    lyrics = Column(Text, nullable=True)
+    lyrics_timed = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
 
 class TaskLock(Base):
     __tablename__ = "task_locks"

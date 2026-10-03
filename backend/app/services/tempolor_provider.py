@@ -53,6 +53,10 @@ TEMPOLOR_POLL_INTERVAL_SECONDS = float(os.getenv("TEMPOLOR_POLL_INTERVAL_SECONDS
 # "callback_url not blank" 拒绝）。未配置时 generate() 直接返回明确配置缺失错误，
 # 零 HTTP 提交、绝不发送占位假 URL。
 TEMPOLOR_CALLBACK_URL = (os.getenv("TEMPOLOR_CALLBACK_URL") or "").strip()
+
+# P4-B2 Phase A-11：Reference/Cover 能力已随功能撤销移除（2026-10-02 产品决策：
+# 两家供应商 Reference/Cover 均无法稳定满足 Melovar ≥240s 交付门，详见
+# PHASE A-4/A-5/A-6/A-7/A-8 审计与联调记录）。
 # 回调共享密钥：天谱乐官方回调协议不带签名，而回调端点是公网可写的。把密钥附加在
 # callback_url 的 query 上，是我们在不改 provider 协议的前提下验证回调来源的唯一手段。
 # 未配置时回调端 fail-closed（503），但生成终态走轮询，功能不受影响。
@@ -156,7 +160,7 @@ class TempolorProvider(BaseProvider):
 
     name = "tempolor"
     provider_type = "api"
-    capabilities = ["text_to_music", "lyrics_to_music", "instrumental"]
+    capabilities = ["text_to_music", "lyrics_to_music", "instrumental", "cover"]
     # 官方最新模型对 prompt 生歌最长 5 分钟；但单次实际长度由歌词结构决定，
     # max_duration 仅作能力上界声明，不参与计价/截断。
     max_duration = 300
@@ -221,42 +225,72 @@ class TempolorProvider(BaseProvider):
         is_instrumental = bool(request.get("is_instrumental")) or (
             str(request.get("type", "")).lower() in ("music", "bgm", "instrumental")
         )
-        model = (request.get("model") or "").strip()
-        model_cost_cny: Optional[float] = None
-        model_key: Optional[str] = None
-        if not model:
-            env_override = os.getenv("TEMPOLOR_MODEL")
-            if env_override and not is_instrumental:
-                model = env_override
-            else:
-                try:
-                    sel = select_music_model(
-                        music_type="instrumental" if is_instrumental else "vocal",
-                        target_duration=int(request.get("duration") or 180),
-                        lyrics_provided=bool(lyrics),
-                    )
-                except NoValidModelError as exc:
-                    return {"success": False, "non_retryable": True,
-                            "error": f"Tempolor {exc}", "provider": self.name}
-                if not sel.model.id_confirmed or not sel.model.api_model_id:
-                    return {"success": False, "non_retryable": True,
-                            "error": f"Tempolor model {sel.model.key} api id UNCONFIRMED（待联调确认）",
-                            "provider": self.name}
-                model = sel.model.api_model_id
-                model_key = sel.model.key
-                model_cost_cny = sel.total_cost_cny
+        # ── Cover 分支（P4-B2 Phase A-17：2026-10-02 裁定恢复，契约锁定）──
+        # - 官方合同（A-15 确认 + 2026-10-03 定价页复核）：
+        #   POST /open-apis/v1/song/generate，action="upload_cover"，
+        #   upload_audio_url=<参考音频公网可 GET URL>，model 锁定 "tempolor-latest"，
+        #   callback_url 必填；官方 Cover 生成模型段定价 70 创作点（¥0.70）/首。
+        # - 禁止：tempolor-latest-cover（旧 registry 键，不复用）、Yinchao Cover、
+        #   Reference 仿写；不支持纯音乐 Cover（官方明示"不支持纯音乐生成"）。
+        # - 歌词为空：不传 lyrics 字段 → 供应商自动调用 Lyric v1 生成歌词
+        #   （官方定价页注：产生额外费用 +7 创作点）——该行为按裁定保留，
+        #   供应商成本计入经济模型（¥0.70 + ¥0.07）。
+        is_cover = bool((request.get("cover_reference_url") or "").strip())
+        if is_cover and is_instrumental:
+            return {"success": False, "non_retryable": True,
+                    "error": "Cover 不支持纯音乐生成（官方契约：不支持 instrumental）",
+                    "provider": self.name}
+        if is_cover:
+            model = "tempolor-latest"
+            model_key = "tempolor-latest"
+            model_cost_cny = 0.70  # 官方 Cover 生成模型段：70 创作点/首（不含自动写词 +0.07）
+            payload = {
+                "model": model,
+                "action": "upload_cover",
+                "upload_audio_url": (request.get("cover_reference_url") or "").strip(),
+                "prompt": prompt,
+                # 附加共享令牌，供 /api/v1/ai/tempolor/callback 校验来源
+                "callback_url": effective_callback_url(),
+            }
+            if lyrics:
+                payload["lyrics"] = lyrics
+        else:
+            model = (request.get("model") or "").strip()
+            model_cost_cny = None
+            model_key = None
+            if not model:
+                env_override = os.getenv("TEMPOLOR_MODEL")
+                if env_override and not is_instrumental:
+                    model = env_override
+                else:
+                    try:
+                        sel = select_music_model(
+                            music_type="instrumental" if is_instrumental else "vocal",
+                            target_duration=int(request.get("duration") or 180),
+                            lyrics_provided=bool(lyrics),
+                        )
+                    except NoValidModelError as exc:
+                        return {"success": False, "non_retryable": True,
+                                "error": f"Tempolor {exc}", "provider": self.name}
+                    if not sel.model.id_confirmed or not sel.model.api_model_id:
+                        return {"success": False, "non_retryable": True,
+                                "error": f"Tempolor model {sel.model.key} api id UNCONFIRMED（待联调确认）",
+                                "provider": self.name}
+                    model = sel.model.api_model_id
+                    model_key = sel.model.key
+                    model_cost_cny = sel.total_cost_cny
 
-        # 提交请求体（官方 contract）
-        payload: dict[str, Any] = {
-            "model": model,
-            "prompt": prompt,
-            # 附加共享令牌，供 /api/v1/ai/tempolor/callback 校验来源
-            "callback_url": effective_callback_url(),
-        }
-        if lyrics:
-            payload["lyrics"] = lyrics
-        if is_instrumental:
-            payload["instrumental"] = True
+            # 提交请求体（官方 contract）
+            payload = {
+                "model": model,
+                "prompt": prompt,
+                # 附加共享令牌，供 /api/v1/ai/tempolor/callback 校验来源
+                "callback_url": effective_callback_url(),
+            }
+            if lyrics:
+                payload["lyrics"] = lyrics
+            if is_instrumental:
+                payload["instrumental"] = True
 
         # 天谱乐官方鉴权为「裸 API Key」，无 Bearer 前缀
         headers = {
@@ -391,6 +425,10 @@ class TempolorProvider(BaseProvider):
             result["error_code"] = code
         if non_retryable:
             result["non_retryable"] = True
+        if code == 400005:
+            # 官方：400005 = Insufficient points（余额/创作点不足）→ 额度类耗尽。
+            # 上层按 quota_exhausted 切换 Provider，不得误判为普通网络错误。
+            result["quota_exhausted"] = True
         return result
 
     def _map_submit_error(self, resp: httpx.Response) -> dict:

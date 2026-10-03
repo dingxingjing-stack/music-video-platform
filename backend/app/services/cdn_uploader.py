@@ -227,6 +227,10 @@ class CDNUploader:
             ExpiresIn=max(60, int(expires_in)),
         )
 
+    # P4-B2 Phase A-11：Reference/Cover 功能已下线——upload_reference_audio
+    # 及其 3 天 URL 常量随功能撤销移除（2026-10-02 产品决策）。
+    # delete_object（C3-5-B 同步幂等实现，见下方）保留——被 MyWorks 删除等路径共用。
+
     async def upload_music_package(self, task_id: str, files: Dict[str, str]) -> Dict[str, str]:
         """上传完整歌曲 + 4 分轨到私有 R2。
 
@@ -240,7 +244,10 @@ class CDNUploader:
         manifest: Dict[str, str] = {}
         for logical, local_path in files.items():
             ext = os.path.splitext(local_path)[1].lower() or ".wav"
-            content_type = "audio/mpeg" if ext == ".mp3" else "audio/wav"
+            # P2：Stems v2 产物为 FLAC（TemPolor stems zip 输出）；mp3/wav 语义不变
+            content_type = {"flac": "audio/flac", "mp3": "audio/mpeg"}.get(
+                ext.lstrip("."), "audio/wav"
+            )
             key = f"music/{task_id}/{logical}{ext}"
             await self.upload_private(local_path, key, content_type)
             manifest[logical] = key

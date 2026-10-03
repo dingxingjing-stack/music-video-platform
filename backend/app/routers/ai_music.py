@@ -28,9 +28,12 @@ import hmac
 import json
 import logging
 import os
+import shutil
+import tempfile
 import time
+import uuid
 import httpx
-from fastapi import APIRouter, HTTPException, Header, Request, Depends
+from fastapi import APIRouter, HTTPException, Header, Request, Depends, File, UploadFile, Form
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -43,6 +46,8 @@ from app.services.ace_step_client import (
     download_file as ace_step_download,
     QueueFullError,
 )
+from app.services import tempolor_stems_service as stems_service
+from app.services import tempolor_midi_service as midi_service
 from app.services.provider_registry import get_provider_registry, gpu_rate_usd_per_sec, PROVIDER_ENV
 from app.services.ai_limits import (
     MAX_AUDIO_DURATION_SECONDS,
@@ -65,6 +70,8 @@ from app.services.credits_config import get_credit_cost
 from app.services.continuation_service import DurationValidationError
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai-music"])
+
+logger = logging.getLogger(__name__)
 
 HF_FALLBACK_ENABLED = os.getenv("HF_FALLBACK", "true").lower() in ("1", "true", "yes")
 
@@ -302,8 +309,9 @@ class GenerateRequest(BaseModel):
     instrumental: bool = False  # 纯音乐（无人声）：透传给 Provider 的 is_instrumental
     # 阶段 B：reference（仿写）操作输入。存在非空 → operation=reference。
     # 合同：Yinchao upload(upload_type=reference) → task_type=reference（官方文档只读恢复）。
-    reference_audio_b64: Optional[str] = None  # base64 编码的参考音频（≤10MB，MP3/WAV）
-    similarity: Optional[float] = None  # 参考相似度，官方枚举 [0.2, 0.8, 1.3, 1.5]，缺省由 adapter 填 0.8
+    reference_audio_b64: Optional[str] = None  # base64 编码的参考音频（≤10MB，MP3/WAV；P4-B2 Phase A-11：Reference/Cover 功能已下线，保留字段仅为 API 兼容）
+    cover: bool = False  # P4-B2 Phase A-17：Cover 恢复（TemPolor tempolor-latest）；True 且带参考音频 → cover 操作
+    similarity: Optional[float] = None  # 参考相似度（Phase A-11：Reference/Cover 功能已下线，保留字段仅为 API 兼容）
 
 
 class GenerateResponse(BaseModel):
@@ -372,6 +380,10 @@ def determine_generation_operation(request: GenerateRequest) -> str:
     """
     ref = getattr(request, "reference_audio_b64", None)
     if isinstance(ref, str) and ref.strip():
+        # P4-B2 Phase A-17：Cover 恢复（TemPolor tempolor-latest，action=upload_cover）。
+        # cover=True + 参考音频 → "cover"；仅参考音频 → "reference"（保持 422 下线门）。
+        if getattr(request, "cover", False):
+            return "cover"
         return "reference"
     if request.instrumental:
         return "instrumental"
@@ -403,6 +415,62 @@ def _resolve_delivery_path(volume_result: dict) -> Optional[str]:
     return None
 
 
+class CoverReferenceError(RuntimeError):
+    """A-17 Cover：参考音频解码/格式/上传失败（消息可安全透出，不含敏感信息）。"""
+
+
+async def _upload_cover_reference(task_id: str, reference_audio_b64: str) -> str:
+    """A-17 Cover：base64 参考音频 → 私有 R2 → presigned GET URL（天谱乐服务端可 GET）。
+
+    与 stems 输入同一套 R2 通道（upload_private + 显式 s3v4 presigned）；供应商仅在
+    提交时拉取一次，TTL 3600s 足够。任何失败抛 CoverReferenceError → 既有 except
+    统一 failed + 恰好一次退款（绝无 Credits 白扣）。
+    """
+    import base64 as _base64
+    from app.services.cdn_uploader import cdn_uploader
+
+    try:
+        raw = _base64.b64decode(reference_audio_b64 or "", validate=False)
+    except Exception as exc:  # noqa: BLE001
+        raise CoverReferenceError(f"参考音频 base64 解码失败: {exc}") from exc
+    if len(raw) < 1000:
+        raise CoverReferenceError("参考音频过小或为空")
+    if len(raw) > 10 * 1024 * 1024:
+        raise CoverReferenceError("参考音频超过 10MB 上限")
+    # 格式嗅探（magic bytes，A-11 同款：ID3 ≥10B / MP3 帧头 / RIFF=WAV）
+    head = raw[:12]
+    if not (head[:3] == b"ID3" or head[:2] == b"\xff\xfb" or head[:4] == b"RIFF"):
+        raise CoverReferenceError("仅支持 MP3/WAV 参考音频")
+    ext = ".wav" if head[:4] == b"RIFF" else ".mp3"
+
+    tmp_dir = tempfile.mkdtemp(prefix="cover_ref_")
+    tmp_path = os.path.join(tmp_dir, f"reference{ext}")
+    try:
+        with open(tmp_path, "wb") as fh:
+            fh.write(raw)
+        key = f"cover/{task_id}/reference{ext}"
+        await cdn_uploader.upload_private(tmp_path, key)
+        url = cdn_uploader.get_presigned_download_url(key, expires_in=3600)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    if not url:
+        raise CoverReferenceError("参考音频上传失败，请稍后重试")
+    return url
+
+
+def _cleanup_cover_reference(task_id: str) -> None:
+    """Cover 参考音频 R2 对象幂等清理（best-effort，绝不抛出）。"""
+    try:
+        from app.services.cdn_uploader import cdn_uploader
+        for ext in (".mp3", ".wav"):
+            try:
+                cdn_uploader.delete_object(f"cover/{task_id}/reference{ext}")
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001
+        pass
+
+
 async def _enforce_duration_gate(volume_result: dict) -> float:
     """阶段 B 统一成品时长质量门（唯一出口，所有 Provider 交付路径共用）。
 
@@ -425,8 +493,8 @@ async def _enforce_duration_gate(volume_result: dict) -> float:
                 "final duration could not be measured: no local deliverable file"
             )
         try:
-            import librosa
-            measured = float(librosa.get_duration(path=path))
+            from app.services.audio_duration import measure_duration
+            measured = float(measure_duration(path))
         except Exception as exc:  # noqa: BLE001
             raise DurationValidationError(
                 f"final duration could not be measured: {type(exc).__name__}: {exc}"
@@ -477,18 +545,26 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         task_store.update(task_id, progress=25, ai_provider=f"{ai_provider}")
 
         final_prompt = agnes_result.optimized_prompt or request.prompt
-        lyrics = request.lyrics or agnes_result.generated_lyrics or final_prompt
+        # P4-B2 Phase 1（Gate A 裁定）：真实歌词与提示词兜底分离——
+        # persisted_lyrics 只存用户词 / Agnes 生成词（两者皆无 → None）；
+        # final_prompt 仅作为 provider 的 lyrics 入参兜底，绝不写入 ai_tasks.lyrics。
+        persisted_lyrics = request.lyrics or agnes_result.generated_lyrics
+        lyrics = persisted_lyrics or final_prompt
+        task_store.update(task_id, lyrics=persisted_lyrics or None)
+
+        # 阶段 B：operation 判定（路由唯一入口）。
+        operation = determine_generation_operation(request)
         duration = duration_target
 
         # ── Provider 选择（阶段 B：按 operation 功能分链，路由唯一入口）──
         # normal / lyric_to_music → Yinchao V4.0 → TemPolor V4.7
-        # instrumental            → Yinchao V4.0 Instrumental → Mureka V9（禁止 → TemPolor）
+        # instrumental            → Yinchao V4.0 Instrumental（单家；Mureka 已删除，禁止 → TemPolor）
         # reference               → Yinchao V3.5 Reference → TemPolor V4.7
         # 显式 AI_GENERATION_PROVIDER 保持既有语义：单 Provider 链、失败不自动切换
         # （生产下非法显式在 select() 抛错，留给外层统一处理）。
         # 不再按 duration 混链：continuation 保留于 continuation_service，主链不依赖；
         # 成品是否 ≥MIN 由统一质量门 _enforce_duration_gate 实测裁决。
-        operation = determine_generation_operation(request)
+        # （operation 已在上方 Reference 预处理前判定，P4-B2 Phase A-2 上移）
         registry = get_provider_registry()
         exclusive = os.getenv(PROVIDER_ENV) or ""
         if exclusive:
@@ -501,6 +577,14 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
             )
 
         # ── 单次生成（按 provider_chain 依次尝试）──
+        # A-17 Cover：参考音频先上传 R2（私有 + presigned URL），供应商提交时拉取；
+        # 上传失败 → CoverReferenceError → 既有 except 统一 failed + 恰好一次退款。
+        cover_reference_url: Optional[str] = None
+        if operation == "cover":
+            cover_reference_url = await _upload_cover_reference(
+                task_id, request.reference_audio_b64 or ""
+            )
+
         task_store.update(task_id, state="generating", progress=40, ai_provider=f"{ai_provider}+{provider_chain[0].name if provider_chain else 'provider'}")
         chain = provider_chain
         volume_result: Optional[dict] = None
@@ -525,11 +609,15 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
                             "duration": duration,
                             "operation": operation,
                             "reference_audio": request.reference_audio_b64,
-                            "similarity": request.similarity,
+                            # P4-B2 Phase A-11：Reference/Cover 功能已下线——
+                            # reference_upload_url 与 similarity 均不再传递。
                             "enable_audio2audio": bool(request.reference_audio_b64),
                             "reference_strength": 0.7,
                             "song_language": request.song_language,
                             "is_instrumental": request.instrumental,
+                            # P4-B2 Phase A-17：Cover 恢复 —— 供应商经该 URL 服务端拉取
+                            # 参考音频（tempolor upload_cover 契约）；非 cover 恒为 None。
+                            "cover_reference_url": cover_reference_url,
                         },
                     )
                     total_duration_ms += int((time.monotonic() - t0) * 1000)
@@ -625,6 +713,7 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         credits_service.refund_generation_credits(user_key, task_id)
     except QueueFullError as e:
         _log_generation_cost(task_id, user_key, last_provider if 'last_provider' in locals() else None, "queue_full", total_duration_ms if 'total_duration_ms' in locals() else 0, retries_used if 'retries_used' in locals() else 0)
+        print("P4B2DEBUG exc", type(e).__name__, str(e)[:100])
         task_store.update(task_id, state="failed", error=str(e))
         refund_generation(user_key, reason="request_not_sent", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
@@ -645,6 +734,9 @@ async def _run_generation(task_id: str, request: GenerateRequest, user_key: str,
         refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=quota_weight)
         credits_service.refund_generation_credits(user_key, task_id)
     finally:
+        # A-17 Cover：参考音频 R2 对象无论成败都清理（幂等 best-effort）
+        if locals().get("operation") == "cover":
+            _cleanup_cover_reference(task_id)
         task_store.release_lock_for_task(task_id)
 
 
@@ -855,6 +947,17 @@ async def generate_music(
     if not req.prompt or len(req.prompt.strip()) < 5:
         raise HTTPException(status_code=400, detail="提示词至少需要 5 个字符")
 
+    # ── P4-B2 Phase A-11/A-17：Reference 保持下线；Cover 恢复（2026-10-02 裁定）──
+    # Reference：两家供应商均无法稳定满足 ≥240s 交付门（15 次真实测试仅 1 次达标），
+    # 永久不恢复，422 先于任务创建/Credits。Cover：chain=("tempolor",) 单供应商，
+    # 240s 统一质量门继续生效；Melovar Credits 无现有 cover 定价 → fail-closed
+    # （503 cover_not_priced，绝不猜价、绝不免费放行），产品定价 cover_song 后自动激活。
+    operation_prelim = determine_generation_operation(req)
+    if operation_prelim == "reference":
+        raise HTTPException(status_code=422, detail="reference_cover_feature_discontinued")
+    if operation_prelim == "cover" and get_credit_cost("cover_song") is None:
+        raise HTTPException(status_code=503, detail="cover_not_priced")
+
     # 身份唯一可信来源：verified auth.users.id（JWT）。禁止 X-User-ID / body.user_id / IP fallback。
     user_key = user_id
     if task_store.is_user_busy(user_key):
@@ -915,7 +1018,8 @@ async def generate_music(
     # ── Credits 扣费（余额型；与 ai_limits 的每日次数并存）──
     # credit_cost=0（未定价）时 get_credit_cost 返回 None → 跳过扣费，保持现有免费流程。
     # 定价后（CREDIT_COSTS 里 credit_cost>0）本段自动激活：余额不足则拒绝生成、不调用 Provider。
-    credit_cost = get_credit_cost("standard_song", req.duration)
+    credit_type = "cover_song" if operation_prelim == "cover" else "standard_song"
+    credit_cost = get_credit_cost(credit_type, req.duration)
     if credit_cost is not None and credit_cost > 0:
         consume = credits_service.reserve_generation_credits(user_key, task_id, credit_cost)
         if not consume["success"]:
@@ -1103,12 +1207,37 @@ async def retry_stems(
 async def _run_retry_stems(task_id: str, user_key: str, full_wav: str):
     try:
         task_store.update(task_id, state="separating", progress=85)
+        if os.getenv("ENVIRONMENT", "development").lower() == "production":
+            # P2：生产分轨重试由 TemPolor Stems v2 承接。
+            # 既有语义全部保留：免费（不扣 Credits）、CAS 抢占、MAX_AUTO_RETRIES 上限、
+            # 失败绝不打 failed（F9：主音频已交付）。
+            tmp_dir = tempfile.mkdtemp(prefix="stems_retry_")
+            try:
+                manifest = dict((task_store.get(task_id) or {}).get("download") or {})
+                added = await _run_song_retry_via_stems(task_id, full_wav, tmp_dir)
+                if added is None:
+                    task_store.update(task_id, state="completed_with_stems_failed",
+                                      progress=100, error="分轨重试失败")
+                    return
+                manifest.update(added)
+                ok = all(s in manifest for s in ("vocals", "drums", "bass", "other"))
+                task_store.update(
+                    task_id, state="completed" if ok else "completed_with_stems_failed",
+                    progress=100, download=manifest,
+                    stems_state="ok" if ok else "failed",
+                    error=None,
+                )
+            finally:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+            return
+
+        # 开发/测试路径：保持 Modal Spleeter 短路行为（生产恒 None），测试 monkeypatch 不受影响
+        # （tempfile 已在模块级导入）
         stems = await ace_step_separate(full_wav)
         if not stems:
             task_store.update(task_id, state="completed_with_stems_failed", progress=100, error="分轨重试失败")
             return
 
-        import tempfile
         tmp_dir = tempfile.mkdtemp(prefix="acestep_retry_")
         files_local = {}
         for logical in ("vocals", "drums", "bass", "other"):
@@ -1135,6 +1264,468 @@ async def _run_retry_stems(task_id: str, user_key: str, full_wav: str):
         task_store.update(task_id, state="completed_with_stems_failed", progress=100, error=f"分轨重试失败: {e}")
     finally:
         task_store.release_lock_for_task(task_id)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# P2（2026-10-01 授权）：TemPolor Stems v2 音频分离（35 Credits）
+#
+# 设计约束（来自 P2 Gate 审计与实施授权）：
+# - 任务/锁/额度/Credits 顺序与 /generate 完全一致（先任务行→锁→预留→扣费）；
+# - 单一退款出口：Credits 幂等退款（reference_id=task_id）+ ai_limits 成对退款；
+# - callback / polling 双通道下结算只发生一次（成功路径无任何计费动作，
+#   失败路径退款幂等）；
+# - 不进入 provider_registry 的 operation chain，不触碰 Song 生成逻辑；
+# - provider 内部细节（item_id/endpoint/stems_url）绝不外泄给前端。
+# ═══════════════════════════════════════════════════════════════════════════
+
+STEMS_INPUT_MAX_BYTES = 50 * 1024 * 1024
+STEMS_ALLOWED_INPUT_EXTS = {".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aac"}
+STEMS_CREDIT_TYPE = "stem_separation"
+# P4-B2 Phase A-17：Stems V3（8 轨）独立计价类型（官方 100 创作点 ¥1.00/次 → 100 Credits）。
+# V2 的 stem_separation=35 保持不动（禁令）。V3 的 model 字符串官方文档未给出
+#（创建任务 body 仅 url+callback_url，无 model 字段）→ MODEL_ID_UNVERIFIED：
+# 提交被双重 env 门禁锁定（模型字符串 + zip 成员白名单，均须官方确认后配置），
+# 未配置时本端点 fail-closed 503，零供应商调用、不猜值。
+STEMS_CREDIT_TYPE_V3 = "stem_separation_v3"
+
+
+async def _save_stems_upload(file: UploadFile) -> str:
+    """上传音频安全落盘：扩展名白名单 + 50MB 硬上限 + 随机目录（防路径穿越/内存打爆）。"""
+    orig_name = os.path.basename(file.filename or "")
+    ext = os.path.splitext(orig_name)[1].lower()
+    if ext not in STEMS_ALLOWED_INPUT_EXTS:
+        raise HTTPException(status_code=400, detail="不支持的音频格式")
+    tmp_dir = tempfile.mkdtemp(prefix="stems_upload_")
+    dest = os.path.join(tmp_dir, f"input{ext}")
+    total = 0
+    try:
+        with open(dest, "wb") as fh:
+            while True:
+                chunk = await file.read(1 << 20)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > STEMS_INPUT_MAX_BYTES:
+                    raise HTTPException(status_code=413, detail="音频文件超过 50MB 上限")
+                fh.write(chunk)
+    except Exception:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
+    if total <= 0:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(status_code=400, detail="空文件")
+    return dest
+
+
+def _stems_task_abandon(task_id: str, reason: str) -> None:
+    """回滚尚未产生外部副作用的任务占位（与 /generate._abandon 同语义）。"""
+    try:
+        task_store.release_lock_for_task(task_id)
+    except Exception:  # noqa: BLE001
+        logger.warning("stems release_lock failed while abandoning %s (%s)", task_id, reason)
+    try:
+        task_store.delete(task_id)
+    except Exception:  # noqa: BLE001
+        logger.warning("stems delete task failed while abandoning %s (%s)", task_id, reason)
+
+
+@router.post("/stems/separate")
+async def stems_separate(
+    file: UploadFile = File(...),
+    version: str = Form("v2"),
+    user_id: str = Depends(get_verified_user_id),
+):
+    """提交音频分离任务（Stems v2 = 35 Credits；v3 = 100 Credits，MODEL_ID_UNVERIFIED 门禁），
+    立即返回 task_id。
+
+    身份唯一来源：Authorization Bearer JWT → verified auth.users.id。
+    扣费/退款语义：
+      - 本端点在提交 provider 前完成 Credits 预留（原子扣减，reference_id=task_id）；
+      - 提交失败 / provider 失败 / 超时 / 产物下载与 R2 失败 → 幂等退款；
+      - 余额不足 → 402，绝不创建 provider 任务。
+    V3 双重门禁（A-17，先于任何扣费）：
+      - TEMPOLOR_STEMS_V3_MODEL_ID 未配置 → 503 stems_v3_model_unverified；
+      - TEMPOLOR_STEMS_V3_ZIP_MEMBERS 未配置 → 503 stems_v3_members_unconfirmed
+        （zip 成员白名单必须按实测产物确认，绝不猜测）。
+    """
+    user_key = user_id
+    # ── A-17 V3 门禁（fail-closed，先于任务创建/Credits）──────────────────
+    version_norm = (version or "v2").strip().lower()
+    if version_norm not in ("v2", "v3"):
+        raise HTTPException(status_code=400, detail="version 仅支持 v2 / v3")
+    stems_model: Optional[str] = None
+    if version_norm == "v3":
+        stems_model = stems_service.stems_v3_model_id()
+        if not stems_model:
+            raise HTTPException(status_code=503, detail="stems_v3_model_unverified")
+        if not stems_service.stems_v3_zip_members():
+            raise HTTPException(status_code=503, detail="stems_v3_members_unconfirmed")
+
+    # 全平台成本硬停线（与 retry-stems 同一保护，Stems 同样消耗真实 provider 成本）
+    if global_hard_stop_reached():
+        raise HTTPException(status_code=429, detail="今日平台预算已用尽，请明天再试")
+    if task_store.is_user_busy(user_key):
+        raise HTTPException(status_code=429, detail="您有任务正在进行中，请稍后再试")
+
+    input_path = await _save_stems_upload(file)
+
+    # 先建任务行（权重 1：与既有 /audio/separate 的 reserve_generation 口径一致），
+    # 再拿锁，再做任何有成本的预留/扣费（P0-3 顺序）
+    task_id = task_store.new_task(
+        user_key=user_key,
+        task_id=f"stems-{uuid.uuid4().hex[:8]}",
+        generation_quota_weight=1,
+    )
+    if not task_store.acquire_lock(user_key, task_id):
+        _stems_task_abandon(task_id, "lock_busy")
+        raise HTTPException(status_code=429, detail="您有任务正在进行中，请稍后再试")
+
+    reserved = reserve_generation(user_key, None)
+    if not reserved["success"]:
+        _stems_task_abandon(task_id, "limits_reserved_failed")
+        raise HTTPException(status_code=429, detail=reserved["error"])
+
+    quota_weight = 1
+    actual_weight = reserved.get("weight")
+    if isinstance(actual_weight, int) and actual_weight != quota_weight:
+        task_store.update(task_id, generation_quota_weight=actual_weight)
+        quota_weight = actual_weight
+
+    credit_type = STEMS_CREDIT_TYPE_V3 if version_norm == "v3" else STEMS_CREDIT_TYPE
+    credit_cost = get_credit_cost(credit_type)
+    if credit_cost is None or credit_cost <= 0:
+        # Stems 是已定价付费功能：价格缺失属配置事故，fail-closed 拒绝免费放行
+        refund_generation(user_key, reason="request_not_sent", task_id=task_id, weight=quota_weight)
+        _stems_task_abandon(task_id, "stems_not_priced")
+        raise HTTPException(status_code=503, detail="stems_not_priced")
+
+    consume = credits_service.reserve_generation_credits(user_key, task_id, credit_cost)
+    if not consume["success"]:
+        refund_generation(user_key, reason="request_not_sent", task_id=task_id, weight=quota_weight)
+        _stems_task_abandon(task_id, "insufficient_credits")
+        raise HTTPException(status_code=402, detail="insufficient_credits")
+
+    try:
+        asyncio.create_task(
+            _run_stems_with_timeout(task_id, user_key, input_path, quota_weight,
+                                    stems_model=stems_model)
+        )
+    except Exception as exc:  # 协程未起来：钱已扣，立即退回
+        logger.error("failed to spawn stems task %s: %s", task_id, exc)
+        credits_service.refund_generation_credits(user_key, task_id)
+        refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=quota_weight)
+        _stems_task_abandon(task_id, "spawn_failed")
+        raise HTTPException(status_code=503, detail="服务繁忙，请稍后重试")
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "status_url": f"/api/v1/ai/stems/task/{task_id}",
+        "credits_charged": credit_cost,
+    }
+
+
+@router.get("/stems/task/{task_id}")
+async def get_stems_task(
+    task_id: str,
+    user_id: str = Depends(get_verified_user_id),
+):
+    """轮询音频分离任务状态；完成时返回 4 轨 + original 的短期预签名 URL。
+
+    - 仅接受 stems- 前缀任务（隔离 song 任务，防止跨产品读取）；
+    - 归属校验（user_key != verified user → 403，IDOR 防护）；
+    - 只返回后端签发的短期预签名 URL，绝不暴露 R2 key/stems_url/item_id。
+    """
+    if not task_id.startswith("stems-"):
+        raise HTTPException(status_code=404, detail="任务不存在")
+    task = task_store.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    user_key = task.get("user_key")
+    if not user_key or user_key != user_id:
+        raise HTTPException(status_code=403, detail="无权访问该任务")
+
+    manifest = task.get("download") or {}
+    stems_ok = task.get("stems_state") == "ok"
+    stems_urls = _stems_signed(task_id, manifest) if stems_ok else None
+    original_url = None
+    if stems_ok and isinstance(manifest, dict) and manifest.get("original"):
+        try:
+            original_url = cdn_uploader.get_presigned_download_url(
+                manifest["original"], expires_in=600
+            )
+        except Exception:  # noqa: BLE001
+            original_url = None
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "state": task.get("state"),
+        "progress": task.get("progress") or 0,
+        "stems_state": task.get("stems_state"),
+        "error": task.get("error"),
+        "stems": stems_urls,
+        "original_url": original_url,
+    }
+
+
+async def _run_stems_generation(task_id: str, user_key: str, input_path: str,
+                                quota_weight: int,
+                                stems_model: Optional[str] = None) -> None:
+    """Stems 任务执行体：provider 链路 → 成功落 manifest；任何失败统一失败+退款。
+
+    stems_model：None = v2 默认档；非空 = v3 显式 model（仅官方确认后由 env 门禁放行）。
+    """
+    tmp_dir = tempfile.mkdtemp(prefix="stems_task_")
+    try:
+        task_store.update(task_id, state="processing", progress=5)
+        manifest = await stems_service.run_stems_task(
+            task_id, input_path, include_original=True, model=stems_model,
+            expected_members=(
+                stems_service.stems_v3_zip_members() or None
+            ) if stems_model else None,
+        )
+        ok = all(s in manifest for s in ("vocals", "drums", "bass", "other"))
+        if not ok:
+            raise RuntimeError("stems manifest incomplete after upload")
+        task_store.update(
+            task_id, state="completed", progress=100, download=manifest,
+            stems_state="ok", error=None,
+        )
+        task_store.release_lock_for_task(task_id)
+    except asyncio.CancelledError:
+        # 外层 wait_for 超时取消：状态/退款/锁由 _run_stems_with_timeout 统一处理
+        raise
+    except Exception as e:  # noqa: BLE001
+        # 不向前端泄露 provider 内部错误细节（item_id/endpoint/HTTP 细节）
+        logger.warning("[stems] task=%s failed: %s", task_id, type(e).__name__)
+        task_store.update(
+            task_id, state="failed", progress=100,
+            error="音频分离失败，Credits 已自动退回",
+        )
+        refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=quota_weight)
+        credits_service.refund_generation_credits(user_key, task_id)
+        task_store.release_lock_for_task(task_id)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        try:
+            shutil.rmtree(os.path.dirname(input_path), ignore_errors=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+async def _run_stems_with_timeout(task_id: str, user_key: str, input_path: str,
+                                  quota_weight: int,
+                                  stems_model: Optional[str] = None) -> None:
+    """单任务硬顶（与 /generate._run_with_timeout 同构）；超时 → failed + 幂等退款。"""
+    try:
+        await asyncio.wait_for(
+            _run_stems_generation(task_id, user_key, input_path, quota_weight,
+                                  stems_model=stems_model),
+            timeout=MAX_TASK_RUNTIME_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        task_store.update(task_id, state="failed", error="音频分离超时，Credits 已自动退回")
+        refund_generation(user_key, reason="timeout_unknown", task_id=task_id, weight=quota_weight)
+        credits_service.refund_generation_credits(user_key, task_id)
+        task_store.release_lock_for_task(task_id)
+        try:
+            shutil.rmtree(os.path.dirname(input_path), ignore_errors=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# MIDI 转换（P4-B2 Phase A-17 正式接入：TemPolor midi v1，官方 200 创作点 ¥2.00/次）
+#
+#  - 端点形态与 /stems/separate 同构：上传 → 建任务 → Credits 预留 → 后台执行；
+#  - 产物 = midi.zip（非音频）→ 不适用 240s 时长门（§九 仅约束音乐生成类交付）；
+#  - Credits：CREDIT_COSTS["midi"] 当前 credit_cost=0 = 未定价 → fail-closed
+#    （503 midi_not_priced），绝不免费放行、绝不猜价；产品定价后自动激活；
+#  - 退款：完全复用既有幂等体系（application-level + uq_credits_refund_once）。
+# ═══════════════════════════════════════════════════════════════════════════
+
+MIDI_CREDIT_TYPE = "midi"
+
+
+def _midi_task_abandon(task_id: str, reason: str) -> None:
+    """回滚尚未产生外部副作用的 MIDI 任务占位（与 stems 同语义）。"""
+    try:
+        task_store.release_lock_for_task(task_id)
+    except Exception:  # noqa: BLE001
+        logger.warning("midi release_lock failed while abandoning %s (%s)", task_id, reason)
+    try:
+        task_store.delete(task_id)
+    except Exception:  # noqa: BLE001
+        logger.warning("midi delete task failed while abandoning %s (%s)", task_id, reason)
+
+
+@router.post("/midi/convert")
+async def midi_convert(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_verified_user_id),
+):
+    """提交音频转 MIDI 任务（TemPolor midi v1），立即返回 task_id。
+
+    未定价（credit_cost=0）→ 503 midi_not_priced，fail-closed 先于任务创建/Credits。
+    """
+    user_key = user_id
+    # 定价门（fail-closed）：MIDI 是已定价付费功能，价格缺失属配置事故，拒绝免费放行
+    credit_cost = get_credit_cost(MIDI_CREDIT_TYPE)
+    if credit_cost is None or credit_cost <= 0:
+        raise HTTPException(status_code=503, detail="midi_not_priced")
+
+    if global_hard_stop_reached():
+        raise HTTPException(status_code=429, detail="今日平台预算已用尽，请明天再试")
+    if task_store.is_user_busy(user_key):
+        raise HTTPException(status_code=429, detail="您有任务正在进行中，请稍后再试")
+
+    input_path = await _save_stems_upload(file)  # 同一输入约束：≤50MB，白名单扩展名
+
+    task_id = task_store.new_task(
+        user_key=user_key,
+        task_id=f"midi-{uuid.uuid4().hex[:8]}",
+        generation_quota_weight=1,
+    )
+    if not task_store.acquire_lock(user_key, task_id):
+        _midi_task_abandon(task_id, "lock_busy")
+        raise HTTPException(status_code=429, detail="您有任务正在进行中，请稍后再试")
+
+    reserved = reserve_generation(user_key, None)
+    if not reserved["success"]:
+        _midi_task_abandon(task_id, "limits_reserved_failed")
+        raise HTTPException(status_code=429, detail=reserved["error"])
+
+    consume = credits_service.reserve_generation_credits(user_key, task_id, credit_cost)
+    if not consume["success"]:
+        refund_generation(user_key, reason="request_not_sent", task_id=task_id, weight=1)
+        _midi_task_abandon(task_id, "insufficient_credits")
+        raise HTTPException(status_code=402, detail="insufficient_credits")
+
+    try:
+        asyncio.create_task(
+            _run_midi_with_timeout(task_id, user_key, input_path, 1)
+        )
+    except Exception as exc:  # 协程未起来：钱已扣，立即退回
+        logger.error("failed to spawn midi task %s: %s", task_id, exc)
+        credits_service.refund_generation_credits(user_key, task_id)
+        refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=1)
+        _midi_task_abandon(task_id, "spawn_failed")
+        raise HTTPException(status_code=503, detail="服务繁忙，请稍后重试")
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "status_url": f"/api/v1/ai/midi/task/{task_id}",
+        "credits_charged": credit_cost,
+    }
+
+
+@router.get("/midi/task/{task_id}")
+async def get_midi_task(
+    task_id: str,
+    user_id: str = Depends(get_verified_user_id),
+):
+    """轮询 MIDI 转换任务状态；完成时返回 midi.zip 的短期预签名下载 URL。
+
+    - 仅接受 midi- 前缀任务（隔离 song/stems 任务）；
+    - 归属校验（user_key != verified user → 403，IDOR 防护）；
+    - 只返回后端签发的短期预签名 URL，绝不暴露 R2 key / midi_url / item_id。
+    """
+    if not task_id.startswith("midi-"):
+        raise HTTPException(status_code=404, detail="任务不存在")
+    task = task_store.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    user_key = task.get("user_key")
+    if not user_key or user_key != user_id:
+        raise HTTPException(status_code=403, detail="无权访问该任务")
+
+    manifest = task.get("download") or {}
+    midi_url = None
+    if task.get("state") == "completed" and isinstance(manifest, dict) and manifest.get("midi_zip"):
+        try:
+            midi_url = cdn_uploader.get_presigned_download_url(
+                manifest["midi_zip"], expires_in=600
+            )
+        except Exception:  # noqa: BLE001
+            midi_url = None
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "state": task.get("state"),
+        "progress": task.get("progress") or 0,
+        "error": task.get("error"),
+        "midi_url": midi_url,
+    }
+
+
+async def _run_midi_generation(task_id: str, user_key: str, input_path: str,
+                               quota_weight: int) -> None:
+    """MIDI 任务执行体：provider 链路 → 成功落 manifest；任何失败统一失败+退款。"""
+    try:
+        task_store.update(task_id, state="processing", progress=5)
+        manifest = await midi_service.run_midi_task(task_id, input_path)
+        task_store.update(
+            task_id, state="completed", progress=100, download=manifest, error=None,
+        )
+        task_store.release_lock_for_task(task_id)
+    except asyncio.CancelledError:
+        # 外层 wait_for 超时取消：状态/退款/锁由 _run_midi_with_timeout 统一处理
+        raise
+    except Exception:  # noqa: BLE001
+        # 不向前端泄露 provider 内部错误细节（item_id/endpoint/midi_url）
+        logger.warning("[midi] task=%s failed", task_id)
+        task_store.update(
+            task_id, state="failed", progress=100,
+            error="MIDI 转换失败，Credits 已自动退回",
+        )
+        refund_generation(user_key, reason="provider_failed", task_id=task_id, weight=quota_weight)
+        credits_service.refund_generation_credits(user_key, task_id)
+        task_store.release_lock_for_task(task_id)
+
+
+async def _run_midi_with_timeout(task_id: str, user_key: str, input_path: str,
+                                 quota_weight: int) -> None:
+    """单任务硬顶（与 stems 同构）；超时 → failed + 幂等退款。"""
+    try:
+        await asyncio.wait_for(
+            _run_midi_generation(task_id, user_key, input_path, quota_weight),
+            timeout=MAX_TASK_RUNTIME_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        task_store.update(task_id, state="failed", error="MIDI 转换超时，Credits 已自动退回")
+        refund_generation(user_key, reason="timeout_unknown", task_id=task_id, weight=quota_weight)
+        credits_service.refund_generation_credits(user_key, task_id)
+        task_store.release_lock_for_task(task_id)
+        try:
+            shutil.rmtree(os.path.dirname(input_path), ignore_errors=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+async def _run_song_retry_via_stems(task_id: str, full_wav_key: str, tmp_dir: str) -> Optional[dict]:
+    """生产 retry-stems 执行体：R2 full_wav → TemPolor Stems v2 → 4 轨上传 → manifest 增量。
+
+    免费（不扣 Credits，既有 retry 语义）；任何失败返回 None，
+    绝不把主任务打成 failed（F9：主音频已交付）。
+    """
+    try:
+        url = cdn_uploader.get_presigned_download_url(full_wav_key, expires_in=600)
+        local_wav = os.path.join(tmp_dir, "full_source.wav")
+        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+        if resp.status_code != 200 or len(resp.content) < 1000:
+            logger.warning("[retry-stems→stems] task=%s source download failed HTTP %s",
+                           task_id, resp.status_code)
+            return None
+        with open(local_wav, "wb") as fh:
+            fh.write(resp.content)
+        return await stems_service.run_stems_task(task_id, local_wav, include_original=False)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[retry-stems→stems] task=%s failed: %s", task_id, type(e).__name__)
+        return None
 
 
 @router.get("/limits")
@@ -1366,5 +1957,65 @@ async def tempolor_callback(request: Request):
         "[tempolor] callback 收到 %d 个 item_id：%s",
         len(item_ids),
         item_ids[:_CALLBACK_LOG_ITEM_CAP] or "-",
+    )
+    return PlainTextResponse("success")
+
+
+@router.post("/tempolor/stems/callback")
+async def tempolor_stems_callback(request: Request):
+    """接收天谱乐 Stems 回调（P2 独立端点，绝不混入 Song callback）。
+
+    提交侧 URL：tempolor_stems_service.effective_stems_callback_url() —— 由
+    TEMPOLOR_CALLBACK_URL 派生（…/tempolor/callback → …/tempolor/stems/callback）
+    并附加同一共享令牌；不修改 TEMPOLOR_CALLBACK_URL 本身。
+    纪律与 Song callback 完全一致：
+      503 我方未配密钥（fail-closed）；401 令牌错（不落内容只记 IP）；
+      解析 stems[].item_id/status 仅记日志，恒返回 200 + "success"（官方要求）。
+    不做任何任务状态/计费变更 —— 轮询是唯一终态权威，callback 与轮询双通道
+    因此天然幂等（结算只发生一次）。
+    """
+    authorized = _tempolor_callback_authorized(request)
+    if authorized is None:
+        _callback_logger.error(
+            "[stems] callback 拒绝：TEMPOLOR_CALLBACK_SECRET 未配置（fail-closed）。"
+            "请在部署环境补该密钥")
+        raise HTTPException(503, "stems_callback_not_configured")
+    if not authorized:
+        client = request.client.host if request.client else "unknown"
+        _callback_logger.warning("[stems] callback 令牌校验失败 from=%s", client)
+        raise HTTPException(401, "invalid callback token")
+
+    body = await request.body()
+    items: list[str] = []
+
+    if not body:
+        _callback_logger.warning("[stems] callback 负载为空")
+    elif len(body) > _CALLBACK_MAX_BYTES:
+        _callback_logger.warning("[stems] callback 负载过大（%d bytes），跳过解析", len(body))
+    else:
+        payload: object = None
+        try:
+            payload = json.loads(body.decode("utf-8", "replace"))
+        except (ValueError, UnicodeDecodeError):
+            _callback_logger.warning("[stems] callback 非合法 JSON，已确认收到")
+        entries = payload.get("stems") if isinstance(payload, dict) else None
+        if isinstance(entries, list):
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                item_id = entry.get("item_id")
+                status = entry.get("status")
+                if isinstance(item_id, str):
+                    safe = _safe_item_id(item_id)
+                    if safe:
+                        safe_status = _safe_item_id(str(status)) if status else "?"
+                        items.append(f"{safe}:{safe_status}")
+        elif entries is not None:
+            _callback_logger.warning("[stems] callback stems 字段类型异常：%s", type(entries).__name__)
+
+    _callback_logger.info(
+        "[stems] callback 收到 %d 个 item：%s",
+        len(items),
+        items[:_CALLBACK_LOG_ITEM_CAP] or "-",
     )
     return PlainTextResponse("success") 

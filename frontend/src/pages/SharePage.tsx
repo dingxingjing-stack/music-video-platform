@@ -22,7 +22,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { api, apiFetch } from '../api/http';
+import { apiFetch } from '../api/http';
+// ⚠️ api.url() 来自 config/api（带 API_BASE 拼接）；../api/http 的 api 只有 get/post/auth。
+// 此前从 http.ts 解构 api.url 会直接 TypeError → 分享页必然落入 error 分支（存量 bug）。
+import { api } from '../config/api';
 import { useTranslation } from '../i18n/useTranslation';
 
 interface SharedWork {
@@ -103,6 +106,42 @@ function platformHref(id: PlatformId, url: string, title: string, cover: string)
     default:
       return url;
   }
+}
+
+/**
+ * L3 音频文件分享：文件名安全化。
+ * 禁危险字符（/ \ : * ? " < > |）与控制符，截断 60 字符，空标题兜底 `Melovar.<ext>`。
+ * 输入只有分享页本就公开展示的 title —— 不引入任何 PII / task 内部信息。
+ */
+function safeAudioFilename(title: string | null | undefined, ext: string): string {
+  const base = (title || '')
+    .replace(/[/\\:*?"<>|]/g, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .trim()
+    .slice(0, 60)
+    .replace(/[.\s]+$/, '');
+  return base ? `Melovar-${base}.${ext}` : `Melovar.${ext}`;
+}
+
+/**
+ * 由 presigned URL 的 pathname 推断扩展名与 MIME。
+ * 分享端点只产出 full_mp3 / full_wav（可能未来有 flac），映射：
+ *   .mp3 → audio/mpeg、.flac → audio/flac、.wav → audio/wav；
+ * 其余扩展名兜底为 mp3 / audio/mpeg（与文件实际内容一致的兜底，绝不用
+ * application/octet-stream —— 系统分享面板按 MIME 决定可接收的目标）。
+ */
+function extAndMimeFromUrl(url: string): { ext: string; mime: string } {
+  const m = /\.([a-z0-9]+)(?:\?|$)/i.exec(url || '');
+  const raw = (m?.[1] || 'mp3').toLowerCase();
+  if (raw === 'flac') return { ext: 'flac', mime: 'audio/flac' };
+  if (raw === 'wav') return { ext: 'wav', mime: 'audio/wav' };
+  return { ext: 'mp3', mime: 'audio/mpeg' };
+}
+
+/** 判定"用户主动取消分享"（AbortError）：静默返回，不弹错、不降级、不重试。 */
+function isShareAbort(e: unknown): boolean {
+  return (e as { name?: string } | null)?.name === 'AbortError';
 }
 
 /** 在 canvas 上绘制静态分享封面卡（品牌渐变 + 标题 + AI 标记）。 */
@@ -285,31 +324,72 @@ export function SharePage() {
     });
   }, [work]);
 
-  /** 系统分享（移动端最顺的一条路）：优先带封面图，退化到纯链接。 */
+  /** L3：把音频取为 File —— 点击分享时才 fetch（600s presigned URL），用完即弃、不缓存。
+   *  任何失败（网络/CORS/响应非 200）返回 null → 安全降级到 URL 分享。 */
+  const audioFile = useCallback(async (): Promise<File | null> => {
+    if (!work?.audio_url) return null;
+    try {
+      const res = await fetch(work.audio_url);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const { ext, mime } = extAndMimeFromUrl(work.audio_url);
+      return new File([blob], safeAudioFilename(work.title, ext), { type: mime });
+    } catch {
+      return null;
+    }
+  }, [work]);
+
+  /**
+   * 系统分享，升级为 L3 降级链（每层至多尝试一次，绝不循环重试）：
+   *   音频文件 → 封面图 + 链接 → 纯链接 → 复制链接。
+   * 用户主动取消（AbortError）一律安静返回；其余异常（DataError /
+   * NotAllowedError / TypeError…）按链降级。canShare 缺失（旧浏览器）
+   * 时 `nav.canShare?.()` 短路为 false，自动跳过文件分支。
+   */
   const onSystemShare = useCallback(async () => {
     const title = work?.title || 'Melovar';
     const text = t('share.shareText', { title, url: shareUrl });
-    try {
-      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-      const file = await coverFile();
-      if (nav.share) {
-        if (file) {
-          const payload: ShareData = { title, text, files: [file] };
-          if (nav.canShare?.(payload)) {
-            await nav.share(payload);
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (nav.share) {
+      // L3 最高优先：直接分享音频文件本身
+      const audio = await audioFile();
+      if (audio) {
+        const audioPayload: ShareData = { title, text, files: [audio] };
+        if (nav.canShare?.(audioPayload)) {
+          try {
+            await nav.share(audioPayload);
             return;
+          } catch (e) {
+            if (isShareAbort(e)) return;
+            // 其他失败 → 降级
           }
         }
+      }
+      // Level 2 现有路径：封面图 + 链接（保持原有行为）
+      const file = await coverFile();
+      if (file) {
+        const payload: ShareData = { title, text, files: [file] };
+        if (nav.canShare?.(payload)) {
+          try {
+            await nav.share(payload);
+            return;
+          } catch (e) {
+            if (isShareAbort(e)) return;
+          }
+        }
+      }
+      // Level 2 兜底：纯链接
+      try {
         await nav.share({ title, text, url: shareUrl });
         return;
+      } catch (e) {
+        if (isShareAbort(e)) return;
+        // URL 分享也失败 → 复制链接
       }
-    } catch {
-      // 用户取消分享：静默
-      return;
     }
     // 桌面浏览器普遍不支持 navigator.share → 复制链接兜底
     await copy(shareUrl, t('share.linkCopied'));
-  }, [work, shareUrl, t, coverFile, copy]);
+  }, [work, shareUrl, t, coverFile, copy, audioFile]);
 
   /** 微信：没有 web 分享协议，只能给二维码让用户「扫一扫」，或复制链接去粘贴。 */
   const onWechat = useCallback(() => setShowQr(true), []);

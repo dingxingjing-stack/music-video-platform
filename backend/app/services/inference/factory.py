@@ -28,7 +28,6 @@ from .gpt_sovits import GPTSovitsService
 from .musicgen import MusicGenService
 from .cogvideox import CogVideoXService
 from .midi_render import MidiRenderService, create_midi_render_service
-from .mureka import MurekaService
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,6 @@ _SERVICE_REGISTRY: dict[str, tuple[type[BaseInferenceService], str]] = {
     "music": (MusicGenService, "MUSICGEN"),
     "video": (CogVideoXService, "COGVIDEOX"),
     "midi": (MidiRenderService, "MIDI_RENDER"),
-    "mureka": (MurekaService, "MUREKA"),
 }
 
 _ALIASES: dict[str, str] = {
@@ -48,11 +46,6 @@ _ALIASES: dict[str, str] = {
     "text2video": "video",
     "t2v": "video",
     "midi_render": "midi",
-    "mureka": "mureka",
-    "song": "mureka",
-    "bgm": "mureka",
-    "lyrics_gen": "mureka",
-    "vocal_clone": "mureka",
 }
 
 

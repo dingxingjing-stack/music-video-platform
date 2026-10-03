@@ -5,10 +5,8 @@
     normal          → POST /api/v1/song/generate        task_type=normal   model=v4.0
     lyric_to_music  → POST /api/v1/song/generate        task_type=normal   model=v4.0 + lyric（用户歌词原样透传）
     instrumental    → POST /api/v1/song/instrumental    model=v4.0（官方指南：/docs/guides/instrumental-generate）
-    reference       → POST /api/v1/file/upload (upload_type=reference) → id
-                      → POST /api/v1/song/generate      task_type=reference model=v3.5
-                        reference_audio={audio_type:upload_id, audio_content:id}
-                        similarity∈[0.2,0.8,1.3,1.5]（缺省 0.8；官方 /docs/guides/reference-generate）
+    （P4-B2 Phase A-11：Reference 仿写已随功能撤销移除——Yinchao V3.5 单次实测
+      179.02s < 240s，且 TemPolor Cover 亦无法稳定达标，详见 Phase A-4~A-9 记录）
 
 职责边界（严格，与 MurekaProvider 一致）：
 - 只负责音潮官方 API 两段式调用：
@@ -26,7 +24,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 import os
 import time
@@ -49,11 +46,25 @@ _POLLING_STATUSES = {"pending", "running", "stream"}
 _SUCCESS_STATUSES = {"done"}
 _FAILURE_STATUSES = {"fail"}
 
-# 参考音频上传官方限制（/docs/api-reference/file/file-upload-post：仅 MP3/WAV，≤10MB）
-_REFERENCE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
-# similarity 官方枚举（/docs/api-reference/song/song-generate-post：[0.2, 0.8, 1.3, 1.5]）
-_REFERENCE_SIMILARITY_VALUES = (0.2, 0.8, 1.3, 1.5)
-_DEFAULT_SIMILARITY = 0.8
+
+def _redact_url(url: str) -> str:
+    """B4-YC-DL-FIX：URL 脱敏——保留 scheme/host/path 与参数名，参数值替换为 [REDACTED]。
+
+    用于下载失败日志/错误上下文：保留可诊断的路径信息，不泄露签名/令牌明文。
+    复用标准库 urllib，不引入新依赖。
+    """
+    if not url:
+        return ""
+    base = url.split("?", 1)[0]
+    if "?" not in url:
+        return base
+    try:
+        from urllib.parse import parse_qsl, urlencode
+        pairs = parse_qsl(url.split("?", 1)[1], keep_blank_values=True)
+        return base + "?" + "&".join(f"{k}=[REDACTED]" for k, _ in pairs)
+    except Exception:  # noqa: BLE001
+        return base + "?[REDACTED]"
+
 
 
 def local_dir() -> str:
@@ -64,11 +75,15 @@ def local_dir() -> str:
     )
 
 
-def _download_audio(url: str, dest_dir: Optional[str] = None) -> Optional[str]:
+def _download_audio(url: str, dest_dir: Optional[str] = None, task_id: Optional[str] = None) -> Optional[str]:
     """下载音潮音频 URL 到本地生成目录，返回本地绝对路径；失败返回 None。
 
     不假设文件格式，按 URL 后缀保留真实扩展名；不把一种格式改名成另一种。
+    B4-YC-DL-FIX：可选 task_id 参数——所有失败路径的日志均携带 task_id 与
+    脱敏 audio_url（参数值 [REDACTED]，不泄露签名/令牌明文），使瞬时下载
+    故障（如 502）可追溯原始 Provider 任务。不改变下载逻辑/成功路径。
     """
+    ctx = f"task={task_id or '-'} url={_redact_url(url)}"
     dest = Path(dest_dir or local_dir())
     dest.mkdir(parents=True, exist_ok=True)
     suffix = ".mp3"
@@ -83,50 +98,26 @@ def _download_audio(url: str, dest_dir: Optional[str] = None) -> Optional[str]:
         with httpx.Client(timeout=120.0, follow_redirects=True) as client:
             resp = client.get(url)
         if resp.status_code != 200:
-            logger.warning("[yinchao] 音频下载失败: HTTP %s", resp.status_code)
+            logger.warning("[yinchao] 音频下载失败: HTTP %s (%s)", resp.status_code, ctx)
             return None
         data = resp.content
         if not data or len(data) < 1000:
-            logger.warning("[yinchao] 音频过小或为空 (%d bytes)", len(data) if data else 0)
+            logger.warning("[yinchao] 音频过小或为空 (%d bytes) (%s)", len(data) if data else 0, ctx)
             return None
         out_path.write_bytes(data)
+    except httpx.TimeoutException as exc:  # noqa: BLE001
+        logger.warning("[yinchao] 音频下载超时: %s (%s)", type(exc).__name__, ctx)
+        return None
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[yinchao] 音频下载异常: %s", exc)
+        logger.warning("[yinchao] 音频下载异常: %s (%s)", exc, ctx)
         return None
     logger.info("[yinchao] 音频已下载: %s (%d bytes)", out_path, out_path.stat().st_size)
     return str(out_path)
 
 
-def _decode_reference_audio(ref: str) -> Optional[tuple[bytes, str, str]]:
-    """把请求里的 base64 参考音频解码为 (bytes, 扩展名, mime)；失败返回 None。
-
-    支持 data URL 前缀与裸 base64；格式按 magic bytes 识别（RIFF/WAVE → wav，
-    ID3/MPEG 帧同步 → mp3），识别不了时以 octet-stream + .bin 提交（由官方
-    upload 端点裁决格式，不在本地臆造格式）。
-    """
-    s = (ref or "").strip()
-    if s.lower().startswith("data:"):
-        comma = s.find(",")
-        if comma == -1:
-            return None
-        s = s[comma + 1:]
-    if not s:
-        return None
-    try:
-        raw = base64.b64decode(s, validate=False)
-    except Exception:  # noqa: BLE001
-        return None
-    if not raw:
-        return None
-    if len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WAVE":
-        return raw, "wav", "audio/wav"
-    if raw[:3] == b"ID3" or (len(raw) >= 2 and raw[0] == 0xFF and (raw[1] & 0xE0) == 0xE0):
-        return raw, "mp3", "audio/mpeg"
-    return raw, "bin", "application/octet-stream"
-
 
 class YinchaoProvider(BaseProvider):
-    """音潮开放平台 API Provider（阶段 B：normal / lyric_to_music / instrumental / reference）。"""
+    """音潮开放平台 API Provider（阶段 B：normal / lyric_to_music / instrumental；reference 已随 Phase A-11 撤销）。"""
 
     name = "yinchao"
     provider_type = "api"
@@ -174,8 +165,6 @@ class YinchaoProvider(BaseProvider):
         operation = str(request.get("operation") or "normal").strip() or "normal"
         lyrics = (request.get("lyrics") or "").strip()
 
-        if operation == "reference":
-            return await self._generate_reference(api_key, prompt, lyrics, request)
         if operation == "instrumental":
             # 官方指南 /docs/guides/instrumental-generate：POST /api/v1/song/instrumental
             payload: dict[str, Any] = {"model": "v4.0", "prompt": prompt, "n": 1}
@@ -199,109 +188,8 @@ class YinchaoProvider(BaseProvider):
 
         return await self._submit_and_poll(api_key, payload, submit_url)
 
-    async def _generate_reference(
-        self, api_key: str, prompt: str, lyrics: str, request: dict,
-    ) -> dict:
-        """仿写（reference）：官方合同（/docs/guides/reference-generate，只读抓取）。
-
-        - similarity：官方枚举 [0.2, 0.8, 1.3, 1.5]；缺省填 0.8；显式非法 →
-          non_retryable，零提交。
-        - 参考音频：base64 → POST /api/v1/file/upload（upload_type=reference）→ id
-          → reference_audio={audio_type: "upload_id", audio_content: id}。
-        - 上传或提交的参数/认证类错误 → non_retryable；超时/5xx → 可重试可切换。
-        """
-        similarity = request.get("similarity")
-        if similarity is None or similarity == "":
-            similarity = _DEFAULT_SIMILARITY
-        else:
-            try:
-                similarity_f = float(similarity)
-            except (TypeError, ValueError):
-                return {"success": False, "non_retryable": True,
-                        "error": f"Yinchao similarity 非法：{similarity!r}", "provider": self.name}
-            if similarity_f not in _REFERENCE_SIMILARITY_VALUES:
-                return {"success": False, "non_retryable": True,
-                        "error": f"Yinchao similarity 无效：{similarity_f}（官方枚举 0.2/0.8/1.3/1.5）",
-                        "provider": self.name}
-            similarity = similarity_f
-
-        ref = request.get("reference_audio")
-        if not isinstance(ref, str) or not ref.strip():
-            return {"success": False, "non_retryable": True,
-                    "error": "Yinchao reference 缺少 reference_audio", "provider": self.name}
-        decoded = _decode_reference_audio(ref)
-        if decoded is None:
-            return {"success": False, "non_retryable": True,
-                    "error": "Yinchao reference_audio base64 解码失败", "provider": self.name}
-        raw, ext, mime = decoded
-        if len(raw) > _REFERENCE_UPLOAD_MAX_BYTES:
-            return {"success": False, "non_retryable": True,
-                    "error": "Yinchao reference_audio 超过官方 10MB 上传限制", "provider": self.name}
-
-        upload_id, upload_err = await self._upload_reference_audio(api_key, raw, ext, mime)
-        if upload_err is not None:
-            return upload_err
-
-        payload: dict[str, Any] = {
-            "model": "v3.5",
-            "task_type": "reference",
-            "prompt": prompt,
-            "reference_audio": {"audio_type": "upload_id", "audio_content": upload_id},
-            "similarity": similarity,
-            "n": 1,
-        }
-        if lyrics:
-            payload["lyric"] = lyrics
-        submit_url = f"{YINCHAO_BASE_URL}/api/v1/song/generate"
-        return await self._submit_and_poll(api_key, payload, submit_url)
-
-    async def _upload_reference_audio(
-        self, api_key: str, raw: bytes, ext: str, mime: str,
-    ) -> tuple[Optional[str], Optional[dict]]:
-        """POST /api/v1/file/upload（upload_type=reference）→ (upload_id, error_result)。
-
-        恰好返回一个非 None：成功给 upload_id，失败给 provider error dict。
-        """
-        url = f"{YINCHAO_BASE_URL}/api/v1/file/upload"
-        headers = {"Authorization": f"Bearer {api_key}"}
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    url, headers=headers,
-                    data={"upload_type": "reference"},
-                    files={"file": (f"reference.{ext}", raw, mime)},
-                )
-        except httpx.TimeoutException:
-            # TODO(阶段 B 后续)：上传超时不存在已建生成任务，可安全重试/切换
-            return None, {"success": False, "error": "Yinchao 参考音频上传超时", "provider": self.name}
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("[yinchao] 参考音频上传异常: %s", exc)
-            return None, {"success": False, "error": f"Yinchao 参考音频上传异常: {exc}", "provider": self.name}
-
-        if resp.status_code != 200:
-            logger.warning("[yinchao] 参考音频上传失败 http=%s", resp.status_code)
-            err = {"success": False, "error": f"Yinchao 参考音频上传 HTTP {resp.status_code}", "provider": self.name}
-            if resp.status_code == 400:
-                err["non_retryable"] = True
-                err["error"] = "Yinchao 参考音频上传参数错误（400：仅支持 MP3/WAV 且 ≤10MB）"
-            elif resp.status_code in (401, 403):
-                err["non_retryable"] = True
-                err["error"] = f"Yinchao 参考音频上传认证/权限错误（{resp.status_code}）"
-            return None, err
-
-        try:
-            data = resp.json() if resp.content else {}
-        except Exception:  # noqa: BLE001
-            data = {}
-        upload_id = data.get("id") if isinstance(data, dict) else None
-        if not upload_id:
-            logger.warning("[yinchao] 上传响应缺少 id: %s", str(data)[:300])
-            return None, {"success": False, "error": "Yinchao 上传响应缺少文件 id", "provider": self.name}
-        logger.info("[yinchao] 参考音频已上传 upload_id=%s", upload_id)
-        return str(upload_id), None
-
     async def _submit_and_poll(self, api_key: str, payload: dict, submit_url: str) -> dict:
-        """通用两段式：提交 → 轮询 /api/v1/task/query → 下载（normal/instrumental/reference 共用）。"""
+        """通用两段式：提交 → 轮询 /api/v1/task/query → 下载（normal/instrumental 共用；reference 已撤销）。"""
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -340,9 +228,13 @@ class YinchaoProvider(BaseProvider):
                         audio_url = choice.get("audio_url")
                         if not audio_url:
                             return {"success": False, "error": "Yinchao response contains no downloadable audio URL", "provider": self.name}
-                        local_path = await asyncio.to_thread(_download_audio, audio_url)
+                        # B4-YC-DL-FIX：下载失败可追溯——task_id 随调用传入，
+                        # 失败返回携带 yinchao_task_id + 脱敏 audio_url。
+                        local_path = await asyncio.to_thread(_download_audio, audio_url, task_id=task_id)
                         if not local_path:
-                            return {"success": False, "error": "Yinchao 音频下载失败", "provider": self.name}
+                            return {"success": False, "error": "Yinchao 音频下载失败", "provider": self.name,
+                                    "yinchao_task_id": task_id,
+                                    "audio_url_redacted": _redact_url(audio_url)}
                         fname = os.path.basename(local_path)
                         return {
                             "success": True,

@@ -161,6 +161,11 @@ async def get_shared_work(token: str):
         "duration": task.get("duration"),
         "audio_url": audio_url,
         "expires_in": AUDIO_URL_EXPIRES_IN,
+        # P4-B2 Phase 1（Gate A 裁定）：歌词与逐句时间轴随公开 API 下发，
+        # 供分享页展示（歌词属作品内容本身，用户主动分享语义；无 PII）。
+        # lyrics_timed 当前无数据源（UNKNOWN-1），恒为 NULL，前端按三态降级。
+        "lyrics": task.get("lyrics"),
+        "lyrics_timed": task.get("lyrics_timed"),
         # 明示品牌，供分享页展示「这是 AI 生成的」——飞轮的钩子
         "brand": "Melovar",
     }

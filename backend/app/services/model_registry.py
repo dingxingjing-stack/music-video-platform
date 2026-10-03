@@ -14,8 +14,9 @@
 - 商用授权：公开文档无逐字条款（仅 Cover 要求原曲授权），全部标记 unconfirmed；
   commercial=True 的请求当前会得到 NO_VALID_MODEL，待商务书面确认后改数据即可（零代码）。
 - 第一版路线（2026-09-18 批准）：产品硬上限 270s（在 ai_limits.MAX_AUDIO_DURATION_SECONDS 钳制）；
-  i3/i4 备用未启用、Mureka V9.5/MiniMax 3.0 不接入（enabled=False，数据保留）；
-  纯音乐 ≤270s 唯一目标 = mureka-v9-instr（API ID 未确认前 Provider 保持零 HTTP 拒绝）。
+  i3/i4 备用未启用、MiniMax 3.0 不接入（enabled=False，数据保留）；
+  Mureka 全部条目已删除（2026-10-01 第一阶段重构，Mureka Provider 整体下线）——
+  纯音乐生产路由 = Yinchao Provider（/api/v1/song/instrumental），不经本表选择。
   Yinchao Extend = NOT_CONFIRMED，禁止实现任何续写/拼接假说。
 """
 
@@ -74,19 +75,6 @@ MODELS: dict[str, ModelSpec] = {
         vocal=True, instrumental=False, max_duration_seconds=300,   # 5 分钟
         price_points=30, notes="旗舰；35+ 语言；流式",
     ),
-    "mureka-v9": ModelSpec(
-        key="mureka-v9", operation="song",
-        api_model_id=None, id_confirmed=False,
-        vocal=True, instrumental=False, max_duration_seconds=330,   # 5.5 分钟
-        price_points=33, notes="编曲丰富；10+ 语言；流式；API model ID 待联调确认",
-    ),
-    "mureka-v9.5": ModelSpec(
-        key="mureka-v9.5", operation="song",
-        api_model_id=None, id_confirmed=False,
-        vocal=True, instrumental=False, max_duration_seconds=330,
-        price_points=100, notes="API model ID 待联调确认",
-        enabled=False,  # 第一版不接入（§四）
-    ),
     "minimax-3.0": ModelSpec(
         key="minimax-3.0", operation="song",
         api_model_id=None, id_confirmed=False,
@@ -109,28 +97,10 @@ MODELS: dict[str, ModelSpec] = {
         price_points=30, notes="旗舰纯音乐；API model ID 待联调确认",
         enabled=False,  # 第一版备用：生产 selector 不得选中（§六）；数据保留
     ),
-    "mureka-v9-instr": ModelSpec(
-        key="mureka-v9-instr", operation="instrumental",
-        api_model_id=None, id_confirmed=False,
-        vocal=False, instrumental=True, max_duration_seconds=270,   # 官方：不超过 4 分 30 秒
-        price_points=33, notes="纯音乐 ≤270s；API model ID 待联调确认",
-    ),
-    # 注意：MiniMax 3.0 纯音乐最大时长官方未明示 → 不注册，禁止假设支持 300s。
-    # Cover（同端点 action=upload_cover；独立 operation）
-    "tempolor-latest-cover": ModelSpec(
-        key="tempolor-latest-cover", operation="cover",
-        api_model_id="tempolor-latest", id_confirmed=True,
-        vocal=True, instrumental=False, max_duration_seconds=None,  # cover 时长上限官方未明示
-        price_points=70, requires_reference_audio=True,
-        notes="参考音频需公网可下载 URL；不支持纯音乐 Cover；改编需原曲授权",
-    ),
-    "mureka-v9-cover": ModelSpec(
-        key="mureka-v9-cover", operation="cover",
-        api_model_id=None, id_confirmed=False,
-        vocal=True, instrumental=False, max_duration_seconds=None,
-        price_points=140, requires_reference_audio=True,
-        notes="API model ID 待联调确认",
-    ),
+    # 注意：Mureka 模型条目已删除（2026-10-01 第一阶段重构，Mureka Provider 整体下线）。
+    # MiniMax 3.0 纯音乐最大时长官方未明示 → 不注册，禁止假设支持 300s。
+    # P4-B2 Phase A-11：tempolor-latest-cover 条目已随 Cover/Remix 功能撤销移除
+    # （2026-10-02 产品决策：Cover 输出无法稳定满足 ≥240s 交付门，11/11 样本实测）。
     # 音轨分离（POST /open-apis/v1/stems；url ≤50MB）
     "stems-v2": ModelSpec(
         key="stems-v2", operation="stems",
@@ -141,10 +111,15 @@ MODELS: dict[str, ModelSpec] = {
     ),
     "stems-v3": ModelSpec(
         key="stems-v3", operation="stems",
+        # A-17：官方 /stems 创建任务文档（464626891e0）body 仅 url+callback_url，
+        # 无 model 字段；v3 的 model 字符串官方未给出 → MODEL_ID_UNVERIFIED，
+        # 禁止写入猜测值。启用唯一通道：TEMPOLOR_STEMS_V3_MODEL_ID +
+        # TEMPOLOR_STEMS_V3_ZIP_MEMBERS 双 env 官方确认后配置（见 tempolor_stems_service）。
         api_model_id=None, id_confirmed=False,
         vocal=False, instrumental=False, max_duration_seconds=None,
         price_points=100, stem_count=8,
-        notes="8 轨：人声/主唱/和声/吉他/钢琴/鼓/贝斯/其他；需手动指定 model",
+        notes="MODEL_ID_UNVERIFIED：8 轨（人声/主唱/和声/吉他/钢琴/鼓/贝斯/其他乐器）；"
+              "100 创作点；提交 fail-closed 门禁，未经官方确认不得上线",
     ),
     # 音乐转 MIDI（POST /open-apis/v1/midi；MP3/WAV/FLAC ≤50MB → midi.zip）
     "midi-v1": ModelSpec(

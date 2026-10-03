@@ -2,7 +2,7 @@
 Audio Router — Stem export + AI lyrics completion endpoints.
 
 POST /api/v1/audio/stems   — Split audio into stems (vocals/drums/bass/other) → ZIP
-POST /api/v1/audio/lyrics  — AI lyrics completion via LLM streaming
+POST /api/v1/audio/lyrics  — AI lyrics completion (A-17: 音潮主链，llm_factory 已移除)
 """
 
 from __future__ import annotations
@@ -155,40 +155,73 @@ async def export_stems(req: StemExportRequest):
 
 
 # ── AI Lyrics Completion ──────────────────────────────────────────────────────
+#
+# P4-B2 Phase A-17（2026-10-02 裁定）：「歌词继续写」主链 = 音潮 Lyrics。
+# Agnes / Gemini / NVIDIA（llm_factory）已从本功能调用链移除。
+#
+# 语义甄别（§十三 CURRENT CODE PATH）：
+# - 本端点是「已有歌词片段的文本续写」（前端 AILyricsCompletion），不是
+#   「对已有歌曲继续生成音乐」（后者 = /music/continue，路由已停止注册），
+#   也不是「AI 写词」（/api/v1/lyrics/generate，lyric_service，语义独立不动）。
+# - 音潮歌词官方 API 仅有一种（POST /api/v1/lyric/generate，按主题/描述生成）；
+#   续写 = 把「已有片段 + 续写指令」整体作为 prompt 传入，属官方 API 正常用法。
+# - fallback：复用 lyrics_engine 双供应商编排（音潮主 → 天谱乐 Lyric v1 备，
+#   45s hard deadline），fallback 行为明确且不引入任何 llm_factory 供应商。
+# - 本功能保持免费（零 Credits 交互，与 lyrics_engine 约束一致）。
+
+_LYRICS_COMPLETION_PROMPT_MAX = 2000  # 与 AI 写词端点（lyric_service >2000→400）同口径
+
+
+def _build_completion_prompt(fragment: str, style: str, language: str) -> str:
+    """把已有片段包装成续写 prompt（供应商 prompt 为自由文本，官方字段仅此一个）。"""
+    return (
+        f"请续写以下歌词片段。风格：{style}；语言：{language}。"
+        f"只输出续写的新歌词段落，不要重复已有片段，不要任何解释。\n\n"
+        f"已有歌词：\n{fragment}"
+    )
+
+
+async def _generate_lyrics_completion(prompt: str, style: str, language: str) -> dict:
+    """歌词继续写统一实现（/lyrics 与 /lyrics/stream 共用）。
+
+    返回 {"lyrics": str, "provider": str} 或 {"error": str}（脱敏）。
+    """
+    from app.services.lyrics_engine import lyrics_engine
+
+    result = await lyrics_engine.generate(
+        _build_completion_prompt(prompt, style, language)
+    )
+    if result.status == "succeeded" and result.lyric.strip():
+        return {"lyrics": result.lyric, "provider": result.provider}
+    # 失败：明确错误文案（与既有前端契约一致：HTTP 200 + lyrics 兜底文案）
+    return {"error": result.error or "歌词续写失败，请稍后重试"}
+
 
 @router.post("/lyrics")
 async def ai_lyrics_completion(req: LyricsCompletionRequest):
     """
-    Generate lyrics completion via LLM factory.
-    Returns JSON with completed text.
+    歌词继续写（AI lyrics completion）。
+    主链 = 音潮 Lyrics（lyrics_engine 编排，音潮 → 天谱乐备）。
+    返回 JSON：{"lyrics": <续写文本>} 或 {"lyrics": <兜底文案>, "error": <原因>}。
     """
-    try:
-        from app.services.inference.llm_factory import llm_factory
-        llm = llm_factory
-
-        full_prompt = (
-            f"你是一位{req.language}歌词创作大师。请根据以下内容续写歌词，"
-            f"风格为{req.style}。只返回歌词，不要解释。\n\n"
-            f"已有歌词：\n{req.prompt}\n\n续写："
-        )
-        messages = [{"role": "user", "content": full_prompt}]
-        text = await llm.call(
-            messages=messages,
-            provider="auto",
-            temperature=0.9,
-            max_tokens=req.max_tokens,
-        )
-        return {"lyrics": text, "style": req.style, "language": req.language}
-    except Exception as e:
-        logger.error("Lyrics completion failed: %s", e)
-        # Fallback: simple echo
+    fragment = req.prompt.strip()
+    if not fragment:
+        return JSONResponse(status_code=400, content={"error": "已有歌词片段不能为空"})
+    if len(fragment) > _LYRICS_COMPLETION_PROMPT_MAX:
         return JSONResponse(
-            status_code=200,
-            content={
-                "lyrics": "（AI 续写暂不可用，请稍后重试）",
-                "error": str(e),
-            },
+            status_code=400,
+            content={"error": f"已有歌词片段过长（>{_LYRICS_COMPLETION_PROMPT_MAX} 字符）"},
         )
+    try:
+        out = await _generate_lyrics_completion(fragment, req.style, req.language)
+    except Exception as e:  # noqa: BLE001 — 引擎永不抛出，此为兜底防线
+        logger.error("Lyrics completion failed: %s", e)
+        out = {"error": "AI 续写暂不可用，请稍后重试"}
+    if "error" in out:
+        return {"lyrics": "（AI 续写暂不可用，请稍后重试）", "error": out["error"],
+                "style": req.style, "language": req.language}
+    return {"lyrics": out["lyrics"], "provider": out.get("provider", ""),
+            "style": req.style, "language": req.language}
 
 
 # ── Lyrics Streaming (SSE) ───────────────────────────────────────────────────
@@ -196,32 +229,27 @@ async def ai_lyrics_completion(req: LyricsCompletionRequest):
 @router.post("/lyrics/stream")
 async def ai_lyrics_stream(req: LyricsCompletionRequest):
     """
-    Stream lyrics completion via Server-Sent Events.
+    歌词继续写（SSE 形态，A-17 已切音潮主链；结果一次性下发，与既有前端契约一致）。
     """
     import json
 
     async def generate():
         try:
-            from app.services.inference.llm_factory import llm_factory
-            llm = llm_factory
-            full_prompt = (
-                f"你是一位{req.language}歌词创作大师。请根据以下内容续写歌词，"
-                f"风格为{req.style}。只返回歌词，不要解释。\n\n"
-                f"已有歌词：\n{req.prompt}\n\n续写："
-            )
-            messages = [{"role": "user", "content": full_prompt}]
-            text = await llm.call(
-                messages=messages,
-                provider="auto",
-                temperature=0.9,
-                max_tokens=req.max_tokens,
-            )
-            yield f"data: {json.dumps({'text': text}, ensure_ascii=False)}\n\n"
+            fragment = req.prompt.strip()
+            if not fragment or len(fragment) > _LYRICS_COMPLETION_PROMPT_MAX:
+                yield f"data: {json.dumps({'error': '已有歌词片段为空或过长'}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+            out = await _generate_lyrics_completion(fragment, req.style, req.language)
+            if "error" in out:
+                yield f"data: {json.dumps({'error': out['error']}, ensure_ascii=False)}\n\n"
+            else:
+                yield f"data: {json.dumps({'text': out['lyrics']}, ensure_ascii=False)}\n\n"
 
             yield "data: [DONE]\n\n"
         except Exception as e:
             logger.error("Lyrics stream failed: %s", e)
-            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'error': 'AI 续写暂不可用，请稍后重试'}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(
