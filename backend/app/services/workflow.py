@@ -5,7 +5,8 @@ Orchestrates multi-step AI music creation paths:
 
   Path A (Suno-style):  prompt → MusicGen → full audio
   Path B (Hybrid):      prompt → MusicGen (bg) + TTS (vocals) → combine metadata
-  Path C (Remix):       audio upload → Demucs (stems) → stem-level playback
+
+  (Path C/D 已随 P5-B.8 410 退休；Demucs 分离实现已移除 —— P2-3)
 
 Each path is fire-and-forget:
   - POST /api/v1/workflow/{a|b|c} → returns task_id immediately
@@ -59,15 +60,12 @@ class WorkflowEngine:
         self.broadcast = broadcast or (lambda tid, r: asyncio.create_task(self._noop(r)))
         self.musicgen_url = musicgen_url
         self.tts_url = tts_url
-        self.demucs_url = demucs_url
         self.musicgen_token = musicgen_token
         self.tts_token = tts_token
-        self.demucs_token = demucs_token
         self.use_mock = use_mock
         self.soundfont_path = soundfont_path
         self._musicgen_svc = None
         self._tts_svc = None
-        self._demucs_svc = None
         self._midi_svc = None
 
     @staticmethod
@@ -137,27 +135,6 @@ class WorkflowEngine:
             )
         return self._tts_svc
 
-    def _get_demucs_service(self):
-        """Lazy-initialize Demucs service."""
-        if self._demucs_svc is not None:
-            return self._demucs_svc
-        from .inference.demucs import DemucsService
-
-        if self.use_mock:
-            self._demucs_svc = MockInferenceService(
-                service_type="demucs-mock",
-                duration=12.0,
-                tick_interval=0.5,
-                broadcast=self.broadcast,
-            )
-        else:
-            assert self.demucs_url, "DEMUCS_SPACE_URL required"
-            self._demucs_svc = DemucsService(
-                space_url=self.demucs_url,
-                api_token=self.demucs_token,
-                broadcast=self.broadcast,
-            )
-        return self._demucs_svc
 
     def _get_midi_service(self):
         """Lazy-initialize MIDI render service."""
@@ -412,104 +389,6 @@ class WorkflowEngine:
             extra={"text": text},
         ))
         return result
-
-    # ------------------------------------------------------------------
-    # Path C: Remix — upload audio → Demucs stems → individual tracks
-    # ------------------------------------------------------------------
-
-    async def run_path_c(
-        self,
-        task_id: str,
-        audio_base64: str,
-        *,
-        stem_count: str = "4",
-        remove_reverb: bool = False,
-    ) -> PredictResult:
-        """
-        Path C: Original remix — separate uploaded audio into stems.
-
-        Flow: audio upload → Demucs → vocal/drums/bass/other tracks
-        """
-        upload_track = {
-            "id": f"track-{task_id}-upload",
-            "name": "Upload",
-            "type": "stem",
-            "status": "running",
-            "url": None,
-            "progress": 0,
-        }
-        await self._broadcast(task_id, TaskStatus.PENDING, 0, "Loading audio...", {
-            "path": "c", "tracks": [upload_track]
-        })
-
-        svc = self._get_demucs_service()
-        result = await svc.predict(PredictRequest(
-            service_type="demucs",
-            task_id=task_id,
-            payload={},
-            extra={
-                "audio_base64": audio_base64,
-                "stem_count": stem_count,
-                "remove_reverb": remove_reverb,
-            },
-        ))
-
-        if result.status == TaskStatus.COMPLETED:
-            # Build track list from stems
-            stems = result.metadata.get("stems", {})
-            tracks = []
-            for stem_name, stem_url in stems.items():
-                tracks.append({
-                    "id": f"track-{task_id}-{stem_name}",
-                    "name": stem_name.capitalize(),
-                    "type": "stem",
-                    "status": "completed",
-                    "url": stem_url,
-                    "progress": 100,
-                })
-            if not tracks:
-                # Mock mode or single output — create a generic track
-                tracks = [{
-                    "id": f"track-{task_id}-separation",
-                    "name": f"Stems ({stem_count})",
-                    "type": "stem",
-                    "status": "completed",
-                    "url": result.result_url,
-                    "progress": 100,
-                }]
-
-            wrapped = PredictResult(
-                task_id=task_id,
-                status=TaskStatus.COMPLETED,
-                progress=100,
-                message="Audio separated into stems!",
-                result_url=result.result_url,
-                metadata={
-                    "path": "c",
-                    "tracks": tracks,
-                    **result.metadata,
-                },
-                updated_at=time.time(),
-            )
-            await self._broadcast(
-                task_id, TaskStatus.COMPLETED, 100,
-                f"Separated into {len(tracks)} stems!",
-                wrapped.metadata,
-            )
-            return wrapped
-
-        # Failed
-        failed = PredictResult(
-            task_id=task_id,
-            status=TaskStatus.FAILED,
-            progress=0,
-            message="Stem separation failed",
-            error=result.error,
-            metadata={"path": "c", "tracks": []},
-            updated_at=time.time(),
-        )
-        await self._broadcast(task_id, TaskStatus.FAILED, 0, failed.message, failed.metadata)
-        return failed
 
     # ------------------------------------------------------------------
     # Path D: Original Creation — MIDI project → render to audio

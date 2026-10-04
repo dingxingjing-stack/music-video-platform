@@ -1,20 +1,17 @@
 """
 音频处理 API 路由
-- 音频分离 (Demucs)
 - 母带处理
 """
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 import os
 import secrets
 import tempfile
 from pathlib import Path
 
-from app.services.audio_separation_service import demucs_service
 from app.services.mastering_service import mastering_service
-from app.services.cdn_uploader import cdn_uploader
 from app.services.auth_identity import get_verified_user_id
 
 router = APIRouter()
@@ -84,11 +81,6 @@ async def _save_upload(file: UploadFile, temp_dir: Path, max_bytes: int = MAX_UP
 
 # ========== 请求模型 ==========
 
-class SeparateRequest(BaseModel):
-    """音频分离请求"""
-    model: str = "htdemucs"  # 模型选择
-
-
 class MasteringRequest(BaseModel):
     """母带处理请求"""
     target_loudness: float = -14.0  # LUFS
@@ -96,14 +88,6 @@ class MasteringRequest(BaseModel):
 
 
 # ========== 响应模型 ==========
-
-class SeparateResponse(BaseModel):
-    success: bool
-    stems: List[str]  # 分离后的文件路径
-    duration: float
-    message: str
-    error_code: Optional[str] = None
-
 
 class MasteringResponse(BaseModel):
     success: bool
@@ -162,7 +146,7 @@ async def master_audio(
     return MasteringResponse(**result)
 
 
-@router.post("/separate", response_model=SeparateResponse)
+@router.post("/separate")
 async def separate_audio(
     file: UploadFile = File(...),
     model: str = Form("htdemucs"),
@@ -181,7 +165,7 @@ async def separate_audio(
     """
     # P2-3 API Retirement：本端点已退休（410 Gone）。旧 Demucs/Spleeter 实现
     # 自此不可达；真实分离 = POST /api/v1/ai/stems/separate（V2=60 / V3=100 Credits）。
-    # 下方历史实现体保留为死代码，待独立删除授权收口。
+    # 历史实现体已随 P2-3 Deletion 移除；/master 系端点与本 router 其余功能不受影响。
     raise HTTPException(
         status_code=410,
         detail=(
@@ -190,81 +174,6 @@ async def separate_audio(
         ),
     )
 
-    # 1) 身份认证（依赖层已强制 JWT；user_key = verified auth.users.id）
-    user_key = user_id
-
-    # 2) Quota 预留：必须在任何 separation/inference 之前
-    from app.services.ai_limits import reserve_generation, refund_generation
-    reserved = reserve_generation(user_key)
-    if not reserved["success"]:
-        raise HTTPException(status_code=429, detail=reserved["error"])
-
-    # 保存上传文件（P0 收口：随机安全文件名 + 硬大小上限）
-    # 失败时必须 refund_generation —— 额度已 reserve，不能让用户在失败上被扣费。
-    temp_dir = Path(tempfile.gettempdir()) / "audio_uploads"
-    try:
-        input_path = await _save_upload(file, temp_dir)
-    except HTTPException:
-        refund_generation(user_key, reason="validation_failed")
-        raise
-    
-    # 执行分离（使用现有的 demucs_service，实际上是 Modal Spleeter）
-    result = demucs_service.separate(
-        str(input_path),
-        model=model,
-        progress_callback=lambda p: print(f"分离进度：{p*100:.0f}%")
-    )
-    
-    # 清理上传文件
-    try:
-        input_path.unlink(missing_ok=True)
-    except:
-        pass
-    
-    if not result["success"]:
-        refund_generation(user_key, reason="provider_failed")
-        return SeparateResponse(
-            success=False,
-            stems=[],
-            duration=0,
-            message=result["message"],
-            error_code=result.get("error_code")
-        )
-    
-    # result["stems"] 是本地临时文件路径列表
-    local_stems = result["stems"]
-    cdn_urls = []
-    try:
-        for stem_path in local_stems:
-            # 上传每个 stem 到 CDN/R2
-            url = await cdn_uploader.upload_audio(stem_path, content_type="audio/wav")
-            cdn_urls.append(url)
-    except Exception as e:
-        # 上传失败，清理本地 stem 文件并返回错误
-        for stem_path in local_stems:
-            try:
-                Path(stem_path).unlink(missing_ok=True)
-            except:
-                pass
-        refund_generation(user_key, reason="persistence_failed")
-        raise HTTPException(status_code=500, detail=f"CDN 上传失败: {e}")
-    finally:
-        # 清理本地 stem 文件（无论成功失败）
-        for stem_path in local_stems:
-            try:
-                Path(stem_path).unlink(missing_ok=True)
-            except:
-                pass
-    
-    # 计算时长？demucs_service.separate 返回 duration 字段（目前是 0）。
-    duration = result.get("duration", 0.0)
-    
-    return SeparateResponse(
-        success=True,
-        stems=cdn_urls,
-        duration=duration,
-        message=f"分离成功，{len(cdn_urls)} 轨音频已上传至 CDN"
-    )
 
 
 @router.get("/master/presets")
