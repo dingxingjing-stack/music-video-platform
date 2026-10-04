@@ -108,3 +108,4 @@ tmp_heartlib/
 /backend/inspect_*.py
 /update_locales*.py
 /how --stat --oneline 2fc0e7b
+frontend/dist.prebuild-*/
