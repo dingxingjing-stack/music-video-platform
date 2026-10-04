@@ -238,7 +238,7 @@
       "sec2i3": "Technical and log data – device and browser information, IP address and usage logs, used for troubleshooting, security and service improvement.",
       "sec2i4": "Order and transaction data – the minimum needed to deliver what you bought: order/transaction IDs, transaction status, currency and amount, and the Credits pack or plan purchased. It never includes payment card credentials.",
       "sec2negLead": "We do not collect:",
-      "sec2neg1": "Full payment card numbers, CVV/CVC codes or bank account credentials – payments are handled by our third-party provider Paddle acting as Merchant of Record, which collects and processes those credentials directly; Melovar neither collects nor stores them.",
+      "sec2neg1": "Full payment card numbers, CVV/CVC codes or bank account credentials – payments are handled by our third-party payment providers (currently Paddle or Lemon Squeezy) acting as Merchant of Record, which collect and process those credentials directly; Melovar neither collects nor stores them.",
       "sec3Title": "How we use your data",
       "sec3Lead": "Your data is used only for the following purposes:",
       "sec3i1": "Providing, maintaining and improving the service.",
@@ -256,7 +256,7 @@
       "sec5i1": "To provide AI music generation and related features, we may pass the user input that a given feature needs to process — typically prompts and lyrics, and audio where a feature requires it — to third-party AI service providers. The providers that generate audio are third-party AI music generation services, currently Yinchao (音潮) v4.0, TemPolor (天谱乐) tempolor-latest and Mureka mureka-9. Providers used for text assistance — prompt optimisation and lyrics-related processing — are Agnes AI agnes-2.0-flash and Google Gemini gemini-2.0-flash, with NVIDIA available as auxiliary text-processing capacity; these are text models and they do not generate the final music audio. Which provider is actually used depends on the feature, its availability and our system configuration, and each receives the input needed for the function it performs. The model designations above identify the services we call, and each provider manages its own models, training data and infrastructure. Third-party AI service providers and the model versions they offer may change as our product features, technical requirements or service availability evolve; material changes will be addressed through updates to this policy and any other notice required by applicable law.",
       "sec5i2": "Infrastructure, hosting, storage and error-monitoring providers that operate the platform on our behalf.",
       "sec5i3": "Authorities, where required by law or a valid legal request; or a successor in a merger or asset transfer, which remains bound by this policy.",
-      "sec5i4": "Our payment provider Paddle, which acts as Merchant of Record for payments, receipts and invoices, refunds and the related taxes, and which collects your payment credentials directly.",
+      "sec5i4": "Our payment providers (currently Paddle or Lemon Squeezy), which act as Merchant of Record for payments, receipts and invoices, refunds and the related taxes, and which collect your payment credentials directly.",
       "sec6Title": "Your rights",
       "sec6Lead": "Subject to applicable data protection law, you can:",
       "sec6i1": "Access the data we hold about you and obtain a copy of it.",
@@ -1632,7 +1632,7 @@
     "r3Title": "Beta Watermark",
     "r3Text": "Works generated during beta are automatically embedded with a beta watermark. Whether generated content may be used commercially is governed by Section 5 of the Terms of Service and the usage terms of the underlying models",
     "r4Title": "Beta scope and paid features",
-    "r4Text": "Payments for Credit top-ups and memberships are handled by our third-party payment provider Paddle; features such as the asset store and UGC earnings withdrawal are unavailable during beta",
+    "r4Text": "Payments for Credit top-ups and memberships are handled by our third-party payment providers (currently Paddle or Lemon Squeezy); features such as the asset store and UGC earnings withdrawal are unavailable during beta",
     "r5Title": "Verify commercial use yourself",
     "r5Text": "You are responsible for confirming whether generated content may be used commercially, and for complying with applicable law, the usage terms of the underlying models and the Terms of Service",
     "agreementVersion": "Beta Test Agreement · v2.0"
@@ -1777,7 +1777,7 @@
     "plan_per_month": "/mo",
     "plan_current": "Current plan",
     "plan_recurring_note": "Membership renews monthly and can be cancelled at any time. Buying a Credits pack never changes your plan or your renewal date.",
-    "legal_notice": "By completing a purchase you confirm that you have read and accepted the Terms of Service, the Privacy Policy and the Credits & Refund Policy. Payments are processed by our third-party provider Paddle acting as Merchant of Record, which issues your receipts and invoices."
+    "legal_notice": "By completing a purchase you confirm that you have read and accepted the Terms of Service, the Privacy Policy and the Credits & Refund Policy. Payments are processed by our third-party payment providers (currently Paddle or Lemon Squeezy) acting as Merchant of Record, which issue your receipts and invoices."
   },
   "share": {
     "notFound": "This share link is invalid or has expired",

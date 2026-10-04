@@ -216,7 +216,7 @@
     "plan_per_month": "/bulan",
     "plan_current": "Paket saat ini",
     "plan_recurring_note": "Keanggotaan diperbarui setiap bulan dan dapat dibatalkan kapan saja. Membeli paket Kredit tidak pernah mengubah paket atau tanggal perpanjangan Anda.",
-    "legal_notice": "Dengan menyelesaikan pembelian, Anda mengonfirmasi telah membaca dan menerima Syarat Layanan, Kebijakan Privasi, dan Kebijakan Kredit & Pengembalian Dana. Pembayaran diproses oleh penyedia pihak ketiga kami Paddle yang bertindak sebagai Merchant of Record, yang menerbitkan struk dan faktur Anda."
+    "legal_notice": "Dengan menyelesaikan pembelian, Anda mengonfirmasi telah membaca dan menerima Syarat Layanan, Kebijakan Privasi, dan Kebijakan Kredit & Pengembalian Dana. Pembayaran diproses oleh penyedia pihak ketiga kami (saat ini Paddle atau Lemon Squeezy) yang bertindak sebagai Merchant of Record, yang menerbitkan struk dan faktur Anda."
   },
   "errors": {
     "promptRequired": "Prompt diperlukan",
@@ -296,7 +296,7 @@
       "sec2i3": "Data teknis dan log – informasi perangkat dan peramban, alamat IP, serta log penggunaan, yang digunakan untuk penelusuran masalah, keamanan, dan peningkatan layanan.",
       "sec2i4": "Data pesanan dan transaksi – data minimum yang diperlukan untuk menyerahkan apa yang Anda beli: ID pesanan/transaksi, status transaksi, mata uang dan jumlah, serta paket atau langganan Kredit yang dibeli. Data ini tidak pernah mencakup kredensial kartu pembayaran.",
       "sec2negLead": "Kami tidak mengumpulkan:",
-      "sec2neg1": "Nomor kartu pembayaran lengkap, kode CVV/CVC, atau kredensial rekening bank – pembayaran ditangani oleh penyedia pihak ketiga kami, Paddle, yang bertindak sebagai Merchant of Record dan mengumpulkan serta memproses kredensial tersebut secara langsung; Melovar tidak mengumpulkan maupun menyimpannya.",
+      "sec2neg1": "Nomor kartu pembayaran lengkap, kode CVV/CVC, atau kredensial rekening bank – pembayaran ditangani oleh penyedia pihak ketiga kami (saat ini Paddle atau Lemon Squeezy), yang bertindak sebagai Merchant of Record dan mengumpulkan serta memproses kredensial tersebut secara langsung; Melovar tidak mengumpulkan maupun menyimpannya.",
       "sec3Title": "Cara kami menggunakan data Anda",
       "sec3Lead": "Data Anda hanya digunakan untuk tujuan berikut:",
       "sec3i1": "Menyediakan, memelihara, dan meningkatkan layanan.",
@@ -314,7 +314,7 @@
       "sec5i1": "Untuk menyediakan pembuatan musik AI dan fitur terkait, kami dapat meneruskan masukan pengguna yang perlu diproses oleh fitur tertentu — umumnya prompt dan lirik, serta audio bila fitur memerlukannya — kepada penyedia layanan AI pihak ketiga. Penyedia yang menghasilkan audio adalah layanan pembuatan musik AI pihak ketiga, saat ini Yinchao v4.0 dan TemPolor tempolor-latest. Penyedia untuk bantuan teks — optimalisasi prompt dan pemrosesan terkait lirik — adalah Agnes AI agnes-2.0-flash dan Google Gemini gemini-2.0-flash, dengan NVIDIA tersedia sebagai kapasitas pemrosesan teks tambahan; semuanya adalah model teks dan tidak menghasilkan audio musik akhir. Penyedia yang benar-benar digunakan bergantung pada fitur, ketersediaannya, dan konfigurasi sistem kami, dan masing-masing menerima masukan yang diperlukan untuk fungsi yang dijalankannya. Sebutan model di atas berfungsi mengidentifikasi layanan yang kami panggil, dan setiap penyedia mengelola model, data pelatihan, serta infrastrukturnya sendiri. Penyedia layanan AI pihak ketiga dan versi model yang mereka tawarkan dapat berubah seiring perkembangan fitur produk, kebutuhan teknis, atau ketersediaan layanan; perubahan material akan disampaikan melalui pembaruan kebijakan ini dan pemberitahuan lain yang diwajibkan hukum yang berlaku.",
       "sec5i2": "Penyedia infrastruktur, hosting, penyimpanan, dan pemantauan kesalahan yang mengoperasikan platform atas nama kami.",
       "sec5i3": "Otoritas, bila diwajibkan hukum atau permintaan hukum yang sah; atau penerus dalam penggabungan usaha atau pengalihan aset, yang tetap terikat pada kebijakan ini.",
-      "sec5i4": "Penyedia pembayaran kami, Paddle, yang bertindak sebagai Merchant of Record untuk pembayaran, kuitansi dan faktur, pengembalian dana, serta pajak terkait, dan yang mengumpulkan kredensial pembayaran Anda secara langsung.",
+      "sec5i4": "Penyedia pembayaran kami (saat ini Paddle atau Lemon Squeezy), yang bertindak sebagai Merchant of Record untuk pembayaran, kuitansi dan faktur, pengembalian dana, serta pajak terkait, dan yang mengumpulkan kredensial pembayaran Anda secara langsung.",
       "sec6Title": "Hak Anda",
       "sec6Lead": "Dengan tunduk pada hukum perlindungan data yang berlaku, Anda dapat:",
       "sec6i1": "Mengakses data yang kami simpan tentang Anda dan memperoleh salinannya.",
@@ -522,7 +522,7 @@
     "r3Title": "Watermark Beta",
     "r3Text": "Karya yang dibuat selama beta otomatis disematkan watermark beta. Apakah konten yang dibuat boleh digunakan secara komersial diatur oleh Bagian 5 Ketentuan Layanan dan ketentuan penggunaan model yang mendasarinya",
     "r4Title": "Cakupan beta dan fitur berbayar",
-    "r4Text": "Pembelian Kredit dan keanggotaan diproses oleh penyedia pembayaran pihak ketiga kami, Paddle; fitur seperti toko aset dan penarikan pendapatan UGC tidak tersedia selama beta",
+    "r4Text": "Pembelian Kredit dan keanggotaan diproses oleh penyedia pembayaran pihak ketiga kami (saat ini Paddle atau Lemon Squeezy); fitur seperti toko aset dan penarikan pendapatan UGC tidak tersedia selama beta",
     "r5Title": "Verifikasi sendiri penggunaan komersial",
     "r5Text": "Anda bertanggung jawab memastikan apakah konten yang dibuat boleh digunakan secara komersial, serta mematuhi hukum yang berlaku, ketentuan penggunaan model yang mendasarinya, dan Ketentuan Layanan",
     "agreementVersion": "Perjanjian Uji Beta · v2.0"

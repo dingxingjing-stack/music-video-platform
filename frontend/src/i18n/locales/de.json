@@ -235,7 +235,7 @@
       "sec2i3": "Technische Daten und Protokolle – Geräte- und Browserinformationen, IP-Adresse und Nutzungsprotokolle, verwendet zur Fehlerbehebung, Sicherheit und Verbesserung des Dienstes.",
       "sec2i4": "Bestell- und Transaktionsdaten – die nötigen Mindestangaben zur Auslieferung Ihres Kaufs: Bestell-/Transaktions-IDs, Transaktionsstatus, Währung und Betrag sowie das gekaufte Credit- oder Abo-Paket. Kartendaten sind darin nie enthalten.",
       "sec2negLead": "Wir erheben nicht:",
-      "sec2neg1": "Vollständige Zahlungskartennummern, CVV/CVC-Codes oder Bankzugangsdaten – Zahlungen verarbeitet unser Drittanbieter Paddle als Merchant of Record, der diese Daten direkt erhebt; Melovar erhebt und speichert sie nicht.",
+      "sec2neg1": "Vollständige Zahlungskartennummern, CVV/CVC-Codes oder Bankzugangsdaten – Zahlungen verarbeiten unsere Drittanbieter (derzeit Paddle oder Lemon Squeezy) als Merchant of Record, die diese Daten direkt erheben; Melovar erhebt und speichert sie nicht.",
       "sec3Title": "Wie wir Ihre Daten nutzen",
       "sec3Lead": "Ihre Daten werden ausschließlich für folgende Zwecke verwendet:",
       "sec3i1": "Bereitstellung, Betrieb und Verbesserung des Dienstes.",
@@ -253,7 +253,7 @@
       "sec5i1": "Um KI-Musikgenerierung und verwandte Funktionen bereitzustellen, übermitteln wir die für die jeweilige Funktion erforderlichen Nutzereingaben – in der Regel Prompts und Songtexte, bei Funktionen, die Audio verarbeiten, auch das jeweilige Audio – an Dritte für KI-Dienste. Die Audioerstellung übernehmen KI-Musikgenerierungsdienste von Drittanbietern, derzeit Yinchao (音潮) v4.0 und TemPolor (天谱乐) tempolor-latest. Für Textunterstützung – Prompt-Optimierung und die Verarbeitung von Songtexten – setzen wir derzeit agnes-2.0-flash von Agnes AI und gemini-2.0-flash von Google Gemini ein, wobei NVIDIA als ergänzende Kapazität für Textverarbeitung bereitsteht; dies sind Textmodelle, die das endgültige Musikaudio nicht erzeugen. Welcher Anbieter tatsächlich zum Einsatz kommt, hängt von der jeweiligen Funktion, deren Verfügbarkeit und unserer Systemkonfiguration ab, und jeder Anbieter erhält die für die von ihm ausgeführte Funktion erforderlichen Eingaben. Die genannten Modellbezeichnungen kennzeichnen lediglich die von uns aufgerufenen Dienste; die Anbieter verwalten ihre jeweiligen Modelle, Trainingsdaten und Infrastrukturen selbst. Dritte KI-Diensteanbieter und die von ihnen angebotenen Modellversionen können sich ändern, etwa wenn sich Produktfunktionen, technische Anforderungen oder die Verfügbarkeit weiterentwickeln; wesentliche Änderungen werden durch Aktualisierungen dieser Richtlinie und sonstige nach dem anwendbaren Recht erforderliche Mitteilungen behandelt.",
       "sec5i2": "Anbieter für Infrastruktur, Hosting, Speicher und Fehlermonitoring, die die Plattform für uns betreiben.",
       "sec5i3": "Behörden, soweit gesetzlich oder aufgrund eines zulässigen Ersuchens erforderlich; oder bei Fusionen und Vermögensübertragungen den Rechtsnachfolger, der an diese Erklärung gebunden bleibt.",
-      "sec5i4": "Unser Zahlungsdienstleister Paddle, der als Merchant of Record Zahlungen, Belege und Rechnungen, Erstattungen sowie die zugehörigen Steuern verarbeitet und Ihre Zahlungsdaten direkt erhebt.",
+      "sec5i4": "Unsere Zahlungsdienstleister (derzeit Paddle oder Lemon Squeezy), die als Merchant of Record Zahlungen, Belege und Rechnungen, Erstattungen sowie die zugehörigen Steuern verarbeiten und Ihre Zahlungsdaten direkt erheben.",
       "sec6Title": "Ihre Rechte",
       "sec6Lead": "Nach Maßgabe des geltenden Datenschutzrechts können Sie:",
       "sec6i1": "Auf die über Sie gespeicherten Daten zugreifen und eine Kopie anfordern.",
@@ -1622,7 +1622,7 @@
     "r3Title": "Beta-Wasserzeichen",
     "r3Text": "Während der Beta generierte Werke enthalten automatisch ein Beta-Wasserzeichen. Ob generierte Inhalte kommerziell genutzt werden dürfen, regeln Abschnitt 5 der Nutzungsbedingungen und die Nutzungsbedingungen der zugrunde liegenden Modelle",
     "r4Title": "Beta-Umfang und kostenpflichtige Funktionen",
-    "r4Text": "Die Zahlungen für Credits und Mitgliedschaften übernimmt unser Drittanbieter Paddle; Funktionen wie der Asset-Store und UGC-Auszahlungen sind während der Beta nicht verfügbar",
+    "r4Text": "Die Zahlungen für Credits und Mitgliedschaften übernehmen unsere Drittanbieter (derzeit Paddle oder Lemon Squeezy); Funktionen wie der Asset-Store und UGC-Auszahlungen sind während der Beta nicht verfügbar",
     "r5Title": "Kommerzielle Nutzung selbst prüfen",
     "r5Text": "Sie sind selbst dafür verantwortlich zu prüfen, ob generierte Inhalte kommerziell genutzt werden dürfen, und die geltenden Gesetze, die Nutzungsbedingungen der Modelle sowie die Nutzungsbedingungen der Plattform einzuhalten",
     "agreementVersion": "Beta-Test-Vereinbarung · v2.0"
@@ -1767,7 +1767,7 @@
     "plan_per_month": "/Monat",
     "plan_current": "Aktueller Tarif",
     "plan_recurring_note": "Die Mitgliedschaft verlängert sich monatlich und ist jederzeit kündbar. Der Kauf von Credit-Paketen ändert weder Tarif noch Verlängerungsdatum.",
-    "legal_notice": "Mit dem Abschluss eines Kaufs bestätigen Sie, dass Sie die Nutzungsbedingungen, die Datenschutzerklärung und die Credit- & Erstattungsrichtlinie gelesen und akzeptiert haben. Zahlungen verarbeitet unser Drittanbieter Paddle als Merchant of Record; Belege und Rechnungen stellt Paddle aus."
+    "legal_notice": "Mit dem Abschluss eines Kaufs bestätigen Sie, dass Sie die Nutzungsbedingungen, die Datenschutzerklärung und die Credit- & Erstattungsrichtlinie gelesen und akzeptiert haben. Zahlungen verarbeiten unsere Drittanbieter (derzeit Paddle oder Lemon Squeezy) als Merchant of Record; Belege und Rechnungen stellt der jeweilige Merchant of Record aus."
   },
   "share": {
     "notFound": "Dieser Freigabelink ist ungültig oder abgelaufen",

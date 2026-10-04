@@ -159,7 +159,7 @@ export const REFUND_DOC: LegalDocPair = {
       },
     ],
     closing:
-      '本政策是《服务条款》的组成部分，与其冲突时以《服务条款》为准。支付、退款与税务处理同时适用 Paddle 作为记账商户的相关政策。',
+      '本政策是《服务条款》的组成部分，与其冲突时以《服务条款》为准。支付、退款与税务处理同时适用相应记账商户（Paddle 或 Lemon Squeezy）的相关政策。',
   },
 
   en: {
@@ -173,7 +173,7 @@ export const REFUND_DOC: LegalDocPair = {
           },
           {
             k: 'p',
-            t: 'Payments on the platform are processed by third-party providers acting as Merchant of Record – currently Paddle and Lemon Squeezy, depending on the checkout channel actually used: the applicable Merchant of Record charges your payment method, issues receipts and invoices, handles refunds and chargebacks and deals with the related taxes under applicable law, so your statement, receipts and invoices come from Paddle. Melovar does not collect or store your full card number, CVV/CVC or bank account credentials.',
+            t: 'Payments on the platform are processed by third-party providers acting as Merchant of Record – currently Paddle and Lemon Squeezy, depending on the checkout channel actually used: the applicable Merchant of Record charges your payment method, issues receipts and invoices, handles refunds and chargebacks and deals with the related taxes under applicable law, so your statement, receipts and invoices come from the applicable Merchant of Record. Melovar does not collect or store your full card number, CVV/CVC or bank account credentials.',
           },
         ],
       },
@@ -312,6 +312,6 @@ export const REFUND_DOC: LegalDocPair = {
       },
     ],
     closing:
-      'This policy forms part of the Terms of Service, which prevail in case of conflict. Payment, refund and tax handling are additionally subject to the policies of Paddle as Merchant of Record.',
+      'This policy forms part of the Terms of Service, which prevail in case of conflict. Payment, refund and tax handling are additionally subject to the policies of the applicable Merchant of Record (Paddle or Lemon Squeezy).',
   },
 };

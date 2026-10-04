@@ -235,7 +235,7 @@
       "sec2i3": "Données techniques et journaux – informations sur l'appareil et le navigateur, adresse IP et journaux d'utilisation, utilisés pour le diagnostic, la sécurité et l'amélioration du service.",
       "sec2i4": "Données de commande et de transaction – le minimum nécessaire pour livrer votre achat : identifiants de commande/transaction, statut, devise et montant, pack de crédits ou formule souscrit. Elles n'incluent jamais d'identifiants de carte bancaire.",
       "sec2negLead": "Nous ne collectons pas :",
-      "sec2neg1": "Les numéros complets de cartes bancaires, codes CVV/CVC ou identifiants de comptes bancaires – les paiements sont traités par Paddle, notre prestataire tiers agissant en qualité de Merchant of Record, qui collecte et traite directement ces données ; Melovar ne les collecte ni ne les stocke.",
+      "sec2neg1": "Les numéros complets de cartes bancaires, codes CVV/CVC ou identifiants de comptes bancaires – les paiements sont traités par nos prestataires tiers (actuellement Paddle ou Lemon Squeezy) agissant en qualité de Merchant of Record, qui collectent et traitent directement ces données ; Melovar ne les collecte ni ne les stocke.",
       "sec3Title": "Utilisation de vos données",
       "sec3Lead": "Vos données ne sont utilisées que pour les finalités suivantes :",
       "sec3i1": "Fournir, maintenir et améliorer le service.",
@@ -253,7 +253,7 @@
       "sec5i1": "Afin de fournir la génération musicale par IA et les fonctions associées, nous sommes susceptibles de transmettre aux prestataires tiers de services d’IA les données que chaque fonction doit traiter, en général les instructions (prompts) et les paroles et, pour les fonctions traitant de l’audio, l’audio concerné. La génération de l’audio est assurée par des services tiers de génération musicale par IA, actuellement Yinchao (音潮) v4.0 et TemPolor (天谱乐) tempolor-latest. L’assistance textuelle — optimisation des instructions et traitement des paroles — repose actuellement sur agnes-2.0-flash d’Agnes AI et gemini-2.0-flash de Google Gemini, NVIDIA étant disponible comme capacité auxiliaire de traitement de texte ; il s’agit de modèles textuels qui ne génèrent pas l’audio musical définitif. Le prestataire effectivement utilisé dépend de la fonction considérée, de sa disponibilité et de la configuration de nos systèmes, et chacun reçoit les données nécessaires à la fonction qu’il exécute. Les désignations de modèles ci-dessus identifient les services que nous appelons, et chaque prestataire gère ses propres modèles, ses données d’entraînement et son infrastructure. Les prestataires tiers de services d’IA et les versions de modèles qu’ils proposent peuvent évoluer avec les fonctions du produit, les exigences techniques ou la disponibilité du service ; les modifications importantes seront traitées par la mise à jour de la présente politique et par toute autre notification requise par le droit applicable.",
       "sec5i2": "Nos prestataires d'infrastructure, d'hébergement, de stockage et de supervision d'erreurs qui exploitent la plateforme pour nous.",
       "sec5i3": "Les autorités, lorsque la loi ou une demande légale légitime l'exige ; ou le successeur d'une fusion ou d'un transfert d'actifs, qui reste tenu par la présente politique.",
-      "sec5i4": "Notre prestataire de paiement Paddle, qui agit en qualité de Merchant of Record pour les paiements, reçus et factures, les remboursements et les taxes associées, et qui collecte directement vos identifiants de paiement.",
+      "sec5i4": "Nos prestataires de paiement (actuellement Paddle ou Lemon Squeezy), qui agissent en qualité de Merchant of Record pour les paiements, reçus et factures, les remboursements et les taxes associées, et qui collectent directement vos identifiants de paiement.",
       "sec6Title": "Vos droits",
       "sec6Lead": "Sous réserve de la réglementation applicable en matière de protection des données, vous pouvez :",
       "sec6i1": "Accéder aux données que nous détenons à votre sujet et en obtenir une copie.",
@@ -1622,7 +1622,7 @@
     "r3Title": "Filigrane bêta",
     "r3Text": "Les œuvres générées pendant la bêta portent automatiquement un filigrane bêta. L'éventuel usage commercial du contenu généré est régi par la section 5 des Conditions d'utilisation et par les conditions d'utilisation des modèles sous-jacents",
     "r4Title": "Périmètre de la bêta et fonctions payantes",
-    "r4Text": "Les paiements des recharges de crédits et des abonnements sont traités par notre prestataire de paiement tiers Paddle ; des fonctions comme la boutique d'actifs et le retrait des revenus UGC ne sont pas disponibles pendant la bêta",
+    "r4Text": "Les paiements des recharges de crédits et des abonnements sont traités par nos prestataires de paiement tiers (actuellement Paddle ou Lemon Squeezy) ; des fonctions comme la boutique d'actifs et le retrait des revenus UGC ne sont pas disponibles pendant la bêta",
     "r5Title": "Vérifiez vous-même l'usage commercial",
     "r5Text": "Il vous appartient de vérifier si le contenu généré peut faire l'objet d'un usage commercial et de respecter la loi applicable, les conditions d'utilisation des modèles ainsi que les Conditions d'utilisation de la plateforme",
     "agreementVersion": "Accord de bêta-test · v2.0"
@@ -1767,7 +1767,7 @@
     "plan_per_month": "/mois",
     "plan_current": "Formule actuelle",
     "plan_recurring_note": "L'abonnement se renouvelle chaque mois et peut être annulé à tout moment. L'achat de packs de crédits ne modifie ni votre formule ni votre date de renouvellement.",
-    "legal_notice": "En finalisant un achat, vous confirmez avoir lu et accepté les Conditions d'utilisation, la Politique de confidentialité et la Politique relative aux crédits et aux remboursements. Les paiements sont traités par Paddle, notre prestataire tiers agissant en qualité de Merchant of Record, qui émet reçus et factures."
+    "legal_notice": "En finalisant un achat, vous confirmez avoir lu et accepté les Conditions d'utilisation, la Politique de confidentialité et la Politique relative aux crédits et aux remboursements. Les paiements sont traités par nos prestataires tiers (actuellement Paddle ou Lemon Squeezy) agissant en qualité de Merchant of Record, qui émettent reçus et factures."
   },
   "share": {
     "notFound": "Ce lien de partage est invalide ou a expiré",
