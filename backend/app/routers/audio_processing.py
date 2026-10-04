@@ -120,11 +120,13 @@ class MasteringResponse(BaseModel):
 @router.get("/separate/models")
 async def get_separation_models():
     """获取可用分离模型列表（已禁用：��心��路使用内部 Modal ���用，不走此 HTTP 端点）"""
-    return {
-        "models": [],
-        "model_descriptions": {},
-        "message": "此端点已禁用，音频分离功能当前不可用。"
-    }
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Endpoint '/separate/models' has been retired. "
+            "Audio separation is served by POST /api/v1/ai/stems/separate."
+        ),
+    )
 
 
 @router.post("/master", response_model=MasteringResponse)
@@ -177,6 +179,17 @@ async def separate_audio(
       - 实际执行 separation（含 mock）前必须先 reserve_generation(user_key)；
         quota 不足 → 429，阻止后续 provider/inference。
     """
+    # P2-3 API Retirement：本端点已退休（410 Gone）。旧 Demucs/Spleeter 实现
+    # 自此不可达；真实分离 = POST /api/v1/ai/stems/separate（V2=60 / V3=100 Credits）。
+    # 下方历史实现体保留为死代码，待独立删除授权收口。
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            "Endpoint '/separate' has been retired. "
+            "Use POST /api/v1/ai/stems/separate."
+        ),
+    )
+
     # 1) 身份认证（依赖层已强制 JWT；user_key = verified auth.users.id）
     user_key = user_id
 
