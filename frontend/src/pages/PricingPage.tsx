@@ -243,49 +243,21 @@ export function PricingPage() {
                 <div className="mt-1 text-2xl font-black">${p.price_usd}</div>
                 <div className="mt-1 text-xs text-[#8a8a8a]">{p.credits.toLocaleString('en-US')} {t('pricing.credits')}</div>
                 <p className="mt-3 text-xs text-[#b0b0b0]">{t(p.description_key)}</p>
-                {(() => {
-                  const plan = plans?.plans.find((x) => x.id === p.id);
-                  if (!plan && plansFailed) {
-                    // 目录请求失败 ≠ 这档套餐没上线 —— 给重试，绝不降级成"即将上线"
-                    return (
-                      <button onClick={retryCatalog} disabled={catalogRetrying} className="mt-auto pt-4 w-full">
-                        <span className="block w-full py-2 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#b0b0b0] text-sm font-semibold hover:text-white disabled:opacity-60">
-                          {t('myCreations.retry')}
-                        </span>
-                      </button>
-                    );
-                  }
-                  if (!plan || !plans?.paddle_configured) {
-                    // 后端确实没配这档 Recurring Price → 保持原有 disabled + Coming Soon
-                    return (
-                      <button disabled className="mt-auto pt-4 w-full">
-                        <span className="block w-full py-2 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#666666] text-sm font-semibold cursor-not-allowed">
-                          {t('pricing.buy_credits')} · {t('pricing.coming_soon')}
-                        </span>
-                      </button>
-                    );
-                  }
-                  const isCurrent = planOfRecord?.plan_id === plan.id;
-                  return (
-                    <button onClick={() => buyPlan(plan)} disabled={busyPack !== null} className="mt-auto pt-4 w-full">
-                      <span className="block w-full py-2 rounded-lg bg-orange-400 text-black text-sm font-semibold hover:bg-orange-300 disabled:opacity-60 disabled:cursor-not-allowed">
-                        {busyPack === plan.id
-                          ? t('pricing.packs_busy')
-                          : isCurrent
-                            ? t('pricing.plan_current')
-                            : `${t('pricing.plan_subscribe')} $${plan.price_usd.toFixed(2)}${t('pricing.plan_per_month')}`}
-                      </span>
-                    </button>
-                  );
-                })()}
+                {/* Membership 新购买入口已按 2026-10-03 产品裁定移除（一次性充值制）；
+                    后端 Paddle 链路保留，存量订阅用户的续费与权益不受影响。 */}
+                {(() => (
+                  <button disabled className="mt-auto pt-4 w-full">
+                    <span className="block w-full py-2 rounded-lg bg-[#1a1a1a] border border-[#262626] text-[#666666] text-sm font-semibold cursor-not-allowed">
+                      {t('pricing.plan_subscribe')} · {t('pricing.coming_soon')}
+                    </span>
+                  </button>
+                ))()}
               </div>
             );
           })}
         </div>
 
-        {plans?.plans.length ? (
-          <p className="mt-3 text-xs text-[#666666]">{t('pricing.plan_recurring_note')}</p>
-        ) : null}
+        {/* Membership 按月续费说明随新购买入口移除（2026-10-03 产品裁定）；存量订阅用户不受影响。 */}
 
         {/* 购买结果提示：放在页面级，套餐区与补充包区共用。
             此前它只渲染在补充包区块内部，点击套餐失败（未登录 / 建单 502）时用户看不到任何反馈。 */}
