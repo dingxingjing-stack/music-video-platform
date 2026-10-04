@@ -757,7 +757,10 @@
     "drums": "Drums",
     "bass": "Bass",
     "other": "Other",
-    "credits": "60 Credits per separation"
+    "original": "Original",
+    "credits": "60 Credits per separation",
+    "insufficientCredits": "Insufficient credits. Please top up and try again.",
+    "timeout": "Separation timed out, credits have been refunded"
   },
   "aiGen": {
     "section": {

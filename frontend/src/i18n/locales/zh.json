@@ -754,7 +754,10 @@
     "drums": "鼓",
     "bass": "贝斯",
     "other": "其他",
-    "credits": "每次分离消耗 60 Credits"
+    "original": "原曲",
+    "credits": "每次分离消耗 60 Credits",
+    "insufficientCredits": "Credits 余额不足，请充值后重试",
+    "timeout": "分离超时，Credits 已自动退回"
   },
   "aiGen": {
     "section": {

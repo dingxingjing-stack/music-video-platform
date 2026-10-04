@@ -1,86 +1,131 @@
 /**
- * 音频分离组件
- * 
+ * 音频分离组件（P2：TemPolor Stems v2 已启用）
+ *
  * 功能:
- * - 上传音频文件
- * - 实时进度显示
- * - 四轨播放预览 (人声/鼓/贝斯/其他)
- * - 分轨下载
- * - 计价展示：60 Credits / 次
+ * - 上传音频文件（≤50MB）
+ * - 异步任务提交 + 轮询（后端: POST /api/v1/ai/stems/separate → GET /stems/task/{id}）
+ * - 四轨 + 原曲播放预览 (人声/鼓/贝斯/其他/原曲)
+ * - 分轨下载（FLAC）
+ * - 计价展示：60 Credits / 次（不足 402 提示；失败/超时后端自动退回）
+ *
+ * 安全边界（不得出现）：API endpoint 细节、callback、provider 名称、
+ * item_id、R2 key / 签名参数 —— 前端只拿到后端签发的短期预签名 URL。
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api } from '../config/api';
 import { supabase } from '../lib/supabase';
 import { useTranslation } from '../i18n/useTranslation';
 
-// 当前生产没有可用的 stem separation（后端在 ENVIRONMENT=production 直接返回不可用），
-// 因此这个页面上的 Start 必须始终不可执行。将来接上真实能力时改回 true 即可。
-const SEPARATION_AVAILABLE: boolean = false;
+// P2：后端已接入 TemPolor Stems v2（生产 fail-closed 语义保留在后端：
+// 未配置 callback/密钥时后端自行拒绝，前端无需再关心 provider 细节）。
+const SEPARATION_AVAILABLE: boolean = true;
+
+const STEMS_POLL_INTERVAL_MS = 3000;
+const STEMS_POLL_MAX_MS = 10 * 60 * 1000; // 与后端单任务 10 分钟硬顶一致
 
 export function AudioSeparationPanel() {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [isSeparating, setIsSeparating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [stems, setStems] = useState<string[]>([]);
-  // 后端 production 分离实现从不读取该参数（P3-3 审计），保留发送以维持既有请求契约。
-  const [model] = useState('htdemucs');
+  // 逻辑名 → 后端签发的短期预签名 URL（vocals/drums/bass/other[/original]）
+  const [stems, setStems] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
-  
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
 
-  const STEM_LABELS = {
-    vocals: t('separation.vocals'),
-    drums: t('separation.drums'),
-    bass: t('separation.bass'),
-    other: t('separation.other'),
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement | null }>({});
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const STEM_LABELS: Array<[string, string]> = [
+    ['vocals', t('separation.vocals')],
+    ['drums', t('separation.drums')],
+    ['bass', t('separation.bass')],
+    ['other', t('separation.other')],
+  ];
+
+  // 组件卸载时停止轮询，避免内存泄漏
+  useEffect(() => {
+    return () => {
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+    };
+  }, []);
+
+  const authHeaders = async (): Promise<Record<string, string>> => {
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess?.session?.access_token;
+    if (!token) throw new Error(t('auth.pleaseLogin'));
+    return { Authorization: `Bearer ${token}` };
   };
 
-  // 上传并分离
+  // 提交并轮询直到终态
   const handleSeparate = async () => {
     if (!file) return;
 
     setIsSeparating(true);
     setProgress(0);
     setError('');
-    setStems([]);
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('model', model);
+    setStems({});
 
     try {
-      // 后端 /audio/separate 强制 JWT（get_verified_user_id）；FormData 不能走 authFetch
-      // （其固定 Content-Type: application/json 会破坏 multipart 边界），手动注入 Authorization。
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess?.session?.access_token;
-      if (!token) throw new Error(t('auth.pleaseLogin'));
+      const headers = await authHeaders();
 
-      const response = await fetch(api.url('/api/v1/audio/separate'), {
+      // 提交（multipart：不能走 authFetch 的固定 JSON Content-Type）
+      const form = new FormData();
+      form.append('file', file);
+      const submitResp = await fetch(api.url('/api/v1/ai/stems/separate'), {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        headers,
+        body: form,
       });
 
-      const data = await response.json();
-
-      if (response.status === 401) throw new Error(t('auth.pleaseLogin'));
-      if (response.status === 429) throw new Error(t('errors.rateLimited'));
-      if (!response.ok || !data.success) {
-        // 机器可读错误码优先：映射到前端既有的不可用文案，不回显后端英文 message。
-        if (data?.error_code === 'stem_separation_unavailable') {
-          throw new Error(t('audioTools.separationDesc'));
-        }
-        // 未知 error_code / 无 error_code：保留原有 detail→message→本地兜底顺序。
-        throw new Error(data.detail || data.message || t('separation.failed'));
+      if (submitResp.status === 401) throw new Error(t('auth.pleaseLogin'));
+      if (submitResp.status === 402) throw new Error(t('separation.insufficientCredits'));
+      if (submitResp.status === 429) throw new Error(t('errors.rateLimited'));
+      const submitData = await submitResp.json().catch(() => ({}));
+      if (!submitResp.ok || !submitData.success) {
+        throw new Error(submitData.detail || t('separation.failed'));
       }
 
-      setStems(data.stems);
-      setProgress(100);
+      const taskId: string = submitData.task_id;
+      if (!taskId) throw new Error(t('separation.failed'));
+
+      // 轮询任务状态（后端 10 分钟硬顶，超时自动退款）
+      const startedAt = Date.now();
+      const poll = async () => {
+        try {
+          const h = await authHeaders();
+          const resp = await fetch(api.url(`/api/v1/ai/stems/task/${taskId}`), { headers: h });
+          if (resp.status === 401) throw new Error(t('auth.pleaseLogin'));
+          if (!resp.ok) throw new Error(t('separation.failedRetry'));
+          const data = await resp.json();
+
+          setProgress(Math.min(95, Number(data.progress) || 0));
+
+          if (data.state === 'completed' && data.stems_state === 'ok' && data.stems) {
+            setStems(data.stems as Record<string, string>);
+            setProgress(100);
+            setIsSeparating(false);
+            return;
+          }
+          if (data.state === 'failed' || data.state === 'completed_with_stems_failed') {
+            const msg = String(data.error || '');
+            throw new Error(
+              msg.includes('超时') ? t('separation.timeout') : t('separation.failedRetry')
+            );
+          }
+
+          if (Date.now() - startedAt > STEMS_POLL_MAX_MS) {
+            throw new Error(t('separation.timeout'));
+          }
+          pollTimer.current = setTimeout(poll, STEMS_POLL_INTERVAL_MS);
+        } catch (err: any) {
+          setError(err.message || t('separation.failedRetry'));
+          setIsSeparating(false);
+        }
+      };
+      poll();
     } catch (err: any) {
       setError(err.message || t('separation.failedRetry'));
-    } finally {
       setIsSeparating(false);
     }
   };
@@ -103,30 +148,25 @@ export function AudioSeparationPanel() {
     });
   };
 
-  // 下载分轨
+  // 下载分轨（Stems v2 产物为 FLAC）
   const downloadStem = (url: string, name: string) => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${name}.wav`;
+    a.download = `${name}.flac`;
     a.click();
   };
+
+  const stemEntries = STEM_LABELS.filter(([key]) => stems[key]);
+  const hasOriginal = Boolean(stems.original);
 
   return (
     <div className="p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold text-white mb-6">
+        <h2 className="text-2xl font-bold text-white mb-2">
           🎵 {t('separation.title')}
         </h2>
-        {/* 计价展示：60 Credits / 次 */}
+        {/* P2 计价展示：60 Credits / 次 */}
         <p className="text-sm text-gray-400 mb-4">{t('separation.credits')}</p>
-
-        {/* 生产后端当前没有可用的分轨能力：页面级明示（复用既有 i18n，不新增 key） */}
-        <div className="mb-6 p-4 rounded-lg bg-gray-800/60 border border-gray-600 flex items-center gap-3">
-          <span className="shrink-0 px-3 py-1 rounded-full bg-gray-700 border border-gray-600 text-xs text-gray-300">
-            {t('audioTools.comingSoon')}
-          </span>
-          <span className="text-sm text-gray-300">{t('audioTools.separationDesc')}</span>
-        </div>
 
         {/* 上传区域 */}
         <div className="mb-6">
@@ -148,14 +188,14 @@ export function AudioSeparationPanel() {
                   {file ? file.name : t('separation.dropOrClick')}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {t('separation.supported')}
+                  {t('separation.supported')} · ≤50MB
                 </p>
               </div>
             </label>
           </div>
         </div>
 
-        {/* 分离按钮：能力开关为 false 时始终禁用，避免呈现一个必然失败的操作 */}
+        {/* 分离按钮 */}
         <button
           onClick={handleSeparate}
           disabled={!file || isSeparating || !SEPARATION_AVAILABLE}
@@ -187,15 +227,15 @@ export function AudioSeparationPanel() {
           </div>
         )}
 
-        {/* 分离结果 */}
-        {stems.length > 0 && (
+        {/* 分离结果：4 分轨 */}
+        {stemEntries.length > 0 && (
           <div className="mt-8">
             <h3 className="text-xl font-bold text-white mb-4">
               ✅ {t('separation.completed')}
             </h3>
 
             <div className="space-y-4">
-              {Object.entries(STEM_LABELS).map(([key, label], idx) => (
+              {stemEntries.map(([key, label]) => (
                 <div
                   key={key}
                   className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg"
@@ -218,7 +258,7 @@ export function AudioSeparationPanel() {
                         ⏹️ {t('separation.stop')}
                       </button>
                       <button
-                        onClick={() => downloadStem(stems[idx], key)}
+                        onClick={() => downloadStem(stems[key], key)}
                         className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
                       >
                         ⬇️ {t('separation.download')}
@@ -228,11 +268,47 @@ export function AudioSeparationPanel() {
 
                   <audio
                     ref={(el) => (audioRefs.current[key] = el)}
-                    src={stems[idx]}
+                    src={stems[key]}
                     className="w-full"
                   />
                 </div>
               ))}
+
+              {/* 原曲 */}
+              {hasOriginal && (
+                <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-semibold text-white">
+                      {t('separation.original')}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => playStem('original')}
+                        className="px-3 py-1 bg-orange-500 text-white text-sm rounded hover:bg-orange-600"
+                      >
+                        ▶️ {t('separation.play')}
+                      </button>
+                      <button
+                        onClick={() => stopAll()}
+                        className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                      >
+                        ⏹️ {t('separation.stop')}
+                      </button>
+                      <button
+                        onClick={() => downloadStem(stems.original, 'original')}
+                        className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                      >
+                        ⬇️ {t('separation.download')}
+                      </button>
+                    </div>
+                  </div>
+                  <audio
+                    ref={(el) => (audioRefs.current['original'] = el)}
+                    src={stems.original}
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="mt-6 p-4 bg-blue-900/30 border border-blue-500 rounded-lg text-blue-300">
