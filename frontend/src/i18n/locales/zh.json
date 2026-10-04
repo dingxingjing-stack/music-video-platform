@@ -753,7 +753,8 @@
     "vocals": "人声",
     "drums": "鼓",
     "bass": "贝斯",
-    "other": "其他"
+    "other": "其他",
+    "credits": "每次分离消耗 60 Credits"
   },
   "aiGen": {
     "section": {

@@ -6,6 +6,7 @@
  * - 实时进度显示
  * - 四轨播放预览 (人声/鼓/贝斯/其他)
  * - 分轨下载
+ * - 计价展示：60 Credits / 次
  */
 
 import { useState, useRef } from 'react';
@@ -116,6 +117,8 @@ export function AudioSeparationPanel() {
         <h2 className="text-2xl font-bold text-white mb-6">
           🎵 {t('separation.title')}
         </h2>
+        {/* 计价展示：60 Credits / 次 */}
+        <p className="text-sm text-gray-400 mb-4">{t('separation.credits')}</p>
 
         {/* 生产后端当前没有可用的分轨能力：页面级明示（复用既有 i18n，不新增 key） */}
         <div className="mb-6 p-4 rounded-lg bg-gray-800/60 border border-gray-600 flex items-center gap-3">
