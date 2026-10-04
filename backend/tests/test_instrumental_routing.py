@@ -1,8 +1,8 @@
 """Phase 2A + 阶段 B：Instrumental / Normal 路由锁定测试。
 
 契约事实（docs/PROVIDER_STRATEGY.md + yinchao_provider 官方合同 + _OPERATION_CHAINS）：
-- instrumental=true → operation "instrumental" → Yinchao V4.0 Instrumental → Mureka V9，
-  绝不进入 TemPolor（官方合同：yinchao /api/v1/song/instrumental；mureka /v1/instrumental/generate）。
+- instrumental=true → operation "instrumental" → Yinchao V4.0 Instrumental 单家
+  （Mureka 已删除，2026-10-01；绝不进入 TemPolor，官方合同 yinchao /api/v1/song/instrumental）。
 - 普通人声歌 → operation "normal" → Yinchao V4.0 → TemPolor（fallback）不变。
 - duration 单点归一化为「不低于 MIN(240)」的单次生成目标；不再分 150+122 continuation 段
   （continuation 仅保留独立续写入口）。
@@ -133,16 +133,15 @@ def test_3_instrumental_240s_single_shot_yinchao(isolated_db, prod_env, monkeypa
     assert (task_store.get(tid) or {}).get("state") == "completed"
 
 
-def test_4_instrumental_falls_back_to_mureka_never_tempolor(isolated_db, prod_env, monkeypatch):
-    """Yinchao Instrumental 用尽 1+MAX_AUTO_RETRIES 仍失败 → 切 Mureka V9，绝不进 TemPolor。"""
+def test_4_instrumental_yinchao_fail_no_fallback_target(isolated_db, prod_env, monkeypatch):
+    """Yinchao Instrumental 用尽 1+MAX_AUTO_RETRIES 仍失败 → 链无下一家（Mureka 已删除）
+    → 任务 failed，绝不进 TemPolor，也绝无第二跳。"""
     y, t, m = RecordingProvider("yinchao", ok=False), RecordingProvider("tempolor"), RecordingProvider("mureka")
     tid = _run(monkeypatch, [y, t, m], duration=60, instrumental=True)
-    assert len(y.requests) == 1 + MAX_AUTO_RETRIES  # 按既有重试策略打满再换家
-    assert len(m.requests) == 1
-    assert m.requests[0]["operation"] == "instrumental"
-    assert m.requests[0]["is_instrumental"] is True
+    assert len(y.requests) == 1 + MAX_AUTO_RETRIES  # 按既有重试策略打满
+    assert m.requests == [], "Mureka 已删除：instrumental 链不存在第二跳"
     assert t.requests == [], "instrumental fallback 绝不允许进入 TemPolor"
-    assert (task_store.get(tid) or {}).get("state") == "completed"
+    assert (task_store.get(tid) or {}).get("state") == "failed"
 
 
 def test_5_normal_song_uses_yinchao_first(isolated_db, prod_env, monkeypatch):

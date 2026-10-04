@@ -94,7 +94,7 @@ def test_app_name_and_registry(ace_step_modal_module):
     assert ace_step_modal_module._APP.name == "avireon-music-platform-acestep"
     registered = set(ace_step_modal_module._APP.registry)
     assert "generate_full_song" in registered
-    assert "separate_audio" in registered
+    assert "separate_audio" not in registered  # Spleeter 分轨入口已删除（2026-10-01）
     assert "preload_models" in registered
 
 

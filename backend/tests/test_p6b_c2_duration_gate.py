@@ -275,11 +275,11 @@ async def test_c3_5_a_stitch_failure_skips_final_upload(ok_provider, stub_heavy_
 
 
 async def test_c2_measurement_seam_does_not_swallow_exceptions(monkeypatch):
-    class Boom:
-        @staticmethod
-        def get_duration(*a, **k):
-            raise ValueError("decode failed")
-    monkeypatch.setitem(__import__("sys").modules, "librosa", Boom)
+    """测量 seam 异常必须原样透传（ffprobe 实现后语义不变：测不到 = 抛错 = 不交付）。"""
+    import app.services.audio_duration as audio_duration
+    def _boom(*a, **k):
+        raise ValueError("decode failed")
+    monkeypatch.setattr(audio_duration, "measure_duration", _boom)
     with pytest.raises(ValueError):
         await continuation_service._measure_final_duration("whatever.wav")
 

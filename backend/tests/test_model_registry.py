@@ -44,23 +44,24 @@ def test_3b_vocal_270s_tempolor_latest():
     assert sel.total_cost_cny == 0.30
 
 
-def test_4_instrumental_120s_routed_to_mureka_instr():
-    """第一版路线（2026-09-18 批准）：i3 enabled=False，120s 纯音乐也统一 mureka-v9-instr。"""
-    sel = select_music_model("instrumental", 120, lyrics_provided=True)
-    assert sel.model.key == "mureka-v9-instr"
-    assert sel.total_cost_cny == 0.33
+def test_4_instrumental_120s_no_valid_model():
+    """Mureka 全条目已删除（2026-10-01），i3/i4 enabled=False → instrumental 无候选。
+    纯音乐生产路由 = Yinchao Provider（/api/v1/song/instrumental），不经本表选择。"""
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("instrumental", 120, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"
 
 
-def test_5_instrumental_180s_routed_to_mureka_instr():
-    """i4 enabled=False → 180s 不再选 i4（Phase 2B 旧规则已被第一版路线覆盖）。"""
-    sel = select_music_model("instrumental", 180, lyrics_provided=True)
-    assert sel.model.key == "mureka-v9-instr"
-    assert sel.total_cost_cny == 0.33
+def test_5_instrumental_180s_no_valid_model():
+    """同上：180s 纯音乐在 model selector 层无候选（Yinchao 路由不经过此处）。"""
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("instrumental", 180, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"
 
 
 def test_5b_disabled_models_never_selected_and_data_kept():
     """§六：禁用 = 不被选中，但注册数据必须保留（不得删除）。"""
-    disabled = {"tempolor-i3", "tempolor-i4", "mureka-v9.5", "minimax-3.0"}
+    disabled = {"tempolor-i3", "tempolor-i4", "minimax-3.0"}
     for key in disabled:
         assert key in MODELS, f"{key} 数据被删除"
         assert MODELS[key].enabled is False, f"{key} 必须 enabled=False"
@@ -68,20 +69,24 @@ def test_5b_disabled_models_never_selected_and_data_kept():
     # 任何可选组合的选择结果都不能落在禁用模型上
     for mt, dur in [("vocal", 120), ("vocal", 270), ("instrumental", 120),
                     ("instrumental", 200), ("instrumental", 270)]:
-        assert select_music_model(mt, dur, True).model.key not in disabled
+        try:
+            sel = select_music_model(mt, dur, True)
+        except NoValidModelError:
+            continue  # instrumental 当前无候选（Mureka 已删除），允许
+        assert sel.model.key not in disabled
 
 
-def test_6_instrumental_250s_mureka():
-    """便宜但做不到的模型必须被淘汰（§11 核心原则）。"""
-    sel = select_music_model("instrumental", 250, lyrics_provided=True)
-    assert sel.model.key == "mureka-v9-instr"
-    assert sel.total_cost_cny == 0.33
+def test_6_instrumental_250s_no_valid_model():
+    """便宜但做不到的模型必须被淘汰（§11 核心原则）：250s 纯音乐无任何已启用候选。"""
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("instrumental", 250, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"
 
 
-def test_7_instrumental_270s_mureka():
-    sel = select_music_model("instrumental", 270, lyrics_provided=True)
-    assert sel.model.key == "mureka-v9-instr"
-    assert sel.total_cost_cny == 0.33
+def test_7_instrumental_270s_no_valid_model():
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("instrumental", 270, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"
 
 
 def test_8_instrumental_300s_no_valid_model():
@@ -100,10 +105,12 @@ def test_8b_instrumental_300s_never_picks_i4_or_minimax():
     )
 
 
-def test_9_cover_tempolor_latest():
-    sel = select_music_model("vocal", 180, lyrics_provided=True, operation="cover")
-    assert sel.model.key == "tempolor-latest-cover"
-    assert sel.total_cost_cny == 0.70
+def test_9_cover_removed_no_valid_model():
+    """P4-B2 Phase A-11：Cover/Remix 功能撤销——tempolor-latest-cover 条目已删，
+    cover operation 一律 NO_VALID_MODEL。"""
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("vocal", 180, lyrics_provided=True, operation="cover")
+    assert ei.value.code == "NO_VALID_MODEL"
 
 
 def test_9b_cover_instrumental_unsupported():
@@ -154,12 +161,12 @@ def test_product_cap_270s_constants():
     assert ai_music.MAX_AUDIO_DURATION_SECONDS == 270
 
 
-def test_vocal_330_only_enabled_mureka_v9_survives():
-    """>300s 人声：tempolor-latest 被淘汰；V9.5/MiniMax 已禁用 → 只剩 mureka-v9。
-    证明 enabled 过滤生效（若 V9.5/MiniMax 仍可选，最低成本也轮不到它们，此断言验证唯一性）。"""
-    sel = select_music_model("vocal", 330, lyrics_provided=True)
-    assert sel.model.key == "mureka-v9"
-    assert sel.model.id_confirmed is False  # 选中但 ID 未确认 → Provider 层仍将零提交拒绝
+def test_vocal_330_no_valid_model():
+    """>300s 人声：tempolor-latest 被淘汰（上限 300s）；V9.5/MiniMax 已禁用；
+    mureka-v9 已删除（2026-10-01）→ 无任何候选，NO_VALID_MODEL。"""
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("vocal", 330, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"
 
 
 def test_unconfirmed_ids_flagged():
@@ -214,7 +221,8 @@ def test_provider_vocal_payload_uses_registry_model(monkeypatch):
 
 
 def test_provider_instrumental_blocks_unconfirmed_id(monkeypatch):
-    """纯音乐 120s 选中 i3，但其 API model ID 未联调确认 → 禁止提交、non_retryable、零 HTTP。"""
+    """纯音乐 120s：Mureka 已删除、i3/i4 disabled → 无候选 NO_VALID_MODEL；
+    选择层拦截 → 禁止提交、non_retryable、零 HTTP（与原 UNCONFIRMED 拦截同语义）。"""
     sink: dict = {}
     _patch_http(monkeypatch, sink)
     prov = tempolor_provider.TempolorProvider()
@@ -223,7 +231,7 @@ def test_provider_instrumental_blocks_unconfirmed_id(monkeypatch):
     }))
     assert result["success"] is False
     assert result.get("non_retryable") is True
-    assert "UNCONFIRMED" in result["error"]
+    assert "NO_VALID_MODEL" in result["error"]
     assert "posts" not in sink  # 一次真实提交都没发生
 
 
@@ -255,7 +263,7 @@ def test_provider_explicit_model_backcompat(monkeypatch):
 # ── P3-13：production 选择底线（api_model_id 未确认的规格一律不可选）──────
 
 def test_prod_instrumental_never_selects_unconfirmed_model(monkeypatch):
-    """ENVIRONMENT=production：instrumental 不得返回 mureka-v9-instr（ID 未确认，提交不出去）。"""
+    """ENVIRONMENT=production：instrumental 无任何已启用候选 → NO_VALID_MODEL（Mureka 已删除）。"""
     monkeypatch.setenv("ENVIRONMENT", "production")
     with pytest.raises(NoValidModelError) as ei:
         select_music_model("instrumental", 180, lyrics_provided=True)
@@ -273,16 +281,15 @@ def test_prod_vocal_still_selects_confirmed_tempolor_latest(monkeypatch):
     assert sel2.total_cost_cny == 0.37
 
 
-def test_prod_cover_still_selects_confirmed_model(monkeypatch):
-    """Cover 同理：已确认 ID 的 tempolor-latest-cover 仍可被选中。"""
+def test_prod_cover_removed_no_valid_model(monkeypatch):
+    """P4-B2 Phase A-11：production 下 cover operation 同样 NO_VALID_MODEL。"""
     monkeypatch.setenv("ENVIRONMENT", "production")
-    sel = select_music_model("vocal", 180, lyrics_provided=True, operation="cover")
-    assert sel.model.key == "tempolor-latest-cover"
-    assert sel.model.id_confirmed and sel.model.api_model_id == "tempolor-latest"
+    with pytest.raises(NoValidModelError):
+        select_music_model("vocal", 180, lyrics_provided=True, operation="cover")
 
 
 def test_prod_never_returns_any_unconfirmed_model(monkeypatch):
-    """穷举：production 下任何被返回的规格都必须已确认，且绝不能是 mureka-v9-instr。"""
+    """穷举：production 下任何被返回的规格都必须已确认（Mureka 条目已删除，不存在例外）。"""
     monkeypatch.setenv("ENVIRONMENT", "production")
     for music_type in ("vocal", "instrumental"):
         for dur in (60, 120, 180, 250, 270, 300):
@@ -292,11 +299,11 @@ def test_prod_never_returns_any_unconfirmed_model(monkeypatch):
                 except NoValidModelError:
                     continue
                 assert sel.model.id_confirmed and sel.model.api_model_id
-                assert sel.model.key != "mureka-v9-instr"
 
 
-def test_development_instrumental_selection_unchanged(monkeypatch):
-    """第一版路线（2026-09-18 批准）只在非生产保留：开发/测试仍指向 mureka-v9-instr。"""
+def test_development_instrumental_no_valid_model(monkeypatch):
+    """Mureka 已删除（2026-10-01）：开发/测试环境下 instrumental 同样 NO_VALID_MODEL。"""
     monkeypatch.setenv("ENVIRONMENT", "development")
-    sel = select_music_model("instrumental", 180, lyrics_provided=True)
-    assert sel.model.key == "mureka-v9-instr"
+    with pytest.raises(NoValidModelError) as ei:
+        select_music_model("instrumental", 180, lyrics_provided=True)
+    assert ei.value.code == "NO_VALID_MODEL"

@@ -1,20 +1,18 @@
 """阶段 B 路由实现验证：功能分链 / fallback 协议 / 统一质量门 / 官方合同。
 
 覆盖（23 项，全部本地桩，绝不真实调用任何 Provider API）：
-1  四条操作链与生产路由表逐字一致（normal/lyric_to_music/instrumental/reference）
+1  三条操作链与生产路由表逐字一致（normal/lyric_to_music/instrumental；reference 已撤销）
 2  非生歌 operation（lyric_gen/stems/midi/未知）一律 ValueError，绝不静默落 normal 链
 3  路由按 operation 分发且单发（chain_for_operation 只调一次、provider 只调一次、收尾一次）
 4  retryable 失败按 MAX_AUTO_RETRIES 打满后切链中下一家
 5  non_retryable 不切链、不重试、不走 HF
 6  Yinchao 缺 prompt → non_retryable，零提交
-7  Yinchao reference similarity 显式非法 → non_retryable，零上传零提交
-8  Yinchao reference 缺省 similarity=0.8 + 提交 payload 合同（v3.5/reference/upload_id）
-9  Yinchao 参考音频上传合同（POST /api/v1/file/upload, upload_type=reference）
+7-9 Yinchao Reference 契约测试已随功能撤销删除（Phase A-11）
+
+
 10 Yinchao normal 提交合同（/api/v1/song/generate, model=v4.0, task_type=normal, 不带 lyric）
 11 Yinchao lyric_to_music 提交合同（用户 lyric 原样透传）
 12 Yinchao instrumental 提交合同（/api/v1/song/instrumental, 无 task_type）
-13 Mureka instrumental 合同（POST /v1/instrumental/generate + 独立 GET /v1/instrumental/query/{id}）
-14 Mureka 不支持 reference → non_retryable
 15 质量门 <MIN=240 → failed + 恰好一次退款 + 无 R2 终对象
 16 质量门测不到时长 → failed + 恰好一次退款 + 无 R2 终对象
 17 质量门边界 240.0/240.5/300/600 → 放行且不截断（finalize 恰一次、零退款）
@@ -23,7 +21,7 @@
 20 timeout 只失败当前任务：不建第二个付费任务、不二次 reserve
 21 HF 兜底门：仅 normal/lyric_to_music 尝试，instrumental/reference 跳过
 22 reference 路由把 reference_audio/similarity 原样交给 provider
-23 链中 provider 未注册则跳过且保持顺序（instrumental 缺 mureka 也绝不落到 tempolor）
+23 链中 provider 未注册则跳过且保持顺序（instrumental 仅 yinchao，绝不落到 tempolor）
 """
 
 import asyncio
@@ -37,7 +35,6 @@ from app.routers import ai_music
 from app.services import ai_limits, credits_service, task_store
 from app.services.provider_registry import PROVIDER_ENV, ProviderRegistry
 from app.services.yinchao_provider import YinchaoProvider
-from app.services.mureka_provider import MurekaProvider
 from tests.test_ai_music_flow import isolated_db
 
 
@@ -192,12 +189,11 @@ def _states(store):
 @pytest.mark.parametrize("operation,expected", [
     ("normal", ["yinchao", "tempolor"]),
     ("lyric_to_music", ["yinchao", "tempolor"]),
-    ("instrumental", ["yinchao", "mureka"]),
-    ("reference", ["yinchao", "tempolor"]),
+    ("instrumental", ["yinchao"]),
 ])
 def test_operation_chains_match_route_table(operation, expected):
     reg = ProviderRegistry()
-    for n in ("yinchao", "tempolor", "mureka"):
+    for n in ("yinchao", "tempolor"):
         reg.register(RecProvider(n))
     chain = reg.chain_for_operation(operation)
     assert [p.name for p in chain] == expected
@@ -208,7 +204,7 @@ def test_operation_chains_match_route_table(operation, expected):
 # ─────────────────────────────────────────────────────────────────────────────
 # 2) 非生歌 operation 拒绝进链
 # ─────────────────────────────────────────────────────────────────────────────
-@pytest.mark.parametrize("operation", ["lyric_gen", "stems", "midi", "unknown", ""])
+@pytest.mark.parametrize("operation", ["lyric_gen", "stems", "midi", "unknown", "", "reference"])
 def test_non_generation_operations_rejected(operation):
     reg = ProviderRegistry()
     reg.register(RecProvider("yinchao"))
@@ -223,7 +219,7 @@ def test_non_generation_operations_rejected(operation):
     ({}, "normal"),
     ({"lyrics": "la la la"}, "lyric_to_music"),
     ({"instrumental": True}, "instrumental"),
-    ({"reference_audio_b64": "QUJD", "similarity": 1.3}, "reference"),
+    # P4-B2 Phase A-11：reference 已下线，不再参数化
 ])
 async def test_route_dispatches_operation_and_single_shot(route, request_kwargs, expected_op):
     rec = RecProvider("yinchao")
@@ -298,79 +294,10 @@ async def test_yinchao_missing_prompt_non_retryable(monkeypatch):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7) Yinchao reference similarity 显式非法 → non_retryable，零上传零提交
-# ─────────────────────────────────────────────────────────────────────────────
-async def test_yinchao_reference_similarity_invalid_non_retryable(monkeypatch):
-    monkeypatch.setattr(YinchaoProvider, "_api_key", lambda self: "test-key")
-    import app.services.yinchao_provider as ymod
-    _forbid_http(monkeypatch, ymod)
-    monkeypatch.setattr(
-        YinchaoProvider, "_upload_reference_audio",
-        AsyncMock(side_effect=AssertionError("非法 similarity 不得上传")),
-    )
-    monkeypatch.setattr(
-        YinchaoProvider, "_submit_and_poll",
-        AsyncMock(side_effect=AssertionError("非法 similarity 不得提交")),
-    )
-    ref = base64.b64encode(b"RIFF\x00\x00\x00\x00WAVE").decode()
-
-    res = await YinchaoProvider().generate({
-        "prompt": "p", "operation": "reference",
-        "reference_audio": ref, "similarity": 0.5,
-    })
-
-    assert res["success"] is False
-    assert res.get("non_retryable") is True
-    assert "similarity" in res["error"]
+# 7-9) Yinchao Reference 契约测试已随 Reference/Cover 功能撤销删除（Phase A-11）。
+#    _generate_reference/_upload_reference_audio/_decode_reference_audio 已自 provider 移除。
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 8) Yinchao reference 缺省 similarity=0.8 + 提交 payload 合同
-# ─────────────────────────────────────────────────────────────────────────────
-async def test_yinchao_reference_default_similarity_and_payload(monkeypatch):
-    monkeypatch.setattr(YinchaoProvider, "_api_key", lambda self: "test-key")
-    uploads = _capture_yinchao_upload(monkeypatch)
-    submits = _capture_yinchao_submit(monkeypatch)
-    ref = base64.b64encode(b"RIFF\x00\x00\x00\x00WAVE").decode()
-
-    res = await YinchaoProvider().generate({
-        "prompt": "p", "operation": "reference", "reference_audio": ref,
-        "lyrics": "照原样",
-    })
-
-    assert res["success"] is True
-    assert len(uploads) == 1 and uploads[0]["ext"] == "wav"
-    payload = submits[0]["payload"]
-    assert submits[0]["url"].endswith("/api/v1/song/generate")
-    assert payload["model"] == "v3.5"
-    assert payload["task_type"] == "reference"
-    assert payload["similarity"] == 0.8, "缺省 similarity 按官方枚举填 0.8"
-    assert payload["reference_audio"] == {"audio_type": "upload_id", "audio_content": "up-42"}
-    assert payload["n"] == 1
-    assert payload["lyric"] == "照原样"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 9) Yinchao 参考音频上传合同
-# ─────────────────────────────────────────────────────────────────────────────
-async def test_yinchao_upload_endpoint_contract(monkeypatch):
-    import app.services.yinchao_provider as ymod
-    log = _install_http(monkeypatch, ymod, posts=[_Resp(200, {"id": "up-9"})])
-    raw = b"RIFF\x00\x00\x00\x00WAVE-rest"
-
-    upload_id, err = await YinchaoProvider()._upload_reference_audio(
-        "test-key", raw, "wav", "audio/wav",
-    )
-
-    assert err is None and upload_id == "up-9"
-    url, kw = log.posts[0]
-    assert url.endswith("/api/v1/file/upload")
-    assert kw["data"] == {"upload_type": "reference"}
-    name, body, mime = kw["files"]["file"]
-    assert name == "reference.wav" and body == raw and mime == "audio/wav"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # 10) Yinchao normal 提交合同
 # ─────────────────────────────────────────────────────────────────────────────
 async def test_yinchao_normal_payload_contract(monkeypatch):
@@ -421,53 +348,6 @@ async def test_yinchao_instrumental_payload_contract(monkeypatch):
     assert submits[0]["url"].endswith("/api/v1/song/instrumental")
     assert payload == {"model": "v4.0", "prompt": "soft piano", "n": 1}, \
         "instrumental 端点无 task_type、无 lyric"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 13) Mureka instrumental 合同：独立 generate + query 端点
-# ─────────────────────────────────────────────────────────────────────────────
-async def test_mureka_instrumental_endpoint_contract(monkeypatch, tmp_path):
-    import app.services.mureka_provider as mmod
-    monkeypatch.setattr(MurekaProvider, "_api_key", lambda self: "test-key")
-    monkeypatch.setattr(mmod, "MUREKA_POLL_INTERVAL_SECONDS", 0.001)
-    monkeypatch.delenv("MUREKA_INSTRUMENTAL_MODEL", raising=False)
-    dl = tmp_path / "dl.wav"
-    dl.write_bytes(b"RIFF\x00\x00\x00\x00WAVE")
-    monkeypatch.setattr(mmod, "_download_audio", lambda url, dest_dir=None: str(dl))
-    log = _install_http(
-        monkeypatch, mmod,
-        posts=[_Resp(200, {"id": "mt-1"})],
-        gets=[_Resp(200, {"status": "succeeded", "wav_url": "https://cdn.example/x.wav"})],
-    )
-
-    res = await MurekaProvider().generate({
-        "prompt": "soft piano", "operation": "instrumental",
-    })
-
-    assert res["success"] is True
-    assert res["volume_files"]["_local_path"] == str(dl)
-    post_url, post_kw = log.posts[0]
-    assert post_url.endswith("/v1/instrumental/generate")
-    assert post_kw["json"] == {"model": "mureka-9", "prompt": "soft piano", "n": 1}
-    assert len(log.gets) == 1
-    assert log.gets[0][0].endswith("/v1/instrumental/query/mt-1"), \
-        "instrumental 必须用独立轮询端点，绝不复用 /v1/song/query"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 14) Mureka 不支持 reference → non_retryable
-# ─────────────────────────────────────────────────────────────────────────────
-async def test_mureka_reference_unsupported_non_retryable(monkeypatch):
-    monkeypatch.setattr(MurekaProvider, "_api_key", lambda self: "test-key")
-    import app.services.mureka_provider as mmod
-    _forbid_http(monkeypatch, mmod)
-
-    res = await MurekaProvider().generate({
-        "prompt": "p", "operation": "reference",
-    })
-
-    assert res["success"] is False
-    assert res.get("non_retryable") is True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -603,7 +483,7 @@ async def test_timeout_creates_no_second_paid_task(monkeypatch):
     ("normal", {}, True),
     ("lyric_to_music", {"lyrics": "la"}, True),
     ("instrumental", {"instrumental": True}, False),
-    ("reference", {"reference_audio_b64": "QUJD"}, False),
+    # P4-B2 Phase A-11：reference 已下线，不再参数化
 ])
 async def test_hf_fallback_gate_by_operation(route, operation, request_kwargs, expect_hf):
     # 1+MAX_AUTO_RETRIES=2 次尝试全部失败，链才可能走尽进入 HF 门
@@ -622,25 +502,10 @@ async def test_hf_fallback_gate_by_operation(route, operation, request_kwargs, e
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 22) reference 路由把 reference_audio/similarity 原样交给 provider
-# ─────────────────────────────────────────────────────────────────────────────
-async def test_reference_route_passes_audio_and_similarity(route):
-    rec = RecProvider("yinchao")
-    route.set_chain(rec)
-
-    await ai_music._run_generation(
-        "ref-route", _req(reference_audio_b64="QUJD", similarity=1.3), "uB", 2,
-    )
-
-    got = rec.requests[0]
-    assert got["reference_audio"] == "QUJD"
-    assert got["similarity"] == 1.3
-    assert got["enable_audio2audio"] is True
-    assert got["operation"] == "reference"
+# 22) reference 路由测试已随 Reference/Cover 功能撤销删除（Phase A-11）。
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 23) 链中 provider 未注册则跳过且保持顺序（instrumental 缺 mureka 也绝无 tempolor）
+# 23) 链中 provider 未注册则跳过且保持顺序（instrumental 仅 yinchao，绝无 tempolor）
 # ─────────────────────────────────────────────────────────────────────────────
 def test_chain_skips_unregistered_and_never_injects_tempolor():
     reg = ProviderRegistry()
@@ -650,4 +515,4 @@ def test_chain_skips_unregistered_and_never_injects_tempolor():
     chain = reg.chain_for_operation("instrumental")
 
     assert [p.name for p in chain] == ["yinchao"], \
-        "mureka 未注册只跳过，绝不用 tempolor 顶替 instrumental 链"
+        "instrumental 链仅 yinchao 单家，绝不用 tempolor 顶替"
