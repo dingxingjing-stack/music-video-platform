@@ -20,7 +20,7 @@ export const REFUND_DOC: LegalDocPair = {
           },
           {
             k: 'p',
-            t: '平台的付款由第三方支付服务商 Paddle 作为记账商户（Merchant of Record）处理：向您的支付方式扣款、开具收据与发票、办理退款与拒付、并按适用法律处理相关税务均由 Paddle 完成，交易账单与收据由 Paddle 出具。Melovar 不收集也不存储您的完整银行卡号、CVV/CVC 或银行账户凭据。',
+            t: '平台的付款由第三方支付服务商作为记账商户（Merchant of Record）处理：目前包括 Paddle 与 Lemon Squeezy（具体以您结账时实际使用的支付渠道为准）。向您的支付方式扣款、开具收据与发票、办理退款与拒付、并按适用法律处理相关税务均由相应记账商户完成，交易账单与收据由该记账商户出具。Melovar 不收集也不存储您的完整银行卡号、CVV/CVC 或银行账户凭据。',
           },
         ],
       },
@@ -56,7 +56,7 @@ export const REFUND_DOC: LegalDocPair = {
         blocks: [
           {
             k: 'p',
-            t: '平台以美元标价展示价格。结账时 Paddle 可能根据您所在地区以当地币种显示含税后的应付金额，实际扣款的币种、金额与税费以 Paddle 收银台页面显示为准。',
+            t: '平台以美元标价展示价格。结账时相应的支付服务商（Paddle 或 Lemon Squeezy）可能根据您所在地区以当地币种显示含税后的应付金额，实际扣款的币种、金额与税费以该收银台页面显示为准。',
           },
           {
             k: 'p',
@@ -79,7 +79,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: '可以申请退款的情形：',
-            t: '重复扣款、明显的计费或金额错误、以及平台未能交付您所购买的 Credits 或订阅权益。经核实后，我们将通过 Paddle 把相应金额退回原支付方式。',
+            t: '重复扣款、明显的计费或金额错误、以及平台未能交付您所购买的 Credits 或订阅权益。经核实后，我们将通过您购买时实际使用的记账商户（Paddle 或 Lemon Squeezy）把相应金额退回原支付方式。',
           },
           {
             k: 'p',
@@ -89,7 +89,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: '退款如何办理：',
-            t: '提交请求后，我们会先核对您的交易记录与账户流水；确认应退的，由 Paddle 作为记账商户按其政策与流程执行退款，退回至原支付方式，实际到账时间取决于您的发卡机构与银行。我们无法承诺无条件退款，也不会因您主动取消订阅而就已经提供服务的期间退款。',
+            t: '提交请求后，我们会先核对您的交易记录与账户流水；确认应退的，由您购买时实际使用的记账商户（Paddle 或 Lemon Squeezy）按其政策与流程执行退款，退回至原支付方式，实际到账时间取决于您的发卡机构与银行。我们无法承诺无条件退款，也不会因您主动取消订阅而就已经提供服务的期间退款。',
           },
         ],
       },
@@ -103,7 +103,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: '关于即时履行：',
-            t: '购买 Credits 或开通会员后，服务通常在付款成功时立即开始提供。收银台是否会就本次交易另行请您勾选“同意立即开始履行、并因此放弃本次交易的撤回权”，取决于您所在法域的强制性规则、Paddle 作为记账商户为您配置的结账流程，以及届时实际向您展示的内容。只有当该项确认在结账流程中确实向您提出并由您作出时，它才构成您就此放弃撤回权的意思表示；未被提出时，您的法定撤回权不受影响。',
+            t: '购买 Credits 或开通会员后，服务通常在付款成功时立即开始提供。收银台是否会就本次交易另行请您勾选“同意立即开始履行、并因此放弃本次交易的撤回权”，取决于您所在法域的强制性规则、相应记账商户（Paddle 或 Lemon Squeezy）为您配置的结账流程，以及届时实际向您展示的内容。只有当该项确认在结账流程中确实向您提出并由您作出时，它才构成您就此放弃撤回权的意思表示；未被提出时，您的法定撤回权不受影响。',
           },
           {
             k: 'p',
@@ -135,7 +135,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: '退款与账务请求：',
-            t: '请通过下方邮箱提交，并尽量附上账户注册邮箱、Paddle 交易号（以 txn_ 开头）、订单日期与金额（含币种）以及问题说明，我们会在核实后回复。',
+            t: '请通过下方邮箱提交，并尽量附上账户注册邮箱、支付交易号（Paddle 交易号以 txn_ 开头；Lemon Squeezy 订单号可在您的收据中查看）、订单日期与金额（含币种）以及问题说明，我们会在核实后回复。',
           },
           { k: 'email' },
           {
@@ -144,8 +144,8 @@ export const REFUND_DOC: LegalDocPair = {
           },
           {
             k: 'p',
-            b: 'Paddle 官方买家渠道：',
-            t: '退款、发票与取消订阅等事项，您也可以直接通过 Paddle 的买家帮助中心办理或查询其处理规则。',
+            b: '官方买家渠道：',
+            t: '退款、发票与取消订阅等事项，您也可以直接通过相应记账商户（Paddle 或 Lemon Squeezy）的买家帮助中心办理或查询其处理规则。',
           },
           {
             k: 'links',
@@ -173,7 +173,7 @@ export const REFUND_DOC: LegalDocPair = {
           },
           {
             k: 'p',
-            t: 'Payments on the platform are processed by the third-party provider Paddle acting as Merchant of Record: Paddle charges your payment method, issues receipts and invoices, handles refunds and chargebacks and deals with the related taxes under applicable law, so your statement, receipts and invoices come from Paddle. Melovar does not collect or store your full card number, CVV/CVC or bank account credentials.',
+            t: 'Payments on the platform are processed by third-party providers acting as Merchant of Record – currently Paddle and Lemon Squeezy, depending on the checkout channel actually used: the applicable Merchant of Record charges your payment method, issues receipts and invoices, handles refunds and chargebacks and deals with the related taxes under applicable law, so your statement, receipts and invoices come from Paddle. Melovar does not collect or store your full card number, CVV/CVC or bank account credentials.',
           },
         ],
       },
@@ -209,7 +209,7 @@ export const REFUND_DOC: LegalDocPair = {
         blocks: [
           {
             k: 'p',
-            t: 'Prices are listed in US dollars. At checkout Paddle may show the amount payable in your local currency, including tax, depending on where you are; the currency, amount and taxes actually charged are the ones displayed on the Paddle checkout page.',
+            t: 'Prices are listed in US dollars. At checkout the applicable Merchant of Record (Paddle or Lemon Squeezy) may show the amount payable in your local currency, including tax, depending on where you are; the currency, amount and taxes actually charged are the ones displayed on the Paddle checkout page.',
           },
           {
             k: 'p',
@@ -232,7 +232,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: 'When you can ask for a refund: ',
-            t: 'duplicate charges, clear billing or amount errors, and cases where we fail to deliver the Credits or membership benefits you bought. Once verified, we have the corresponding amount returned to your original payment method through Paddle.',
+            t: 'duplicate charges, clear billing or amount errors, and cases where we fail to deliver the Credits or membership benefits you bought. Once verified, we have the corresponding amount returned to your original payment method through the Merchant of Record used at the time of purchase (Paddle or Lemon Squeezy).',
           },
           {
             k: 'p',
@@ -242,7 +242,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: 'How a refund is processed: ',
-            t: 'after you submit a request we first check the transaction against your account ledger. Where a refund is due, Paddle as Merchant of Record executes it under its own policy and process, back to your original payment method; the time it takes to reach you depends on your card issuer and bank. We cannot promise unconditional refunds, and cancelling a membership does not by itself entitle you to a refund of periods already served.',
+            t: 'after you submit a request we first check the transaction against your account ledger. Where a refund is due, the Merchant of Record used at the time of purchase (Paddle or Lemon Squeezy) executes it under its own policy and process, back to your original payment method; the time it takes to reach you depends on your card issuer and bank. We cannot promise unconditional refunds, and cancelling a membership does not by itself entitle you to a refund of periods already served.',
           },
         ],
       },
@@ -256,7 +256,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: 'About immediate performance: ',
-            t: 'Credits and memberships are normally made available as soon as your payment succeeds. Whether the checkout asks you to separately tick "I agree to immediate performance and thereby lose my withdrawal right for this transaction" depends on the mandatory rules of your jurisdiction, on the checkout flow configured for us by Paddle as Merchant of Record, and on what is actually presented to you at that time. Such a confirmation binds you only if it is in fact presented in the checkout and you give it; where it is not presented, your statutory withdrawal right is unaffected.',
+            t: 'Credits and memberships are normally made available as soon as your payment succeeds. Whether the checkout used at the time of purchase (Paddle or Lemon Squeezy) asks you to separately tick "I agree to immediate performance and thereby lose my withdrawal right for this transaction" depends on the mandatory rules of your jurisdiction, on the checkout flow configured for us by Paddle as Merchant of Record, and on what is actually presented to you at that time. Such a confirmation binds you only if it is in fact presented in the checkout and you give it; where it is not presented, your statutory withdrawal right is unaffected.',
           },
           {
             k: 'p',
@@ -288,7 +288,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: 'Refund and billing requests: ',
-            t: 'send them to the address below and include, where possible, your account email, the Paddle transaction ID (starting with txn_), the order date and the amount with currency, and a description of the problem. We will reply after checking the records.',
+            t: 'send them to the address below and include, where possible, your account email, the payment transaction ID (the Paddle transaction ID starts with txn_; Lemon Squeezy order numbers appear on your receipt), the order date and the amount with currency, and a description of the problem. We will reply after checking the records.',
           },
           { k: 'email' },
           {
@@ -298,7 +298,7 @@ export const REFUND_DOC: LegalDocPair = {
           {
             k: 'p',
             b: 'Paddle buyer channels: ',
-            t: 'you can also handle refunds, invoices and subscription cancellations directly through Paddle’s buyer help centre, or check how Paddle processes them:',
+            t: 'you can also handle refunds, invoices and subscription cancellations directly through the buyer help centre of the applicable Merchant of Record (Paddle or Lemon Squeezy), or check how Paddle processes them:',
           },
           {
             k: 'links',
