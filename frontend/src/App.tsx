@@ -5,6 +5,7 @@ import { ConsentGuard } from './components/RouteGuards';
 import { PageTransition } from './components/PageTransition';
 import { useTranslation } from './i18n/useTranslation';
 
+const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
@@ -63,6 +64,9 @@ export default function App() {
           <Route path="/legal/aimusic-copyright" element={<PageTransition><AIMusicCopyrightPolicy /></PageTransition>} />
           <Route path="/legal/credits-refund" element={<PageTransition><CreditsRefundPolicy /></PageTransition>} />
           <Route path="/legal/aup" element={<PageTransition><AcceptableUsePolicy /></PageTransition>} />
+
+          {/* 404 catch-all：其余所有未匹配路径 */}
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </Suspense>

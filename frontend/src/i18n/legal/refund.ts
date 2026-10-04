@@ -37,7 +37,7 @@ export const REFUND_DOC: LegalDocPair = {
             items: [
               {
                 b: '获取途径：',
-                t: '注册赠送（欢迎 50、邮箱验证 25、首次创作 25，合计 100 Credits，每项仅发放一次）、购买 Credits 补充包、以及会员订阅按周期发放的额度。',
+                t: '注册奖励（注册即一次性赠送 30 Credits）、购买 Credits 补充包、以及会员订阅按周期发放的额度。',
               },
               {
                 b: '消耗与退回：',
@@ -190,7 +190,7 @@ export const REFUND_DOC: LegalDocPair = {
             items: [
               {
                 b: 'How you obtain them: ',
-                t: 'signup bonuses (50 for welcome, 25 for verifying your email and 25 for your first creation – 100 Credits in total, each granted once), purchased Credit packs, and the allowance granted periodically by a membership.',
+                t: 'a signup reward (30 Credits granted once at registration), purchased Credit packs, and the allowance granted periodically by a membership.',
               },
               {
                 b: 'How they are spent and returned: ',

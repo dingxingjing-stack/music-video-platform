@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /create
+Disallow: /audio-tools
+Disallow: /my-works
+Disallow: /settings
+Disallow: /share/
+
+Sitemap: https://melovar.com/sitemap.xml
