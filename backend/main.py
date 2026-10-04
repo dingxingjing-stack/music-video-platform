@@ -203,10 +203,9 @@ from app.services.inference.gpt_sovits import GPTSovitsService
 from app.services.inference.factory import _SERVICE_REGISTRY  # 仅 tts/run 与启动日志使用（predict 派发已于 P5-B.7 退休）
 from app.services.inference.mock import MockInferenceService
 from app.services.inference.llm_factory import llm_factory
-# Note: WorkflowEngine, batch_queue, RemixService are now loaded via dedicated routers
+# Note: WorkflowEngine, batch_queue are now loaded via dedicated routers
 # from app.services.workflow import WorkflowEngine
 # from app.services.batch_queue import batch_queue
-# from app.services.inference.remix import RemixService
 from app.websocket_manager import ConnectionManager, manager
 
 # ---------- Router imports (moved to dedicated modules) ----------
@@ -371,14 +370,12 @@ _setup_sentry_lazy()
 # 开发阶段：使用 Gemini 临时方案（免费额度）
 # 生产阶段：使用 ai_music (Agnes AI 主力 + Gemini 备用 + Mureka 音频)
 from app.routers import ai_music
-from app.routers import hf_music
 from app.routers import stems_export
 from app.routers import community
 from app.routers import pitch_correction
 from app.routers import chord_track
 from app.routers import comping
 from app.routers import time_stretch
-from app.routers import remix_engine
 from app.routers import voice_clone
 from app.routers import poyo_voice_clone
 from app.routers import ai_lyrics
@@ -405,7 +402,6 @@ app.include_router(pitch_correction.router)
 app.include_router(chord_track.router)
 app.include_router(comping.router)
 app.include_router(time_stretch.router)
-app.include_router(remix_engine.router)
 app.include_router(voice_clone.router, prefix="/api/v1")
 app.include_router(poyo_voice_clone.router)  # PoYo 歌唱声音克隆 /api/v1/voice-clone（独立，不进生歌 chain）
 app.include_router(ai_lyrics.router)
@@ -1400,72 +1396,6 @@ def _resolve_audio_path(url: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Remix endpoint — pitch shifting, tempo adjustment, timbre transformation
-# ---------------------------------------------------------------------------
-
-
-@app.post("/api/v1/remix/process", tags=["remix"])
-async def remix_process(request: Request):
-    """
-    Submit an audio remix task (pitch shift, tempo adjustment, timbre EQ).
-
-    Body::
-        {
-            "source_track_id": "track-123",
-            "source_url": "/results/...",
-            "pitchShift": 0,
-            "tempoMultiplier": 1.0,
-            "timbreTransform": "warm"
-        }
-
-    Returns a task_id. Connect to WS /ws/progress/{task_id} for progress.
-    On completion, result_url contains the remixed audio.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-
-    source_url = body.get("source_url", "")
-    if not source_url:
-        raise HTTPException(status_code=422, detail="'source_url' is required")
-
-    task_id = body.get("source_track_id") or str(uuid.uuid4())[:8]
-    if not task_id.startswith("remix-"):
-        task_id = f"remix-{task_id}"
-
-    local_url = source_url
-    if source_url.startswith("/results/"):
-        local_url = source_url
-
-    svc = RemixService(
-        results_dir=RESULTS_DIR,
-        broadcast=_websocket_broadcast,
-    )
-
-    asyncio.create_task(
-        svc.predict(PredictRequest(
-            service_type="remix",
-            task_id=task_id,
-            payload={},
-            extra={
-                "source_track_id": body.get("source_track_id", ""),
-                "source_url": local_url,
-                "pitchShift": body.get("pitchShift", 0),
-                "tempoMultiplier": body.get("tempoMultiplier", 1.0),
-                "timbreTransform": body.get("timbreTransform", "warm"),
-            },
-        ))
-    )
-
-    return {
-        "task_id": task_id,
-        "status": "started",
-        "websocket": f"/ws/progress/{task_id}",
-    }
-
-
-# ---------------------------------------------------------------------------
 # MV Generator endpoints — beat detection + video rendering
 # ---------------------------------------------------------------------------
 
@@ -1572,7 +1502,6 @@ async def root():
         "workflow_b": "/api/v1/workflow/b  (Hybrid: music+TTS)",
         "workflow_c": "/api/v1/workflow/c  (Remix: upload→stems)",
         "workflow_d": "/api/v1/workflow/d  (MIDI: project→audio)",
-        "remix_process": "/api/v1/remix/process",
         "lyrics_generate": "/api/v1/lyrics/generate",
         "watermark_fingerprint": "/api/v1/watermark/fingerprint",
         "watermark_embed": "/api/v1/watermark/embed",
