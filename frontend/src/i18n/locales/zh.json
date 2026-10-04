@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "创作音乐",
+    "coverToggle": "Cover 改编（上传参考音频）",
+    "coverHint": "上传参考音频（MP3/WAV，≤10MB），AI 保留原曲人声旋律，改编为全新风格版本。",
     "subtitle": "用 AI 生成完整歌曲 — 描述、歌词与风格驱动",
     "songDescription": "歌曲描述",
     "songDescriptionPlaceholder": "描述你想要的音乐，例如：温暖治愈的钢琴流行，夜色与希望主题...",

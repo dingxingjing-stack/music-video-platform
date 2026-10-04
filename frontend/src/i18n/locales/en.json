@@ -306,6 +306,8 @@
   },
   "createMusic": {
     "title": "Create Music",
+    "coverToggle": "Cover (upload reference audio)",
+    "coverHint": "Upload a reference track (MP3/WAV, max 10MB). AI keeps the original vocal melody and creates a brand-new style version.",
     "subtitle": "Generate complete tracks — powered by description, lyrics and style",
     "songDescription": "Song Description",
     "songDescriptionPlaceholder": "Describe the music you want, e.g. warm uplifting piano pop about night and hope...",

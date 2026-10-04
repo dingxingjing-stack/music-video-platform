@@ -119,6 +119,8 @@
   },
   "createMusic": {
     "title": "Buat Musik",
+    "coverToggle": "Cover (unggah audio referensi)",
+    "coverHint": "Unggah trek referensi (MP3/WAV, maks. 10MB). AI mempertahankan melodi vokal asli dan membuat versi bergaya yang benar-benar baru.",
     "subtitle": "Hasilkan trek lengkap — bertenaga deskripsi, lirik, dan gaya",
     "songDescription": "Deskripsi Lagu",
     "songDescriptionPlaceholder": "Jelaskan musik yang Anda inginkan, mis. pop piano hangat dan membangkitkan semangat tentang malam dan harapan...",

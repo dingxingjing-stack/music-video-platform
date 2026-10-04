@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "Créer de la musique",
+    "coverToggle": "Cover (audio de référence)",
+    "coverHint": "Importez une piste de référence (MP3/WAV, 10 Mo max). L'IA conserve la mélodie vocale d'origine et crée une version dans un style entièrement nouveau.",
     "subtitle": "Générez des morceaux complets — description, paroles et style",
     "songDescription": "Description du morceau",
     "songDescriptionPlaceholder": "Décrivez la musique, ex. pop piano chaleureux sur nuit et espoir...",

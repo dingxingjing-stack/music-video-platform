@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "음악 만들기",
+    "coverToggle": "커버(참고 오디오 업로드)",
+    "coverHint": "참고 오디오(MP3/WAV, 10MB 이하)를 업로드하면 AI가 원곡의 보컬 멜로디를 유지한 채 완전히 새로운 스타일로 편곡합니다.",
     "subtitle": "완전한 트랙 생성 — 설명, 가사, 스타일",
     "songDescription": "곡 설명",
     "songDescriptionPlaceholder": "음악을 설명하세요, 예: 밤과 희망의 따뜻한 피아노 팝...",

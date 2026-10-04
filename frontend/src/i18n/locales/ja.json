@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "音楽を作成",
+    "coverToggle": "カバー（参照音声をアップロード）",
+    "coverHint": "参照音源（MP3/WAV、10MB 以内）をアップロードすると、AI が元曲のボーカル旋律を保ちながら、まったく新しいスタイルにアレンジします。",
     "subtitle": "完全な楽曲を生成 — 説明、歌詞、スタイル駆動",
     "songDescription": "楽曲の説明",
     "songDescriptionPlaceholder": "音楽を説明、例：夜と希望の温かいピアノポップ...",

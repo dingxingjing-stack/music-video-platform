@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "Musik erstellen",
+    "coverToggle": "Cover (Referenzaudio hochladen)",
+    "coverHint": "Referenztrack hochladen (MP3/WAV, max. 10 MB). Die KI behält die ursprüngliche Gesangsmelodie und erstellt eine Version in einem völlig neuen Stil.",
     "subtitle": "Komplette Tracks generieren — Beschreibung, Lyrics und Stil",
     "songDescription": "Song-Beschreibung",
     "songDescriptionPlaceholder": "Beschreibe die Musik, z. B. warmer Piano-Pop über Nacht und Hoffnung...",

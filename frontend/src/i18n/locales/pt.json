@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "Criar música",
+    "coverToggle": "Cover (envie áudio de referência)",
+    "coverHint": "Envie uma faixa de referência (MP3/WAV, máx. 10 MB). A IA mantém a melodia vocal original e cria uma versão em um estilo totalmente novo.",
     "subtitle": "Gere faixas completas — descrição, letra e estilo",
     "songDescription": "Descrição da música",
     "songDescriptionPlaceholder": "Descreva a música, ex. pop piano acolhedor sobre noite e esperança...",

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAudioGeneration } from '../hooks/useAudioGeneration';
@@ -25,6 +25,10 @@ export function CreateMusicPage() {
   const [mood, setMood] = useState('');
   const [vocal, setVocal] = useState('');
   const [songLanguage, setSongLanguage] = useState('');
+  // A-17 Cover：上传参考音频（MP3/WAV ≤10MB）→ 后端 tempolor-latest upload_cover
+  const [coverMode, setCoverMode] = useState(false);
+  const [coverFile, setCoverFile] = useState<{ name: string; base64: string } | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<{id:string, url:string, prompt:string, time:string}[]>(()=> {
@@ -40,6 +44,29 @@ export function CreateMusicPage() {
     }
   });
 
+  // A-17 Cover：参考音频文件校验与 base64 读取（仅 MP3/WAV，≤10MB）
+  const handleCoverFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) { setCoverFile(null); setCoverError(null); return; }
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!ext || !['mp3', 'wav'].includes(ext)) {
+      setCoverError(t('errors.unsupportedFormat')); setCoverFile(null); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setCoverError(t('errors.fileTooLarge')); setCoverFile(null); return;
+    }
+    setCoverError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result as string;
+      setCoverFile({ name: file.name, base64: b64.includes(',') ? b64.split(',')[1] : b64 });
+    };
+    reader.onerror = () => setCoverError(t('errors.uploadFailed'));
+    reader.readAsDataURL(file);
+  };
+
+  const isCoverRequest = coverMode && !!coverFile;
+
   const handleGenerate = () => {
     if (!description.trim()) return;
     const payload: any = {
@@ -52,6 +79,12 @@ export function CreateMusicPage() {
       duration: GENERATION_SECONDS,
       song_language: songLanguage || undefined,
     };
+    if (isCoverRequest) {
+      // Cover：官方契约不支持纯音乐；封面模式下禁用 instrumental
+      payload.cover = true;
+      payload.reference_audio_b64 = coverFile!.base64;
+      payload.instrumental = undefined;
+    }
     generate('/ai/generate', payload);
   };
 
@@ -149,6 +182,31 @@ export function CreateMusicPage() {
                 </select>
               </div>
             </div>
+            {/* A-17 Cover：参考音频上传（tempolor-latest upload_cover） */}
+            <div className="rounded-xl bg-[#0f0f0f] border border-[#262626] p-3.5 space-y-2.5">
+              <label className="flex items-center gap-2.5 text-xs text-[#b0b0b0] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={coverMode}
+                  onChange={(e) => { setCoverMode(e.target.checked); if (!e.target.checked) { setCoverFile(null); setCoverError(null); } }}
+                  className="w-4 h-4 accent-[#ff6a10]"
+                />
+                {t('createMusic.coverToggle')}
+              </label>
+              {coverMode && (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-[#6a6a6a]">{t('createMusic.coverHint')}</p>
+                  <input
+                    type="file"
+                    accept=".mp3,.wav,audio/mpeg,audio/wav"
+                    onChange={handleCoverFile}
+                    className="block w-full text-xs text-[#8a8a8a] file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-[#1f1f1f] file:text-white file:text-xs file:cursor-pointer"
+                  />
+                  {coverFile && <p className="text-[11px] text-[#8a8a8a]">✓ {coverFile.name}</p>}
+                  {coverError && <p className="text-[11px] text-[#ff6b6b]">{coverError}</p>}
+                </div>
+              )}
+            </div>
             {(() => {
               const balanceKnown = credits.balance !== null;
               const insufficient = balanceKnown && (credits.balance as number) < CREATION_COST_CREDITS;
@@ -164,7 +222,7 @@ export function CreateMusicPage() {
                       <button onClick={() => navigate('/pricing')} className="text-white underline">{t('createMusic.goPricing')}</button>
                     </div>
                   )}
-                  <button onClick={handleGenerate} disabled={loading || !description.trim() || insufficient} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">
+                  <button onClick={handleGenerate} disabled={loading || !description.trim() || insufficient || (coverMode && !coverFile)} className="w-full py-3 rounded-xl bg-white text-[#0a0a0a] font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#ededed] transition flex items-center justify-center gap-2">
                     {loading ? <><span className="w-4 h-4 border-2 border-[#0a0a0a]/30 border-t-[#0a0a0a] rounded-full animate-spin" /> {t('createMusic.generating')}</> : `${t('createMusic.generate')} · ${CREATION_COST_CREDITS} ${t('pricing.credits')}`}
                   </button>
                 </>

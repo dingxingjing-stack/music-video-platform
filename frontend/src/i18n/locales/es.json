@@ -303,6 +303,8 @@
   },
   "createMusic": {
     "title": "Crear música",
+    "coverToggle": "Cover (sube audio de referencia)",
+    "coverHint": "Sube una pista de referencia (MP3/WAV, máx. 10 MB). La IA conserva la melodía vocal original y crea una versión con un estilo completamente nuevo.",
     "subtitle": "Genera pistas completas — descripción, letra y estilo",
     "songDescription": "Descripción de la canción",
     "songDescriptionPlaceholder": "Describe la música, ej. pop piano cálido sobre noche y esperanza...",
