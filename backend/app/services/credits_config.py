@@ -194,10 +194,12 @@ CREDIT_COSTS = {
     "instrumental":     {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_instrumental"},
     "vocals":           {"credit_cost": 0, "enabled": True,  "description_key": "pricing.cost_vocals"},
     "stem_separation":  {"credit_cost": 60, "enabled": True,  "description_key": "pricing.cost_stems"},
-    # P4-B2 Phase A-17（2026-10-02 裁定）：Stems V3（8 轨）独立条目。产品定价
-    # 2026-10-03 裁定：Stems V3 = 30 Credits（原 100）。V3 提交另有 MODEL_ID_UNVERIFIED
-    # 双重 env 门禁（见 ai_music /stems/separate）——credit_cost 变更不影响该 fail-closed。
-    "stem_separation_v3": {"credit_cost": 30, "enabled": True, "description_key": "pricing.cost_stems_v3"},
+    # P4-B2 Phase A-17（2026-10-02 裁定）：Stems V3（8 轨）独立条目。
+    # 正式产品裁定（2026-10-03 确认）：Stems V3 = 100 Credits（供应商成本 100 创作点
+    # ¥1.00/次，见 ai_music.py Phase A-17 注释；曾有"V3=30"的错误/过期裁定记录，已废止）。
+    # V3 提交另有 MODEL_ID_UNVERIFIED 双重 env 门禁（见 ai_music /stems/separate）
+    # ——credit_cost 变更不影响该 fail-closed，V3 保持不对真实用户开放。
+    "stem_separation_v3": {"credit_cost": 100, "enabled": True, "description_key": "pricing.cost_stems_v3"},
     # P4-B2 Phase A-17：Cover（TemPolor tempolor-latest，供应商 70 创作点 ¥0.70/首
     # + 空歌词自动写词 +7 点）。产品定价 2026-10-03 裁定：Cover = 60 Credits
     # （fail-closed 解除：get_credit_cost("cover_song") 返回 60，端点不再 503）。

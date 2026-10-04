@@ -54,7 +54,7 @@ def test_credit_costs_match_product_decision():
         "standard_song": 30,
         "cover_song": 120,
         "stem_separation": 60,          # Stems V2
-        "stem_separation_v3": 30,       # Stems V3
+        "stem_separation_v3": 100,      # Stems V3（正式裁定 2026-10-03）
         "stem_separation_v1": 15,       # 预留（NOT_WIRED）
         "song_extend": 30,              # 预留（NOT_WIRED）
         "remix": 60,                    # 预留（NOT_WIRED）
